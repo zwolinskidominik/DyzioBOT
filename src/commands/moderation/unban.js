@@ -39,8 +39,6 @@ const {
   
     name: "unban",
     description: "Odbanowuje użytkownika na serwerze.",
-    // devOnly: Boolean,
-    // testOnly: Boolean,
     options: [
       {
         name: "target-user",

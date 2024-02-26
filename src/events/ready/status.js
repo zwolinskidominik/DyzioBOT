@@ -4,6 +4,6 @@ module.exports = (client) => {
   console.log(`${client.user.tag} jest online.`);
   client.user.setPresence({
     activities: [{ name: "/help", type: ActivityType.Playing }],
-    status: 'GameZone',
+    status: 'SigmaBot',
   });
 };

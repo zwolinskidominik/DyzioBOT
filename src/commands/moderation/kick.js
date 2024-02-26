@@ -55,8 +55,6 @@ const {
   
     name: "kick",
     description: "Wyrzuca użytkownika z serwera.",
-    // devOnly: Boolean,
-    // testOnly: Boolean,
     options: [
       {
         name: "target-user",

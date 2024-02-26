@@ -11,14 +11,6 @@ module.exports = async (client, member) => {
       let guild = member.guild;
       if (!guild) return;
   
-      const autoRole = await AutoRole.findOne({ guildId: guild.id });
-      if (!autoRole) {
-        console.log("AutoRole not found for guild:", guild.id);
-        return;
-      }
-  
-      console.log("AutoRole found:", autoRole);
-  
       for (const roleId of autoRole.roleIds) {
         try {
           await member.roles.add(roleId);
