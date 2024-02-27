@@ -1,53 +1,56 @@
 const {
-    Client,
-    Interaction,
-    ApplicationCommandOptionType,
-    PermissionFlagsBits,
-  } = require("discord.js");
-  
-  module.exports = {
-    /**
-     * 
-     * @param {Client} client 
-     * @param {Interaction} interaction 
-     */
-    callback: async (client, interaction) => {
-      const targetUserId = interaction.options.get('target-user').value;
+  Client,
+  Interaction,
+  ApplicationCommandOptionType,
+  PermissionFlagsBits,
+} = require("discord.js");
 
-      await interaction.deferReply();
+module.exports = {
+  /**
+   *
+   * @param {Client} client
+   * @param {Interaction} interaction
+   */
+  callback: async (client, interaction) => {
+    const targetUserId = interaction.options.get("target-user").value;
 
-      const bannedUsers = await interaction.guild.bans.fetch();
+    await interaction.deferReply();
 
-      let bannedId = bannedUsers.find(user => user.user.id === targetUserId);
+    const bannedUsers = await interaction.guild.bans.fetch();
 
-      if (!bannedId) {
-        await interaction.editReply("Nie znaleziono użytkownika na liście banów");
-        return;
-      }
+    let bannedId = bannedUsers.find((user) => user.user.id === targetUserId);
 
-      const targetUser = bannedId.user.username;
+    if (!bannedId) {
+      await interaction.editReply("Nie znaleziono użytkownika na liście banów");
+      return;
+    }
 
-      // Unban the target user
-      try {
-        await interaction.guild.bans.remove(targetUserId);
-        return interaction.editReply(`Użytkownik **${targetUser}** został odbanowany`);
-      } catch (error) {
-        console.log(`Wystąpił błąd podczas próby odbanowania: ${error}`);
-        return interaction.editReply("Wystąpił błąd podczas odbanowywania użytkownika.");
-      }
+    const targetUser = bannedId.user.username;
+
+    // Unban the target user
+    try {
+      await interaction.guild.bans.remove(targetUserId);
+      return interaction.editReply(
+        `Użytkownik **${targetUser}** został odbanowany`
+      );
+    } catch (error) {
+      console.log(`Wystąpił błąd podczas próby odbanowania: ${error}`);
+      return interaction.editReply(
+        "Wystąpił błąd podczas odbanowywania użytkownika."
+      );
+    }
+  },
+
+  name: "unban",
+  description: "Odbanowuje użytkownika na serwerze.",
+  options: [
+    {
+      name: "target-user",
+      description: "Użytkownik, którego chcesz odbanować.",
+      required: true,
+      type: ApplicationCommandOptionType.String,
     },
-  
-    name: "unban",
-    description: "Odbanowuje użytkownika na serwerze.",
-    options: [
-      {
-        name: "target-user",
-        description: "Użytkownik, którego chcesz odbanować.",
-        required: true,
-        type: ApplicationCommandOptionType.String,
-      },
-    ],
-    permissionsRequired: [PermissionFlagsBits.BanMembers],
-    botPermissions: [PermissionFlagsBits.BanMembers],
-  };
-  
+  ],
+  permissionsRequired: [PermissionFlagsBits.BanMembers],
+  botPermissions: [PermissionFlagsBits.BanMembers],
+};

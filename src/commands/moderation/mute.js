@@ -111,15 +111,15 @@ module.exports = {
 
       await targetUser.timeout(msDuration, reason);
       embed
-          .setDescription(
-            `${targetUser} został zmute'owany na okres **${prettyMs(
-              msDuration
-            )}**.\nPowód: **${reason}**`
-          )
-          .setColor("#1F8B4Caa")
-          .setTimestamp()
-          .setFooter({ text: interaction.guild.name });
-        interaction.editReply({ embeds: [embed] });
+        .setDescription(
+          `${targetUser} został zmute'owany na okres **${prettyMs(
+            msDuration
+          )}**.\nPowód: **${reason}**`
+        )
+        .setColor("#1F8B4Caa")
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
+      interaction.editReply({ embeds: [embed] });
     } catch (error) {
       await interaction.editReply("Wystąpił błąd");
       console.log(`Wystąpił błąd podczas mute'owania: ${error}`);

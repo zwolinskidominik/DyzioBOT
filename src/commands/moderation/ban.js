@@ -7,25 +7,29 @@ const {
 
 module.exports = {
   /**
-   * 
-   * @param {Client} client 
-   * @param {Interaction} interaction 
+   *
+   * @param {Client} client
+   * @param {Interaction} interaction
    */
   callback: async (client, interaction) => {
-    const targetUserId = interaction.options.get('target-user').value;
-    const reason = interaction.options.get('reason')?.value || "Brak";
+    const targetUserId = interaction.options.get("target-user").value;
+    const reason = interaction.options.get("reason")?.value || "Brak";
 
     await interaction.deferReply();
 
     const targetUser = await interaction.guild.members.fetch(targetUserId);
 
     if (!targetUser) {
-      await interaction.editReply("Taki użytkownik nie istnieje na tym serwerze.");
+      await interaction.editReply(
+        "Taki użytkownik nie istnieje na tym serwerze."
+      );
       return;
     }
 
     if (targetUser.id === interaction.guild.ownerId) {
-      await interaction.editReply("Nie możesz zbanować tego użytkownika, ponieważ jest on właścicielem serwera.");
+      await interaction.editReply(
+        "Nie możesz zbanować tego użytkownika, ponieważ jest on właścicielem serwera."
+      );
       return;
     }
 
@@ -34,19 +38,25 @@ module.exports = {
     const botRolePosition = interaction.guild.members.me.roles.highest.position; //Highest role of the bot
 
     if (targetUserRolePosition >= requestUserRolePosition) {
-      await interaction.editReply("Nie możesz zbanować użytkownika, ponieważ ma taką samą lub wyższą rolę.");
+      await interaction.editReply(
+        "Nie możesz zbanować użytkownika, ponieważ ma taką samą lub wyższą rolę."
+      );
       return;
     }
 
     if (targetUserRolePosition >= botRolePosition) {
-      await interaction.editReply("Nie mogę zbanować tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.");
+      await interaction.editReply(
+        "Nie mogę zbanować tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie."
+      );
       return;
     }
 
     // Ban the target user
     try {
-      await targetUser.ban({reason});
-      await interaction.editReply(`Użytkownik ${targetUser} został zbanowany\nPowód: ${reason}`);
+      await targetUser.ban({ reason });
+      await interaction.editReply(
+        `Użytkownik ${targetUser} został zbanowany\nPowód: ${reason}`
+      );
     } catch (error) {
       console.log(`Wystąpił błąd podczas banowania: ${error}`);
     }
