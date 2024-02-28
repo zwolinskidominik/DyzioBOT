@@ -11,12 +11,33 @@ module.exports = async (client, member) => {
     let guild = member.guild;
     if (!guild) return;
 
-    for (const roleId of autoRole.roleIds) {
-      try {
-        await member.roles.add(roleId);
-        console.log(`Role added successfully: ${roleId}`);
-      } catch (addRoleError) {
-        console.log(`Error adding role ${roleId}: ${addRoleError}`);
+    // Check if a roles are configured
+    const autoRole = await AutoRole.findOne({ guildId: guild.id });
+
+    if (autoRole && autoRole.roleIds.length > 0) {
+      // Check if the user who joined is a bot
+      if (member.user.bot) {
+        // Get the "Bot" role with specified ID
+        const botRoleId = autoRole.roleIds[0];
+        const botRole = guild.roles.cache.get(botRoleId);
+
+        // Check if the bot role exists
+        if (botRole) {
+          // Add the bot role to the bot
+          await member.roles.add(botRole).catch((error) => {
+            console.log(`Error adding bot role to ${member.user.tag} : ${error}`);
+          });
+          console.log(`Bot role added successfully to ${member.user.tag}`);
+        } else {
+          console.log(`Bot role does not exist or is not configured for ${guild.name}`);
+        }
+      } else {
+        // Get the "User" role with specified ID
+        for (const roleId of autoRole.roleIds.slice(1)) {
+          await member.roles.add(roleId).catch((error) => {
+            console.log(`Error adding role ${roleId} : ${error}`);
+          });
+        }
       }
     }
   } catch (error) {

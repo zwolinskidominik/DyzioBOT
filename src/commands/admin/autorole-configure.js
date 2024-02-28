@@ -20,7 +20,7 @@ module.exports = {
     }
 
     const roles = [];
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 6; i++) {
       const roleOption = interaction.options.get(`role${i}`);
       if (roleOption) {
         const role = roleOption.role;
@@ -63,15 +63,15 @@ module.exports = {
   options: [
     {
       name: "role1",
-      description: "Rola, która ma być nadawana nowym członkom.",
+      description: "Rola która ma być nadawana botom.",
       type: ApplicationCommandOptionType.Role,
       required: true,
     },
     {
       name: "role2",
-      description: "Rola 2 (opcjonalna)",
+      description: "Rola, która ma być nadawana nowym członkom.",
       type: ApplicationCommandOptionType.Role,
-      required: false,
+      required: true,
     },
     {
       name: "role3",
@@ -88,6 +88,12 @@ module.exports = {
     {
       name: "role5",
       description: "Rola 5 (opcjonalna)",
+      type: ApplicationCommandOptionType.Role,
+      required: false,
+    },
+    {
+      name: "role6",
+      description: "Rola 6 (opcjonalna)",
       type: ApplicationCommandOptionType.Role,
       required: false,
     },
