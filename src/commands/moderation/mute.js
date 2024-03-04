@@ -1,47 +1,47 @@
-const { ApplicationCommandOptionType, PermissionFlagsBits, EmbedBuilder } = require("discord.js");
-const ms = require("ms");
+const { ApplicationCommandOptionType, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const ms = require('ms');
 
 module.exports = {
   data: {
-    name: "mute",
-    description: "Wysyła użytkownika na wakacje od serwera.",
+    name: 'mute',
+    description: 'Wysyła użytkownika na wakacje od serwera.',
     options: [
       {
-        name: "target-user",
+        name: 'target-user',
         description: "Użytkownik, którego chcesz zmute'ować.",
         type: ApplicationCommandOptionType.Mentionable,
         required: true,
       },
       {
-        name: "duration",
-        description: "Czas trwania mute (30min, 1h, 1 dzień).",
+        name: 'duration',
+        description: 'Czas trwania mute (30min, 1h, 1 dzień).',
         type: ApplicationCommandOptionType.String,
         required: true,
         choices: [
           {
-            name: "15 min",
-            value: "15 min",
+            name: '15 min',
+            value: '15 min',
           },
           {
-            name: "30 min",
-            value: "30 min",
+            name: '30 min',
+            value: '30 min',
           },
           {
-            name: "1 godz.",
-            value: "1 hour",
+            name: '1 godz.',
+            value: '1 hour',
           },
           {
-            name: "1 dzień",
-            value: "1 day",
+            name: '1 dzień',
+            value: '1 day',
           },
           {
-            name: "1 tydzień",
-            value: "1 week",
+            name: '1 tydzień',
+            value: '1 week',
           },
         ],
       },
       {
-        name: "reason",
+        name: 'reason',
         description: "Powód mute'a.",
         type: ApplicationCommandOptionType.String,
       },
@@ -49,9 +49,9 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const mentionable = interaction.options.get("target-user").value;
-    const duration = interaction.options.get("duration").value;
-    const reason = interaction.options.get("reason")?.value || "Brak powodu.";
+    const mentionable = interaction.options.get('target-user').value;
+    const duration = interaction.options.get('duration').value;
+    const reason = interaction.options.get('reason')?.value || 'Brak powodu.';
 
     let embed = new EmbedBuilder().setColor('#990f02');
 
@@ -61,7 +61,7 @@ module.exports = {
 
     if (!targetUser) {
       embed
-        .setDescription("**Nie znaleziono podanego użytkownika na serwerze.**")
+        .setDescription('**Nie znaleziono podanego użytkownika na serwerze.**')
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
       interaction.editReply({ embeds: [embed] });
@@ -91,7 +91,7 @@ module.exports = {
     if (msDuration < 5000 || msDuration > 2.419e9) {
       embed
         .setDescription(
-          "**Mute nie może być krótszy niż 5 sekund oraz dłuższy niż 28 dni.**"
+          '**Mute nie może być krótszy niż 5 sekund oraz dłuższy niż 28 dni.**'
         )
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
@@ -126,7 +126,7 @@ module.exports = {
     }
 
     try {
-      const { default: prettyMs } = await import("pretty-ms");
+      const { default: prettyMs } = await import('pretty-ms');
 
       if (targetUser.isCommunicationDisabled()) {
         await targetUser.timeout(msDuration, reason);
@@ -136,7 +136,7 @@ module.exports = {
               msDuration
             )}**.\nPowód: **${reason}**`
           )
-          .setColor("#32CD03")
+          .setColor('#32CD03')
           .setTimestamp()
           .setFooter({ text: interaction.guild.name });
         interaction.editReply({ embeds: [embed] });
@@ -150,18 +150,17 @@ module.exports = {
             msDuration
           )}**.\nPowód: **${reason}**`
         )
-        .setColor("#32CD03")
+        .setColor('#32CD03')
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
       interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      await interaction.editReply("Wystąpił błąd");
+      await interaction.editReply('Wystąpił błąd');
       console.log(`Wystąpił błąd podczas mute'owania: ${error}`);
     }
   },
 
   options: {
-    devOnly: false,
     permissionsRequired: [PermissionFlagsBits.MuteMembers],
     botPermissions: [PermissionFlagsBits.MuteMembers],
   },

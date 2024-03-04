@@ -39,7 +39,7 @@ module.exports = {
     ],
   },
 
-  run: async ({ interaction, client, handler }) => {
+  run: async ({ interaction }) => {
     if (!interaction.inGuild()) {
       interaction.reply('You can only run this command inside a server.');
       return;
@@ -85,7 +85,6 @@ module.exports = {
   },
 
   options: {
-    devOnly: false,
     userPermissions: [PermissionFlagsBits.Administrator],
     botPermissions: [PermissionFlagsBits.Administrator],
   },

@@ -1,18 +1,18 @@
-const { ApplicationCommandOptionType, PermissionFlagsBits, EmbedBuilder } = require("discord.js");
+const { ApplicationCommandOptionType, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 
 module.exports = {
   data: {
-    name: "unban",
-    description: "Odbanowuje użytkownika na serwerze.",
+    name: 'unban',
+    description: 'Odbanowuje użytkownika na serwerze.',
     options: [{
-      name: "target-user",
-      description: "Użytkownik, którego chcesz odbanować.",
+      name: 'target-user',
+      description: 'Użytkownik, którego chcesz odbanować.',
       required: true,
       type: ApplicationCommandOptionType.String,
     }, ],
   },
   run: async ({ interaction }) => {
-    const targetUserId = interaction.options.get("target-user").value;
+    const targetUserId = interaction.options.get('target-user').value;
 
     await interaction.deferReply();
 
@@ -52,7 +52,6 @@ module.exports = {
   },
 
   options: {
-    devOnly: false,
     permissionsRequired: [PermissionFlagsBits.BanMembers],
     botPermissions: [PermissionFlagsBits.BanMembers],
   },

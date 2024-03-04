@@ -1,27 +1,27 @@
-const { ApplicationCommandOptionType, PermissionFlagsBits } = require("discord.js");
+const { ApplicationCommandOptionType, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
   data: {
-    name: "ban",
-    description: "Banuje użytkownika na serwerze.",
+    name: 'ban',
+    description: 'Banuje użytkownika na serwerze.',
     options: [
       {
-        name: "target-user",
-        description: "Użytkownik, którego chcesz zbanować.",
+        name: 'target-user',
+        description: 'Użytkownik, którego chcesz zbanować.',
         required: true,
         type: ApplicationCommandOptionType.Mentionable,
       },
       {
-        name: "reason",
-        description: "Powód zbanowania.",
+        name: 'reason',
+        description: 'Powód zbanowania.',
         type: ApplicationCommandOptionType.String,
       },
     ],
   },
 
   run: async ({ interaction, client, handler }) => {
-    const targetUserId = interaction.options.get("target-user").value;
-    const reason = interaction.options.get("reason")?.value || "Brak";
+    const targetUserId = interaction.options.get('target-user').value;
+    const reason = interaction.options.get('reason')?.value || 'Brak';
 
     await interaction.deferReply();
 
@@ -29,14 +29,14 @@ module.exports = {
 
     if (!targetUser) {
       await interaction.editReply(
-        "Taki użytkownik nie istnieje na tym serwerze."
+        'Taki użytkownik nie istnieje na tym serwerze.'
       );
       return;
     }
 
     if (targetUser.id === interaction.guild.ownerId) {
       await interaction.editReply(
-        "Nie możesz zbanować tego użytkownika, ponieważ jest on właścicielem serwera."
+        'Nie możesz zbanować tego użytkownika, ponieważ jest on właścicielem serwera.'
       );
       return;
     }
@@ -47,14 +47,14 @@ module.exports = {
 
     if (targetUserRolePosition >= requestUserRolePosition) {
       await interaction.editReply(
-        "Nie możesz zbanować użytkownika, ponieważ ma taką samą lub wyższą rolę."
+        'Nie możesz zbanować użytkownika, ponieważ ma taką samą lub wyższą rolę.'
       );
       return;
     }
 
     if (targetUserRolePosition >= botRolePosition) {
       await interaction.editReply(
-        "Nie mogę zbanować tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie."
+        'Nie mogę zbanować tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.'
       );
       return;
     }
@@ -71,7 +71,6 @@ module.exports = {
   },
 
   options: {
-    devOnly: false,
     permissionsRequired: [PermissionFlagsBits.BanMembers],
     botPermissions: [PermissionFlagsBits.BanMembers],
   },

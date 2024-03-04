@@ -1,5 +1,5 @@
-const { Client, GuildMember } = require("discord.js");
-const AutoRole = require("../../models/AutoRole");
+const { Client, GuildMember } = require('discord.js');
+const AutoRole = require('../../models/AutoRole');
 
 /**
  *
@@ -17,7 +17,7 @@ module.exports = async (client, member) => {
     if (autoRole && autoRole.roleIds.length > 0) {
       // Check if the user who joined is a bot
       if (member.user.bot) {
-        // Get the "Bot" role with specified ID
+        // Get the 'Bot' role with specified ID
         const botRoleId = autoRole.roleIds[0];
         const botRole = guild.roles.cache.get(botRoleId);
 
@@ -32,7 +32,7 @@ module.exports = async (client, member) => {
           console.log(`Bot role does not exist or is not configured for ${guild.name}`);
         }
       } else {
-        // Get the "User" role with specified ID
+        // Get the 'User' role with specified ID
         for (const roleId of autoRole.roleIds.slice(1)) {
           await member.roles.add(roleId).catch((error) => {
             console.log(`Error adding role ${roleId} : ${error}`);

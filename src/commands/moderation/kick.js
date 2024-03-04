@@ -1,27 +1,27 @@
-const { ApplicationCommandOptionType, PermissionFlagsBits } = require("discord.js");
+const { ApplicationCommandOptionType, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
   data: {
-    name: "kick",
-    description: "Wyrzuca użytkownika z serwera.",
+    name: 'kick',
+    description: 'Wyrzuca użytkownika z serwera.',
     options: [
       {
-        name: "target-user",
-        description: "Użytkownik, którego chcesz wyrzucić.",
+        name: 'target-user',
+        description: 'Użytkownik, którego chcesz wyrzucić.',
         required: true,
         type: ApplicationCommandOptionType.Mentionable,
       },
       {
-        name: "reason",
-        description: "Powód wyrzucenia.",
+        name: 'reason',
+        description: 'Powód wyrzucenia.',
         type: ApplicationCommandOptionType.String,
       },
     ],
   },
 
   run: async ({ interaction, client, handler }) => {
-    const targetUserId = interaction.options.get("target-user").value;
-    const reason = interaction.options.get("reason")?.value || "Brak";
+    const targetUserId = interaction.options.get('target-user').value;
+    const reason = interaction.options.get('reason')?.value || 'Brak';
 
     await interaction.deferReply();
 
@@ -29,14 +29,14 @@ module.exports = {
 
     if (!targetUser) {
       await interaction.editReply(
-        "Taki użytkownik nie istnieje na tym serwerze."
+        'Taki użytkownik nie istnieje na tym serwerze.'
       );
       return;
     }
 
     if (targetUser.id === interaction.guild.ownerId) {
       await interaction.editReply(
-        "Nie możesz wyrzucić tego użytkownika, ponieważ jest on właścicielem serwera."
+        'Nie możesz wyrzucić tego użytkownika, ponieważ jest on właścicielem serwera.'
       );
       return;
     }
@@ -47,14 +47,14 @@ module.exports = {
 
     if (targetUserRolePosition >= requestUserRolePosition) {
       await interaction.editReply(
-        "Nie możesz wyrzucić użytkownika, ponieważ ma taką samą lub wyższą rolę."
+        'Nie możesz wyrzucić użytkownika, ponieważ ma taką samą lub wyższą rolę.'
       );
       return;
     }
 
     if (targetUserRolePosition >= botRolePosition) {
       await interaction.editReply(
-        "Nie mogę wyrzucić tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie."
+        'Nie mogę wyrzucić tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.'
       );
       return;
     }
@@ -71,9 +71,7 @@ module.exports = {
   },
 
   options: {
-    devOnly: false,
     permissionsRequired: [PermissionFlagsBits.KickMembers],
     botPermissions: [PermissionFlagsBits.KickMembers],
-    deleted: false,
   },
 };
