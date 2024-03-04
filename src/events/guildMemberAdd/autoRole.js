@@ -8,15 +8,20 @@ const AutoRole = require('../../models/AutoRole');
  */
 module.exports = async (client, member) => {
   try {
-    let guild = member.guild;
+    console.log('Event "joinedMember" triggered successfully.');
+
+    const guild = member.guild;
     if (!guild) return;
 
     // Check if a roles are configured
     const autoRole = await AutoRole.findOne({ guildId: guild.id });
+    console.log('AutoRole:', autoRole);
 
     if (autoRole && autoRole.roleIds.length > 0) {
+      console.log('Roles to assign:', autoRole.roleIds);
       // Check if the user who joined is a bot
       if (member.user.bot) {
+        console.log('User is a bot');
         // Get the 'Bot' role with specified ID
         const botRoleId = autoRole.roleIds[0];
         const botRole = guild.roles.cache.get(botRoleId);
@@ -32,12 +37,17 @@ module.exports = async (client, member) => {
           console.log(`Bot role does not exist or is not configured for ${guild.name}`);
         }
       } else {
+        console.log('User is not a bot');
         // Get the 'User' role with specified ID
-        for (const roleId of autoRole.roleIds.slice(1)) {
+        const userRoleIds = autoRole.roleIds.slice(1);
+
+        for (const roleId of userRoleIds) {
           await member.roles.add(roleId).catch((error) => {
             console.log(`Error adding role ${roleId} : ${error}`);
           });
         }
+
+        console.log(`User roles added successfully to ${member.user.tag}`);
       }
     }
   } catch (error) {

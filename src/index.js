@@ -1,8 +1,9 @@
 require('dotenv').config();
+const guildMemberAddEvent = require('./events/guildMemberAdd/autoRole.js');
 const { Client, IntentsBitField } = require('discord.js');
 const { CommandKit } = require('commandkit');
 const mongoose = require('mongoose');
-const path = require('path');
+
 
 const client = new Client({
   intents: [
@@ -22,13 +23,17 @@ const client = new Client({
 
     new CommandKit({
       client,
-      commandsPath: path.join(__dirname, 'commands'),
-      eventsPath: path.join(__dirname, 'events'),
-      validationsPath: path.join(__dirname, 'validations'),
+      commandsPath: `${__dirname}/commands`,
+      eventsPath: `${__dirname}/events`,
+      validationsPath: `${__dirname}/validations`,
       devGuildIds: ['1119330659127795822'],
       devUserIds: ['548177225661546496'],
       devRoleIds: ['1209504337412235347'],
-    })
+    });
+
+    client.on('guildMemberAdd', member => {
+      guildMemberAddEvent(client, member);
+    }); 
 
     client.login(process.env.TOKEN);
   } catch (error) {
