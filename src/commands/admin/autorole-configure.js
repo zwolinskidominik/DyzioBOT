@@ -35,6 +35,12 @@ module.exports = {
         description: 'Rola 5 (opcjonalna)',
         type: ApplicationCommandOptionType.Role,
         required: false,
+      },
+      {
+        name: 'role6',
+        description: 'Rola 6 (opcjonalna)',
+        type: ApplicationCommandOptionType.Role,
+        required: false,
       }
     ],
   },
