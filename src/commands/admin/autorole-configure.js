@@ -1,21 +1,47 @@
-const {
-  ApplicationCommandOptionType,
-  Client,
-  Interaction,
-  PermissionFlagsBits,
-} = require("discord.js");
-const AutoRole = require("../../models/AutoRole");
+const { ApplicationCommandOptionType, PermissionFlagsBits } = require('discord.js');
+const AutoRole = require('../../models/AutoRole');
 
 module.exports = {
-  /**
-   *
-   * @param {Client} client
-   * @param {Interaction} interaction
-   */
+  data: {
+    name: 'autorole-configure',
+    description: 'Skonfiguruj autorole dla serwera.',
+    options: [
+      {
+        name: 'role1',
+        description: 'Rola która ma być nadawana botom.',
+        type: ApplicationCommandOptionType.Role,
+        required: true,
+      },
+      {
+        name: 'role2',
+        description: 'Rola, która ma być nadawana nowym członkom.',
+        type: ApplicationCommandOptionType.Role,
+        required: true,
+      },
+      {
+        name: 'role3',
+        description: 'Rola 3 (opcjonalna)',
+        type: ApplicationCommandOptionType.Role,
+        required: false,
+      },
+      {
+        name: 'role4',
+        description: 'Rola 4 (opcjonalna)',
+        type: ApplicationCommandOptionType.Role,
+        required: false,
+      },
+      {
+        name: 'role5',
+        description: 'Rola 5 (opcjonalna)',
+        type: ApplicationCommandOptionType.Role,
+        required: false,
+      }
+    ],
+  },
 
-  callback: async (client, interaction) => {
+  run: async ({ interaction, client, handler }) => {
     if (!interaction.inGuild()) {
-      interaction.reply("You can only run this command inside a server.");
+      interaction.reply('You can only run this command inside a server.');
       return;
     }
 
@@ -26,7 +52,7 @@ module.exports = {
         const role = roleOption.role;
         // Check if the selected role is @everyone
         if (role.id === interaction.guild?.id) {
-          interaction.reply("Nie można skonfigurować roli `@everyone`.");
+          interaction.reply('Nie można skonfigurować roli `@everyone`.');
           return;
         }
         roles.push(roleOption.value);
@@ -51,47 +77,16 @@ module.exports = {
 
       await autoRole.save();
       interaction.editReply(
-        "Autorole zostały skonfigurowane. Aby wyłączyć, uruchom `autorole-disable`"
+        'Autorole zostały skonfigurowane. Aby wyłączyć, uruchom `autorole-disable`'
       );
     } catch (error) {
-      console.log(error);
+      console.log(`Wystąpił błąd podczas konfigurowania autoroli: ${error}`);
     }
   },
 
-  name: "autorole-configure",
-  description: "Skonfiguruj autorole dla serwera.",
-  options: [
-    {
-      name: "role1",
-      description: "Rola która ma być nadawana botom.",
-      type: ApplicationCommandOptionType.Role,
-      required: true,
-    },
-    {
-      name: "role2",
-      description: "Rola, która ma być nadawana nowym członkom.",
-      type: ApplicationCommandOptionType.Role,
-      required: true,
-    },
-    {
-      name: "role3",
-      description: "Rola 3 (opcjonalna)",
-      type: ApplicationCommandOptionType.Role,
-      required: false,
-    },
-    {
-      name: "role4",
-      description: "Rola 4 (opcjonalna)",
-      type: ApplicationCommandOptionType.Role,
-      required: false,
-    },
-    {
-      name: "role5",
-      description: "Rola 5 (opcjonalna)",
-      type: ApplicationCommandOptionType.Role,
-      required: false,
-    }
-  ],
-  permissionsRequired: [PermissionFlagsBits.Administrator],
-  botPermissions: [PermissionFlagsBits.ManageRoles],
+  options: {
+    devOnly: false,
+    userPermissions: [PermissionFlagsBits.Administrator],
+    botPermissions: [PermissionFlagsBits.Administrator],
+  },
 };

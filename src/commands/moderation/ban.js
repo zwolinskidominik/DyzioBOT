@@ -1,17 +1,25 @@
-const {
-  Client,
-  Interaction,
-  ApplicationCommandOptionType,
-  PermissionFlagsBits,
-} = require("discord.js");
+const { ApplicationCommandOptionType, PermissionFlagsBits } = require("discord.js");
 
 module.exports = {
-  /**
-   *
-   * @param {Client} client
-   * @param {Interaction} interaction
-   */
-  callback: async (client, interaction) => {
+  data: {
+    name: "ban",
+    description: "Banuje użytkownika na serwerze.",
+    options: [
+      {
+        name: "target-user",
+        description: "Użytkownik, którego chcesz zbanować.",
+        required: true,
+        type: ApplicationCommandOptionType.Mentionable,
+      },
+      {
+        name: "reason",
+        description: "Powód zbanowania.",
+        type: ApplicationCommandOptionType.String,
+      },
+    ],
+  },
+
+  run: async ({ interaction, client, handler }) => {
     const targetUserId = interaction.options.get("target-user").value;
     const reason = interaction.options.get("reason")?.value || "Brak";
 
@@ -62,21 +70,9 @@ module.exports = {
     }
   },
 
-  name: "ban",
-  description: "Banuje użytkownika na serwerze.",
-  options: [
-    {
-      name: "target-user",
-      description: "Użytkownik, którego chcesz zbanować.",
-      required: true,
-      type: ApplicationCommandOptionType.Mentionable,
-    },
-    {
-      name: "reason",
-      description: "Powód zbanowania.",
-      type: ApplicationCommandOptionType.String,
-    },
-  ],
-  permissionsRequired: [PermissionFlagsBits.BanMembers],
-  botPermissions: [PermissionFlagsBits.BanMembers],
+  options: {
+    devOnly: false,
+    permissionsRequired: [PermissionFlagsBits.BanMembers],
+    botPermissions: [PermissionFlagsBits.BanMembers],
+  },
 };

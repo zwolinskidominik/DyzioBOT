@@ -1,56 +1,59 @@
-const {
-  Client,
-  Interaction,
-  ApplicationCommandOptionType,
-  PermissionFlagsBits,
-} = require("discord.js");
+const { ApplicationCommandOptionType, PermissionFlagsBits, EmbedBuilder } = require("discord.js");
 
 module.exports = {
-  /**
-   *
-   * @param {Client} client
-   * @param {Interaction} interaction
-   */
-  callback: async (client, interaction) => {
+  data: {
+    name: "unban",
+    description: "Odbanowuje użytkownika na serwerze.",
+    options: [{
+      name: "target-user",
+      description: "Użytkownik, którego chcesz odbanować.",
+      required: true,
+      type: ApplicationCommandOptionType.String,
+    }, ],
+  },
+  run: async ({ interaction }) => {
     const targetUserId = interaction.options.get("target-user").value;
 
     await interaction.deferReply();
 
     const bannedUsers = await interaction.guild.bans.fetch();
-
     let bannedId = bannedUsers.find((user) => user.user.id === targetUserId);
 
     if (!bannedId) {
-      await interaction.editReply("Nie znaleziono użytkownika na liście banów");
+      embed
+        .setDescription('**Nie znaleziono użytkownika na liście banów.**')
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
+      interaction.editReply({ embeds: [embed] });
       return;
     }
 
+    let embed = new EmbedBuilder().setColor('#990f02');
     const targetUser = bannedId.user.username;
 
     // Unban the target user
     try {
       await interaction.guild.bans.remove(targetUserId);
-      return interaction.editReply(
-        `Użytkownik **${targetUser}** został odbanowany`
-      );
+      embed
+        .setDescription(`Użytkownik **${targetUser}** został odbanowany`)
+        .setTimestamp()
+        .setColor('#32CD03')
+        .setFooter({ text: interaction.guild.name });
+      interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.log(`Wystąpił błąd podczas próby odbanowania: ${error}`);
-      return interaction.editReply(
-        "Wystąpił błąd podczas odbanowywania użytkownika."
-      );
+      embed
+        .setDescription('**Wystąpił błąd podczas odbanowywania użytkownika.**')
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
+      interaction.editReply({ embeds: [embed] });
+      return;
     }
   },
 
-  name: "unban",
-  description: "Odbanowuje użytkownika na serwerze.",
-  options: [
-    {
-      name: "target-user",
-      description: "Użytkownik, którego chcesz odbanować.",
-      required: true,
-      type: ApplicationCommandOptionType.String,
-    },
-  ],
-  permissionsRequired: [PermissionFlagsBits.BanMembers],
-  botPermissions: [PermissionFlagsBits.BanMembers],
+  options: {
+    devOnly: false,
+    permissionsRequired: [PermissionFlagsBits.BanMembers],
+    botPermissions: [PermissionFlagsBits.BanMembers],
+  },
 };

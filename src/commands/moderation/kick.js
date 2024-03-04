@@ -1,18 +1,25 @@
-const {
-  Client,
-  Interaction,
-  ApplicationCommandOptionType,
-  PermissionFlagsBits,
-} = require("discord.js");
+const { ApplicationCommandOptionType, PermissionFlagsBits } = require("discord.js");
 
 module.exports = {
-  /**
-   *
-   * @param {Client} client
-   * @param {Interaction} interaction
-   */
+  data: {
+    name: "kick",
+    description: "Wyrzuca użytkownika z serwera.",
+    options: [
+      {
+        name: "target-user",
+        description: "Użytkownik, którego chcesz wyrzucić.",
+        required: true,
+        type: ApplicationCommandOptionType.Mentionable,
+      },
+      {
+        name: "reason",
+        description: "Powód wyrzucenia.",
+        type: ApplicationCommandOptionType.String,
+      },
+    ],
+  },
 
-  callback: async (client, interaction) => {
+  run: async ({ interaction, client, handler }) => {
     const targetUserId = interaction.options.get("target-user").value;
     const reason = interaction.options.get("reason")?.value || "Brak";
 
@@ -63,21 +70,10 @@ module.exports = {
     }
   },
 
-  name: "kick",
-  description: "Wyrzuca użytkownika z serwera.",
-  options: [
-    {
-      name: "target-user",
-      description: "Użytkownik, którego chcesz wyrzucić.",
-      required: true,
-      type: ApplicationCommandOptionType.Mentionable,
-    },
-    {
-      name: "reason",
-      description: "Powód wyrzucenia.",
-      type: ApplicationCommandOptionType.String,
-    },
-  ],
-  permissionsRequired: [PermissionFlagsBits.KickMembers],
-  botPermissions: [PermissionFlagsBits.KickMembers],
+  options: {
+    devOnly: false,
+    permissionsRequired: [PermissionFlagsBits.KickMembers],
+    botPermissions: [PermissionFlagsBits.KickMembers],
+    deleted: false,
+  },
 };

@@ -1,14 +1,13 @@
-const { Client, Interaction, PermissionFlagsBits } = require("discord.js");
+const { PermissionFlagsBits } = require("discord.js");
 const AutoRole = require("../../models/AutoRole");
 
 module.exports = {
-  /**
-   *
-   * @param {Client} client
-   * @param {Interaction} interaction
-   */
+  data: {
+    name: "autorole-disable",
+    description: "Wyłącz autorole dla tego serwera",
+  },
 
-  callback: async (client, interaction) => {
+  run: async ({ interaction, client, handler }) => {
     try {
       await interaction.deferReply();
 
@@ -24,11 +23,13 @@ module.exports = {
         "Autorole zostały wyłączone dla tego serwera. Aby skonfigurować, uruchom `/autorole-configure`."
       );
     } catch (error) {
-      console.log(error);
+      console.log(`Wystąpił błąd podczas wyłączania autoroli dla tego serwera: ${error}`);
     }
   },
 
-  name: "autorole-disable",
-  description: "Wyłącz autorole dla tego serwera",
-  permissionsRequired: [PermissionFlagsBits.Administrator],
+  options: {
+    devOnly: false,
+    userPermissions: [PermissionFlagsBits.Administrator],
+    botPermissions: [PermissionFlagsBits.Administrator],
+  },
 };

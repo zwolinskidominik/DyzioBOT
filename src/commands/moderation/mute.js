@@ -1,25 +1,59 @@
-const {
-  Client,
-  Interaction,
-  ApplicationCommandOptionType,
-  PermissionFlagsBits,
-  EmbedBuilder,
-} = require("discord.js");
+const { ApplicationCommandOptionType, PermissionFlagsBits, EmbedBuilder } = require("discord.js");
 const ms = require("ms");
 
 module.exports = {
-  /**
-   *
-   * @param {Client} client
-   * @param {Interaction} interaction
-   */
+  data: {
+    name: "mute",
+    description: "Wysyła użytkownika na wakacje od serwera.",
+    options: [
+      {
+        name: "target-user",
+        description: "Użytkownik, którego chcesz zmute'ować.",
+        type: ApplicationCommandOptionType.Mentionable,
+        required: true,
+      },
+      {
+        name: "duration",
+        description: "Czas trwania mute (30min, 1h, 1 dzień).",
+        type: ApplicationCommandOptionType.String,
+        required: true,
+        choices: [
+          {
+            name: "15 min",
+            value: "15 min",
+          },
+          {
+            name: "30 min",
+            value: "30 min",
+          },
+          {
+            name: "1 godz.",
+            value: "1 hour",
+          },
+          {
+            name: "1 dzień",
+            value: "1 day",
+          },
+          {
+            name: "1 tydzień",
+            value: "1 week",
+          },
+        ],
+      },
+      {
+        name: "reason",
+        description: "Powód mute'a.",
+        type: ApplicationCommandOptionType.String,
+      },
+    ],
+  },
 
-  callback: async (client, interaction) => {
+  run: async ({ interaction }) => {
     const mentionable = interaction.options.get("target-user").value;
     const duration = interaction.options.get("duration").value;
     const reason = interaction.options.get("reason")?.value || "Brak powodu.";
 
-    let embed = new EmbedBuilder().setColor(0x990f02);
+    let embed = new EmbedBuilder().setColor('#990f02');
 
     await interaction.deferReply();
 
@@ -102,7 +136,7 @@ module.exports = {
               msDuration
             )}**.\nPowód: **${reason}**`
           )
-          .setColor("#1F8B4C")
+          .setColor("#32CD03")
           .setTimestamp()
           .setFooter({ text: interaction.guild.name });
         interaction.editReply({ embeds: [embed] });
@@ -116,7 +150,7 @@ module.exports = {
             msDuration
           )}**.\nPowód: **${reason}**`
         )
-        .setColor("#1F8B4Caa")
+        .setColor("#32CD03")
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
       interaction.editReply({ embeds: [embed] });
@@ -126,49 +160,9 @@ module.exports = {
     }
   },
 
-  name: "mute",
-  description: "Wysyła użytkownika na wakacje od serwera.",
-  options: [
-    {
-      name: "target-user",
-      description: "Użytkownik, którego chcesz zmute'ować.",
-      type: ApplicationCommandOptionType.Mentionable,
-      required: true,
-    },
-    {
-      name: "duration",
-      description: "Czas trwania mute (30min, 1h, 1 dzień).",
-      type: ApplicationCommandOptionType.String,
-      required: true,
-      choices: [
-        {
-          name: "15 min",
-          value: "15 min",
-        },
-        {
-          name: "30 min",
-          value: "30 min",
-        },
-        {
-          name: "1 godz.",
-          value: "1 hour",
-        },
-        {
-          name: "1 dzień",
-          value: "1 day",
-        },
-        {
-          name: "1 tydzień",
-          value: "1 week",
-        },
-      ],
-    },
-    {
-      name: "reason",
-      description: "Powód mute'a.",
-      type: ApplicationCommandOptionType.String,
-    },
-  ],
-  permissionsRequired: [PermissionFlagsBits.MuteMembers],
-  botPermissions: [PermissionFlagsBits.MuteMembers],
+  options: {
+    devOnly: false,
+    permissionsRequired: [PermissionFlagsBits.MuteMembers],
+    botPermissions: [PermissionFlagsBits.MuteMembers],
+  },
 };
