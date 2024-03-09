@@ -40,8 +40,6 @@ module.exports = async (client, member) => {
             console.log(`Error adding role ${roleId} : ${error}`);
           });
         }
-
-        console.log(`User roles added successfully to ${member.user.tag}`);
       }
     }
   } catch (error) {

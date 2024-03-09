@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, PermissionFlagsBits } = require('discord.js');
+const { ApplicationCommandOptionType } = require('discord.js');
 const AutoRole = require('../../models/AutoRole');
 
 module.exports = {
@@ -91,7 +91,7 @@ module.exports = {
   },
 
   options: {
-    userPermissions: [PermissionFlagsBits.Administrator],
-    botPermissions: [PermissionFlagsBits.Administrator],
+    userPermissions: ['Administrator'],
+    botPermissions: ['Administrator'],
   },
 };

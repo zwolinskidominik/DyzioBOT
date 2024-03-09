@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
 const ms = require('ms');
 
 module.exports = {
@@ -161,7 +161,7 @@ module.exports = {
   },
 
   options: {
-    permissionsRequired: [PermissionFlagsBits.MuteMembers],
-    botPermissions: [PermissionFlagsBits.MuteMembers],
+    permissionsRequired: ['MuteMembers'],
+    botPermissions: ['MuteMembers'],
   },
 };

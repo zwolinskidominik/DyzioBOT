@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, PermissionFlagsBits } = require('discord.js');
+const { ApplicationCommandOptionType } = require('discord.js');
 
 module.exports = {
   data: {
@@ -19,7 +19,7 @@ module.exports = {
     ],
   },
 
-  run: async ({ interaction, client, handler }) => {
+  run: async ({ interaction }) => {
     const targetUserId = interaction.options.get('target-user').value;
     const reason = interaction.options.get('reason')?.value || 'Brak';
 
@@ -71,7 +71,7 @@ module.exports = {
   },
 
   options: {
-    permissionsRequired: [PermissionFlagsBits.BanMembers],
-    botPermissions: [PermissionFlagsBits.BanMembers],
+    permissionsRequired: ['BanMembers'],
+    botPermissions: ['BanMembers'],
   },
 };

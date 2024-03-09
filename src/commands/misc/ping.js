@@ -9,7 +9,7 @@ module.exports = {
     const reply = await interaction.fetchReply();
     const ping = reply.createdTimestamp - interaction.createdTimestamp;
     interaction.editReply(
-      `Pong! Client ${ping}ms | Websocket: ${client.ws.ping}ms`
+      `Pong! Klient ${ping}ms | Websocket: ${client.ws.ping}ms`
     );
   },
 };
