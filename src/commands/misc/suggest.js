@@ -93,7 +93,7 @@ module.exports = {
                 })
                 .addFields([
                     { name: 'Sugestia', value: suggestionText},
-                    { name: 'Status', value: '⏳ Pending'},
+                    { name: 'Status', value: '⏳ Oczekująca'},
                     { name: 'Głosy', value: formatResults() }
                 ])
                 .setColor('Yellow');
