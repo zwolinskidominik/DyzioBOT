@@ -1,6 +1,5 @@
 require('dotenv').config();
 const guildMemberAddEvent = require('./events/guildMemberAdd/autoRole.js');
-const interactionCreateEvent = require('./events/interactionCreate/handleSuggestions.js');
 const { Client, IntentsBitField } = require('discord.js');
 const { CommandKit } = require('commandkit');
 const mongoose = require('mongoose');

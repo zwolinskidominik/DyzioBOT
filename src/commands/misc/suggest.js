@@ -100,13 +100,13 @@ module.exports = {
     
                 // Buttons
             const upvoteButton = new ButtonBuilder()
-                .setEmoji('👍')
+                .setEmoji('<:pingu_yes:1162408115677958184>')
                 .setLabel('Za')
                 .setStyle(ButtonStyle.Primary)
                 .setCustomId(`suggestion.${newSuggestion.suggestionId}.upvote`);
     
             const downvoteButton = new ButtonBuilder()
-                .setEmoji('👎')
+                .setEmoji('<:pingu_no:1162408119196995696>')
                 .setLabel('Przeciw')
                 .setStyle(ButtonStyle.Primary)
                 .setCustomId(`suggestion.${newSuggestion.suggestionId}.downvote`);
