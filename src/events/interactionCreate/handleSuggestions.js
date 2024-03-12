@@ -20,6 +20,13 @@ module.exports = async (interaction) => {
 
         const targetSuggestion = await Suggestion.findOne({ suggestionId });
         const targetMessage = await interaction.channel.messages.fetch(targetSuggestion.messageId);
+
+        // Check if targetMessage has embeds
+        if (!targetMessage.embeds.length) {
+            console.error('Target message does not contain any embeds.');
+            return;
+        }
+
         const targetMessageEmbed = targetMessage.embeds[0];
 
         if (action === 'upvote') {
@@ -36,7 +43,7 @@ module.exports = async (interaction) => {
 
             interaction.editReply('Oddano głos na tak!');
 
-            targetMessageEmbed.fields[2].value = formatResults(
+            targetMessageEmbed.fields[1].value = formatResults(
                 targetSuggestion.upvotes, 
                 targetSuggestion.downvotes,
             );
@@ -62,7 +69,7 @@ module.exports = async (interaction) => {
 
             interaction.editReply('Oddano głos na nie!');
 
-            targetMessageEmbed.fields[2].value = formatResults(
+            targetMessageEmbed.fields[1].value = formatResults(
                 targetSuggestion.upvotes, 
                 targetSuggestion.downvotes,
             );
