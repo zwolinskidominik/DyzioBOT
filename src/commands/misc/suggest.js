@@ -93,44 +93,30 @@ module.exports = {
                 })
                 .addFields([
                     { name: 'Sugestia', value: suggestionText},
-                    { name: 'Status', value: '⏳ Oczekująca'},
                     { name: 'Głosy', value: formatResults() }
                 ])
-                .setColor('Yellow');
+                .setColor('#2B2D31');
     
                 // Buttons
             const upvoteButton = new ButtonBuilder()
                 .setEmoji('<:pingu_yes:1162408115677958184>')
                 .setLabel('Za')
-                .setStyle(ButtonStyle.Primary)
+                .setStyle(ButtonStyle.Secondary)
                 .setCustomId(`suggestion.${newSuggestion.suggestionId}.upvote`);
     
             const downvoteButton = new ButtonBuilder()
                 .setEmoji('<:pingu_no:1162408119196995696>')
                 .setLabel('Przeciw')
-                .setStyle(ButtonStyle.Primary)
+                .setStyle(ButtonStyle.Secondary)
                 .setCustomId(`suggestion.${newSuggestion.suggestionId}.downvote`);
-    
-            const approveButton = new ButtonBuilder()
-                .setEmoji('✅')
-                .setLabel('Zatwierdź')
-                .setStyle(ButtonStyle.Success)
-                .setCustomId(`suggestion.${newSuggestion.suggestionId}.approve`);
-    
-            const rejectButton = new ButtonBuilder()
-                .setEmoji('🗑️')
-                .setLabel('Odrzuć')
-                .setStyle(ButtonStyle.Danger)
-                .setCustomId(`suggestion.${newSuggestion.suggestionId}.reject`);
     
             // Rows
             const firstRow = new ActionRowBuilder().addComponents(upvoteButton, downvoteButton);
-            const secondRow = new ActionRowBuilder().addComponents(approveButton, rejectButton);
     
             suggestionMessage.edit({
-                content: `${interaction.user} Sugestia utworzona!`,
+                content: ``,
                 embeds: [suggestionEmbed],
-                components: [firstRow, secondRow],
+                components: [firstRow],
             });
         } catch (error) {
             console.log(`Error in /suggest: ${error}`);

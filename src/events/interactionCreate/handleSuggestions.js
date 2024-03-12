@@ -22,52 +22,6 @@ module.exports = async (interaction) => {
         const targetMessage = await interaction.channel.messages.fetch(targetSuggestion.messageId);
         const targetMessageEmbed = targetMessage.embeds[0];
 
-        if (action === 'approve') {
-            if (!interaction.memberPermissions.has('Administrator')) {
-                await interaction.editReply('Nie masz uprawnień do zaakceptowania sugestii.');
-                return;
-            }
-
-            targetSuggestion.status = 'approved';
-
-            targetMessageEmbed.data.color = 0x84e660;
-            targetMessageEmbed.fields[1].value = '✅ Zatwierdzona';
-
-            await targetSuggestion.save();
-
-            await interaction.editReply('Sugestia zatwierdzona!');
-
-            targetMessage.edit({
-                embeds: [targetMessageEmbed],
-                components: [targetMessage.components[0]],
-            });
-
-            return;
-        }
-
-        if (action === 'reject') {
-            if (!interaction.memberPermissions.has('Administrator')) {
-                await interaction.editReply('Nie masz uprawnień do odrzucania sugestii.');
-                return;
-            }
-
-            targetSuggestion.status = 'rejected';
-
-            targetMessageEmbed.data.color = 0xff6161;
-            targetMessageEmbed.fields[1].value = '❌ Odrzucona';
-
-            await targetSuggestion.save();
-
-            interaction.editReply('Sugestia odrzucona!');
-
-            targetMessage.edit({
-                embeds: [targetMessageEmbed],
-                components: [targetMessage.components[0]],
-            });
-
-            return;
-        }
-
         if (action === 'upvote') {
             const hasVoted = targetSuggestion.upvotes.includes(interaction.user.id) || targetSuggestion.downvotes.includes(interaction.user.id);
 
