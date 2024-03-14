@@ -84,6 +84,12 @@ module.exports = {
             await newSuggestion.save();
     
             modalInteraction.editReply('Sugestia utworzona!');
+
+            await interaction.channel.threads.create({
+                name: `${suggestionText}`,
+                autoArchiveDuration: 60,
+                startMessage: suggestionMessage,
+            });
     
             //Suggestion embed
             const suggestionEmbed = new EmbedBuilder()
@@ -118,6 +124,7 @@ module.exports = {
                 embeds: [suggestionEmbed],
                 components: [firstRow],
             });
+
         } catch (error) {
             console.log(`Error in /suggest: ${error}`);
         }
