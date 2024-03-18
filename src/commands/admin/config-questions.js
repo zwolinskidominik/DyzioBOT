@@ -5,6 +5,7 @@ module.exports = {
     run: async ({ interaction }) => {
         const subcommand = interaction.options.getSubcommand();
         const channel = interaction.options.getChannel('channel');
+        const pingRole = interaction.options.getRole('ping_role');
 
         if (subcommand === 'add') {
             const existingConfiguration = await QuestionConfiguration.findOne({ guildId: interaction.guildId });
@@ -15,6 +16,7 @@ module.exports = {
                     return;
                 }
                 existingConfiguration.questionChannelId = channel.id;
+                existingConfiguration.pingRoleId = pingRole ? pingRole.id : null;
                 await existingConfiguration.save();
                 await interaction.reply(`Zaktualizowano kanał pytań dnia na ${channel}.`);
                 return;
@@ -23,6 +25,7 @@ module.exports = {
             const newConfiguration = new QuestionConfiguration({
                 guildId: interaction.guildId,
                 questionChannelId: channel.id,
+                pingRoleId: pingRole ? pingRole.id : null,
             });
             await newConfiguration.save();
             await interaction.reply(`Ustawiono kanał pytań dnia na ${channel}.`);
@@ -38,6 +41,7 @@ module.exports = {
             }
 
             configuration.questionChannelId = null;
+            configuration.pingRoleId = null;
             await configuration.save();
             await interaction.reply(`Usunięto kanał pytań dnia.`);
             return;
@@ -62,6 +66,12 @@ module.exports = {
             .setDescription('Kanał, który chcesz dodać.')
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
+        )
+        .addRoleOption((option) =>
+          option
+            .setName('ping_role')
+            .setDescription('Rola, która będzie pingowana przy dodawaniu pytania dnia.')
+            .setRequired(false)
         )
     )
     .addSubcommand((subcommand) => 
