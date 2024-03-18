@@ -79,7 +79,7 @@ module.exports = {
     },
 
     options: {
-        devOnly: true,
+        devOnly: false,
         userPermissions: ['Administrator'],
         botPermissions: ['Administrator'],
         deleted: true,
