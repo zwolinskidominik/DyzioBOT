@@ -32,9 +32,15 @@ module.exports = async (message) => {
 
     await newSuggestion.save();
 
+    let threadName = suggestionText;
+
+    if (threadName.length > 100) {
+      threadName = threadName.slice(0, 97) + '...';
+    }
+
     await message.channel.threads.create({
-      name: `${suggestionText}`,
-      autoArchiveDuration: 60,
+      name: threadName,
+      autoArchiveDuration: 1440,
       type: ChannelType.PublicThread,
       startMessage: suggestionMessage,
     });

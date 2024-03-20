@@ -5,7 +5,7 @@ const cron = require('node-cron');
 const { GUILD_ID } = process.env;
 
 module.exports = async (client) => {
-    const job = cron.schedule('0 * * * * *', async () => { // Wykona się o 10:00 każdego dnia
+    const job = cron.schedule('0 10 * * * *', async () => { // Wykona się o 10:00 każdego dnia
         try {
             const questionConfig = await QuestionConfiguration.findOne({ guildId: GUILD_ID });
 
@@ -28,14 +28,20 @@ module.exports = async (client) => {
 
                 let question;
 
+                let threadName = randomQuestion.content;
+
+                if (threadName.length > 100) {
+                    threadName = threadName.slice(0, 97) + '...';
+                }
+
                 if (questionConfig.pingRoleId) {
                     question = await questionChannel.send(`<@&${questionConfig.pingRoleId}>\n\n**Pytanie dnia:**\n${randomQuestion.content}`);
                 } else {
                     question = await questionChannel.send(`**Pytanie dnia:**\n${randomQuestion.content}`);
                 }
 
-                await questionChannel.threads.create({
-                    name: `${randomQuestion.content}`,
+                const thread = await questionChannel.threads.create({
+                    name: threadName,
                     autoArchiveDuration: 1440,
                     type: ChannelType.PublicThread,
                     startMessage: question,
