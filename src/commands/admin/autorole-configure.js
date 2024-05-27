@@ -1,9 +1,6 @@
 const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
 const AutoRole = require('../../models/AutoRole');
 
-const errorEmbed = new EmbedBuilder()
-  .setColor('#FF0000');
-
 module.exports = {
   data: {
     name: 'autorole-configure',
@@ -50,7 +47,9 @@ module.exports = {
 
   run: async ({ interaction }) => {
     if (!interaction.inGuild()) {
-      errorEmbed.setDescription('You can only run this command inside a server.');
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setDescription('You can only run this command inside a server.');
       await interaction.reply({ embeds: [errorEmbed] });
       return;
     }
@@ -58,12 +57,15 @@ module.exports = {
     const roles = [];
     for (const role of interaction.options.data) {
       const selectedRole = role.role;
-        // Check if the selected role is @everyone
-      if (selectedRole.id === interaction.guild?.id) {
-        errorEmbed.setDescription('Nie można skonfigurować roli `@everyone`.');
+      // Check if the selected role is @everyone
+      if (selectedRole.id === interaction.guild.id) {
+        const errorEmbed = new EmbedBuilder()
+          .setColor('#FF0000')
+          .setDescription('Nie można skonfigurować roli `@everyone`.');
         await interaction.reply({ embeds: [errorEmbed] });
         return;
       }
+      roles.push(selectedRole.id);
     }
 
     try {
@@ -85,9 +87,14 @@ module.exports = {
       const successEmbed = new EmbedBuilder()
         .setColor('#00BFFF')
         .setDescription('Autorole zostały skonfigurowane. Aby wyłączyć, uruchom `autorole-disable`');
-      await interaction.reply({ embeds: [successEmbed] });
+      await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.log(`Wystąpił błąd podczas konfigurowania autoroli: ${error}`);
+
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setDescription('Wystąpił błąd podczas konfigurowania autoroli.');
+      await interaction.editReply({ embeds: [errorEmbed] });
     }
   },
 

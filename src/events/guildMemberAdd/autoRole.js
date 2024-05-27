@@ -11,34 +11,36 @@ module.exports = async (client, member) => {
     const guild = member.guild;
     if (!guild) return;
 
-    // Check if a roles are configured
-    const autoRole = await AutoRole.findOne({ guildId: guild.id });
+    // Check if roles are configured
+    const autoRoleConfig = await AutoRole.findOne({ guildId: guild.id });
 
-    if (autoRole && autoRole.roleIds.length > 0) {
+    if (autoRoleConfig && autoRoleConfig.roleIds.length > 0) {
       // Check if the user who joined is a bot
       if (member.user.bot) {
         // Get the 'Bot' role with specified ID
-        const botRoleId = autoRole.roleIds[0];
+        const botRoleId = autoRoleConfig.roleIds[0];
         const botRole = guild.roles.cache.get(botRoleId);
 
         // Check if the bot role exists
         if (botRole) {
           // Add the bot role to the bot
-          await member.roles.add(botRole).catch((error) => {
-            console.log(`Error adding bot role to ${member.user.tag} : ${error}`);
-          });
+          await member.roles.add(botRole);
           console.log(`Bot role added successfully to ${member.user.tag}`);
         } else {
           console.log(`Bot role does not exist or is not configured for ${guild.name}`);
         }
       } else {
-        // Get the 'User' role with specified ID
-        const userRoleIds = autoRole.roleIds.slice(1);
+        // Get the 'User' roles with specified IDs
+        const userRoleIds = autoRoleConfig.roleIds.slice(1);
 
         for (const roleId of userRoleIds) {
-          await member.roles.add(roleId).catch((error) => {
-            console.log(`Error adding role ${roleId} : ${error}`);
-          });
+          const userRole = guild.roles.cache.get(roleId);
+          if (userRole) {
+            await member.roles.add(userRole);
+            console.log(`Role ${userRole.name} added successfully to ${member.user.tag}`);
+          } else {
+            console.log(`Role with ID ${roleId} does not exist in guild ${guild.name}`);
+          }
         }
       }
     }

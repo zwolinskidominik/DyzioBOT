@@ -1,12 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const Birthday = require('../../../models/Birthday');
 
-const errorEmbed = new EmbedBuilder()
-  .setColor('#FF0000');
-
-const successEmbed = new EmbedBuilder()
-  .setColor('#00BFFF');
-
 module.exports = {
   data: {
     name: 'next-birthdays',
@@ -19,7 +13,7 @@ module.exports = {
 
       const guildId = interaction.guild.id;
       const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0); // Set to local midnight
 
       const birthdays = await Birthday.find({ guildId }).sort({ date: 1 });
 
@@ -51,9 +45,11 @@ module.exports = {
         .sort((a, b) => a.date - b.date)
         .slice(0, 10);
 
+      const successEmbed = new EmbedBuilder().setColor('#00BFFF');
+
       if (upcomingBirthdays.length === 0) {
         successEmbed.setDescription('Brak nadchodzących urodzin.');
-        await interaction.reply({ embeds: [successEmbed] });
+        await interaction.editReply({ embeds: [successEmbed] });
         return;
       }
 
@@ -72,12 +68,14 @@ module.exports = {
             .join('\n\n')
         );
 
-      await interaction.reply({ embeds: [successEmbed] });
+      await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.error(`Błąd podczas pobierania nadchodzących urodzin: ${error}`);
 
-      errorEmbed.setDescription('Wystąpił błąd podczas pobierania nadchodzących urodzin.');
-      await interaction.reply({ embeds: [errorEmbed] });
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setDescription('Wystąpił błąd podczas pobierania nadchodzących urodzin.');
+      await interaction.editReply({ embeds: [errorEmbed] });
     }
   },
 };

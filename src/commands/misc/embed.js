@@ -50,31 +50,38 @@ module.exports = {
         ],
     },
     run: async ({ interaction }) => {
-        const title = interaction.options.get('title').value;
-        const description = interaction.options.get('description').value;
-        const color = interaction.options.get('color')?.value || '#000000';
-        const title2 = interaction.options.get('title2')?.value || ' ';
-        const description2 = interaction.options.get('description2')?.value || ' ';
-        const title3 = interaction.options.get('title3')?.value || ' ';
-        const description3 = interaction.options.get('description3')?.value || ' ';
+        const title = interaction.options.getString('title');
+        const description = interaction.options.getString('description');
+        const color = interaction.options.getString('color') || '#000000';
+        const title2 = interaction.options.getString('title2') || null;
+        const description2 = interaction.options.getString('description2') || null;
+        const title3 = interaction.options.getString('title3') || null;
+        const description3 = interaction.options.getString('description3') || null;
+
         try {
+            await interaction.deferReply({ ephemeral: true });
+
             const embed = new EmbedBuilder()
-                .setTitle(`${title}`)
-                .setDescription(`${description}`)
+                .setTitle(title)
+                .setDescription(description)
                 .setThumbnail(interaction.user.avatarURL())
-                .addFields(
-                { name: '\u200B', value: ' '},
-                { name: `${title2}`, value: `${description2}`, inline: true },
-                { name: `${title3}`, value: `${description3}`, inline: true })
-                .setColor(`${color}`)
+                .setColor(color)
                 .setTimestamp()
                 .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });
 
-            interaction.deferReply();
-            interaction.deleteReply();
-            interaction.channel.send({ embeds: [embed] });
+            // Conditionally add fields only if provided
+            if (title2 && description2) {
+                embed.addFields({ name: title2, value: description2, inline: true });
+            }
+            if (title3 && description3) {
+                embed.addFields({ name: title3, value: description3, inline: true });
+            }
+
+            await interaction.editReply({ content: 'Embed został utworzony.', ephemeral: true });
+            await interaction.channel.send({ embeds: [embed] });
         } catch (error) {
-            console.log(error);
+            console.error(error);
+            await interaction.editReply({ content: 'Wystąpił błąd podczas tworzenia embeda.', ephemeral: true });
         }
     },
 
@@ -82,6 +89,6 @@ module.exports = {
         devOnly: false,
         userPermissions: ['Administrator'],
         botPermissions: ['Administrator'],
-        deleted: true,
+        deleted: false,
     },
 };

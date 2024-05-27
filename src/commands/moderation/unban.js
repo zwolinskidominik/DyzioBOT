@@ -9,54 +9,55 @@ module.exports = {
       description: 'Użytkownik, którego chcesz odbanować.',
       required: true,
       type: ApplicationCommandOptionType.String,
-    }, ],
+    }],
   },
   run: async ({ interaction }) => {
-    const targetUserId = interaction.options.get('target-user').value;
-
-    await interaction.deferReply();
-
-    const bannedUsers = await interaction.guild.bans.fetch();
-    let bannedId = bannedUsers.find((user) => user.user.id === targetUserId);
-
-    const errorEmbed = new EmbedBuilder()
-     .setColor('#FF0000')
-     .setTimestamp()
-     .setFooter({ text: interaction.guild.name });
-  
-    if (!bannedId) {
-      errorEmbed.setDescription('**Nie znaleziono użytkownika na liście banów.**');
-
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
-    }
-
-    const targetUser = bannedId.user.username;
-
-    // Unban the target user
     try {
+      const targetUserId = interaction.options.get('target-user').value;
+
+      await interaction.deferReply();
+
+      const bannedUsers = await interaction.guild.bans.fetch();
+      const bannedUser = bannedUsers.find((user) => user.user.id === targetUserId);
+
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
+
+      if (!bannedUser) {
+        errorEmbed.setDescription('**Nie znaleziono użytkownika na liście banów.**');
+        await interaction.editReply({ embeds: [errorEmbed] });
+        return;
+      }
+
+      const targetUser = bannedUser.user;
+
+      // Unban the target user
       await interaction.guild.bans.remove(targetUserId);
 
       const successEmbed = new EmbedBuilder()
         .setColor('#00BFFF')
-        .setDescription(`Użytkownik **${targetUser}** został odbanowany`)
+        .setDescription(`Użytkownik **${targetUser.username}** został odbanowany`)
         .addFields(
-          { name: 'Moderator:', value: `${interaction.user}`, inline: true },
-          { name: 'Powód:', value: `${reason}`, inline: true }
+          { name: 'Moderator:', value: `${interaction.user}`, inline: true }
         )
-        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
 
-      interaction.editReply({ embeds: [successEmbed] });
+      await interaction.editReply({ embeds: [successEmbed] });
 
     } catch (error) {
       console.log(`Wystąpił błąd podczas próby odbanowania: ${error}`);
 
-      errorEmbed.setDescription('**Wystąpił błąd podczas odbanowywania użytkownika.**');
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setDescription('**Wystąpił błąd podczas odbanowywania użytkownika.**')
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
 
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
+      await interaction.editReply({ embeds: [errorEmbed] });
     }
   },
 

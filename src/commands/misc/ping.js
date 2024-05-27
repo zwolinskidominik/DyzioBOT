@@ -5,11 +5,16 @@ module.exports = {
   },
   
   run: async ({ interaction, client }) => {
-    await interaction.deferReply();
-    const reply = await interaction.fetchReply();
-    const ping = reply.createdTimestamp - interaction.createdTimestamp;
-    interaction.editReply(
-      `🏓 Pong! Klient ${ping}ms | Websocket: ${client.ws.ping}ms`
-    );
+    try {
+      await interaction.deferReply();
+      const reply = await interaction.fetchReply();
+      const ping = reply.createdTimestamp - interaction.createdTimestamp;
+      await interaction.editReply(
+        `🏓 Pong! Klient ${ping}ms | Websocket: ${client.ws.ping}ms`
+      );
+    } catch (error) {
+      console.error('Błąd podczas wykonywania komendy ping:', error);
+      await interaction.editReply({ content: 'Wystąpił błąd podczas wykonywania komendy.', ephemeral: true });
+    }
   },
 };

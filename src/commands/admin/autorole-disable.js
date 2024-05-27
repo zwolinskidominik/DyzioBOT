@@ -1,9 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const AutoRole = require('../../models/AutoRole');
 
-const errorEmbed = new EmbedBuilder()
-  .setColor('#FF0000');
-
 module.exports = {
   data: {
     name: 'autorole-disable',
@@ -12,7 +9,9 @@ module.exports = {
 
   run: async ({ interaction }) => {
     if (!interaction.inGuild()) {
-      errorEmbed.setDescription('You can only run this command inside a server.');
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setDescription('You can only run this command inside a server.');
       await interaction.reply({ embeds: [errorEmbed] });
       return;
     }
@@ -21,8 +20,10 @@ module.exports = {
       await interaction.deferReply();
 
       if (!(await AutoRole.exists({ guildId: interaction.guild.id }))) {
-        errorEmbed.setDescription('Autorole nie są skonfigurowane. Aby skonfigurować, uruchom `/autorole-configure`.');
-        await interaction.reply({ embeds: [errorEmbed] });
+        const errorEmbed = new EmbedBuilder()
+          .setColor('#FF0000')
+          .setDescription('Autorole nie są skonfigurowane. Aby skonfigurować, uruchom `/autorole-configure`.');
+        await interaction.editReply({ embeds: [errorEmbed] });
         return;
       }
 
@@ -31,9 +32,14 @@ module.exports = {
       const successEmbed = new EmbedBuilder()
         .setColor('#00BFFF')
         .setDescription('Autorole zostały wyłączone dla tego serwera. Aby skonfigurować, uruchom `/autorole-configure`.');
-      await interaction.reply({ embeds: [successEmbed] });
+      await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.log(`Wystąpił błąd podczas wyłączania autoroli dla tego serwera: ${error}`);
+
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setDescription('Wystąpił błąd podczas wyłączania autoroli.');
+      await interaction.editReply({ embeds: [errorEmbed] });
     }
   },
 

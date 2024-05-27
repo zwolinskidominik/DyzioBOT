@@ -7,41 +7,42 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    let channel = interaction.channel;
+    const channel = interaction.channel;
 
-    let sayModal = new ModalBuilder()
-      .setCustomId("say")
+    const sayModal = new ModalBuilder()
+      .setCustomId("sayModal")
       .setTitle("Napisz coś poprzez bota");
 
-    let sayQuestion = new TextInputBuilder()
-      .setCustomId("say")
+    const sayQuestion = new TextInputBuilder()
+      .setCustomId("sayMessage")
       .setLabel("Napisz coś")
       .setPlaceholder("Wpisz cokolwiek...")
       .setStyle(TextInputStyle.Paragraph)
       .setRequired(true);
 
-    let sayEmbed = new TextInputBuilder()
-      .setCustomId("embed")
+    const sayEmbed = new TextInputBuilder()
+      .setCustomId("embedMode")
       .setLabel("Tryb embed on/off?")
       .setPlaceholder("on/off")
       .setStyle(TextInputStyle.Short)
       .setRequired(false);
 
-    let say = new ActionRowBuilder().addComponents(sayQuestion);
-    let sayemb = new ActionRowBuilder().addComponents(sayEmbed);
+    const sayActionRow = new ActionRowBuilder().addComponents(sayQuestion);
+    const embedActionRow = new ActionRowBuilder().addComponents(sayEmbed);
 
-    sayModal.addComponents(say, sayemb);
+    sayModal.addComponents(sayActionRow, embedActionRow);
 
     await interaction.showModal(sayModal);
 
     try {
-      let response = await interaction.awaitModalSubmit({ time: 300000 });
-      let message = response.fields.getTextInputValue("say");
-      let embedSay = response.fields.getTextInputValue("embed");
+      const response = await interaction.awaitModalSubmit({ time: 300000 });
+
+      const message = response.fields.getTextInputValue("sayMessage");
+      const embedSay = response.fields.getTextInputValue("embedMode");
 
       const embed = new EmbedBuilder().setDescription(message).setColor('#00BFFF');
 
-      if (embedSay === "on" || embedSay === "On" || embedSay === "ON") {
+      if (embedSay && (embedSay.toLowerCase() === "on")) {
         await channel.send({ embeds: [embed] });
       } else {
         await channel.send(message);
@@ -52,8 +53,13 @@ module.exports = {
         ephemeral: true,
       });
     } catch (error) {
-      console.error(error);
-      return;
+      console.error("Błąd podczas wysyłania wiadomości:", error);
+      if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
+        await interaction.followUp({
+          content: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.',
+          ephemeral: true,
+        });
+      }
     }
   },
 

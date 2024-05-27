@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
+const { ApplicationCommandOptionType, EmbedBuilder, ChannelType } = require("discord.js");
 const BirthdayConfiguration = require("../../../models/BirthdayConfiguration");
 
 module.exports = {
@@ -11,6 +11,7 @@ module.exports = {
         description: "Kanał do wysyłania wiadomości urodzinowych.",
         required: true,
         type: ApplicationCommandOptionType.Channel,
+        channelTypes: [ChannelType.GuildText], // Ensure it's a text channel
       },
     ],
   },
@@ -22,7 +23,7 @@ module.exports = {
     try {
       await interaction.deferReply();
 
-      const birthdayConfig = await BirthdayConfiguration.findOne({ guildId });
+      let birthdayConfig = await BirthdayConfiguration.findOne({ guildId });
       if (birthdayConfig) {
         birthdayConfig.birthdayChannelId = birthdayChannelId;
       } else {
@@ -37,14 +38,14 @@ module.exports = {
       const successEmbed = new EmbedBuilder()
         .setColor('#00BFFF')
         .setDescription('Kanał do wysyłania wiadomości urodzinowych został ustawiony.');
-      await interaction.reply({ embeds: [successEmbed] });
+      await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.error(`Błąd podczas zapisywania konfiguracji kanału: ${error}`);
 
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
         .setDescription('Wystąpił błąd podczas zapisywania konfiguracji kanału.');
-      await interaction.reply({ embeds: [errorEmbed] });
+      await interaction.editReply({ embeds: [errorEmbed] });
     }
   },
 };

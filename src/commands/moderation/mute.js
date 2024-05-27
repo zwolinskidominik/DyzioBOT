@@ -8,7 +8,7 @@ module.exports = {
     options: [
       {
         name: 'target-user',
-        description: "Użytkownik, którego chcesz wyciszyć.",
+        description: 'Użytkownik, którego chcesz wyciszyć.',
         type: ApplicationCommandOptionType.User,
         required: true,
       },
@@ -42,101 +42,93 @@ module.exports = {
       },
       {
         name: 'reason',
-        description: "Powód wyciszenia.",
+        description: 'Powód wyciszenia.',
         type: ApplicationCommandOptionType.String,
       },
     ],
   },
 
   run: async ({ interaction }) => {
-    const targetUser = interaction.options.get('target-user').value;
-    const duration = interaction.options.get('duration').value;
-    const reason = interaction.options.get('reason')?.value || 'Brak powodu.';
-
-    await interaction.deferReply();
-
-    const member = await interaction.guild.members.fetch(targetUser);
-
-    const errorEmbed = new EmbedBuilder()
-      .setColor('#FF0000')
-      .setTimestamp()
-      .setFooter({ text: interaction.guild.name });
-
-    const successEmbed = new EmbedBuilder()
-      .setColor('#00BFFF')
-      .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-      .setTimestamp()
-      .setFooter({ text: interaction.guild.name });
-
-    if (!member) {
-      errorEmbed.setDescription('**Taki użytkownik nie istnieje na tym serwerze.**');
-
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
-    }
-
-    if (member.id === interaction.guild.ownerId) {
-      errorEmbed.setDescription('**Nie możesz wyciszyć tego użytkownika, ponieważ jest on właścicielem serwera.**');
-
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
-    }
-
-    if (member.user.bot) {
-      errorEmbed.setDescription("**Nie mogę wyciszyć bota.**");
-
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
-    }
-
-    const msDuration = ms(duration);
-
-    if (isNaN(msDuration)) {
-      errorEmbed.setDescription("**Podaj prawidłową wartość czasu trwania wyciszenia.**");
-
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
-    }
-
-    if (msDuration < 5000 || msDuration > 2.419e9) {
-      errorEmbed.setDescription('**Czas wyciszenia nie może być krótszy niż 5 sekund oraz dłuższy niż 28 dni.**');
-
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
-    }
-
-    const targetUserRolePosition = member.roles.highest.position; //Highest role of the target user
-    const requestUserRolePosition = interaction.member.roles.highest.position; //Highest role of the user running the cmd
-    const botRolePosition = interaction.guild.members.me.roles.highest.position; //Highest role of the bot
-
-    if (targetUserRolePosition >= requestUserRolePosition) {
-      errorEmbed.setDescription("**Nie możesz wyciszyć użytkownika, ponieważ ma taką samą lub wyższą rolę.**");
-
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
-    }
-
-    if (targetUserRolePosition >= botRolePosition) {
-      errorEmbed.setDescription("**Nie mogę wyciszyć tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.**");
-
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
-    }
-
     try {
+      const targetUserId = interaction.options.get('target-user').value;
+      const duration = interaction.options.get('duration').value;
+      const reason = interaction.options.get('reason')?.value || 'Brak powodu.';
+
+      await interaction.deferReply();
+
+      const member = await interaction.guild.members.fetch(targetUserId);
+
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
+
+      const successEmbed = new EmbedBuilder()
+        .setColor('#00BFFF')
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
+
+      if (!member) {
+        errorEmbed.setDescription('**Taki użytkownik nie istnieje na tym serwerze.**');
+        await interaction.editReply({ embeds: [errorEmbed] });
+        return;
+      }
+
+      if (member.id === interaction.guild.ownerId) {
+        errorEmbed.setDescription('**Nie możesz wyciszyć tego użytkownika, ponieważ jest on właścicielem serwera.**');
+        await interaction.editReply({ embeds: [errorEmbed] });
+        return;
+      }
+
+      if (member.user.bot) {
+        errorEmbed.setDescription('**Nie mogę wyciszyć bota.**');
+        await interaction.editReply({ embeds: [errorEmbed] });
+        return;
+      }
+
+      const msDuration = ms(duration);
+
+      if (isNaN(msDuration)) {
+        errorEmbed.setDescription('**Podaj prawidłową wartość czasu trwania wyciszenia.**');
+        await interaction.editReply({ embeds: [errorEmbed] });
+        return;
+      }
+
+      if (msDuration < 5000 || msDuration > 2.419e9) {
+        errorEmbed.setDescription('**Czas wyciszenia nie może być krótszy niż 5 sekund oraz dłuższy niż 28 dni.**');
+        await interaction.editReply({ embeds: [errorEmbed] });
+        return;
+      }
+
+      const targetUserRolePosition = member.roles.highest.position; // Highest role of the target user
+      const requestUserRolePosition = interaction.member.roles.highest.position; // Highest role of the user running the cmd
+      const botRolePosition = interaction.guild.members.me.roles.highest.position; // Highest role of the bot
+
+      if (targetUserRolePosition >= requestUserRolePosition) {
+        errorEmbed.setDescription('**Nie możesz wyciszyć użytkownika, ponieważ ma taką samą lub wyższą rolę.**');
+        await interaction.editReply({ embeds: [errorEmbed] });
+        return;
+      }
+
+      if (targetUserRolePosition >= botRolePosition) {
+        errorEmbed.setDescription('**Nie mogę wyciszyć tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.**');
+        await interaction.editReply({ embeds: [errorEmbed] });
+        return;
+      }
+
       const { default: prettyMs } = await import('pretty-ms');
 
       if (member.isCommunicationDisabled()) {
         await member.timeout(msDuration, reason);
 
         successEmbed
-          .setDescription(`**Czas wyciszenia ${member} został zaktualizowany: **${prettyMs(msDuration)}**`)
+          .setDescription(`**Czas wyciszenia ${member} został zaktualizowany: ${prettyMs(msDuration)}**`)
           .addFields(
             { name: 'Moderator:', value: `${interaction.user}`, inline: true },
             { name: 'Powód:', value: `${reason}`, inline: true }
           );
 
-        interaction.editReply({ embeds: [successEmbed] });
+        await interaction.editReply({ embeds: [successEmbed] });
         return;
       }
 
@@ -149,14 +141,17 @@ module.exports = {
           { name: 'Powód:', value: `${reason}`, inline: true }
         );
 
-      interaction.editReply({ embeds: [successEmbed] });
+      await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.log(`Wystąpił błąd podczas wysyłania użytkownika na przerwę: ${error}`);
 
-      errorEmbed.setDescription('**Wystąpił błąd podczas wysyłania użytkownika na przerwę.**');
+      const errorEmbed = new EmbedBuilder()
+        .setColor('#FF0000')
+        .setDescription('**Wystąpił błąd podczas wysyłania użytkownika na przerwę.**')
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
 
-      interaction.editReply({ embeds: [errorEmbed] });
-      return;
+      await interaction.editReply({ embeds: [errorEmbed] });
     }
   },
 

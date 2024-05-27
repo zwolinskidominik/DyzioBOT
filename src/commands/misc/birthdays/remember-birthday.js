@@ -1,9 +1,6 @@
 const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
 const Birthday = require('../../../models/Birthday');
 
-const errorEmbed = new EmbedBuilder()
-  .setColor('#FF0000');
-
 module.exports = {
   data: {
     name: 'remember-birthday',
@@ -28,6 +25,9 @@ module.exports = {
 
     let date, yearSpecified = true;
 
+    const errorEmbed = new EmbedBuilder()
+      .setColor('#FF0000');
+
     if (datePatternWithYear.test(dateString)) {
       const [day, month, year] = dateString.split('-');
       date = new Date(`${year}-${month}-${day}`);
@@ -44,7 +44,7 @@ module.exports = {
     try {
       await interaction.deferReply();
 
-      const birthday = await Birthday.findOne({ userId, guildId });
+      let birthday = await Birthday.findOne({ userId, guildId });
 
       if (birthday) {
         birthday.date = date;
@@ -69,12 +69,12 @@ module.exports = {
       const successEmbed = new EmbedBuilder()
         .setColor('#00BFFF')
         .setDescription(`Zanotowano, **kolejne** urodziny <@${userId}> już za **${diffDays}** dni, **${formattedDate}** 🎂.`);
-      await interaction.reply({ embeds: [successEmbed] });
+      await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.error(`Błąd podczas zapisywania daty urodzin: ${error}`);
 
       errorEmbed.setDescription('Wystąpił błąd podczas zapisywania daty urodzin.');
-      await interaction.reply({ embeds: [errorEmbed] });
+      await interaction.editReply({ embeds: [errorEmbed] });
     }
   },
 };
