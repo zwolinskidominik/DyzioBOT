@@ -9,7 +9,7 @@ module.exports = {
       {
         name: 'target-user',
         description: "Użytkownik, którego chcesz wyciszyć.",
-        type: ApplicationCommandOptionType.Mentionable,
+        type: ApplicationCommandOptionType.User,
         required: true,
       },
       {
@@ -56,6 +56,17 @@ module.exports = {
     await interaction.deferReply();
 
     const member = await interaction.guild.members.fetch(targetUser);
+
+    const errorEmbed = new EmbedBuilder()
+      .setColor('#FF0000')
+      .setTimestamp()
+      .setFooter({ text: interaction.guild.name });
+
+    const successEmbed = new EmbedBuilder()
+      .setColor('#00BFFF')
+      .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+      .setTimestamp()
+      .setFooter({ text: interaction.guild.name });
 
     if (!member) {
       errorEmbed.setDescription('**Taki użytkownik nie istnieje na tym serwerze.**');
@@ -111,17 +122,6 @@ module.exports = {
       interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
-
-    const errorEmbed = new EmbedBuilder()
-      .setColor('#FF0000')
-      .setTimestamp()
-      .setFooter({ text: interaction.guild.name });
-
-    const successEmbed = new EmbedBuilder()
-      .setColor('#00BFFF')
-      .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
-      .setTimestamp()
-      .setFooter({ text: interaction.guild.name });
 
     try {
       const { default: prettyMs } = await import('pretty-ms');

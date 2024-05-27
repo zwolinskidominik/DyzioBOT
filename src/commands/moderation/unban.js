@@ -19,6 +19,11 @@ module.exports = {
     const bannedUsers = await interaction.guild.bans.fetch();
     let bannedId = bannedUsers.find((user) => user.user.id === targetUserId);
 
+    const errorEmbed = new EmbedBuilder()
+     .setColor('#FF0000')
+     .setTimestamp()
+     .setFooter({ text: interaction.guild.name });
+  
     if (!bannedId) {
       errorEmbed.setDescription('**Nie znaleziono użytkownika na liście banów.**');
 
@@ -28,15 +33,11 @@ module.exports = {
 
     const targetUser = bannedId.user.username;
 
-    const errorEmbed = new EmbedBuilder()
-      .setColor('#FF0000')
-      .setTimestamp()
-      .setFooter({ text: interaction.guild.name });
     // Unban the target user
     try {
       await interaction.guild.bans.remove(targetUserId);
 
-      successEmbed
+      const successEmbed = new EmbedBuilder()
         .setColor('#00BFFF')
         .setDescription(`Użytkownik **${targetUser}** został odbanowany`)
         .addFields(

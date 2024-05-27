@@ -27,6 +27,11 @@ module.exports = {
 
     const targetUser = await interaction.guild.members.fetch(targetUserId);
 
+    const errorEmbed = new EmbedBuilder()
+      .setColor('#FF0000')
+      .setTimestamp()
+      .setFooter({ text: interaction.guild.name });
+
     if (!targetUser) {
       errorEmbed.setDescription('**Taki użytkownik nie istnieje na tym serwerze.**');
 
@@ -59,11 +64,6 @@ module.exports = {
       return;
     }
 
-    
-    const errorEmbed = new EmbedBuilder()
-      .setColor('#FF0000')
-      .setTimestamp()
-      .setFooter({ text: interaction.guild.name });
     // Ban the target user
     try {
       await targetUser.ban({ reason });
