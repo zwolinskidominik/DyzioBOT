@@ -80,7 +80,7 @@ module.exports = {
       await targetUser.ban({ reason });
 
       const successEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
+        .setColor('#00BFFF')
         .setDescription(`**Użytkownik ${targetUser} został zbanowany.**`)
         .addFields(
           { name: 'Moderator:', value: `${interaction.user}`, inline: true },

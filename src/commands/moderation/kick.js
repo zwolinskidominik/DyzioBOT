@@ -72,6 +72,7 @@ module.exports = {
           { name: 'Powód:', value: `${reason}`, inline: true }
         )
         .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
+        .setTimestamp()
         .setFooter({ text: `${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL({ dynamic: true }) });
 
       await interaction.editReply({ embeds: [successEmbed] });
