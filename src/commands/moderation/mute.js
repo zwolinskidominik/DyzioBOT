@@ -56,7 +56,7 @@ module.exports = {
 
       await interaction.deferReply();
 
-      const member = await interaction.guild.members.fetch(targetUserId);
+      const targetUser = await interaction.guild.members.fetch(targetUserId);
 
       const errorEmbed = new EmbedBuilder()
         .setColor('#FF0000')
@@ -68,19 +68,19 @@ module.exports = {
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
 
-      if (!member) {
+      if (!targetUser) {
         errorEmbed.setDescription('**Taki użytkownik nie istnieje na tym serwerze.**');
         await interaction.editReply({ embeds: [errorEmbed] });
         return;
       }
 
-      if (member.id === interaction.guild.ownerId) {
+      if (targetUser.id === interaction.guild.ownerId) {
         errorEmbed.setDescription('**Nie możesz wyciszyć tego użytkownika, ponieważ jest on właścicielem serwera.**');
         await interaction.editReply({ embeds: [errorEmbed] });
         return;
       }
 
-      if (member.user.bot) {
+      if (targetUser.user.bot) {
         errorEmbed.setDescription('**Nie mogę wyciszyć bota.**');
         await interaction.editReply({ embeds: [errorEmbed] });
         return;
@@ -100,7 +100,7 @@ module.exports = {
         return;
       }
 
-      const targetUserRolePosition = member.roles.highest.position; // Highest role of the target user
+      const targetUserRolePosition = targetUser.roles.highest.position; // Highest role of the target user
       const requestUserRolePosition = interaction.member.roles.highest.position; // Highest role of the user running the cmd
       const botRolePosition = interaction.guild.members.me.roles.highest.position; // Highest role of the bot
 
@@ -118,28 +118,30 @@ module.exports = {
 
       const { default: prettyMs } = await import('pretty-ms');
 
-      if (member.isCommunicationDisabled()) {
-        await member.timeout(msDuration, reason);
+      if (targetUser.isCommunicationDisabled()) {
+        await targetUser.timeout(msDuration, reason);
 
         successEmbed
-          .setDescription(`**Czas wyciszenia ${member} został zaktualizowany: ${prettyMs(msDuration)}**`)
+          .setDescription(`**Czas wyciszenia ${targetUser} został zaktualizowany: ${prettyMs(msDuration)}**`)
           .addFields(
             { name: 'Moderator:', value: `${interaction.user}`, inline: true },
             { name: 'Powód:', value: `${reason}`, inline: true }
-          );
+          )
+          .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }));
 
         await interaction.editReply({ embeds: [successEmbed] });
         return;
       }
 
-      await member.timeout(msDuration, reason);
+      await targetUser.timeout(msDuration, reason);
 
       successEmbed
-        .setDescription(`**${member} został wyciszony na okres ${prettyMs(msDuration)}**`)
+        .setDescription(`**${targetUser} został wyciszony na okres ${prettyMs(msDuration)}**`)
         .addFields(
           { name: 'Moderator:', value: `${interaction.user}`, inline: true },
           { name: 'Powód:', value: `${reason}`, inline: true }
-        );
+        )
+        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }));
 
       await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {

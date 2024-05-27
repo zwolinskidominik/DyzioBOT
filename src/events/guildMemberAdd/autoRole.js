@@ -37,7 +37,6 @@ module.exports = async (client, member) => {
           const userRole = guild.roles.cache.get(roleId);
           if (userRole) {
             await member.roles.add(userRole);
-            console.log(`Role ${userRole.name} added successfully to ${member.user.tag}`);
           } else {
             console.log(`Role with ID ${roleId} does not exist in guild ${guild.name}`);
           }

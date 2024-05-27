@@ -31,18 +31,18 @@ module.exports = {
         return;
       }
 
-      const targetUser = bannedUser.user;
+      const member = bannedUser.user;
 
       // Unban the target user
       await interaction.guild.bans.remove(targetUserId);
 
       const successEmbed = new EmbedBuilder()
         .setColor('#00BFFF')
-        .setDescription(`Użytkownik **${targetUser.username}** został odbanowany`)
+        .setDescription(`Użytkownik **${member.username}** został odbanowany`)
         .addFields(
           { name: 'Moderator:', value: `${interaction.user}`, inline: true }
         )
-        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+        .setThumbnail(member.displayAvatarURL({ dynamic: true }))
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
 
