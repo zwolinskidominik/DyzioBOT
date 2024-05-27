@@ -65,7 +65,7 @@ module.exports = {
       await targetUser.kick(reason);
 
       const successEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
+        .setColor('#00BFFF')
         .setDescription(`**Użytkownik ${targetUser} został wyrzucony.**`)
         .addFields(
           { name: 'Moderator:', value: `${interaction.user}`, inline: true },
