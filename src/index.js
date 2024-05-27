@@ -1,9 +1,8 @@
 require('dotenv').config();
 const { TOKEN, CLIENT_ID, MONGODB_URI } = process.env; // These are the same we wrote in the .env file.
 const guildMemberAddEvent = require('./events/guildMemberAdd/autoRole.js');
-const { Client, IntentsBitField } = require('discord.js');
+const { Client, IntentsBitField, REST, Routes } = require('discord.js');
 const { CommandKit } = require('commandkit');
-const { REST, Routes } = require('discord.js'); // Import Routes and the REST class.
 const mongoose = require('mongoose');
 
 

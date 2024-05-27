@@ -1,5 +1,10 @@
 const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
 
+const errorEmbed = new EmbedBuilder()
+  .setColor('#FF0000')
+  .setTimestamp()
+  .setFooter({ text: interaction.guild.name });
+
 module.exports = {
   data: {
     name: 'unban',
@@ -20,33 +25,37 @@ module.exports = {
     let bannedId = bannedUsers.find((user) => user.user.id === targetUserId);
 
     if (!bannedId) {
-      embed
-        .setDescription('**Nie znaleziono użytkownika na liście banów.**')
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
-      interaction.editReply({ embeds: [embed] });
+      errorEmbed.setDescription('**Nie znaleziono użytkownika na liście banów.**');
+
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
 
-    let embed = new EmbedBuilder().setColor('#990f02');
     const targetUser = bannedId.user.username;
 
     // Unban the target user
     try {
       await interaction.guild.bans.remove(targetUserId);
-      embed
+
+      successEmbed
+        .setColor('#00BFFF')
         .setDescription(`Użytkownik **${targetUser}** został odbanowany`)
+        .addFields(
+          { name: 'Moderator:', value: `${interaction.user}`, inline: true },
+          { name: 'Powód:', value: `${reason}`, inline: true }
+        )
+        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
         .setTimestamp()
-        .setColor('#32CD03')
         .setFooter({ text: interaction.guild.name });
-      interaction.editReply({ embeds: [embed] });
+
+      interaction.editReply({ embeds: [successEmbed] });
+
     } catch (error) {
       console.log(`Wystąpił błąd podczas próby odbanowania: ${error}`);
-      embed
-        .setDescription('**Wystąpił błąd podczas odbanowywania użytkownika.**')
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
-      interaction.editReply({ embeds: [embed] });
+
+      errorEmbed.setDescription('**Wystąpił błąd podczas odbanowywania użytkownika.**');
+
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
   },

@@ -1,5 +1,8 @@
-const { ApplicationCommandOptionType } = require('discord.js');
+const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
 const AutoRole = require('../../models/AutoRole');
+
+const errorEmbed = new EmbedBuilder()
+  .setColor('#FF0000');
 
 module.exports = {
   data: {
@@ -47,23 +50,19 @@ module.exports = {
 
   run: async ({ interaction }) => {
     if (!interaction.inGuild()) {
-      interaction.reply('You can only run this command inside a server.');
+      errorEmbed.setDescription('You can only run this command inside a server.');
+      await interaction.reply({ embeds: [errorEmbed] });
       return;
     }
 
     const roles = [];
-    for (let i = 1; i <= 6; i++) {
-      const roleOption = interaction.options.get(`role${i}`);
-      if (roleOption) {
-        const role = roleOption.role;
+    for (const role of interaction.options.data) {
+      const selectedRole = role.role;
         // Check if the selected role is @everyone
-        if (role.id === interaction.guild?.id) {
-          interaction.reply('Nie można skonfigurować roli `@everyone`.');
-          return;
-        }
-        roles.push(roleOption.value);
-      } else {
-        break;
+      if (selectedRole.id === interaction.guild?.id) {
+        errorEmbed.setDescription('Nie można skonfigurować roli `@everyone`.');
+        await interaction.reply({ embeds: [errorEmbed] });
+        return;
       }
     }
 
@@ -82,9 +81,11 @@ module.exports = {
       }
 
       await autoRole.save();
-      interaction.editReply(
-        'Autorole zostały skonfigurowane. Aby wyłączyć, uruchom `autorole-disable`'
-      );
+
+      const successEmbed = new EmbedBuilder()
+        .setColor('#00BFFF')
+        .setDescription('Autorole zostały skonfigurowane. Aby wyłączyć, uruchom `autorole-disable`');
+      await interaction.reply({ embeds: [successEmbed] });
     } catch (error) {
       console.log(`Wystąpił błąd podczas konfigurowania autoroli: ${error}`);
     }

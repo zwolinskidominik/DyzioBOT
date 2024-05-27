@@ -38,6 +38,7 @@ module.exports = async (interaction) => {
             }
 
             targetSuggestion.upvotes.push(interaction.user.id);
+            targetSuggestion.upvoteUsernames.push(interaction.user.username);
 
             await targetSuggestion.save();
 
@@ -64,6 +65,7 @@ module.exports = async (interaction) => {
             }
 
             targetSuggestion.downvotes.push(interaction.user.id);
+            targetSuggestion.downvoteUsernames.push(interaction.user.username);
 
             await targetSuggestion.save();
 

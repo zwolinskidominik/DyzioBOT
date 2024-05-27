@@ -14,6 +14,10 @@ const questionSchema = new Schema({
         type: String,
         required: true,
     },
+    reactions: {
+        type: [String],
+        default: [],
+    }
 });
 
 module.exports = model('Question', questionSchema);

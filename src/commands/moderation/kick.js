@@ -1,4 +1,9 @@
-const { ApplicationCommandOptionType } = require('discord.js');
+const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
+
+const errorEmbed = new EmbedBuilder()
+  .setColor('#FF0000')
+  .setTimestamp()
+  .setFooter({ text: interaction.guild.name });
 
 module.exports = {
   data: {
@@ -28,16 +33,14 @@ module.exports = {
     const targetUser = await interaction.guild.members.fetch(targetUserId);
 
     if (!targetUser) {
-      await interaction.editReply(
-        'Taki użytkownik nie istnieje na tym serwerze.'
-      );
+      errorEmbed.setDescription('**Taki użytkownik nie istnieje na tym serwerze.**');
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
 
     if (targetUser.id === interaction.guild.ownerId) {
-      await interaction.editReply(
-        'Nie możesz wyrzucić tego użytkownika, ponieważ jest on właścicielem serwera.'
-      );
+      errorEmbed.setDescription('**Nie możesz wyrzucić tego użytkownika, ponieważ jest on właścicielem serwera.**');
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
 
@@ -46,27 +49,37 @@ module.exports = {
     const botRolePosition = interaction.guild.members.me.roles.highest.position; //Highest role of the bot
 
     if (targetUserRolePosition >= requestUserRolePosition) {
-      await interaction.editReply(
-        'Nie możesz wyrzucić użytkownika, ponieważ ma taką samą lub wyższą rolę.'
-      );
+      errorEmbed.setDescription("**Nie możesz wyrzucić użytkownika, ponieważ ma taką samą lub wyższą rolę.**");
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
 
     if (targetUserRolePosition >= botRolePosition) {
-      await interaction.editReply(
-        'Nie mogę wyrzucić tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.'
-      );
+      errorEmbed.setDescription("**Nie mogę wyrzucić tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.**");
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
 
     // Kick the target user
     try {
       await targetUser.kick(reason);
-      await interaction.editReply(
-        `Użytkownik ${targetUser} został wyrzucony\nPowód: ${reason}`
-      );
+
+      errorEmbed
+        .setDescription(`**Użytkownik ${targetUser} został wyrzucony.**`)
+        .addFields(
+          { name: 'Moderator:', value: `${interaction.user}`, inline: true },
+          { name: 'Powód:', value: `${reason}`, inline: true }
+        )
+        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
+        .setFooter({ text: `${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL({ dynamic: true }) });
+
+      await interaction.editReply({ embeds: [errorEmbed] });
     } catch (error) {
       console.log(`Wystąpił błąd podczas wyrzucenia: ${error}`);
+
+      errorEmbed.setDescription('**Wystąpił błąd podczas próby wyrzucenia użytkownika.**');
+      interaction.editReply({ embeds: [errorEmbed] });
+      return;
     }
   },
 

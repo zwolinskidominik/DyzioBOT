@@ -1,8 +1,20 @@
-const { SlashCommandBuilder, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, ChannelType, EmbedBuilder } = require('discord.js');
 const QuestionConfiguration = require('../../models/QuestionConfiguration');
+
+const errorEmbed = new EmbedBuilder()
+    .setColor('#FF0000');
+
+const successEmbed = new EmbedBuilder()
+    .setColor('#00BFFF');
 
 module.exports = {
     run: async ({ interaction }) => {
+        if (!interaction.inGuild()) {
+            errorEmbed.setDescription('You can only run this command inside a server.');
+            await interaction.reply({ embeds: [errorEmbed] });
+            return;
+        }
+
         const subcommand = interaction.options.getSubcommand();
         const channel = interaction.options.getChannel('channel');
         const pingRole = interaction.options.getRole('ping_role');
@@ -12,13 +24,16 @@ module.exports = {
 
             if (existingConfiguration) {
                 if (existingConfiguration.questionChannelId === channel.id) {
-                    await interaction.reply(`Kanał ${channel} jest już ustawiony jako kanał pytań dnia.`);
+                    errorEmbed.setDescription(`Kanał ${channel} jest już ustawiony jako kanał pytań dnia.`);
+                    await interaction.reply({ embeds: [errorEmbed] });
                     return;
                 }
                 existingConfiguration.questionChannelId = channel.id;
                 existingConfiguration.pingRoleId = pingRole ? pingRole.id : null;
                 await existingConfiguration.save();
-                await interaction.reply(`Zaktualizowano kanał pytań dnia na ${channel}.`);
+
+                successEmbed.setDescription(`Zaktualizowano kanał pytań dnia na ${channel}.`);
+                await interaction.reply({ embeds: [successEmbed] });
                 return;
             }
 
@@ -28,7 +43,9 @@ module.exports = {
                 pingRoleId: pingRole ? pingRole.id : null,
             });
             await newConfiguration.save();
-            await interaction.reply(`Ustawiono kanał pytań dnia na ${channel}.`);
+
+            successEmbed.setDescription(`Ustawiono kanał pytań dnia na ${channel}.`);
+            await interaction.reply({ embeds: [successEmbed] });
             return;
         }
 
@@ -36,14 +53,17 @@ module.exports = {
             const configuration = await QuestionConfiguration.findOne({ guildId: interaction.guildId });
 
             if (!configuration) {
-                await interaction.reply(`Brak skonfigurowanego kanału pytań dnia.`);
+                errorEmbed.setDescription('Brak skonfigurowanego kanału pytań dnia.');
+                await interaction.reply({ embeds: [errorEmbed] });
                 return;
             }
 
             configuration.questionChannelId = null;
             configuration.pingRoleId = null;
             await configuration.save();
-            await interaction.reply(`Usunięto kanał pytań dnia.`);
+
+            successEmbed.setDescription('Usunięto kanał pytań dnia.');
+            await interaction.reply({ embeds: [successEmbed] });
             return;
         }
     },

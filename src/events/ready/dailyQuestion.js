@@ -5,12 +5,12 @@ const cron = require('node-cron');
 const { GUILD_ID } = process.env;
 
 module.exports = async (client) => {
-    const job = cron.schedule('0 10 * * * *', async () => { // Wykona się o 10:00 każdego dnia
+    const job = cron.schedule('0 0 10 * * *', async () => { // Wykona się o 10:00 każdego dnia
         try {
             const questionConfig = await QuestionConfiguration.findOne({ guildId: GUILD_ID });
 
             if (!questionConfig) {
-                console.error('Konfiguracja pytań nie istnieje!');
+                console.error('Konfiguracja kanału pytań nie istnieje!');
                 return;
             }
 
@@ -45,6 +45,14 @@ module.exports = async (client) => {
                     autoArchiveDuration: 1440,
                     type: ChannelType.PublicThread,
                     startMessage: question,
+                });
+
+                randomQuestion.reactions.forEach(async (reaction) => {
+                    try {
+                        await question.react(reaction);
+                    } catch (error) {
+                        console.error('Błąd podczas dodawania reakcji:', error);
+                    }
                 });
 
                 await Question.findByIdAndDelete(randomQuestion._id);

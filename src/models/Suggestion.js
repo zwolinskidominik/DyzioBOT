@@ -27,7 +27,15 @@ const suggestionSchema = new Schema({
         type: [String],
         default: [],
     },
+    upvoteUsernames: {
+        type: [String],
+        default: [],
+    },
     downvotes: {
+        type: [String],
+        default: [],
+    },
+    downvoteUsernames: {
         type: [String],
         default: [],
     },

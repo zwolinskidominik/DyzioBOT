@@ -16,8 +16,7 @@ module.exports = {
         }
 
         const { guild } = interaction;
-        const { members } = guild;
-        const { name, ownerId, createdTimestamp, memberCount } = guild;
+        const { name, ownerId, memberCount } = guild;
         const icon = guild.iconURL();
         const roles = guild.roles.cache.size;
         const emojis = guild.emojis.cache.size;

@@ -1,4 +1,9 @@
-const { ApplicationCommandOptionType } = require('discord.js');
+const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
+
+const errorEmbed = new EmbedBuilder()
+  .setColor('#FF0000')
+  .setTimestamp()
+  .setFooter({ text: interaction.guild.name });
 
 module.exports = {
   data: {
@@ -28,16 +33,16 @@ module.exports = {
     const targetUser = await interaction.guild.members.fetch(targetUserId);
 
     if (!targetUser) {
-      await interaction.editReply(
-        'Taki użytkownik nie istnieje na tym serwerze.'
-      );
+      errorEmbed.setDescription('**Taki użytkownik nie istnieje na tym serwerze.**');
+
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
 
     if (targetUser.id === interaction.guild.ownerId) {
-      await interaction.editReply(
-        'Nie możesz zbanować tego użytkownika, ponieważ jest on właścicielem serwera.'
-      );
+      errorEmbed.setDescription('**Nie możesz zbanować tego użytkownika, ponieważ jest on właścicielem serwera.**');
+
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
 
@@ -46,27 +51,40 @@ module.exports = {
     const botRolePosition = interaction.guild.members.me.roles.highest.position; //Highest role of the bot
 
     if (targetUserRolePosition >= requestUserRolePosition) {
-      await interaction.editReply(
-        'Nie możesz zbanować użytkownika, ponieważ ma taką samą lub wyższą rolę.'
-      );
+      errorEmbed.setDescription("**Nie możesz zbanować użytkownika, ponieważ ma taką samą lub wyższą rolę.**");
+
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
 
     if (targetUserRolePosition >= botRolePosition) {
-      await interaction.editReply(
-        'Nie mogę zbanować tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.'
-      );
+      errorEmbed.setDescription("**Nie mogę zbanować tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.**");
+
+      interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
 
     // Ban the target user
     try {
       await targetUser.ban({ reason });
-      await interaction.editReply(
-        `Użytkownik ${targetUser} został zbanowany\nPowód: ${reason}`
-      );
+
+      errorEmbed
+        .setDescription(`**Użytkownik ${targetUser} został zbanowany.**`)
+        .addFields(
+          { name: 'Moderator:', value: `${interaction.user}`, inline: true },
+          { name: 'Powód:', value: `${reason}`, inline: true }
+        )
+        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
+        .setFooter({ text: `${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL({ dynamic: true }) });
+
+      await interaction.editReply({ embeds: [errorEmbed] });
     } catch (error) {
       console.log(`Wystąpił błąd podczas banowania: ${error}`);
+
+      errorEmbed.setDescription('**Wystąpił błąd podczas banowania.**');
+
+      interaction.editReply({ embeds: [errorEmbed] });
+      return;
     }
   },
 

@@ -1,13 +1,13 @@
-const { SlashCommandBuilder, ChannelType, ChatInputCommandInteraction } = require('discord.js');
+const { SlashCommandBuilder, ChannelType, EmbedBuilder } = require('discord.js');
 const GuildConfiguration = require('../../models/GuildConfiguration');
 
+const errorEmbed = new EmbedBuilder()
+    .setColor('#FF0000');
+
+const successEmbed = new EmbedBuilder()
+    .setColor('#00BFFF');
+
 module.exports = {
-  /**
-   * 
-   * @param {Object} param0 
-   * @param {ChatInputCommandInteraction} param0.interaction
-   */
-  
   run: async ({ interaction }) => {
     let guildConfiguration = await GuildConfiguration.findOne({ guildId: interaction.guildId });
 
@@ -16,28 +16,28 @@ module.exports = {
     };
 
     const subcommand = interaction.options.getSubcommand();
+    const channel = interaction.options.getChannel('channel');
 
     if (subcommand === 'add') {
-        const channel = interaction.options.getChannel('channel');
-
         if (guildConfiguration.suggestionChannelIds.includes(channel.id)) {
-            await interaction.reply(`${channel} jest już kanałem sugestii.`);
-            return;
+          errorEmbed.setDescription(`${channel} jest już kanałem sugestii.`);
+          await interaction.reply({ embeds: [errorEmbed] });
+          return;
         }
 
         guildConfiguration.suggestionChannelIds.push(channel.id);
         await guildConfiguration.save();
 
-        await interaction.reply(`Dodano ${channel} do kanałów sugestii.`);
+        successEmbed.setDescription(`Dodano ${channel} do kanałów sugestii.`);
+        await interaction.reply({ embeds: [successEmbed] });
         return;
     }
 
     if (subcommand === 'remove') {
-        const channel = interaction.options.getChannel('channel');
-
         if (!guildConfiguration.suggestionChannelIds.includes(channel.id)) {
-            await interaction.reply(`${channel} is not a suggestion channel.`);
-            return;
+          errorEmbed.setDescription(`${channel} nie jest kanałem sugestii.`);
+          await interaction.reply({ embeds: [errorEmbed] });
+          return;
         };
 
         guildConfiguration.suggestionChannelIds = guildConfiguration.suggestionChannelIds.filter(
@@ -45,7 +45,8 @@ module.exports = {
         );
         await guildConfiguration.save();
 
-        await interaction.reply(`Usunięto ${channel} z kanałów sugestii.`);
+        successEmbed.setDescription(`Usunięto ${channel} z kanałów sugestii.`);
+        await interaction.reply({ embeds: [successEmbed] });
         return;
     }
   },
