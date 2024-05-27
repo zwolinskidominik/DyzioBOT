@@ -1,17 +1,6 @@
 const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
 const ms = require('ms');
 
-const errorEmbed = new EmbedBuilder()
-  .setColor('#FF0000')
-  .setTimestamp()
-  .setFooter({ text: interaction.guild.name });
-
-const successEmbed = new EmbedBuilder()
-  .setColor('#00BFFF')
-  .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
-  .setTimestamp()
-  .setFooter({ text: interaction.guild.name });
-
 module.exports = {
   data: {
     name: 'mute',
@@ -122,6 +111,17 @@ module.exports = {
       interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
+
+    const errorEmbed = new EmbedBuilder()
+      .setColor('#FF0000')
+      .setTimestamp()
+      .setFooter({ text: interaction.guild.name });
+
+    const successEmbed = new EmbedBuilder()
+      .setColor('#00BFFF')
+      .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
+      .setTimestamp()
+      .setFooter({ text: interaction.guild.name });
 
     try {
       const { default: prettyMs } = await import('pretty-ms');

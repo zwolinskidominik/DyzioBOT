@@ -1,10 +1,5 @@
 const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
 
-const errorEmbed = new EmbedBuilder()
-  .setColor('#FF0000')
-  .setTimestamp()
-  .setFooter({ text: interaction.guild.name });
-
 module.exports = {
   data: {
     name: 'unban',
@@ -33,6 +28,10 @@ module.exports = {
 
     const targetUser = bannedId.user.username;
 
+    const errorEmbed = new EmbedBuilder()
+      .setColor('#FF0000')
+      .setTimestamp()
+      .setFooter({ text: interaction.guild.name });
     // Unban the target user
     try {
       await interaction.guild.bans.remove(targetUserId);

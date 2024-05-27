@@ -1,10 +1,5 @@
 const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
 
-const errorEmbed = new EmbedBuilder()
-  .setColor('#FF0000')
-  .setTimestamp()
-  .setFooter({ text: interaction.guild.name });
-
 module.exports = {
   data: {
     name: 'kick',
@@ -60,6 +55,11 @@ module.exports = {
       return;
     }
 
+    
+    const errorEmbed = new EmbedBuilder()
+      .setColor('#FF0000')
+      .setTimestamp()
+      .setFooter({ text: interaction.guild.name });
     // Kick the target user
     try {
       await targetUser.kick(reason);
