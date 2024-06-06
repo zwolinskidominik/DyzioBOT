@@ -54,12 +54,10 @@ module.exports = {
       });
     } catch (error) {
       console.error("Błąd podczas wysyłania wiadomości:", error);
-      if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
-        await interaction.followUp({
-          content: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.',
-          ephemeral: true,
-        });
-      }
+      await interaction.editReply({
+        content: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.',
+        ephemeral: true,
+      });
     }
   },
 

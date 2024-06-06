@@ -59,7 +59,7 @@ module.exports = {
         const description3 = interaction.options.getString('description3') || null;
 
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
 
             const embed = new EmbedBuilder()
                 .setTitle(title)

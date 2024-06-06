@@ -11,7 +11,7 @@ module.exports = {
      * @param {ChatInputCommandInteraction} interaction 
      */
 
-    run: async ({ interaction, client }) => {
+    run: async ({ interaction }) => {
         try {
             const emojis = interaction.guild.emojis.cache.map((e) => `${e} | \`${e}\``);
             const pageSize = 10;
