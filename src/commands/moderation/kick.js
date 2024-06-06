@@ -64,6 +64,8 @@ module.exports = {
       // Kick the target user
       await targetUser.kick(reason);
 
+      const botUser = interaction.client.user; // Get the bot user
+
       const successEmbed = new EmbedBuilder()
         .setColor('#00BFFF')
         .setDescription(`**Użytkownik ${targetUser} został wyrzucony.**`)
@@ -73,7 +75,7 @@ module.exports = {
         )
         .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
         .setTimestamp()
-        .setFooter({ text: `${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL({ dynamic: true }) });
+        .setFooter({ text: botUser.username, iconURL: botUser.displayAvatarURL({ dynamic: true }) });
 
       await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {

@@ -29,9 +29,9 @@ module.exports = {
 
       if (!birthday) {
         errorEmbed
-          .setDescription(`Nie znam **jeszcze** daty urodzin ${targetUser}.\n\nUżyj /remember-birthday lub /set-user-birthday, aby ustawić datę urodzin.`)
+          .setDescription(`Nie znam **jeszcze** daty urodzin ${targetUser}.\n\nUżyj </remember-birthday:1244599618617081864> lub </set-user-birthday:1244599618747109506>, aby ustawić datę urodzin.`)
           .addFields(
-            { name: 'Przykłady:', value: ' - /remember-birthday 15-04\n- /remember-birthday 13-09-2004\n- /set-user-birthday 15-04-1994 @Dyzio' }
+            { name: 'Przykłady:', value: ' - </remember-birthday:1244599618617081864> 15-04\n- </remember-birthday:1244599618617081864> 13-09-2004\n- </set-user-birthday:1244599618747109506> 15-04-1994 `@Dyzio`' }
           );
         await interaction.editReply({ embeds: [errorEmbed] });
         return;

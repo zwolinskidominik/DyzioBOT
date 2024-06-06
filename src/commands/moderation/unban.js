@@ -38,7 +38,7 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor('#00BFFF')
-        .setDescription(`Użytkownik **${member.username}** został odbanowany`)
+        .setDescription(`**Użytkownik ${member.username} został odbanowany**`)
         .addFields(
           { name: 'Moderator:', value: `${interaction.user}`, inline: true }
         )
