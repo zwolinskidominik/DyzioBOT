@@ -11,26 +11,20 @@ module.exports = async (client, member) => {
     const guild = member.guild;
     if (!guild) return;
 
-    // Check if roles are configured
     const autoRoleConfig = await AutoRole.findOne({ guildId: guild.id });
 
     if (autoRoleConfig && autoRoleConfig.roleIds.length > 0) {
-      // Check if the user who joined is a bot
       if (member.user.bot) {
-        // Get the 'Bot' role with specified ID
         const botRoleId = autoRoleConfig.roleIds[0];
         const botRole = guild.roles.cache.get(botRoleId);
 
-        // Check if the bot role exists
         if (botRole) {
-          // Add the bot role to the bot
           await member.roles.add(botRole);
           console.log(`Bot role added successfully to ${member.user.tag}`);
         } else {
           console.log(`Bot role does not exist or is not configured for ${guild.name}`);
         }
       } else {
-        // Get the 'User' roles with specified IDs
         const userRoleIds = autoRoleConfig.roleIds.slice(1);
 
         for (const roleId of userRoleIds) {

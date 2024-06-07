@@ -11,6 +11,7 @@
   "author": "Dominik Zwoliński",
   "license": "ISC",
   "dependencies": {
+    "canvacord": "^6.0.2",
     "commandkit": "^0.1.10",
     "discord.js": "^14.11.0",
     "dotenv": "^16.4.5",

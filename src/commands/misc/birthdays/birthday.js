@@ -46,7 +46,7 @@ module.exports = {
       if (nextBirthday < today) {
         nextBirthday.setFullYear(today.getFullYear() + 1);
         if (yearSpecified) {
-          age += 1; // Adjust age for the upcoming birthday
+          age += 1;
         }
       }
 

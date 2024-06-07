@@ -11,7 +11,7 @@ module.exports = {
         description: "Kanał do wysyłania wiadomości urodzinowych.",
         required: true,
         type: ApplicationCommandOptionType.Channel,
-        channelTypes: [ChannelType.GuildText], // Ensure it's a text channel
+        channelTypes: [ChannelType.GuildText],
       },
     ],
   },

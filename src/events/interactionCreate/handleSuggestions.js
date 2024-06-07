@@ -21,7 +21,6 @@ module.exports = async (interaction) => {
         const targetSuggestion = await Suggestion.findOne({ suggestionId });
         const targetMessage = await interaction.channel.messages.fetch(targetSuggestion.messageId);
 
-        // Check if targetMessage has embeds
         if (!targetMessage.embeds.length) {
             console.error('Target message does not contain any embeds.');
             return;

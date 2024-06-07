@@ -46,7 +46,6 @@ module.exports = {
       return;
     }
 
-    // Check if the date is valid
     if (isNaN(date.getTime())) {
       errorEmbed.setDescription('Niepoprawna data. Użyj prawidłowej daty w formacie `DD-MM-YYYY` lub `DD-MM`.');
       await interaction.reply({ embeds: [errorEmbed] });
@@ -67,7 +66,6 @@ module.exports = {
 
       await birthday.save();
 
-      // Calculate days until next birthday
       const today = new Date();
       const nextBirthday = new Date(today.getFullYear(), date.getMonth(), date.getDate());
       if (nextBirthday < today) {

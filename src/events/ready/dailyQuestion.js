@@ -5,7 +5,7 @@ const cron = require('node-cron');
 const { GUILD_ID } = process.env;
 
 module.exports = async (client) => {
-    const job = cron.schedule('0 0 10 * * *', async () => { // Wykona się o 10:00 każdego dnia
+    const job = cron.schedule('0 0 10 * * *', async () => {
         try {
             const questionConfig = await QuestionConfiguration.findOne({ guildId: GUILD_ID });
 

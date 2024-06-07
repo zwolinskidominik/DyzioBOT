@@ -33,7 +33,7 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor('#6441A5')
-        .setDescription(`Streamer ${twitchChannel} został dodany do listy ogłaszanych streamów.`);
+        .setDescription(`Streamer **${twitchChannel}** został dodany do listy ogłaszanych streamów.`);
       
         await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {

@@ -3,7 +3,7 @@ const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
 module.exports = {
     data: {
         name: 'embed',
-        description: 'Create an embed',
+        description: 'Stwórz embed.',
         options: [
             {
                 name: 'title',
@@ -69,7 +69,6 @@ module.exports = {
                 .setTimestamp()
                 .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });
 
-            // Conditionally add fields only if provided
             if (title2 && description2) {
                 embed.addFields({ name: title2, value: description2, inline: true });
             }

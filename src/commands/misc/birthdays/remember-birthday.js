@@ -55,7 +55,6 @@ module.exports = {
 
       await birthday.save();
 
-      // Calculate days until next birthday
       const today = new Date();
       const nextBirthday = new Date(today.getFullYear(), date.getMonth(), date.getDate());
       if (nextBirthday < today) {

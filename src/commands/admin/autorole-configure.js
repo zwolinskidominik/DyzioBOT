@@ -57,6 +57,7 @@ module.exports = {
     const roles = [];
     for (const role of interaction.options.data) {
       const selectedRole = role.role;
+      
       // Check if the selected role is @everyone
       if (selectedRole.id === interaction.guild.id) {
         const errorEmbed = new EmbedBuilder()

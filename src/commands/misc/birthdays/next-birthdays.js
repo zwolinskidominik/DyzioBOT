@@ -13,7 +13,7 @@ module.exports = {
 
       const guildId = interaction.guild.id;
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Set to local midnight
+      today.setHours(0, 0, 0, 0);
 
       const birthdays = await Birthday.find({ guildId }).sort({ date: 1 });
 

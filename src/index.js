@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { TOKEN, CLIENT_ID, MONGODB_URI } = process.env; // These are the same we wrote in the .env file.
+const { TOKEN, CLIENT_ID, DEV_GUILD_IDS, DEV_USER_IDS, DEV_ROLE_IDS, MONGODB_URI } = process.env;
 const guildMemberAddEvent = require('./events/guildMemberAdd/autoRole.js');
 const { Client, IntentsBitField, REST, Routes } = require('discord.js');
 const { CommandKit } = require('commandkit');
@@ -21,10 +21,10 @@ new CommandKit({
   commandsPath: `${__dirname}/commands`,
   eventsPath: `${__dirname}/events`,
   validationsPath: `${__dirname}/validations`,
-  devGuildIds: ['1119330659127795822'],
-  devUserIds: ['548177225661546496'],
-  devRoleIds: ['1209504337412235347'],
-  bulkRegister: true,
+  devGuildIds: DEV_GUILD_IDS,
+  devUserIds: DEV_USER_IDS,
+  devRoleIds: DEV_ROLE_IDS,
+  bulkRegister: false,
 });
 
 client.on('guildMemberAdd', member => {
@@ -43,7 +43,7 @@ mongoose.connect(MONGODB_URI).then(() => {
   rest
     .put(Routes.applicationCommands(CLIENT_ID), { body: [] })
     .then(() => console.log('Commands cleared.'))
-    .catch(console.error); // Make sure to catch any errors.
+    .catch(console.error);
 
   client.login(TOKEN);
 });

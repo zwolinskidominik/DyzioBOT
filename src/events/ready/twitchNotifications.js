@@ -5,7 +5,6 @@ const StreamConfiguration = require("../../models/StreamConfiguration");
 const { ApiClient } = require('twitch');
 const { ClientCredentialsAuthProvider } = require('twitch-auth');
 
-// Konfiguracja klienta Twitcha
 const clientId = process.env.TWITCH_CLIENT_ID;
 const clientSecret = process.env.TWITCH_CLIENT_SECRET;
 
@@ -21,18 +20,15 @@ module.exports = (client) => {
       for (const streamer of streamers) {
         const { guildId, twitchChannel, isLive } = streamer;
 
-        // Fetching user data
         const user = await twitchClient.helix.users.getUserByName(twitchChannel);
         if (!user) {
           console.log(`Nie znaleziono użytkownika Twitch: ${twitchChannel}`);
           continue;
         }
 
-        // Fetching stream data
         const stream = await twitchClient.helix.streams.getStreamByUserId(user.id);
 
         if (stream && !isLive) {
-          // If streamer starts stream and before was no notification
           const notificationChannel = channels.find(
             (channel) => channel.guildId === guildId
           );
@@ -64,7 +60,6 @@ module.exports = (client) => {
 
             await channel.send({ embeds: [embed] });
 
-            // Updating streamer state in database
             streamer.isLive = true;
             await streamer.save();
           }

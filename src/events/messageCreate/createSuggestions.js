@@ -15,10 +15,8 @@ module.exports = async (message) => {
   try {
     const suggestionText = message.content;
 
-    //Usuń wiadomość użytkownika
     await message.delete();
 
-    // Utwórz sugestię i wątek.
     let suggestionMessage = await message.channel.send(
       'Tworzenie sugestii, proszę czekać...'
     );
@@ -45,7 +43,6 @@ module.exports = async (message) => {
       startMessage: suggestionMessage,
     });
 
-    // Tworzenie embeda sugestii oraz przycisków
     const suggestionEmbed = new EmbedBuilder()
       .setAuthor({
         name: message.author.username,
@@ -57,7 +54,6 @@ module.exports = async (message) => {
       ])
       .setColor('#2B2D31');
 
-    // Buttons
     const upvoteButton = new ButtonBuilder()
       .setEmoji('<:pingu_yes:1162408115677958184>')
       .setLabel('Za')
@@ -70,17 +66,15 @@ module.exports = async (message) => {
       .setStyle(ButtonStyle.Secondary)
       .setCustomId(`suggestion.${newSuggestion.suggestionId}.downvote`);
 
-    // Rows
     const firstRow = new ActionRowBuilder().addComponents(
       upvoteButton,
       downvoteButton
     );
 
-    // Aktualizacja embeda sugestii
     suggestionMessage.edit({
       content: '',
-      embeds: [suggestionEmbed], // ...
-      components: [firstRow], // ...
+      embeds: [suggestionEmbed],
+      components: [firstRow],
     });
 
   } catch (error) {
