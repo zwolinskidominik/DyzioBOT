@@ -45,7 +45,7 @@ module.exports = {
         .setAvatar(avatar)
         .setDisplayName(user.user.tag)
         .setMessage(`Został nadany 1 punkt ostrzeżeń`)
-        .setReason(`Powód: ${reason}`)
+        .setReason(`${reason}`)
         .setAuthor(interaction.user.tag);
 
       const image = await card.build({ format: "png" });
