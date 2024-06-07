@@ -55,7 +55,7 @@ class WarnCard extends Builder {
         JSX.createElement(
           "div",
           {
-            className: "w-full flex flex-row items-center justify-center mb-6",
+            className: "w-full flex flex-row items-center justify-center my-6",
           },
           JSX.createElement("img", {
             src: image.toDataURL(),

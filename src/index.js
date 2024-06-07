@@ -16,14 +16,19 @@ const client = new Client({
   ],
 });
 
+const parsedDevGuildIds = DEV_GUILD_IDS ? DEV_GUILD_IDS.split(',').map(id => id.trim()) : [];
+const parsedDevUserIds = DEV_USER_IDS ? DEV_USER_IDS.split(',').map(id => id.trim()) : [];
+const parsedDevRoleIds = DEV_ROLE_IDS ? DEV_ROLE_IDS.split(',').map(id => id.trim()) : [];
+
+
 new CommandKit({
   client,
   commandsPath: `${__dirname}/commands`,
   eventsPath: `${__dirname}/events`,
   validationsPath: `${__dirname}/validations`,
-  devGuildIds: DEV_GUILD_IDS,
-  devUserIds: DEV_USER_IDS,
-  devRoleIds: DEV_ROLE_IDS,
+  devGuildIds: parsedDevGuildIds,
+  devUserIds: parsedDevUserIds,
+  devRoleIds: parsedDevRoleIds,
   bulkRegister: false,
 });
 
