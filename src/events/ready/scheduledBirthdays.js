@@ -21,14 +21,12 @@ module.exports = async (client) => {
       }
 
       const today = new Date();
-      const day = today.getUTCDate();
-      const month = today.getUTCMonth();
 
       const birthdays = await Birthday.find({
         $expr: {
           $and: [
-            { $eq: [{ $dayOfMonth: "$date" }, day] },
-            { $eq: [{ $month: "$date" }, month] }
+            { $eq: [{ $dayOfMonth: "$date" }, { $dayOfMonth: today.getDate() }] },
+            { $eq: [{ $month: "$date" }, { $month: today.getMonth() + 1 }] }, // Month is 0-indexed
           ]
         }
       });
@@ -46,7 +44,5 @@ module.exports = async (client) => {
     } catch (error) {
       console.error('Błąd podczas wysyłania wiadomości urodzinowych:', error);
     }
-  }, {
-    timezone: "UTC"
   });
 };
