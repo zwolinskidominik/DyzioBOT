@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+const { Schema, model } = require('mongoose');
 
-const StreamConfigurationSchema = new mongoose.Schema({
+const StreamConfigurationSchema = new Schema({
   guildId: {
     type: String,
     required: true,
@@ -11,4 +11,4 @@ const StreamConfigurationSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model('StreamConfiguration', StreamConfigurationSchema);
+module.exports = model('StreamConfiguration', StreamConfigurationSchema);

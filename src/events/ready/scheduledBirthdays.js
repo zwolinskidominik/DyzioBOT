@@ -4,7 +4,7 @@ const BirthdayConfiguration = require('../../models/BirthdayConfiguration');
 const { GUILD_ID } = process.env;
 
 module.exports = async (client) => {
-  const job = cron.schedule('0 0 9 * *', async () => {
+  const job = cron.schedule('0 0 10 * * *', async () => {
     try {
       const birthdayConfig = await BirthdayConfiguration.findOne({ guildId: GUILD_ID });
 
@@ -21,13 +21,14 @@ module.exports = async (client) => {
       }
 
       const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
+      const day = today.getUTCDate();
+      const month = today.getUTCMonth();
 
       const birthdays = await Birthday.find({
         $expr: {
           $and: [
-            { $eq: [{ $dayOfMonth: "$date" }, { $dayOfMonth: today }] },
-            { $eq: [{ $month: "$date" }, { $month: today }] }
+            { $eq: [{ $dayOfMonth: "$date" }, day] },
+            { $eq: [{ $month: "$date" }, month] }
           ]
         }
       });

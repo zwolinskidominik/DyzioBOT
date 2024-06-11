@@ -1,12 +1,11 @@
-const { Client, GuildMember } = require('discord.js');
+const { GuildMember } = require('discord.js');
 const AutoRole = require('../../models/AutoRole');
 
 /**
  *
- * @param {Client} client
  * @param {GuildMember} member
  */
-module.exports = async (client, member) => {
+module.exports = async (member) => {
   try {
     const guild = member.guild;
     if (!guild) return;

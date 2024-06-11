@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+const { Schema, model } = require("mongoose");
 
-const twitchStreamerSchema = new mongoose.Schema({
+const twitchStreamerSchema = new Schema({
   guildId: {
     type: String,
     required: true,
@@ -15,4 +15,4 @@ const twitchStreamerSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("TwitchStreamer", twitchStreamerSchema);
+module.exports = model("TwitchStreamer", twitchStreamerSchema);

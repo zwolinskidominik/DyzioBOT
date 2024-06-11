@@ -1,7 +1,6 @@
-const { AttachmentBuilder } = require("discord.js");
+const { AttachmentBuilder, ApplicationCommandOptionType } = require("discord.js");
 const { Font } = require("canvacord");
 const { WarnCard } = require("../../utils/WarnCard");
-const { ApplicationCommandOptionType } = require("discord.js");
 
 module.exports = {
   data: {
