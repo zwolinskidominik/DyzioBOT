@@ -4,7 +4,7 @@ const BirthdayConfiguration = require('../../models/BirthdayConfiguration');
 const { GUILD_ID } = process.env;
 
 module.exports = async (client) => {
-  const job = cron.schedule('0 0 10 * * *', async () => {
+  const job = cron.schedule('0 0 11 * * *', async () => {
     try {
       const birthdayConfig = await BirthdayConfiguration.findOne({ guildId: GUILD_ID });
 
@@ -21,18 +21,18 @@ module.exports = async (client) => {
       }
 
       const today = new Date();
+      const day = today.getUTCDate();
+      const month = today.getUTCMonth() + 1;
 
-      const birthdays = await Birthday.find({
-        $expr: {
-          $and: [
-            { $eq: [{ $dayOfMonth: "$date" }, { $dayOfMonth: today.getDate() }] },
-            { $eq: [{ $month: "$date" }, { $month: today.getMonth() + 1 }] }, // Month is 0-indexed
-          ]
-        }
-      });
+      const birthdays = await Birthday.find();
 
-      if (birthdays.length > 0) {
-        for (const birthday of birthdays) {
+      const todaysBirthdays = birthdays.filter(birthday => {
+        const birthdayDate = new Date(birthday.date);
+        return birthdayDate.getUTCDate() === day && (birthdayDate.getUTCMonth() + 1) === month;
+      })
+
+      if (todaysBirthdays.length > 0) {
+        for (const birthday of todaysBirthdays) {
           const user = await client.users.fetch(birthday.userId);
           if (user) {
             await birthdayChannel.send(`Wszystkiego najlepszego <@${user.id}>! 🥳`);
