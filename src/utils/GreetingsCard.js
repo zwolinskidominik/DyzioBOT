@@ -39,6 +39,8 @@ class GreetingsCard extends Builder {
     const loadedAvatar = await loadImage(avatar);
     const loadedBackground = await loadImage(backgroundImage);
 
+    const displayNameColor = type === "welcome" ? "#86c232" : "#FF0000";
+
     return JSX.createElement(
       "div",
       {
@@ -54,7 +56,10 @@ class GreetingsCard extends Builder {
         "div",
         {
           className:
-            "px-6 bg-[#2B2F35AA] w-[96%] h-[84%] rounded-lg flex items-center",
+            "px-6 bg-[#2B2F35] w-[96%] h-[84%] rounded-lg flex items-center",
+          style: {
+            opacity: 0.95,
+          },
         },
         JSX.createElement("img", {
           src: loadedAvatar.toDataURL(),
@@ -67,11 +72,11 @@ class GreetingsCard extends Builder {
             "h1",
             { className: "text-5xl text-white font-bold m-0" },
             type === "welcome" ? "Cześć" : "Żegnaj",
-            ",",
+            ", ",
             " ",
             JSX.createElement(
               "span",
-              { className: "text-blue-500" },
+              { className: `text-[${displayNameColor}]` },
               displayName,
               "!"
             )

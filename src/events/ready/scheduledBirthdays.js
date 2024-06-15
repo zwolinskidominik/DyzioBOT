@@ -4,7 +4,7 @@ const BirthdayConfiguration = require('../../models/BirthdayConfiguration');
 const { GUILD_ID } = process.env;
 
 module.exports = async (client) => {
-  const job = cron.schedule('0 0 11 * * *', async () => {
+  const job = cron.schedule('0 0 7 * * *', async () => {
     try {
       const birthdayConfig = await BirthdayConfiguration.findOne({ guildId: GUILD_ID });
 

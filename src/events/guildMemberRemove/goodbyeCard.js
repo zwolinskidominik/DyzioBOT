@@ -25,18 +25,17 @@ module.exports = async (member) => {
         const card = new GreetingsCard()
             .setAvatar(avatar)
             .setDisplayName(member.user.tag)
-            .setType('welcome')
-            .setMessage(`Jesteś ${guild.memberCount} osóbką na serwerze!`);
+            .setType('goodbye')
+            .setMessage(`Miło, że wpadłeś/aś. 👌`);
         
         const image = await card.build({ format: 'png' });
 
         const attachment = new AttachmentBuilder(image, { name: 'welcome.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle(`Siema <@${member.user.id}>! 😎`)
-            .setDescription(`Witaj na serwerze ${guild.name}! 🕹️`)
+            .setDescription(`### Żegnaj <@${member.user.id}>! 😟`)
             .setImage('attachment://welcome.png')
-            .setColor('#AFC362');
+            .setColor('#FF0000');
 
         await channel.send({ embeds: [embed], files: [attachment] });
 
