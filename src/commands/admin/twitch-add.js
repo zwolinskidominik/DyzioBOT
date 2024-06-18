@@ -1,14 +1,14 @@
-const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
-const TwitchStreamer = require('../../models/TwitchStreamer');
+const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
+const TwitchStreamer = require("../../models/TwitchStreamer");
 
 module.exports = {
   data: {
-    name: 'twitch-add',
-    description: 'Dodaje streamera Twitcha do listy ogłaszanych streamów.',
+    name: "twitch-add",
+    description: "Dodaje streamera Twitcha do listy ogłaszanych streamów.",
     options: [
       {
-        name: 'twitch-username',
-        description: 'Nazwa użytkownika na Twitchu.',
+        name: "twitch-username",
+        description: "Nazwa użytkownika na Twitchu.",
         required: true,
         type: ApplicationCommandOptionType.String,
       },
@@ -16,7 +16,7 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const twitchChannel = interaction.options.get('twitch-username').value;
+    const twitchChannel = interaction.options.get("twitch-username").value;
 
     const guildId = interaction.guild.id;
 
@@ -32,18 +32,25 @@ module.exports = {
       await streamer.save();
 
       const successEmbed = new EmbedBuilder()
-        .setColor('#6441A5')
-        .setDescription(`Streamer **${twitchChannel}** został dodany do listy ogłaszanych streamów.`);
-      
-        await interaction.editReply({ embeds: [successEmbed] });
+        .setColor("#6441A5")
+        .setDescription(
+          `Streamer **${twitchChannel}** został dodany do listy ogłaszanych streamów.`
+        );
+
+      await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.error(`Błąd podczas zapisywania streamera: ${error}`);
 
       const errorEmbed = new EmbedBuilder()
-        .setColor('#FF0000')
-        .setDescription('Wystąpił błąd podczas zapisywania streamera.');
+        .setColor("#FF0000")
+        .setDescription("Wystąpił błąd podczas zapisywania streamera.");
 
       await interaction.editReply({ embeds: [errorEmbed] });
     }
+  },
+
+  options: {
+    userPermissions: ["Administrator"],
+    botPermissions: ["Administrator"],
   },
 };

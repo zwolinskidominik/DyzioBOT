@@ -1,44 +1,47 @@
-const { Schema, model } = require('mongoose');
-const { randomUUID } = require('crypto');
+const { Schema, model } = require("mongoose");
+const { randomUUID } = require("crypto");
 
-const suggestionSchema = new Schema({
+const suggestionSchema = new Schema(
+  {
     suggestionId: {
-        type: String,
-        default: randomUUID,
+      type: String,
+      default: randomUUID,
     },
     authorId: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
     guildId: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
     messageId: {
-        type: String,
-        required: true,
-        unique: true,
+      type: String,
+      required: true,
+      unique: true,
     },
     content: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
     upvotes: {
-        type: [String],
-        default: [],
+      type: [String],
+      default: [],
     },
     upvoteUsernames: {
-        type: [String],
-        default: [],
+      type: [String],
+      default: [],
     },
     downvotes: {
-        type: [String],
-        default: [],
+      type: [String],
+      default: [],
     },
     downvoteUsernames: {
-        type: [String],
-        default: [],
+      type: [String],
+      default: [],
     },
-}, { timestamps: true });
+  },
+  { timestamps: true }
+);
 
-module.exports = model('Suggestion', suggestionSchema);
+module.exports = model("Suggestion", suggestionSchema);

@@ -2,8 +2,8 @@ const cron = require("node-cron");
 const { EmbedBuilder } = require("discord.js");
 const Streamer = require("../../models/TwitchStreamer");
 const StreamConfiguration = require("../../models/StreamConfiguration");
-const { ApiClient } = require('twitch');
-const { ClientCredentialsAuthProvider } = require('twitch-auth');
+const { ApiClient } = require("twitch");
+const { ClientCredentialsAuthProvider } = require("twitch-auth");
 
 const clientId = process.env.TWITCH_CLIENT_ID;
 const clientSecret = process.env.TWITCH_CLIENT_SECRET;
@@ -20,13 +20,17 @@ module.exports = (client) => {
       for (const streamer of streamers) {
         const { guildId, twitchChannel, isLive } = streamer;
 
-        const user = await twitchClient.helix.users.getUserByName(twitchChannel);
+        const user = await twitchClient.helix.users.getUserByName(
+          twitchChannel
+        );
         if (!user) {
           console.log(`Nie znaleziono użytkownika Twitch: ${twitchChannel}`);
           continue;
         }
 
-        const stream = await twitchClient.helix.streams.getStreamByUserId(user.id);
+        const stream = await twitchClient.helix.streams.getStreamByUserId(
+          user.id
+        );
 
         if (stream && !isLive) {
           const notificationChannel = channels.find(
@@ -35,7 +39,9 @@ module.exports = (client) => {
 
           if (notificationChannel) {
             const guild = client.guilds.cache.get(guildId);
-            const channel = guild.channels.cache.get(notificationChannel.channelId);
+            const channel = guild.channels.cache.get(
+              notificationChannel.channelId
+            );
 
             const embed = new EmbedBuilder()
               .setColor("#9146FF")

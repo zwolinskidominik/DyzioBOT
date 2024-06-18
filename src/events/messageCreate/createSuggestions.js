@@ -1,10 +1,17 @@
-const { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ChannelType } = require('discord.js');
-const GuildConfiguration = require('../../models/GuildConfiguration');
-const formatResults = require('../../utils/formatResults');
-const Suggestion = require('../../models/Suggestion');
+const {
+  EmbedBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ActionRowBuilder,
+  ChannelType,
+} = require("discord.js");
+const GuildConfiguration = require("../../models/GuildConfiguration");
+const formatResults = require("../../utils/formatResults");
+const Suggestion = require("../../models/Suggestion");
 
 module.exports = async (message) => {
-  if (message.author.bot || message.channel.type === ChannelType.GroupDM) return;
+  if (message.author.bot || message.channel.type === ChannelType.GroupDM)
+    return;
 
   const guildConfig = await GuildConfiguration.findOne({
     guildId: message.guildId,
@@ -18,7 +25,7 @@ module.exports = async (message) => {
     await message.delete();
 
     let suggestionMessage = await message.channel.send(
-      'Tworzenie sugestii, proszę czekać...'
+      "Tworzenie sugestii, proszę czekać..."
     );
 
     const newSuggestion = new Suggestion({
@@ -33,7 +40,7 @@ module.exports = async (message) => {
     let threadName = suggestionText;
 
     if (threadName.length > 100) {
-      threadName = threadName.slice(0, 97) + '...';
+      threadName = threadName.slice(0, 97) + "...";
     }
 
     await message.channel.threads.create({
@@ -49,20 +56,20 @@ module.exports = async (message) => {
         iconURL: message.author.displayAvatarURL({ size: 256 }),
       })
       .addFields([
-        { name: 'Sugestia', value: suggestionText },
-        { name: 'Głosy', value: formatResults() },
+        { name: "Sugestia", value: suggestionText },
+        { name: "Głosy", value: formatResults() },
       ])
-      .setColor('#2B2D31');
+      .setColor("#2B2D31");
 
     const upvoteButton = new ButtonBuilder()
-      .setEmoji('<:pingu_yes:1162408115677958184>')
-      .setLabel('Za')
+      .setEmoji("<:pingu_yes:1162408115677958184>")
+      .setLabel("Za")
       .setStyle(ButtonStyle.Secondary)
       .setCustomId(`suggestion.${newSuggestion.suggestionId}.upvote`);
 
     const downvoteButton = new ButtonBuilder()
-      .setEmoji('<:pingu_no:1162408119196995696>')
-      .setLabel('Przeciw')
+      .setEmoji("<:pingu_no:1162408119196995696>")
+      .setLabel("Przeciw")
       .setStyle(ButtonStyle.Secondary)
       .setCustomId(`suggestion.${newSuggestion.suggestionId}.downvote`);
 
@@ -72,15 +79,12 @@ module.exports = async (message) => {
     );
 
     suggestionMessage.edit({
-      content: '',
+      content: "",
       embeds: [suggestionEmbed],
       components: [firstRow],
     });
-
   } catch (error) {
-    console.error('Błąd podczas tworzenia sugestii:', error);
-    message.channel.send(
-      'Wystąpił błąd podczas tworzenia sugestii.'
-    );
+    console.error("Błąd podczas tworzenia sugestii:", error);
+    message.channel.send("Wystąpił błąd podczas tworzenia sugestii.");
   }
 };

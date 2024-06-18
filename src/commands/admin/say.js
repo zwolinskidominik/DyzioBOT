@@ -1,4 +1,10 @@
-const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder } = require("discord.js");
+const {
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  EmbedBuilder,
+} = require("discord.js");
 
 module.exports = {
   data: {
@@ -40,9 +46,11 @@ module.exports = {
       const message = response.fields.getTextInputValue("sayMessage");
       const embedSay = response.fields.getTextInputValue("embedMode");
 
-      const embed = new EmbedBuilder().setDescription(message).setColor('#00BFFF');
+      const embed = new EmbedBuilder()
+        .setDescription(message)
+        .setColor("#00BFFF");
 
-      if (embedSay && (embedSay.toLowerCase() === "on")) {
+      if (embedSay && embedSay.toLowerCase() === "on") {
         await channel.send({ embeds: [embed] });
       } else {
         await channel.send(message);
@@ -55,14 +63,14 @@ module.exports = {
     } catch (error) {
       console.error("Błąd podczas wysyłania wiadomości:", error);
       await interaction.editReply({
-        content: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.',
+        content: "Nie udało się wysłać wiadomości. Spróbuj ponownie.",
         ephemeral: true,
       });
     }
   },
 
   options: {
-    userPermissions: ["ModerateMembers"],
-    botPermissions: ["ModerateMembers"],
+    userPermissions: ["Administrator"],
+    botPermissions: ["Administrator"],
   },
 };

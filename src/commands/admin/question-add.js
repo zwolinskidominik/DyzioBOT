@@ -1,20 +1,20 @@
-const { ApplicationCommandOptionType } = require('discord.js');
-const Question = require('../../models/Question');
+const { ApplicationCommandOptionType } = require("discord.js");
+const Question = require("../../models/Question");
 
 module.exports = {
   data: {
-    name: 'question-add',
-    description: 'Dodaj pytanie.',
+    name: "question-add",
+    description: "Dodaj pytanie.",
     options: [
       {
-        name: 'question',
-        description: 'Treść pytania.',
+        name: "question",
+        description: "Treść pytania.",
         type: ApplicationCommandOptionType.String,
         required: true,
       },
       {
-        name: 'reactions',
-        description: 'Reakcje na pytanie.',
+        name: "reactions",
+        description: "Reakcje na pytanie.",
         type: ApplicationCommandOptionType.String,
         required: true,
       },
@@ -22,8 +22,8 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const question = interaction.options.getString('question');
-    const reactions = interaction.options.getString('reactions').split(' ');
+    const question = interaction.options.getString("question");
+    const reactions = interaction.options.getString("reactions").split(" ");
 
     try {
       const questionModel = new Question({
@@ -34,15 +34,15 @@ module.exports = {
 
       await questionModel.save();
 
-      await interaction.reply('Pomyślnie dodano pytanie dnia!');
+      await interaction.reply("Pomyślnie dodano pytanie dnia!");
     } catch (error) {
       console.error(`Błąd podczas dodawania pytania: ${error}`);
-      await interaction.reply('Wystąpił błąd podczas dodawania pytania.');
+      await interaction.reply("Wystąpił błąd podczas dodawania pytania.");
     }
   },
 
   options: {
-    userPermissions: ['Administrator'],
-    botPermissions: ['Administrator'],
+    userPermissions: ["Administrator"],
+    botPermissions: ["Administrator"],
   },
 };

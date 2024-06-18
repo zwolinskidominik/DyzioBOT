@@ -1,10 +1,10 @@
-const { EmbedBuilder } = require('discord.js');
-const Birthday = require('../../../models/Birthday');
+const { EmbedBuilder } = require("discord.js");
+const Birthday = require("../../../models/Birthday");
 
 module.exports = {
   data: {
-    name: 'next-birthdays',
-    description: 'Wyświetla następne 10 urodzin użytkowników.',
+    name: "next-birthdays",
+    description: "Wyświetla następne 10 urodzin użytkowników.",
   },
 
   run: async ({ interaction }) => {
@@ -32,8 +32,12 @@ module.exports = {
             nextBirthday.setFullYear(today.getFullYear() + 1);
           }
 
-          const age = yearSpecified ? nextBirthday.getFullYear() - birthdayDate.getFullYear() : null;
-          const user = interaction.guild.members.cache.get(birthday.userId)?.user;
+          const age = yearSpecified
+            ? nextBirthday.getFullYear() - birthdayDate.getFullYear()
+            : null;
+          const user = interaction.guild.members.cache.get(
+            birthday.userId
+          )?.user;
 
           return {
             user,
@@ -45,36 +49,38 @@ module.exports = {
         .sort((a, b) => a.date - b.date)
         .slice(0, 10);
 
-      const successEmbed = new EmbedBuilder().setColor('#00BFFF');
+      const successEmbed = new EmbedBuilder().setColor("#00BFFF");
 
       if (upcomingBirthdays.length === 0) {
-        successEmbed.setDescription('Brak nadchodzących urodzin.');
+        successEmbed.setDescription("Brak nadchodzących urodzin.");
         await interaction.editReply({ embeds: [successEmbed] });
         return;
       }
 
-      successEmbed
-        .setTitle('Nadchodzące urodziny')
-        .setDescription(
-          upcomingBirthdays
-            .map(
-              (birthday) =>
-                `**${birthday.date.toLocaleDateString('pl-PL', {
-                  day: '2-digit',
-                  month: 'long',
-                  year: 'numeric',
-                })}**\n${birthday.user} ${birthday.age !== null ? `(${birthday.age})` : ''}`
-            )
-            .join('\n\n')
-        );
+      successEmbed.setTitle("Nadchodzące urodziny").setDescription(
+        upcomingBirthdays
+          .map(
+            (birthday) =>
+              `**${birthday.date.toLocaleDateString("pl-PL", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}**\n${birthday.user} ${
+                birthday.age !== null ? `(${birthday.age})` : ""
+              }`
+          )
+          .join("\n\n")
+      );
 
       await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.error(`Błąd podczas pobierania nadchodzących urodzin: ${error}`);
 
       const errorEmbed = new EmbedBuilder()
-        .setColor('#FF0000')
-        .setDescription('Wystąpił błąd podczas pobierania nadchodzących urodzin.');
+        .setColor("#FF0000")
+        .setDescription(
+          "Wystąpił błąd podczas pobierania nadchodzących urodzin."
+        );
       await interaction.editReply({ embeds: [errorEmbed] });
     }
   },

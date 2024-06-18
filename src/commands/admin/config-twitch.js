@@ -1,14 +1,14 @@
-const { ApplicationCommandOptionType, EmbedBuilder } = require('discord.js');
-const StreamChannel = require('../../models/StreamConfiguration');
+const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
+const StreamChannel = require("../../models/StreamConfiguration");
 
 module.exports = {
   data: {
-    name: 'config-twitch',
-    description: 'Ustawia kanał Discorda do ogłaszania streamów Twitcha.',
+    name: "config-twitch",
+    description: "Ustawia kanał Discorda do ogłaszania streamów Twitcha.",
     options: [
       {
-        name: 'channel',
-        description: 'Kanał Discorda do ogłaszania streamów z Twitcha.',
+        name: "channel",
+        description: "Kanał Discorda do ogłaszania streamów z Twitcha.",
         required: true,
         type: ApplicationCommandOptionType.Channel,
       },
@@ -17,7 +17,7 @@ module.exports = {
 
   run: async ({ interaction }) => {
     const guildId = interaction.guild.id;
-    const channelId = interaction.options.get('channel').value;
+    const channelId = interaction.options.get("channel").value;
 
     try {
       await interaction.deferReply();
@@ -33,16 +33,25 @@ module.exports = {
       await streamChannel.save();
 
       const successEmbed = new EmbedBuilder()
-        .setColor('#00BFFF')
-        .setDescription(`Kanał <#${channelId}> z powiadomieniami o streamkach z Twitcha został ustawiony.`);
+        .setColor("#00BFFF")
+        .setDescription(
+          `Kanał <#${channelId}> z powiadomieniami o streamkach z Twitcha został ustawiony.`
+        );
       await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.error(`Błąd podczas zapisywania konfiguracji kanału: ${error}`);
 
       const errorEmbed = new EmbedBuilder()
-        .setColor('#FF0000')
-        .setDescription('Wystąpił błąd podczas zapisywania konfiguracji kanału.');
+        .setColor("#FF0000")
+        .setDescription(
+          "Wystąpił błąd podczas zapisywania konfiguracji kanału."
+        );
       await interaction.editReply({ embeds: [errorEmbed] });
     }
+  },
+
+  options: {
+    userPermissions: ["Administrator"],
+    botPermissions: ["Administrator"],
   },
 };

@@ -6,7 +6,7 @@ const twitchStreamerSchema = new Schema({
     required: true,
   },
   twitchChannel: {
-    type: String, 
+    type: String,
     required: true,
   },
   isLive: {

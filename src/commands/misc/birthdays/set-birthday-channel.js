@@ -1,10 +1,15 @@
-const { ApplicationCommandOptionType, EmbedBuilder, ChannelType } = require("discord.js");
+const {
+  ApplicationCommandOptionType,
+  EmbedBuilder,
+  ChannelType,
+} = require("discord.js");
 const BirthdayConfiguration = require("../../../models/BirthdayConfiguration");
 
 module.exports = {
   data: {
     name: "set-birthday-channel",
-    description: "Ustawia kanał, na którym będą wysyłane wiadomości urodzinowe.",
+    description:
+      "Ustawia kanał, na którym będą wysyłane wiadomości urodzinowe.",
     options: [
       {
         name: "channel",
@@ -36,16 +41,24 @@ module.exports = {
       await birthdayConfig.save();
 
       const successEmbed = new EmbedBuilder()
-        .setColor('#00BFFF')
-        .setDescription('Kanał do wysyłania wiadomości urodzinowych został ustawiony.');
+        .setColor("#00BFFF")
+        .setDescription(
+          "Kanał do wysyłania wiadomości urodzinowych został ustawiony."
+        );
       await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
       console.error(`Błąd podczas zapisywania konfiguracji kanału: ${error}`);
 
       const errorEmbed = new EmbedBuilder()
-        .setColor('#FF0000')
-        .setDescription('Wystąpił błąd podczas zapisywania konfiguracji kanału.');
+        .setColor("#FF0000")
+        .setDescription(
+          "Wystąpił błąd podczas zapisywania konfiguracji kanału."
+        );
       await interaction.editReply({ embeds: [errorEmbed] });
     }
+  },
+  options: {
+    userPermissions: ["Administrator"],
+    botPermissions: ["Administrator"],
   },
 };

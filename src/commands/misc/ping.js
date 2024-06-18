@@ -1,9 +1,9 @@
 module.exports = {
   data: {
-    name: 'ping',
-    description: 'Pong!',
+    name: "ping",
+    description: "Pong!",
   },
-  
+
   run: async ({ interaction, client }) => {
     try {
       await interaction.deferReply();
@@ -13,8 +13,11 @@ module.exports = {
         `🏓 Pong! Klient ${ping}ms | Websocket: ${client.ws.ping}ms`
       );
     } catch (error) {
-      console.error('Błąd podczas wykonywania komendy ping:', error);
-      await interaction.editReply({ content: 'Wystąpił błąd podczas wykonywania komendy.', ephemeral: true });
+      console.error("Błąd podczas wykonywania komendy ping:", error);
+      await interaction.editReply({
+        content: "Wystąpił błąd podczas wykonywania komendy.",
+        ephemeral: true,
+      });
     }
   },
 };

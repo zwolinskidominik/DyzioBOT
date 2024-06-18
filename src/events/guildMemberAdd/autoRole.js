@@ -1,5 +1,5 @@
-const { GuildMember } = require('discord.js');
-const AutoRole = require('../../models/AutoRole');
+const { GuildMember } = require("discord.js");
+const AutoRole = require("../../models/AutoRole");
 
 /**
  *
@@ -21,7 +21,9 @@ module.exports = async (member) => {
           await member.roles.add(botRole);
           console.log(`Bot role added successfully to ${member.user.tag}`);
         } else {
-          console.log(`Bot role does not exist or is not configured for ${guild.name}`);
+          console.log(
+            `Bot role does not exist or is not configured for ${guild.name}`
+          );
         }
       } else {
         const userRoleIds = autoRoleConfig.roleIds.slice(1);
@@ -31,7 +33,9 @@ module.exports = async (member) => {
           if (userRole) {
             await member.roles.add(userRole);
           } else {
-            console.log(`Role with ID ${roleId} does not exist in guild ${guild.name}`);
+            console.log(
+              `Role with ID ${roleId} does not exist in guild ${guild.name}`
+            );
           }
         }
       }

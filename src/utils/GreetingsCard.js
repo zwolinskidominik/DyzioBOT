@@ -1,5 +1,5 @@
 const { JSX, Builder, loadImage } = require("canvacord");
-const path = require('path');
+const path = require("path");
 
 class GreetingsCard extends Builder {
   constructor() {
@@ -9,7 +9,7 @@ class GreetingsCard extends Builder {
       type: "welcome",
       avatar: "",
       message: "",
-      backgroundImage: path.join(__dirname, '../resources/img/bg.jpg'),
+      backgroundImage: path.join(__dirname, "../resources/img/bg.jpg"),
     });
   }
 
@@ -34,7 +34,8 @@ class GreetingsCard extends Builder {
   }
 
   async render() {
-    const { type, displayName, avatar, message, backgroundImage } = this.options.getOptions();
+    const { type, displayName, avatar, message, backgroundImage } =
+      this.options.getOptions();
 
     const loadedAvatar = await loadImage(avatar);
     const loadedBackground = await loadImage(backgroundImage);
@@ -46,12 +47,12 @@ class GreetingsCard extends Builder {
       {
         className:
           "h-full w-full flex flex-col items-center justify-center bg-[#23272A] rounded-xl",
-          style: {
-            backgroundImage: `url(${loadedBackground.toDataURL()})`,
-            backgroundSize: "cover",
-            backgroundRepeat: "no-repeat",
-          }
+        style: {
+          backgroundImage: `url(${loadedBackground.toDataURL()})`,
+          backgroundSize: "cover",
+          backgroundRepeat: "no-repeat",
         },
+      },
       JSX.createElement(
         "div",
         {

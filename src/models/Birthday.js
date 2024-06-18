@@ -1,4 +1,4 @@
-const { Schema, model } = require('mongoose');
+const { Schema, model } = require("mongoose");
 
 const birthdaySchema = new Schema({
   userId: {
@@ -21,4 +21,4 @@ const birthdaySchema = new Schema({
   },
 });
 
-module.exports = model('Birthday', birthdaySchema);
+module.exports = model("Birthday", birthdaySchema);

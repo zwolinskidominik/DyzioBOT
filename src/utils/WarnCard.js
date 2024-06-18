@@ -39,18 +39,21 @@ class WarnCard extends Builder {
   }
 
   async render() {
-    const { displayName, avatar, message, reason, author } = this.options.getOptions();
+    const { displayName, avatar, message, reason, author } =
+      this.options.getOptions();
     const image = await loadImage(avatar);
 
     return JSX.createElement(
       "div",
       {
-        className: "h-full w-full flex flex-col items-center justify-center bg-[#2D2D2D] rounded-xl",
+        className:
+          "h-full w-full flex flex-col items-center justify-center bg-[#2D2D2D] rounded-xl",
       },
       JSX.createElement(
         "div",
         {
-          className: "bg-[#121212] w-[90%] h-[80%] rounded-lg flex flex-col items-center justify-center",
+          className:
+            "bg-[#121212] w-[90%] h-[80%] rounded-lg flex flex-col items-center justify-center",
         },
         JSX.createElement(
           "div",
