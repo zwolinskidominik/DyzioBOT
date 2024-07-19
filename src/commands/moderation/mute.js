@@ -1,62 +1,52 @@
-const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+} = require("discord.js");
 const ms = require("ms");
 
 module.exports = {
-  data: {
-    name: "mute",
-    description: "Wysyła użytkownika na wakacje od serwera.",
-    options: [
-      {
-        name: "target-user",
-        description: "Użytkownik, którego chcesz wyciszyć.",
-        type: ApplicationCommandOptionType.User,
-        required: true,
-      },
-      {
-        name: "duration",
-        description: "Czas trwania wyciszenia (30min, 1h, 1 dzień).",
-        type: ApplicationCommandOptionType.String,
-        required: true,
-        choices: [
-          {
-            name: "15 min",
-            value: "15 min",
-          },
-          {
-            name: "30 min",
-            value: "30 min",
-          },
-          {
-            name: "1 godz.",
-            value: "1 hour",
-          },
-          {
-            name: "1 dzień",
-            value: "1 day",
-          },
-          {
-            name: "1 tydzień",
-            value: "1 week",
-          },
-        ],
-      },
-      {
-        name: "reason",
-        description: "Powód wyciszenia.",
-        type: ApplicationCommandOptionType.String,
-      },
-    ],
+  data: new SlashCommandBuilder()
+    .setName("mute")
+    .setDescription("Wysyła użytkownika na wakacje od serwera.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .setDMPermission(false)
+    .addUserOption((option) =>
+      option
+        .setName("target-user")
+        .setDescription("Użytkownik, którego chcesz wyciszyć.")
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName("duration")
+        .setDescription("Czas trwania wyciszenia (30min, 1h, 1 dzień).")
+        .setRequired(true)
+        .addChoices(
+          { name: "15 min", value: "15 min" },
+          { name: "30 min", value: "30 min" },
+          { name: "1 godz.", value: "1 hour" },
+          { name: "1 dzień", value: "1 day" },
+          { name: "1 tydzień", value: "1 week" }
+        )
+    )
+    .addStringOption((option) =>
+      option
+        .setName("reason")
+        .setDescription("Powód wyciszenia.")
+        .setRequired(false)
+    ),
+
+  options: {
+    userPermissions: [PermissionFlagsBits.ModerateMembers],
+    botPermissions: [PermissionFlagsBits.ModerateMembers],
   },
 
   run: async ({ interaction }) => {
     try {
-      const targetUserId = interaction.options.get("target-user").value;
-      const duration = interaction.options.get("duration").value;
-      const reason = interaction.options.get("reason")?.value || "Brak powodu.";
-
-      await interaction.deferReply();
-
-      const targetUser = await interaction.guild.members.fetch(targetUserId);
+      const targetUserId = interaction.options.getUser("target-user").id;
+      const duration = interaction.options.getString("duration");
+      const reason = interaction.options.getString("reason") || "Brak powodu.";
 
       const errorEmbed = new EmbedBuilder()
         .setColor("#FF0000")
@@ -65,8 +55,17 @@ module.exports = {
 
       const successEmbed = new EmbedBuilder()
         .setColor("#00BFFF")
+        .addFields(
+          { name: "Moderator:", value: `${interaction.user}`, inline: true },
+          { name: "Powód:", value: `${reason}`, inline: true }
+        )
+        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
+
+      await interaction.deferReply();
+
+      const targetUser = await interaction.guild.members.fetch(targetUserId);
 
       if (!targetUser) {
         errorEmbed.setDescription(
@@ -76,35 +75,14 @@ module.exports = {
         return;
       }
 
-      if (targetUser.id === interaction.guild.ownerId) {
-        errorEmbed.setDescription(
-          "**Nie możesz wyciszyć tego użytkownika, ponieważ jest on właścicielem serwera.**"
-        );
-        await interaction.editReply({ embeds: [errorEmbed] });
-        return;
-      }
-
-      if (targetUser.user.bot) {
-        errorEmbed.setDescription("**Nie mogę wyciszyć bota.**");
-        await interaction.editReply({ embeds: [errorEmbed] });
-        return;
-      }
-
       const msDuration = ms(duration);
 
-      if (isNaN(msDuration)) {
-        errorEmbed.setDescription(
-          "**Podaj prawidłową wartość czasu trwania wyciszenia.**"
-        );
-        await interaction.editReply({ embeds: [errorEmbed] });
-        return;
-      }
-
-      if (msDuration < 5000 || msDuration > 2.419e9) {
-        errorEmbed.setDescription(
-          "**Czas wyciszenia nie może być krótszy niż 5 sekund oraz dłuższy niż 28 dni.**"
-        );
-        await interaction.editReply({ embeds: [errorEmbed] });
+      if (isNaN(msDuration) || msDuration < 5000 || msDuration > 2.419e9) {
+        await interaction.editReply({
+          content:
+            "Podaj prawidłową wartość czasu trwania wyciszenia (5 sekund - 28 dni).",
+          ephemeral: true,
+        });
         return;
       }
 
@@ -113,19 +91,14 @@ module.exports = {
       const botRolePosition =
         interaction.guild.members.me.roles.highest.position;
 
-      if (targetUserRolePosition >= requestUserRolePosition) {
-        errorEmbed.setDescription(
-          "**Nie możesz wyciszyć użytkownika, ponieważ ma taką samą lub wyższą rolę.**"
-        );
-        await interaction.editReply({ embeds: [errorEmbed] });
-        return;
-      }
-
-      if (targetUserRolePosition >= botRolePosition) {
-        errorEmbed.setDescription(
-          "**Nie mogę wyciszyć tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.**"
-        );
-        await interaction.editReply({ embeds: [errorEmbed] });
+      if (
+        targetUserRolePosition >= requestUserRolePosition ||
+        targetUserRolePosition >= botRolePosition
+      ) {
+        await interaction.editReply({
+          content: "Nie możesz wyciszyć użytkownika z wyższą lub równą rolą.",
+          ephemeral: true,
+        });
         return;
       }
 
@@ -134,54 +107,41 @@ module.exports = {
       if (targetUser.isCommunicationDisabled()) {
         await targetUser.timeout(msDuration, reason);
 
-        successEmbed
-          .setDescription(
-            `**Czas wyciszenia ${targetUser} został zaktualizowany: ${prettyMs(
-              msDuration
-            )}**`
-          )
-          .addFields(
-            { name: "Moderator:", value: `${interaction.user}`, inline: true },
-            { name: "Powód:", value: `${reason}`, inline: true }
-          )
-          .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }));
-
-        await interaction.editReply({ embeds: [successEmbed] });
+        await interaction.editReply({
+          embeds: [
+            successEmbed.setDescription(
+              `**Czas wyciszenia ${targetUser} został zaktualizowany: ${prettyMs(
+                msDuration
+              )}**`
+            ),
+          ],
+        });
         return;
       }
 
       await targetUser.timeout(msDuration, reason);
 
-      successEmbed
-        .setDescription(
-          `**${targetUser} został wyciszony na okres ${prettyMs(msDuration)}**`
-        )
-        .addFields(
-          { name: "Moderator:", value: `${interaction.user}`, inline: true },
-          { name: "Powód:", value: `${reason}`, inline: true }
-        )
-        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }));
-
-      await interaction.editReply({ embeds: [successEmbed] });
+      await interaction.editReply({
+        embeds: [
+          successEmbed.setDescription(
+            `**${targetUser} został wyciszony na okres ${prettyMs(
+              msDuration
+            )}**`
+          ),
+        ],
+      });
     } catch (error) {
       console.log(
         `Wystąpił błąd podczas wysyłania użytkownika na przerwę: ${error}`
       );
 
-      const errorEmbed = new EmbedBuilder()
-        .setColor("#FF0000")
-        .setDescription(
-          "**Wystąpił błąd podczas wysyłania użytkownika na przerwę.**"
-        )
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
-
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await interaction.editReply({
+        embeds: [
+          errorEmbed.setDescription(
+            "**Wystąpił błąd podczas wysyłania użytkownika na przerwę.**"
+          ),
+        ],
+      });
     }
-  },
-
-  options: {
-    userPermissions: ["ModerateMembers"],
-    botPermissions: ["ModerateMembers"],
   },
 };

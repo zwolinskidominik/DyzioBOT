@@ -1,23 +1,30 @@
-const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+} = require("discord.js");
 const TwitchStreamer = require("../../models/TwitchStreamer");
 
 module.exports = {
-  data: {
-    name: "twitch-add",
-    description: "Dodaje streamera Twitcha do listy ogłaszanych streamów.",
-    options: [
-      {
-        name: "twitch-username",
-        description: "Nazwa użytkownika na Twitchu.",
-        required: true,
-        type: ApplicationCommandOptionType.String,
-      },
-    ],
+  data: new SlashCommandBuilder()
+    .setName("twitch-add")
+    .setDescription("Dodaje streamera Twitcha do listy ogłaszanych streamów.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDMPermission(false)
+    .addStringOption((option) =>
+      option
+        .setName("twitch-username")
+        .setDescription("Nazwa użytkownika na Twitchu.")
+        .setRequired(true)
+    ),
+
+  options: {
+    userPermissions: [PermissionFlagsBits.Administrator],
+    botPermissions: [PermissionFlagsBits.Administrator],
   },
 
   run: async ({ interaction }) => {
-    const twitchChannel = interaction.options.get("twitch-username").value;
-
+    const twitchChannel = interaction.options.getString("twitch-username");
     const guildId = interaction.guild.id;
 
     try {
@@ -31,26 +38,25 @@ module.exports = {
 
       await streamer.save();
 
-      const successEmbed = new EmbedBuilder()
-        .setColor("#6441A5")
-        .setDescription(
-          `Streamer **${twitchChannel}** został dodany do listy ogłaszanych streamów.`
-        );
-
-      await interaction.editReply({ embeds: [successEmbed] });
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor("#6441A5")
+            .setDescription(
+              `Streamer **${twitchChannel}** został dodany do listy ogłaszanych streamów.`
+            ),
+        ],
+      });
     } catch (error) {
       console.error(`Błąd podczas zapisywania streamera: ${error}`);
 
-      const errorEmbed = new EmbedBuilder()
-        .setColor("#FF0000")
-        .setDescription("Wystąpił błąd podczas zapisywania streamera.");
-
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor("#FF0000")
+            .setDescription("Wystąpił błąd podczas zapisywania streamera."),
+        ],
+      });
     }
-  },
-
-  options: {
-    userPermissions: ["Administrator"],
-    botPermissions: ["Administrator"],
   },
 };

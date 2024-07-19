@@ -14,10 +14,6 @@ function formatResults(upvotes = [], downvotes = []) {
     Math.round((upvotes.length / totalVotes) * progressBarLength) || 0;
   const emptySquares = progressBarLength - filledSquares || 0;
 
-  if (!filledSquares && !emptySquares) {
-    emptySquares = progressBarLength;
-  }
-
   const upPercentage = (upvotes.length / totalVotes) * 100 || 0;
   const downPercentage = (downvotes.length / totalVotes) * 100 || 0;
 
@@ -26,15 +22,11 @@ function formatResults(upvotes = [], downvotes = []) {
     (pb.mf.repeat(filledSquares) + pb.me.repeat(emptySquares)) +
     (filledSquares === progressBarLength ? pb.rf : pb.re);
 
-  const results = [];
-  results.push(
-    `👍 ${upvotes.length} głosów na tak (${upPercentage.toFixed(1)}%) • 👎 ${
-      downvotes.length
-    } głosów na nie (${downPercentage.toFixed(1)}%)`
-  );
-  results.push(progressBar);
-
-  return results.join("\n");
+  return `👍 ${upvotes.length} głosów na tak (${upPercentage.toFixed(
+    1
+  )}%) • 👎 ${downvotes.length} głosów na nie (${downPercentage.toFixed(
+    1
+  )}%)\n${progressBar}`;
 }
 
 module.exports = formatResults;

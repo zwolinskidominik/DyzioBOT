@@ -20,28 +20,20 @@ module.exports = (client) => {
       for (const streamer of streamers) {
         const { guildId, twitchChannel, isLive } = streamer;
 
-        const user = await twitchClient.helix.users.getUserByName(
-          twitchChannel
-        );
+        const user = await twitchClient.helix.users.getUserByName(twitchChannel);
         if (!user) {
           console.log(`Nie znaleziono użytkownika Twitch: ${twitchChannel}`);
           continue;
         }
 
-        const stream = await twitchClient.helix.streams.getStreamByUserId(
-          user.id
-        );
+        const stream = await twitchClient.helix.streams.getStreamByUserId(user.id);
 
         if (stream && !isLive) {
-          const notificationChannel = channels.find(
-            (channel) => channel.guildId === guildId
-          );
+          const notificationChannel = channels.find((channel) => channel.guildId === guildId);
 
           if (notificationChannel) {
             const guild = client.guilds.cache.get(guildId);
-            const channel = guild.channels.cache.get(
-              notificationChannel.channelId
-            );
+            const channel = guild.channels.cache.get(notificationChannel.channelId);
 
             const embed = new EmbedBuilder()
               .setColor("#9146FF")
@@ -53,11 +45,7 @@ module.exports = (client) => {
               .setTitle(stream.title)
               .setURL(`https://www.twitch.tv/${twitchChannel}`)
               .setDescription(`**Streamuje:** ${stream.gameName}`)
-              .setImage(
-                stream.thumbnailUrl
-                  .replace("{width}", "1280")
-                  .replace("{height}", "720")
-              )
+              .setImage(stream.thumbnailUrl.replace("{width}", "1280").replace("{height}", "720"))
               .setFooter({
                 text: client.user.username,
                 iconURL: client.user.displayAvatarURL(),

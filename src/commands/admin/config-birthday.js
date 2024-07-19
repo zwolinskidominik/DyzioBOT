@@ -4,22 +4,22 @@ const {
   SlashCommandBuilder,
   PermissionFlagsBits,
 } = require("discord.js");
-const StreamChannel = require("../../models/StreamConfiguration");
+const BirthdayConfiguration = require("../../models/BirthdayConfiguration");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("config-twitch")
-    .setDescription("Ustawia kanał Discorda do ogłaszania streamów Twitcha.")
+    .setName("config-birthday")
+    .setDescription("Skonfiguruj kanał do wysyłania życzeń urodzinowych.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setDMPermission(false)
     .addSubcommand((subcommand) =>
       subcommand
         .setName("add")
-        .setDescription("Dodaje kanał do powiadomień o streamach Twitch.")
+        .setDescription("Dodaje kanał do wysyłania życzeń urodzinowych.")
         .addChannelOption((option) =>
           option
             .setName("channel")
-            .setDescription("Kanał Discorda do ogłaszania streamów z Twitcha.")
+            .setDescription("Kanał do wysyłania życzeń urodzinowych.")
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
         )
@@ -27,8 +27,13 @@ module.exports = {
     .addSubcommand((subcommand) =>
       subcommand
         .setName("remove")
-        .setDescription("Usuwa kanał do powiadomień o streamach Twitch.")
+        .setDescription("Usuwa kanał do wysyłania życzeń urodzinowych.")
     ),
+
+  options: {
+    userPermissions: [PermissionFlagsBits.Administrator],
+    botPermissions: [PermissionFlagsBits.Administrator],
+  },
 
   run: async ({ interaction }) => {
     const errorEmbed = new EmbedBuilder().setColor("#FF0000");
@@ -41,31 +46,30 @@ module.exports = {
     try {
       await interaction.deferReply({ ephemeral: true });
 
-      const existingConfig = await StreamChannel.findOne({ guildId });
+      const existingConfig = await BirthdayConfiguration.findOne({ guildId });
 
       if (subcommand === "add") {
-        if (existingConfig && existingConfig.channelId === channel.id) {
+        if (existingConfig && existingConfig.birthdayChannelId === channel.id) {
           await interaction.editReply({
             embeds: [
               errorEmbed.setDescription(
-                `Kanał ${channel} jest już ustawiony jako kanał powiadomień o streamach Twitch.`
+                `Kanał ${channel} jest już ustawiony jako kanał do wysyłania życzeń urodzinowych.`
               ),
             ],
             ephemeral: true,
           });
           return;
         }
-
-        const config = existingConfig || new StreamChannel({ guildId });
-        config.channelId = channel.id;
+        const config = existingConfig || new BirthdayConfiguration({ guildId });
+        config.birthdayChannelId = channel.id;
         await config.save();
 
         await interaction.editReply({
           embeds: [
             successEmbed.setDescription(
               existingConfig
-                ? `Zaktualizowano kanał powiadomień o streamach Twitch na ${channel}.`
-                : `Ustawiono kanał powiadomień o streamach Twitch na ${channel}.`
+                ? `Zaktualizowano kanał do wysyłania życzeń urodzinowych na ${channel}.`
+                : `Ustawiono kanał do wysyłania życzeń urodzinowych na ${channel}.`
             ),
           ],
           ephemeral: true,
@@ -78,7 +82,7 @@ module.exports = {
           await interaction.editReply({
             embeds: [
               errorEmbed.setDescription(
-                "Nie znaleziono skonfigurowanego kanału do usunięcia."
+                "Brak skonfigurowanego kanału do wysyłania życzeń urodzinowych."
               ),
             ],
             ephemeral: true,
@@ -86,12 +90,11 @@ module.exports = {
           return;
         }
 
-        await StreamChannel.findOneAndDelete({ guildId });
-
+        await BirthdayConfiguration.findOneAndDelete({ guildId });
         await interaction.editReply({
           embeds: [
             successEmbed.setDescription(
-              `Kanał ${channel} został usunięty z powiadomień o streamach Twitch.`
+              "Usunięto kanał do wysyłania życzeń urodzinowych."
             ),
           ],
           ephemeral: true,
@@ -99,7 +102,6 @@ module.exports = {
       }
     } catch (error) {
       console.error(`Błąd podczas zapisywania konfiguracji kanału: ${error}`);
-
       await interaction.editReply({
         embeds: [
           errorEmbed.setDescription(

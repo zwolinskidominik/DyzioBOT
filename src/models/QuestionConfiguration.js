@@ -1,9 +1,10 @@
 const { Schema, model } = require("mongoose");
 
-const QuestionConfigurationSchema = new Schema({
+const questionConfigurationSchema = new Schema({
   guildId: {
     type: String,
     required: true,
+    unique: true,
   },
   questionChannelId: {
     type: String,
@@ -11,8 +12,8 @@ const QuestionConfigurationSchema = new Schema({
   },
   pingRoleId: {
     type: String,
-    default: null,
+    required: false,
   },
 });
 
-module.exports = model("QuestionConfiguration", QuestionConfigurationSchema);
+module.exports = model("QuestionConfiguration", questionConfigurationSchema);

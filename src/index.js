@@ -7,10 +7,12 @@ const {
   DEV_ROLE_IDS,
   MONGODB_URI,
 } = process.env;
-const guildMemberAddEvent = require("./events/guildMemberAdd/autoRole.js");
+
 const { Client, IntentsBitField, REST, Routes } = require("discord.js");
 const { CommandKit } = require("commandkit");
 const mongoose = require("mongoose");
+
+const guildMemberAddEvent = require("./events/guildMemberAdd/autoRole.js");
 
 const client = new Client({
   intents: [
@@ -19,18 +21,15 @@ const client = new Client({
     IntentsBitField.Flags.GuildMessages,
     IntentsBitField.Flags.GuildPresences,
     IntentsBitField.Flags.MessageContent,
+    IntentsBitField.Flags.GuildMessagePolls,
   ],
 });
 
-const parsedDevGuildIds = DEV_GUILD_IDS
-  ? DEV_GUILD_IDS.split(",").map((id) => id.trim())
-  : [];
-const parsedDevUserIds = DEV_USER_IDS
-  ? DEV_USER_IDS.split(",").map((id) => id.trim())
-  : [];
-const parsedDevRoleIds = DEV_ROLE_IDS
-  ? DEV_ROLE_IDS.split(",").map((id) => id.trim())
-  : [];
+const parseEnvVar = (envVar) =>
+  envVar ? envVar.split(",").map((id) => id.trim()) : [];
+const parsedDevGuildIds = parseEnvVar(DEV_GUILD_IDS);
+const parsedDevUserIds = parseEnvVar(DEV_USER_IDS);
+const parsedDevRoleIds = parseEnvVar(DEV_ROLE_IDS);
 
 new CommandKit({
   client,
@@ -52,10 +51,8 @@ mongoose.connect(MONGODB_URI).then(() => {
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
 
-  // Clear commands globally.
   console.log("Clearing commands...");
 
-  // Clear the commands.
   rest
     .put(Routes.applicationCommands(CLIENT_ID), { body: [] })
     .then(() => console.log("Commands cleared."))

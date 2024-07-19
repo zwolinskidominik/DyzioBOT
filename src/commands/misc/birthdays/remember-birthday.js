@@ -1,61 +1,69 @@
-const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const Birthday = require("../../../models/Birthday");
 
 module.exports = {
-  data: {
-    name: "remember-birthday",
-    description: "Ustawia datę urodzin użytkownika.",
-    options: [
-      {
-        name: "date",
-        description: "Data urodzin w formacie DD-MM-YYYY lub DD-MM.",
-        required: true,
-        type: ApplicationCommandOptionType.String,
-      },
-    ],
-  },
+  data: new SlashCommandBuilder()
+    .setName("remember-birthday")
+    .setDescription("Ustawia datę urodzin użytkownika.")
+    .setDMPermission(false)
+    .addStringOption((option) =>
+      option
+        .setName("date")
+        .setDescription("Data urodzin w formacie DD-MM-YYYY lub DD-MM.")
+        .setRequired(true)
+    ),
 
   run: async ({ interaction }) => {
-    const dateString = interaction.options.get("date").value;
+    const errorEmbed = new EmbedBuilder().setColor("#FF0000");
+    const successEmbed = new EmbedBuilder().setColor("#00BFFF");
+
+    const dateString = interaction.options.getString("date");
     const userId = interaction.user.id;
     const guildId = interaction.guild.id;
 
     const datePatternWithYear = /^\d{2}-\d{2}-\d{4}$/;
     const datePatternWithoutYear = /^\d{2}-\d{2}$/;
 
-    let date,
-      yearSpecified = true;
-
-    const errorEmbed = new EmbedBuilder().setColor("#FF0000");
+    let date;
+    let yearSpecified = true;
 
     if (datePatternWithYear.test(dateString)) {
       const [day, month, year] = dateString.split("-");
       date = new Date(`${year}-${month}-${day}`);
     } else if (datePatternWithoutYear.test(dateString)) {
       const [day, month] = dateString.split("-");
-      date = new Date(`1970-${month}-${day}`); // Use a placeholder year for storage
+      date = new Date(`1970-${month}-${day}`); // Placeholder if no year specified
       yearSpecified = false;
     } else {
-      errorEmbed.setDescription(
-        "Niepoprawny format daty. Użyj formatu `DD-MM-YYYY` lub `DD-MM`."
-      );
-      await interaction.reply({ embeds: [errorEmbed] });
-      return;
+      return interaction.reply({
+        embeds: [
+          errorEmbed.setDescription(
+            "Niepoprawny format daty. Użyj formatu `DD-MM-YYYY` lub `DD-MM`."
+          ),
+        ],
+        ephemeral: true,
+      });
+    }
+
+    if (isNaN(date.getTime())) {
+      return interaction.reply({
+        embeds: [
+          errorEmbed.setDescription(
+            "Niepoprawna data. Użyj prawidłowej daty w formacie `DD-MM-YYYY` lub `DD-MM`."
+          ),
+        ],
+        ephemeral: true,
+      });
     }
 
     try {
       await interaction.deferReply();
 
-      let birthday = await Birthday.findOne({ userId, guildId });
+      const filter = { userId, guildId };
+      const update = { date, yearSpecified };
+      const options = { upsert: true, new: true, setDefaultsOnInsert: true };
 
-      if (birthday) {
-        birthday.date = date;
-        birthday.yearSpecified = yearSpecified;
-      } else {
-        birthday = new Birthday({ userId, guildId, date, yearSpecified });
-      }
-
-      await birthday.save();
+      await Birthday.findOneAndUpdate(filter, update, options);
 
       const today = new Date();
       const nextBirthday = new Date(
@@ -75,19 +83,29 @@ module.exports = {
         year: "numeric",
       });
 
-      const successEmbed = new EmbedBuilder()
-        .setColor("#00BFFF")
-        .setDescription(
-          `Zanotowano, **kolejne** urodziny <@${userId}> już za **${diffDays}** dni, **${formattedDate}** 🎂.`
-        );
-      await interaction.editReply({ embeds: [successEmbed] });
-    } catch (error) {
-      console.error(`Błąd podczas zapisywania daty urodzin: ${error}`);
+      let ageMessage = "kolejne";
+      if (yearSpecified) {
+        const birthYear = date.getFullYear();
+        const nextAge = nextBirthday.getFullYear() - birthYear;
+        ageMessage = `${nextAge}`;
+      }
 
-      errorEmbed.setDescription(
-        "Wystąpił błąd podczas zapisywania daty urodzin."
-      );
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await interaction.editReply({
+        embeds: [
+          successEmbed.setDescription(
+            `Zanotowano, **${ageMessage}** urodziny <@!${userId}> już za **${diffDays}** dni, **${formattedDate}** 🎂.`
+          ),
+        ],
+      });
+    } catch (error) {
+      console.error(`Błąd podczas zapisywania daty urodzin: ${error}`, error);
+      await interaction.editReply({
+        embeds: [
+          errorEmbed.setDescription(
+            "Wystąpił błąd podczas zapisywania daty urodzin."
+          ),
+        ],
+      });
     }
   },
 };

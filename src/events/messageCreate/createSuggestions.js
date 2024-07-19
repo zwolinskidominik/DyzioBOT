@@ -5,43 +5,49 @@ const {
   ActionRowBuilder,
   ChannelType,
 } = require("discord.js");
-const GuildConfiguration = require("../../models/GuildConfiguration");
+const SuggestionConfiguration = require("../../models/SuggestionConfiguration");
 const formatResults = require("../../utils/formatResults");
 const Suggestion = require("../../models/Suggestion");
 
 module.exports = async (message) => {
-  if (message.author.bot || message.channel.type === ChannelType.GroupDM)
+  const guildId = message.guild.id;
+
+  if (
+    message.author.bot ||
+    message.channel.type === ChannelType.GroupDM ||
+    message.channel.type === ChannelType.DM
+  )
     return;
 
-  const guildConfig = await GuildConfiguration.findOne({
-    guildId: message.guildId,
-  });
-
-  if (!guildConfig?.suggestionChannelIds.includes(message.channelId)) return;
-
   try {
-    const suggestionText = message.content;
+    const suggestionConfig = await SuggestionConfiguration.findOne({ guildId });
 
+    if (
+      !suggestionConfig ||
+      suggestionConfig.suggestionChannelId !== message.channelId
+    )
+      return;
+
+    const suggestionText = message.content;
     await message.delete();
 
-    let suggestionMessage = await message.channel.send(
+    const suggestionMessage = await message.channel.send(
       "Tworzenie sugestii, proszę czekać..."
     );
 
     const newSuggestion = new Suggestion({
       authorId: message.author.id,
-      guildId: message.guildId,
+      guildId,
       messageId: suggestionMessage.id,
       content: suggestionText,
     });
 
     await newSuggestion.save();
 
-    let threadName = suggestionText;
-
-    if (threadName.length > 100) {
-      threadName = threadName.slice(0, 97) + "...";
-    }
+    let threadName =
+      suggestionText.length > 100
+        ? suggestionText.slice(0, 97) + "..."
+        : suggestionText;
 
     await message.channel.threads.create({
       name: threadName,

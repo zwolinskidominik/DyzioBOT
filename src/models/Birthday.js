@@ -4,7 +4,6 @@ const birthdaySchema = new Schema({
   userId: {
     type: String,
     required: true,
-    unique: true,
   },
   guildId: {
     type: String,
@@ -20,5 +19,7 @@ const birthdaySchema = new Schema({
     default: true,
   },
 });
+
+birthdaySchema.index({ userId: 1, guildId: 1 }, { unique: true });
 
 module.exports = model("Birthday", birthdaySchema);

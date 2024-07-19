@@ -1,51 +1,37 @@
-const { EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
-  data: {
-    name: "serverinfo",
-    description: "Wyświetla informacje o serwerze.",
-  },
+  data: new SlashCommandBuilder()
+    .setName("serverinfo")
+    .setDescription("Wyświetla informacje o serwerze.")
+    .setDMPermission(false),
 
   run: async ({ interaction }) => {
     try {
-      if (!interaction.inGuild()) {
-        await interaction.reply({
-          content: "You can only run this command inside a server.",
-          ephemeral: true,
-        });
-        return;
-      }
-
-      const { guild } = interaction;
-      const { name, ownerId, memberCount } = guild;
+      const { guild, member } = interaction;
+      const {
+        name,
+        ownerId,
+        memberCount,
+        roles,
+        emojis,
+        id,
+        createdTimestamp,
+        premiumSubscriptionCount,
+        verificationLevel,
+      } = guild;
       const icon = guild.iconURL();
-      const roles = guild.roles.cache.size;
-      const emojis = guild.emojis.cache.size;
-      const id = guild.id;
-      const joinedAt = interaction.member.joinedAt;
+      const joinedAt = member.joinedAt;
 
-      let baseVerification;
-
-      switch (guild.verificationLevel) {
-        case 0:
-          baseVerification = "Żaden";
-          break;
-        case 1:
-          baseVerification = "Niski";
-          break;
-        case 2:
-          baseVerification = "Średni";
-          break;
-        case 3:
-          baseVerification = "Wysoki";
-          break;
-        case 4:
-          baseVerification = "Bardzo wysoki";
-          break;
-        default:
-          baseVerification = "Nieznany";
-          break;
-      }
+      const verificationLevels = [
+        "Żaden",
+        "Niski",
+        "Średni",
+        "Wysoki",
+        "Bardzo wysoki",
+      ];
+      const baseVerification =
+        verificationLevels[verificationLevel] || "Nieznany";
 
       const embed = new EmbedBuilder()
         .setColor("#ff0000")
@@ -54,10 +40,10 @@ module.exports = {
         .setTimestamp()
         .addFields(
           { name: "Nazwa", value: name, inline: false },
-          { name: "Właściciel", value: `<@${ownerId}>`, inline: true },
+          { name: "Właściciel", value: `<@!${ownerId}>`, inline: true },
           {
             name: "Data utworzenia",
-            value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:R>`,
+            value: `<t:${Math.floor(createdTimestamp / 1000)}:R>`,
             inline: true,
           },
           {
@@ -66,8 +52,8 @@ module.exports = {
             inline: true,
           },
           { name: "Członkowie", value: `${memberCount}`, inline: true },
-          { name: "Role", value: `${roles}`, inline: true },
-          { name: "Emoji", value: `${emojis}`, inline: true },
+          { name: "Role", value: `${roles.cache.size}`, inline: true },
+          { name: "Emoji", value: `${emojis.cache.size}`, inline: true },
           {
             name: "Stopień weryfikacji",
             value: baseVerification,
@@ -75,7 +61,7 @@ module.exports = {
           },
           {
             name: "Boosty",
-            value: `${guild.premiumSubscriptionCount}`,
+            value: `${premiumSubscriptionCount}`,
             inline: true,
           }
         );

@@ -1,27 +1,38 @@
-const { ApplicationCommandOptionType } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+} = require("discord.js");
 const Question = require("../../models/Question");
 
 module.exports = {
-  data: {
-    name: "question-add",
-    description: "Dodaj pytanie.",
-    options: [
-      {
-        name: "question",
-        description: "Treść pytania.",
-        type: ApplicationCommandOptionType.String,
-        required: true,
-      },
-      {
-        name: "reactions",
-        description: "Reakcje na pytanie.",
-        type: ApplicationCommandOptionType.String,
-        required: true,
-      },
-    ],
+  data: new SlashCommandBuilder()
+    .setName("question-add")
+    .setDescription("Dodaj pytanie.")
+    .addStringOption((option) =>
+      option
+        .setName("question")
+        .setDescription("Treść pytania.")
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName("reactions")
+        .setDescription("Reakcje na pytanie (oddzielone spacją).")
+        .setRequired(true)
+    )
+    .setDMPermission(false)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  options: {
+    userPermissions: [PermissionFlagsBits.Administrator],
+    botPermissions: [PermissionFlagsBits.Administrator],
   },
 
   run: async ({ interaction }) => {
+    const errorEmbed = new EmbedBuilder().setColor("#FF0000");
+    const successEmbed = new EmbedBuilder().setColor("#00BFFF");
+
     const question = interaction.options.getString("question");
     const reactions = interaction.options.getString("reactions").split(" ");
 
@@ -34,15 +45,18 @@ module.exports = {
 
       await questionModel.save();
 
-      await interaction.reply("Pomyślnie dodano pytanie dnia!");
+      await interaction.reply({
+        embeds: [successEmbed.setDescription("Pomyślnie dodano pytanie dnia!")],
+        ephemeral: true,
+      });
     } catch (error) {
       console.error(`Błąd podczas dodawania pytania: ${error}`);
-      await interaction.reply("Wystąpił błąd podczas dodawania pytania.");
+      await interaction.reply({
+        embeds: [
+          errorEmbed.setDescription("Wystąpił błąd podczas dodawania pytania."),
+        ],
+        ephemeral: true,
+      });
     }
-  },
-
-  options: {
-    userPermissions: ["Administrator"],
-    botPermissions: ["Administrator"],
   },
 };

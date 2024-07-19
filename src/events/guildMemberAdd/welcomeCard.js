@@ -1,12 +1,8 @@
-const { GuildMember, AttachmentBuilder, EmbedBuilder } = require("discord.js");
+const { AttachmentBuilder, EmbedBuilder } = require("discord.js");
 const { Font } = require("canvacord");
 const { GreetingsCard } = require("../../utils/GreetingsCard");
 const GreetingsConfiguration = require("../../models/GreetingsConfiguration");
 
-/**
- *
- * @param {GuildMember} member
- */
 module.exports = async (member) => {
   try {
     const guild = member.guild;
@@ -34,7 +30,7 @@ module.exports = async (member) => {
 
     const embed = new EmbedBuilder()
       .setDescription(
-        `### Siema <@${member.user.id}>! 😎 ###\nWitaj na serwerze ${guild.name}! 🕹️`
+        `### Siema <@!${member.user.id}>! 😎 ###\nWitaj na serwerze ${guild.name}! 🕹️`
       )
       .setImage("attachment://welcome.png")
       .setColor("#86c232");

@@ -1,97 +1,60 @@
-const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+} = require("discord.js");
 
 module.exports = {
-  data: {
-    name: "ban",
-    description: "Banuje użytkownika na serwerze.",
-    options: [
-      {
-        name: "target-user",
-        description: "Użytkownik, którego chcesz zbanować.",
-        required: true,
-        type: ApplicationCommandOptionType.Mentionable,
-      },
-      {
-        name: "reason",
-        description: "Powód zbanowania.",
-        type: ApplicationCommandOptionType.String,
-      },
-    ],
+  data: new SlashCommandBuilder()
+    .setName("ban")
+    .setDescription("Banuje użytkownika na serwerze.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .setDMPermission(false)
+    .addUserOption((option) =>
+      option
+        .setName("target-user")
+        .setDescription("Użytkownik, którego chcesz zbanować.")
+        .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName("reason")
+        .setDescription("Powód zbanowania.")
+        .setRequired(false)
+    ),
+
+  options: {
+    userPermissions: [PermissionFlagsBits.BanMembers],
+    botPermissions: [PermissionFlagsBits.BanMembers],
   },
 
   run: async ({ interaction }) => {
     try {
-      const targetUserId = interaction.options.get("target-user").value;
-      const reason = interaction.options.get("reason")?.value || "Brak";
+      const targetUserId = interaction.options.getUser("target-user").id;
+      const reason = interaction.options.getString("reason") || "Brak";
 
       await interaction.deferReply();
 
       const targetUser = await interaction.guild.members.fetch(targetUserId);
 
       if (!targetUser) {
-        const errorEmbed = new EmbedBuilder()
-          .setColor("#FF0000")
-          .setDescription("**Taki użytkownik nie istnieje na tym serwerze.**")
-          .setTimestamp()
-          .setFooter({ text: interaction.guild.name });
-
-        await interaction.editReply({ embeds: [errorEmbed] });
+        await interaction.editReply({
+          embeds: [
+            errorEmbed.setDescription(
+              "**Taki użytkownik nie istnieje na tym serwerze.**"
+            ),
+          ],
+        });
         return;
       }
 
-      if (targetUser.id === interaction.guild.ownerId) {
-        const errorEmbed = new EmbedBuilder()
-          .setColor("#FF0000")
-          .setDescription(
-            "**Nie możesz zbanować tego użytkownika, ponieważ jest on właścicielem serwera.**"
-          )
-          .setTimestamp()
-          .setFooter({ text: interaction.guild.name });
-
-        await interaction.editReply({ embeds: [errorEmbed] });
-        return;
-      }
-
-      const targetUserRolePosition = targetUser.roles.highest.position;
-      const requestUserRolePosition = interaction.member.roles.highest.position;
-      const botRolePosition =
-        interaction.guild.members.me.roles.highest.position;
-
-      if (targetUserRolePosition >= requestUserRolePosition) {
-        const errorEmbed = new EmbedBuilder()
-          .setColor("#FF0000")
-          .setDescription(
-            "**Nie możesz zbanować użytkownika, ponieważ ma taką samą lub wyższą rolę.**"
-          )
-          .setTimestamp()
-          .setFooter({ text: interaction.guild.name });
-
-        await interaction.editReply({ embeds: [errorEmbed] });
-        return;
-      }
-
-      if (targetUserRolePosition >= botRolePosition) {
-        const errorEmbed = new EmbedBuilder()
-          .setColor("#FF0000")
-          .setDescription(
-            "**Nie mogę zbanować tego użytkownika, ponieważ ma taką samą lub wyższą rolę ode mnie.**"
-          )
-          .setTimestamp()
-          .setFooter({ text: interaction.guild.name });
-
-        await interaction.editReply({ embeds: [errorEmbed] });
-        return;
-      }
-
-      await targetUser.ban({ reason });
+      const errorEmbed = new EmbedBuilder()
+        .setColor("#FF0000")
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
 
       const successEmbed = new EmbedBuilder()
         .setColor("#00BFFF")
-        .setDescription(`**Użytkownik ${targetUser} został zbanowany.**`)
-        .addFields(
-          { name: "Moderator:", value: `${interaction.user}`, inline: true },
-          { name: "Powód:", value: `${reason}`, inline: true }
-        )
         .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
         .setFooter({
           text: `${interaction.user.username}`,
@@ -99,22 +62,50 @@ module.exports = {
         })
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [successEmbed] });
+      const targetUserRolePosition = targetUser.roles.highest.position;
+      const requestUserRolePosition = interaction.member.roles.highest.position;
+      const botRolePosition =
+        interaction.guild.members.me.roles.highest.position;
+
+      if (
+        targetUser.id === interaction.guild.ownerId ||
+        targetUserRolePosition >= requestUserRolePosition ||
+        targetUserRolePosition >= botRolePosition
+      ) {
+        await interaction.editReply({
+          embeds: [
+            errorEmbed.setDescription(
+              "**Nie możesz zbanować tego użytkownika z wyższą lub równą rolą.**"
+            ),
+          ],
+        });
+        return;
+      }
+
+      await targetUser.ban({ reason });
+
+      await interaction.editReply({
+        embeds: [
+          successEmbed
+            .setDescription(`**Użytkownik ${targetUser} został zbanowany.**`)
+            .addFields(
+              {
+                name: "Moderator:",
+                value: `${interaction.user}`,
+                inline: true,
+              },
+              { name: "Powód:", value: `${reason}`, inline: true }
+            ),
+        ],
+      });
     } catch (error) {
       console.error(`Wystąpił błąd podczas banowania: ${error}`);
 
-      const errorEmbed = new EmbedBuilder()
-        .setColor("#FF0000")
-        .setDescription("**Wystąpił błąd podczas banowania.**")
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
-
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await interaction.editReply({
+        embeds: [
+          errorEmbed.setDescription("**Wystąpił błąd podczas banowania.**"),
+        ],
+      });
     }
-  },
-
-  options: {
-    userPermissions: ["BanMembers"],
-    botPermissions: ["BanMembers"],
   },
 };

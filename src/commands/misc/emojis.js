@@ -1,5 +1,5 @@
 const {
-  ChatInputCommandInteraction,
+  SlashCommandBuilder,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -7,15 +7,10 @@ const {
 } = require("discord.js");
 
 module.exports = {
-  data: {
-    name: "emoji",
-    description: "Wyświetla listę emoji na serwerze.",
-  },
-
-  /**
-   *
-   * @param {ChatInputCommandInteraction} interaction
-   */
+  data: new SlashCommandBuilder()
+    .setName("emoji")
+    .setDescription("Wyświetla listę emoji na serwerze.")
+    .setDMPermission(false),
 
   run: async ({ interaction }) => {
     try {
@@ -62,15 +57,9 @@ module.exports = {
 
       collector.on("collect", async (btnInteraction) => {
         if (btnInteraction.customId === "previous") {
-          currentPage--;
-          if (currentPage < 0) {
-            currentPage = pages - 1;
-          }
+          currentPage = (currentPage - 1 + pages) % pages;
         } else if (btnInteraction.customId === "next") {
-          currentPage++;
-          if (currentPage > pages - 1) {
-            currentPage = 0;
-          }
+          currentPage = (currentPage + 1) % pages;
         }
         await btnInteraction.update({
           embeds: [generateEmbed(currentPage)],
@@ -79,9 +68,7 @@ module.exports = {
       });
 
       collector.on("end", async () => {
-        row.components.forEach((c) => {
-          c.setDisabled(true);
-        });
+        row.components.forEach((c) => c.setDisabled(true));
         await message.edit({ components: [row] });
       });
     } catch (error) {

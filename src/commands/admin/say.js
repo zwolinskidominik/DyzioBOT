@@ -4,12 +4,20 @@ const {
   TextInputStyle,
   ActionRowBuilder,
   EmbedBuilder,
+  SlashCommandBuilder,
+  PermissionFlagsBits,
 } = require("discord.js");
 
 module.exports = {
-  data: {
-    name: "say",
-    description: "Napisz coś za pomocą bota.",
+  data: new SlashCommandBuilder()
+    .setName("say")
+    .setDescription("Napisz coś za pomocą bota.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDMPermission(false),
+
+  options: {
+    userPermissions: [PermissionFlagsBits.Administrator],
+    botPermissions: [PermissionFlagsBits.Administrator],
   },
 
   run: async ({ interaction }) => {
@@ -28,7 +36,7 @@ module.exports = {
 
     const sayEmbed = new TextInputBuilder()
       .setCustomId("embedMode")
-      .setLabel("Tryb embed on/off?")
+      .setLabel("Tryb embed: (on/off)")
       .setPlaceholder("on/off")
       .setStyle(TextInputStyle.Short)
       .setRequired(false);
@@ -67,10 +75,5 @@ module.exports = {
         ephemeral: true,
       });
     }
-  },
-
-  options: {
-    userPermissions: ["Administrator"],
-    botPermissions: ["Administrator"],
   },
 };

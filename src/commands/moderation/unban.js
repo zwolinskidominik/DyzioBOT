@@ -1,21 +1,30 @@
-const { ApplicationCommandOptionType, EmbedBuilder } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+} = require("discord.js");
 
 module.exports = {
-  data: {
-    name: "unban",
-    description: "Odbanowuje użytkownika na serwerze.",
-    options: [
-      {
-        name: "target-user",
-        description: "Użytkownik, którego chcesz odbanować.",
-        required: true,
-        type: ApplicationCommandOptionType.String,
-      },
-    ],
+  data: new SlashCommandBuilder()
+    .setName("unban")
+    .setDescription("Odbanowuje użytkownika na serwerze.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .setDMPermission(false)
+    .addStringOption((option) =>
+      option
+        .setName("target-user")
+        .setDescription("Użytkownik, którego chcesz odbanować.")
+        .setRequired(true)
+    ),
+
+  options: {
+    userPermissions: [PermissionFlagsBits.BanMembers],
+    botPermissions: [PermissionFlagsBits.BanMembers],
   },
+
   run: async ({ interaction }) => {
     try {
-      const targetUserId = interaction.options.get("target-user").value;
+      const targetUserId = interaction.options.getString("target-user");
 
       await interaction.deferReply();
 
@@ -24,52 +33,55 @@ module.exports = {
         (user) => user.user.id === targetUserId
       );
 
-      const errorEmbed = new EmbedBuilder()
-        .setColor("#FF0000")
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
-
       if (!bannedUser) {
-        errorEmbed.setDescription(
-          "**Nie znaleziono użytkownika na liście banów.**"
-        );
-        await interaction.editReply({ embeds: [errorEmbed] });
+        await interaction.editReply({
+          embeds: [
+            errorEmbed.setDescription(
+              "**Nie znaleziono użytkownika na liście banów.**"
+            ),
+          ],
+        });
         return;
       }
 
       const member = bannedUser.user;
 
-      // Unban the target user
-      await interaction.guild.bans.remove(targetUserId);
+      const errorEmbed = new EmbedBuilder()
+        .setColor("#FF0000")
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
 
       const successEmbed = new EmbedBuilder()
         .setColor("#00BFFF")
-        .setDescription(`**Użytkownik ${member.username} został odbanowany**`)
-        .addFields({
-          name: "Moderator:",
-          value: `${interaction.user}`,
-          inline: true,
-        })
         .setThumbnail(member.displayAvatarURL({ dynamic: true }))
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
 
-      await interaction.editReply({ embeds: [successEmbed] });
+      await interaction.guild.bans.remove(targetUserId);
+
+      await interaction.editReply({
+        embeds: [
+          successEmbed
+            .setDescription(
+              `**Użytkownik ${member.username} został odbanowany**`
+            )
+            .addFields({
+              name: "Moderator:",
+              value: `${interaction.user}`,
+              inline: true,
+            }),
+        ],
+      });
     } catch (error) {
       console.log(`Wystąpił błąd podczas próby odbanowania: ${error}`);
 
-      const errorEmbed = new EmbedBuilder()
-        .setColor("#FF0000")
-        .setDescription("**Wystąpił błąd podczas odbanowywania użytkownika.**")
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
-
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await interaction.editReply({
+        embeds: [
+          errorEmbed.setDescription(
+            "**Wystąpił błąd podczas odbanowywania użytkownika.**"
+          ),
+        ],
+      });
     }
-  },
-
-  options: {
-    userPermissions: ["BanMembers"],
-    botPermissions: ["BanMembers"],
   },
 };
