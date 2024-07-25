@@ -23,7 +23,7 @@ module.exports = {
       option
         .setName("reason")
         .setDescription("Powód upomnienia.")
-        .setRequired(false)
+        .setRequired(true)
     ),
 
   options: {

@@ -1,5 +1,5 @@
-const { PollLayoutType } = require("discord.js");
-const Poll = require("../../models/Poll");
+const { ChannelType } = require("discord.js");
+const Question = require("../../models/Question");
 const QuestionConfiguration = require("../../models/QuestionConfiguration");
 const cron = require("node-cron");
 const { GUILD_ID } = process.env;
@@ -24,7 +24,7 @@ module.exports = async (client) => {
         return;
       }
 
-      const questions = await Poll.find();
+      const questions = await Question.find();
       if (questions.length === 0) {
         questionChannel.send("Brak pytań w bazie danych!");
         return;
@@ -32,31 +32,30 @@ module.exports = async (client) => {
 
       const randomQuestion =
         questions[Math.floor(Math.random() * questions.length)];
-
-      const answers = randomQuestion.answers
-        .filter((answer) => answer.text && answer.emoji)
-        .map((answer, index) => ({
-          text: answer.text,
-          emoji: answer.emoji,
-        }));
-
-      const pollData = {
-        poll: {
-          question: { text: randomQuestion.content },
-          answers,
-          allowMultiselect: randomQuestion.allowMultiselect,
-          duration: 168,
-          layoutType: PollLayoutType.Default,
-        },
-      };
+      let threadName = randomQuestion.content.slice(0, 97);
+      if (randomQuestion.content.length > 97) threadName += "...";
 
       const messageContent = questionConfig.pingRoleId
-        ? `<@&${questionConfig.pingRoleId}>:`
-        : ``;
+        ? `<@&${questionConfig.pingRoleId}>\n\n**Pytanie dnia:**\n${randomQuestion.content}`
+        : `**Pytanie dnia:**\n${randomQuestion.content}`;
+      const questionMessage = await questionChannel.send(messageContent);
 
-      await questionChannel.send({ content: messageContent, ...pollData });
+      await questionChannel.threads.create({
+        name: threadName,
+        autoArchiveDuration: 1440,
+        type: ChannelType.PublicThread,
+        startMessage: questionMessage,
+      });
 
-      await Poll.findByIdAndDelete(randomQuestion._id);
+      randomQuestion.reactions.forEach(async (reaction) => {
+        try {
+          await questionMessage.react(reaction);
+        } catch (error) {
+          console.error("Błąd podczas dodawania reakcji:", error);
+        }
+      });
+
+      await Question.findByIdAndDelete(randomQuestion._id);
     } catch (error) {
       console.error("Błąd wysyłania pytania dnia:", error);
     }

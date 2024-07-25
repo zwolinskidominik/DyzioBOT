@@ -27,7 +27,6 @@ module.exports = {
   options: {
     userPermissions: [PermissionFlagsBits.Administrator],
     botPermissions: [PermissionFlagsBits.Administrator],
-    deleted: true,
   },
 
   run: async ({ interaction }) => {

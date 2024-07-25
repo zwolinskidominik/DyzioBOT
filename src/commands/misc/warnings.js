@@ -50,13 +50,13 @@ module.exports = {
       const warningList = warn.warnings
         .map(
           (w, index) =>
-            `⏱️ ${w.date.toLocaleDateString()}\nID ostrzeżenia (**${
+            `**⏱️ ${w.date.toLocaleString()}**\nID ostrzeżenia (**${
               index + 1
             }**) - Moderator: ${w.moderator}\n\`${w.reason}\``
         )
         .join("\n\n");
 
-      embed.addFields({ name: "Lista ostrzeżeń", value: warningList });
+      embed.setDescription(warningList);
     }
 
     await interaction.reply({ embeds: [embed], ephemeral: true });

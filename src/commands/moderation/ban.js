@@ -20,7 +20,7 @@ module.exports = {
       option
         .setName("reason")
         .setDescription("Powód zbanowania.")
-        .setRequired(false)
+        .setRequired(true)
     ),
 
   options: {

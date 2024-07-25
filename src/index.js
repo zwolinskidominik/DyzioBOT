@@ -8,7 +8,7 @@ const {
   MONGODB_URI,
 } = process.env;
 
-const { Client, IntentsBitField, REST, Routes } = require("discord.js");
+const { Client, GatewayIntentBits, REST, Routes } = require("discord.js");
 const { CommandKit } = require("commandkit");
 const mongoose = require("mongoose");
 
@@ -16,12 +16,13 @@ const guildMemberAddEvent = require("./events/guildMemberAdd/autoRole.js");
 
 const client = new Client({
   intents: [
-    IntentsBitField.Flags.Guilds,
-    IntentsBitField.Flags.GuildMembers,
-    IntentsBitField.Flags.GuildMessages,
-    IntentsBitField.Flags.GuildPresences,
-    IntentsBitField.Flags.MessageContent,
-    IntentsBitField.Flags.GuildMessagePolls,
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessagePolls,
+    GatewayIntentBits.GuildVoiceStates,
   ],
 });
 

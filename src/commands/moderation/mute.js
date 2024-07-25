@@ -34,7 +34,7 @@ module.exports = {
       option
         .setName("reason")
         .setDescription("Powód wyciszenia.")
-        .setRequired(false)
+        .setRequired(true)
     ),
 
   options: {
