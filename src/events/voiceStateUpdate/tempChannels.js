@@ -30,6 +30,7 @@ module.exports = async (oldState, newState) => {
         name: `${newState.channel.name}`,
         type: ChannelType.GuildVoice,
         parent: parentChannel,
+        userLimit: newState.channel.userLimit,
         permissionOverwrites: newState.channel.permissionOverwrites.cache.map(
           (permission) => ({
             id: permission.id,
