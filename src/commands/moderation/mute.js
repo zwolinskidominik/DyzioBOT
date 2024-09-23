@@ -48,6 +48,10 @@ module.exports = {
       const duration = interaction.options.getString("duration");
       const reason = interaction.options.getString("reason") || "Brak powodu.";
 
+      await interaction.deferReply();
+
+      const targetUser = await interaction.guild.members.fetch(targetUserId);
+
       const errorEmbed = new EmbedBuilder()
         .setColor("#FF0000")
         .setTimestamp()
@@ -62,10 +66,6 @@ module.exports = {
         .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
-
-      await interaction.deferReply();
-
-      const targetUser = await interaction.guild.members.fetch(targetUserId);
 
       if (!targetUser) {
         errorEmbed.setDescription(

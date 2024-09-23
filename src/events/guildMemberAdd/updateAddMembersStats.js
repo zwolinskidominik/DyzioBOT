@@ -6,29 +6,30 @@ module.exports = async (member) => {
 
   const { guild } = member;
 
-  const peopleCount = guild.memberCount;
-
   const updateChannelName = async (type, value) => {
-    const channelId = channelStats.channels[type]?.channelId;
-    if (!channelId) return;
+    const channelData = channelStats.channels[type];
+    if (!channelData || !channelData.channelId) return;
 
-    const channel = guild.channels.cache.get(channelId);
+    const channel = guild.channels.cache.get(channelData.channelId);
     if (channel) {
-      const newName = channelStats.channels[type].channelName.replace(
-        /<>/g,
-        value
-      );
+      const newName = channelData.channelName.replace(/<>/g, value);
       if (channel.name !== newName) {
         await channel.setName(newName);
       }
     }
   };
 
-  await updateChannelName("people", peopleCount);
+  const peopleCount = guild.members.cache.filter((m) => !m.user.bot).size;
+  await updateChannelName("people_channel", peopleCount);
 
-  if (channelStats.channels.newest?.channelId) {
-    await updateChannelName("newest", member.displayName);
-    channelStats.channels.newest.member = member.id;
+  const botsCount = guild.members.cache.filter((m) => m.user.bot).size;
+  await updateChannelName("bots_channel", botsCount);
+
+  if (channelStats.channels.newest_channel) {
+    await updateChannelName("newest_channel", member.user.username);
+    channelStats.channels.newest_channel.member = member.id;
     await channelStats.save();
   }
+
+  console.log(`Updated channels for new member: ${member.user.tag}`);
 };

@@ -124,18 +124,49 @@ async function handleSetup(interaction, channelStats, channel, name, embed) {
     .setColor("#00ff00")
     .setDescription(`✔️ Kanał statystyk został ustawiony!`);
 
-  await updateChannelSettings(channelStats, channel, {
-    channelId: null,
-    channelName: name,
+  let value;
+  switch (channel) {
+    case "people_channel":
+      value = guild.members.cache.filter((member) => !member.user.bot).size;
+      break;
+    case "bots_channel":
+      value = guild.members.cache.filter((member) => member.user.bot).size;
+      break;
+    case "bans_channel":
+      const bans = await guild.bans.fetch();
+      value = bans.size;
+      break;
+    case "newest_channel":
+      const newestMember = guild.members.cache
+        .sort((a, b) => b.joinedTimestamp - a.joinedTimestamp)
+        .first();
+      value = newestMember ? newestMember.user.username : "Brak";
+      break;
+  }
+
+  const newChannel = await guild.channels.create({
+    name: name.replace(/<>/g, value),
+    type: ChannelType.GuildVoice,
+    permissionOverwrites: [
+      {
+        id: guild.id,
+        deny: [PermissionFlagsBits.Connect],
+      },
+    ],
   });
 
-  const channelId = channelStats.channels[channel]?.channelId;
-  if (channelId) {
-    const existingChannel = guild.channels.cache.get(channelId);
-    if (existingChannel) {
-      await existingChannel.setName(name.replace(/<>/g, "0"));
-    }
+  channelStats.channels[channel] = {
+    channelId: newChannel.id,
+    channelName: name,
+  };
+
+  if (channel === "newest_channel") {
+    channelStats.channels[channel].member = newestMember
+      ? newestMember.id
+      : null;
   }
+
+  await channelStats.save();
 
   interaction.reply({ embeds: [embed] });
 }
@@ -155,7 +186,26 @@ async function handleEdit(interaction, channelStats, channel, name, embed) {
   if (channelId) {
     const existingChannel = guild.channels.cache.get(channelId);
     if (existingChannel) {
-      await existingChannel.setName(name.replace(/<>/g, "0"));
+      let value;
+      switch (channel) {
+        case "people_channel":
+          value = guild.members.cache.filter((member) => !member.user.bot).size;
+          break;
+        case "bots_channel":
+          value = guild.members.cache.filter((member) => member.user.bot).size;
+          break;
+        case "bans_channel":
+          const bans = await guild.bans.fetch();
+          value = bans.size;
+          break;
+        case "newest_channel":
+          const newestMember = guild.members.cache
+            .sort((a, b) => b.joinedTimestamp - a.joinedTimestamp)
+            .first();
+          value = newestMember ? newestMember.user.username : "Brak";
+          break;
+      }
+      await existingChannel.setName(name.replace(/<>/g, value));
     }
   }
 
@@ -167,6 +217,16 @@ async function handleEdit(interaction, channelStats, channel, name, embed) {
 }
 
 async function handleDelete(interaction, channelStats, channel, _, embed) {
+  const { guild } = interaction;
+  const channelId = channelStats.channels[channel]?.channelId;
+
+  if (channelId) {
+    const channelToDelete = guild.channels.cache.get(channelId);
+    if (channelToDelete) {
+      await channelToDelete.delete();
+    }
+  }
+
   await updateChannelSettings(channelStats, channel, {
     channelId: null,
     channelName: null,

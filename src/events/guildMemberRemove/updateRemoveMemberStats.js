@@ -6,23 +6,24 @@ module.exports = async (member) => {
 
   const { guild } = member;
 
-  const peopleCount = guild.memberCount;
-
   const updateChannelName = async (type, value) => {
-    const channelId = channelStats.channels[type]?.channelId;
-    if (!channelId) return;
+    const channelData = channelStats.channels[type];
+    if (!channelData || !channelData.channelId) return;
 
-    const channel = guild.channels.cache.get(channelId);
+    const channel = guild.channels.cache.get(channelData.channelId);
     if (channel) {
-      const newName = channelStats.channels[type].channelName.replace(
-        /<>/g,
-        value
-      );
+      const newName = channelData.channelName.replace(/<>/g, value);
       if (channel.name !== newName) {
         await channel.setName(newName);
       }
     }
   };
 
-  await updateChannelName("people", peopleCount);
+  const peopleCount = guild.members.cache.filter((m) => !m.user.bot).size;
+  await updateChannelName("people_channel", peopleCount);
+
+  const botsCount = guild.members.cache.filter((m) => m.user.bot).size;
+  await updateChannelName("bots_channel", botsCount);
+
+  console.log(`Updated channels for removed member: ${member.user.tag}`);
 };

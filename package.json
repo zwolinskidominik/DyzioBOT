@@ -20,6 +20,7 @@
     "node-cron": "^3.0.3",
     "nodemon": "^3.1.0",
     "pretty-ms": "^8.0.0",
+    "sharp": "^0.33.5",
     "twitch": "^4.6.7",
     "twitch-api": "^0.5.0",
     "twitch-auth": "^4.6.7",

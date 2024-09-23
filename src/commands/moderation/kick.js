@@ -33,6 +33,20 @@ module.exports = {
       const targetUserId = interaction.options.getUser("target-user").id;
       const reason = interaction.options.getString("reason") || "Brak";
 
+      const errorEmbed = new EmbedBuilder()
+        .setColor("#FF0000")
+        .setTimestamp()
+        .setFooter({ text: interaction.guild.name });
+
+      const successEmbed = new EmbedBuilder()
+        .setColor("#00BFFF")
+        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
+        .setFooter({
+          text: `${interaction.user.username}`,
+          iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
+        })
+        .setTimestamp();
+
       await interaction.deferReply();
 
       const targetUser = await interaction.guild.members.fetch(targetUserId);
@@ -47,20 +61,6 @@ module.exports = {
         });
         return;
       }
-
-      const errorEmbed = new EmbedBuilder()
-        .setColor("#FF0000")
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
-
-      const successEmbed = new EmbedBuilder()
-        .setColor("#00BFFF")
-        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
-        .setFooter({
-          text: `${interaction.user.username}`,
-          iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
-        })
-        .setTimestamp();
 
       const targetUserRolePosition = targetUser.roles.highest.position;
       const requestUserRolePosition = interaction.member.roles.highest.position;

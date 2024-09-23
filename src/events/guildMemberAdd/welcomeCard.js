@@ -16,7 +16,10 @@ module.exports = async (member) => {
 
     await Font.loadDefault();
 
-    const avatar = member.user.displayAvatarURL({ format: "png" });
+    const avatar = member.user.displayAvatarURL({
+      extension: "png",
+      forceStatic: true,
+    });
 
     const card = new GreetingsCard()
       .setAvatar(avatar)
