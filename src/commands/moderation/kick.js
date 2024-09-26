@@ -29,16 +29,16 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
+    const errorEmbed = new EmbedBuilder()
+      .setColor("#FF0000")
+      .setTimestamp()
+      .setFooter({ text: interaction.guild.name });
+
     try {
       const targetUserId = interaction.options.getUser("target-user").id;
       const reason = interaction.options.getString("reason") || "Brak";
       await interaction.deferReply();
       const targetUser = await interaction.guild.members.fetch(targetUserId);
-
-      const errorEmbed = new EmbedBuilder()
-        .setColor("#FF0000")
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
 
       const successEmbed = new EmbedBuilder()
         .setColor("#00BFFF")
