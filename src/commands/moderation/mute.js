@@ -47,9 +47,7 @@ module.exports = {
       const targetUserId = interaction.options.getUser("target-user").id;
       const duration = interaction.options.getString("duration");
       const reason = interaction.options.getString("reason") || "Brak powodu.";
-
       await interaction.deferReply();
-
       const targetUser = await interaction.guild.members.fetch(targetUserId);
 
       const errorEmbed = new EmbedBuilder()

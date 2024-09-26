@@ -32,6 +32,8 @@ module.exports = {
     try {
       const targetUserId = interaction.options.getUser("target-user").id;
       const reason = interaction.options.getString("reason") || "Brak";
+      await interaction.deferReply();
+      const targetUser = await interaction.guild.members.fetch(targetUserId);
 
       const errorEmbed = new EmbedBuilder()
         .setColor("#FF0000")
@@ -46,10 +48,6 @@ module.exports = {
           iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
         })
         .setTimestamp();
-
-      await interaction.deferReply();
-
-      const targetUser = await interaction.guild.members.fetch(targetUserId);
 
       if (!targetUser) {
         await interaction.editReply({

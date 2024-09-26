@@ -25,6 +25,9 @@ module.exports = {
   run: async ({ interaction }) => {
     try {
       const targetUserId = interaction.options.getString("target-user");
+      const member = bannedUser.user;
+      await interaction.deferReply();
+      await interaction.guild.bans.remove(targetUserId);
 
       const errorEmbed = new EmbedBuilder()
         .setColor("#FF0000")
@@ -36,8 +39,6 @@ module.exports = {
         .setThumbnail(member.displayAvatarURL({ dynamic: true }))
         .setTimestamp()
         .setFooter({ text: interaction.guild.name });
-
-      await interaction.deferReply();
 
       const bannedUsers = await interaction.guild.bans.fetch();
       const bannedUser = bannedUsers.find(
@@ -54,10 +55,6 @@ module.exports = {
         });
         return;
       }
-
-      const member = bannedUser.user;
-
-      await interaction.guild.bans.remove(targetUserId);
 
       await interaction.editReply({
         embeds: [
