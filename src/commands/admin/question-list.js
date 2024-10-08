@@ -1,46 +1,75 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  PermissionFlagsBits,
+} = require("discord.js");
 const Question = require("../../models/Question");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("question-list")
-    .setDescription("Wyświetla listę pytań dnia wraz z ich reakcjami."),
+    .setDescription("Wyświetl listę pytań w bazie danych.")
+    .addIntegerOption((option) =>
+      option
+        .setName("page")
+        .setDescription("Numer strony do wyświetlenia")
+        .setMinValue(1)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDMPermission(false),
+
+  options: {
+    userPermissions: [PermissionFlagsBits.Administrator],
+    botPermissions: [PermissionFlagsBits.Administrator],
+  },
 
   run: async ({ interaction }) => {
+    const page = interaction.options.getInteger("page") || 1;
+    const pageSize = 10;
+    const skip = (page - 1) * pageSize;
+
+    await interaction.deferReply({ ephemeral: true });
+
     try {
-      const questions = await Question.find();
+      const totalQuestions = await Question.countDocuments();
+      const totalPages = Math.ceil(totalQuestions / pageSize);
 
-      const embed = new EmbedBuilder()
-        .setColor("#00BFFF")
-        .setTitle("Lista pytań dnia")
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
-
-      if (questions.length === 0) {
-        embed.setDescription("Nie dodano jeszcze żadnych pytań dnia.");
-      } else {
-        embed.setDescription(`**Liczba pytań dnia: ${questions.length}**\n\n`);
-
-        questions.forEach((question, index) => {
-          embed.addFields({
-            name: `Pytanie ${index + 1}:`,
-            value: `**Treść:** ${question.content}\n**Reakcje:** ${
-              question.reactions.join(" ") || "Brak"
-            }`,
-          });
+      if (page > totalPages) {
+        return await interaction.editReply({
+          content: `Strona ${page} nie istnieje. Dostępne strony: 1-${totalPages}`,
+          ephemeral: true,
         });
       }
 
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      const questions = await Question.find()
+        .sort({ _id: 1 })
+        .skip(skip)
+        .limit(pageSize);
+
+      const embed = new EmbedBuilder()
+        .setColor("#00BFFF")
+        .setTitle("Lista pytań")
+        .setDescription(
+          questions
+            .map(
+              (q, index) =>
+                `${skip + index + 1}. ${q.content}\nReakcje: ${q.reactions.join(
+                  " "
+                )}`
+            )
+            .join("\n\n")
+        )
+        .setFooter({
+          text: `Strona ${page} z ${totalPages} | Łączna liczba pytań: ${totalQuestions}`,
+        });
+
+      await interaction.editReply({ embeds: [embed], ephemeral: true });
     } catch (error) {
-      console.error(`Błąd podczas pobierania listy pytań: ${error}`);
-
-      const errorEmbed = new EmbedBuilder()
-        .setColor("#FF0000")
-        .setDescription("Wystąpił błąd podczas wyświetlania listy pytań.")
-        .setTimestamp();
-
-      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      console.error("Błąd podczas wyświetlania listy pytań:", error);
+      await interaction.editReply({
+        content: "Wystąpił błąd podczas wyświetlania listy pytań.",
+        ephemeral: true,
+      });
     }
   },
 };
