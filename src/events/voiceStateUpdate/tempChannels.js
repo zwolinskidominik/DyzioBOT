@@ -1,18 +1,14 @@
 const TempChannel = require("../../models/TempChannel");
+const TempChannelConfiguration = require("../../models/TempChannelConfiguration");
 const { ChannelType } = require("discord.js");
 
 module.exports = async (oldState, newState) => {
   try {
-    const targetChannels = [
-      "1247683631246217227", // Kanał Pogadanki
-      "1195819702170157147", // Kanał Randka
-      "1213825666722832425", // Kanał Trójkącik
-      "1204791810325618718", // Kanał Kwadracik
-      "1195819357457105017", // Kanał Granko
-      "1204513868421009469", // Kanał CS 2 Team
-      "1196285106042720376", // Kanał Valo Team
-      "1196287248635793468", // Kanał Sala kinowa
-    ];
+    const monitoredChannels = await TempChannelConfiguration.find({
+      guildId: newState.guild.id,
+    });
+
+    const targetChannels = monitoredChannels.map((config) => config.channelId);
 
     if (
       targetChannels.includes(newState.channelId) &&

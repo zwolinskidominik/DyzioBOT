@@ -1,8 +1,15 @@
-const boostChannelId = "881296019948732457";
+const path = require("path");
+const fs = require("fs").promises;
+
+const boostChannelId = "1292423972859940966";
 const boosterListChannelId = "1196291091280973895";
-const boosterListBanner = "../../assets/boosterBanner.png";
 const emoji = "<:pink_heart:1215648879597453345>";
 const boosterRoleId = "1040694065924149300";
+
+const boosterListBanner = path.join(
+  __dirname,
+  "../../assets/boosterBanner.png"
+);
 
 module.exports = async (oldMember, newMember) => {
   const oldStatus = oldMember.premiumSince;
@@ -22,21 +29,41 @@ module.exports = async (oldMember, newMember) => {
 
     const messageContent = `${boosters}`;
 
-    const messages = await channel.messages.fetch({ limit: 5 });
-    const listMessage = messages.find((msg) =>
-      msg.content.includes(`${emoji}`)
-    );
+    try {
+      await fs.access(boosterListBanner);
 
-    if (listMessage) {
-      await listMessage.edit({
-        content: messageContent,
-        files: [{ attachment: boosterListBanner, name: "boosterBanner.png" }],
-      });
-    } else {
-      await channel.send({
-        content: messageContent,
-        files: [{ attachment: boosterListBanner, name: "boosterBanner.png" }],
-      });
+      const messages = await channel.messages.fetch({ limit: 5 });
+      const listMessage = messages.find((msg) =>
+        msg.content.includes(`${emoji}`)
+      );
+
+      if (listMessage) {
+        await listMessage.edit({
+          content: messageContent,
+          files: [{ attachment: boosterListBanner, name: "boosterBanner.png" }],
+        });
+      } else {
+        await channel.send({
+          content: messageContent,
+          files: [{ attachment: boosterListBanner, name: "boosterBanner.png" }],
+        });
+      }
+    } catch (error) {
+      console.error(`Nie znaleziono pliku z bannerem: ${error}`);
+      const messages = await channel.messages.fetch({ limit: 5 });
+      const listMessage = messages.find((msg) =>
+        msg.content.includes(`${emoji}`)
+      );
+
+      if (listMessage) {
+        await listMessage.edit({
+          content: messageContent,
+        });
+      } else {
+        await channel.send({
+          content: messageContent,
+        });
+      }
     }
   };
 
