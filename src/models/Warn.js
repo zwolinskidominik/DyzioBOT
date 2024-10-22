@@ -21,6 +21,10 @@ const warnSchema = new Schema({
       moderator: { type: String, required: true },
     },
   ],
+  banUntil: {
+    type: Date,
+    default: null,
+  },
 });
 
 module.exports = model("Warn", warnSchema);

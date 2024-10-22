@@ -12,7 +12,7 @@ const authProvider = new ClientCredentialsAuthProvider(clientId, clientSecret);
 const twitchClient = new ApiClient({ authProvider });
 
 module.exports = (client) => {
-  cron.schedule("*/5 * * * * *", async () => {
+  cron.schedule("* * * * *", async () => {
     try {
       const streamers = await Streamer.find();
       const channels = await StreamConfiguration.find();

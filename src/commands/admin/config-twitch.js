@@ -30,6 +30,11 @@ module.exports = {
         .setDescription("Usuwa kanał do powiadomień o streamach Twitch.")
     ),
 
+  options: {
+    userPermissions: [PermissionFlagsBits.Administrator],
+    botPermissions: [PermissionFlagsBits.Administrator],
+  },
+
   run: async ({ interaction }) => {
     const errorEmbed = new EmbedBuilder().setColor("#FF0000");
     const successEmbed = new EmbedBuilder().setColor("#00BFFF");

@@ -1,11 +1,9 @@
 const path = require("path");
 const fs = require("fs").promises;
-
 const boostChannelId = "1292423972859940966";
 const boosterListChannelId = "1196291091280973895";
 const emoji = "<:pink_heart:1215648879597453345>";
 const boosterRoleId = "1040694065924149300";
-
 const boosterListBanner = path.join(
   __dirname,
   "../../assets/boosterBanner.png"
@@ -20,28 +18,37 @@ module.exports = async (oldMember, newMember) => {
       .filter((member) => member.premiumSince)
       .map((member) => `${emoji} <@!${member.user.id}>`)
       .join("\n");
-
     const channel = guild.channels.cache.get(boosterListChannelId);
     if (!channel) {
       console.error("Nie znaleziono kanału do aktualizacji listy boosterów!");
       return;
     }
-
     const messageContent = `${boosters}`;
-
     try {
       await fs.access(boosterListBanner);
-
       const messages = await channel.messages.fetch({ limit: 5 });
-      const listMessage = messages.find((msg) =>
-        msg.content.includes(`${emoji}`)
+      const listMessage = messages.find(
+        (msg) =>
+          msg.author.id === guild.client.user.id &&
+          msg.content.includes(`${emoji}`)
       );
-
       if (listMessage) {
-        await listMessage.edit({
-          content: messageContent,
-          files: [{ attachment: boosterListBanner, name: "boosterBanner.png" }],
-        });
+        try {
+          await listMessage.edit({
+            content: messageContent,
+            files: [
+              { attachment: boosterListBanner, name: "boosterBanner.png" },
+            ],
+          });
+        } catch (editError) {
+          console.error(`Nie można edytować wiadomości: ${editError}`);
+          await channel.send({
+            content: messageContent,
+            files: [
+              { attachment: boosterListBanner, name: "boosterBanner.png" },
+            ],
+          });
+        }
       } else {
         await channel.send({
           content: messageContent,
@@ -51,14 +58,22 @@ module.exports = async (oldMember, newMember) => {
     } catch (error) {
       console.error(`Nie znaleziono pliku z bannerem: ${error}`);
       const messages = await channel.messages.fetch({ limit: 5 });
-      const listMessage = messages.find((msg) =>
-        msg.content.includes(`${emoji}`)
+      const listMessage = messages.find(
+        (msg) =>
+          msg.author.id === guild.client.user.id &&
+          msg.content.includes(`${emoji}`)
       );
-
       if (listMessage) {
-        await listMessage.edit({
-          content: messageContent,
-        });
+        try {
+          await listMessage.edit({
+            content: messageContent,
+          });
+        } catch (editError) {
+          console.error(`Nie można edytować wiadomości: ${editError}`);
+          await channel.send({
+            content: messageContent,
+          });
+        }
       } else {
         await channel.send({
           content: messageContent,
@@ -74,9 +89,7 @@ module.exports = async (oldMember, newMember) => {
         `Dzięki za wsparcie! <@!${newMember.user.id}>, właśnie dołączyłeś/aś do grona naszych boosterów!`
       );
     }
-
     await updateBoosterList(newMember.guild);
-
     const boosterRole = newMember.guild.roles.cache.get(boosterRoleId);
     if (boosterRole) {
       try {
@@ -94,7 +107,6 @@ module.exports = async (oldMember, newMember) => {
 
   if (oldStatus && !newStatus) {
     await updateBoosterList(newMember.guild);
-
     const boosterRole = newMember.guild.roles.cache.get(boosterRoleId);
     if (boosterRole) {
       try {

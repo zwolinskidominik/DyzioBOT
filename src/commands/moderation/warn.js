@@ -85,23 +85,23 @@ module.exports = {
 
       let muteDuration;
       let muteReason;
-      let kickUser = false;
+      let banUser = false;
 
       if (warn.count === 1) {
         muteDuration = 3600 * 1000;
         muteReason = "1 ostrzeżenie - czasowe wyciszenie na 1 godzinę.";
       } else if (warn.count === 2) {
-        muteDuration = 86400 * 1000;
-        muteReason = "2 ostrzeżenie - czasowe wyciszenie na 1 dzień.";
+        muteDuration = 3 * 3600 * 1000;
+        muteReason = "2 ostrzeżenie - czasowe wyciszenie na 3 godziny.";
       } else if (warn.count === 3) {
-        muteDuration = 259200 * 1000;
-        muteReason = "3 ostrzeżenie - czasowe wyciszenie na 3 dni.";
+        muteDuration = 24 * 3600 * 1000;
+        muteReason = "3 ostrzeżenie - czasowe wyciszenie na 1 dzień.";
       } else if (warn.count === 4) {
-        muteDuration = 604800 * 1000;
+        muteDuration = 7 * 24 * 3600 * 1000;
         muteReason = "4 ostrzeżenie - czasowe wyciszenie na 7 dni.";
       } else if (warn.count >= 5) {
-        kickUser = true;
-        muteReason = "5 ostrzeżenie - wyrzucenie z serwera.";
+        banUser = true;
+        muteReason = "5 ostrzeżenie - tymczasowy ban na serwerze na 1 miesiąc.";
       }
 
       warn.warnings.push({
@@ -126,8 +126,42 @@ module.exports = {
 
       const attachment = new AttachmentBuilder(image, { name: "warn.png" });
 
-      if (kickUser) {
-        await user.kick(muteReason);
+      if (banUser) {
+        const unbanDate = new Date();
+        unbanDate.setMonth(unbanDate.getMonth() + 1);
+        warn.banUntil = unbanDate;
+
+        const embed = new EmbedBuilder()
+          .setColor("#FF0000")
+          .setTitle("Tymczasowy ban na serwerze GameZone")
+          .setDescription(
+            `Zostałeś/aś **tymczasowo zbanowany/a na serwerze GameZone** na okres 1 miesiąca.
+  
+  **Powód:** ${muteReason}
+  
+  • *Przypominamy, że naruszenie zasad serwera prowadzi do konsekwencji.*
+  • *Po upływie kary będziesz mógł ponownie dołączyć do naszej społeczności.*
+  • *W razie wątpliwości lub chęci odwołania się, skontaktuj się z administracją.*
+  
+  Twój ban wygaśnie: ${unbanDate.toLocaleString()}`
+          )
+          .setTimestamp();
+
+        try {
+          await user.send({ embeds: [embed] });
+        } catch (error) {
+          console.error(
+            `Nie można wysłać wiadomości do użytkownika ${user.user.tag}`,
+            error
+          );
+          // Możemy dodać informację o tym do odpowiedzi interakcji
+          await interaction.followUp({
+            content: `Nie udało się wysłać prywatnej wiadomości do ${user.user.tag}. Użytkownik może mieć wyłączone wiadomości prywatne.`,
+            ephemeral: true,
+          });
+        }
+
+        await user.ban({ reason: muteReason });
       } else {
         await user.timeout(muteDuration, muteReason);
       }

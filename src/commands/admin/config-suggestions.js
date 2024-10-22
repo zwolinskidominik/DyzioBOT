@@ -28,6 +28,11 @@ module.exports = {
       subcommand.setName("remove").setDescription("Usuwa kanał sugestii.")
     ),
 
+  options: {
+    userPermissions: [PermissionFlagsBits.Administrator],
+    botPermissions: [PermissionFlagsBits.Administrator],
+  },
+
   run: async ({ interaction }) => {
     const errorEmbed = new EmbedBuilder().setColor("#FF0000");
     const successEmbed = new EmbedBuilder().setColor("#00BFFF");
