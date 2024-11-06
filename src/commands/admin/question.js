@@ -89,7 +89,7 @@ module.exports = {
                 (q, index) =>
                   `${skip + index + 1}. ${
                     q.content
-                  }\nReakcje: ${q.reactions.join(" ")}` // Wyświetla numer pytania
+                  }\nReakcje: ${q.reactions.join(" ")}`
               )
               .join("\n\n")
           )
@@ -126,7 +126,7 @@ module.exports = {
 
       const collector = reply.createMessageComponentCollector({
         componentType: ComponentType.Button,
-        time: 300000, // 5 minut
+        time: 300000,
       });
 
       collector.on("collect", async (i) => {
@@ -156,32 +156,27 @@ module.exports = {
           });
         } catch (error) {
           if (error.code === 10008) {
-            await interaction.followUp({
-              content:
-                "Poprzednia wiadomość wygasła. Oto zaktualizowana lista:",
-              embeds: [newEmbed],
-              components: [newButtonRow],
-              ephemeral: true,
-            });
+            return;
           } else {
             console.error("Błąd podczas aktualizacji wiadomości:", error);
-            await interaction.followUp({
-              content: "Wystąpił błąd podczas aktualizacji listy pytań.",
-              ephemeral: true,
-            });
           }
         }
       });
 
       collector.on("end", async () => {
         try {
+          const message = await interaction.channel.messages
+            .fetch(reply.id)
+            .catch(() => null);
+          if (!message) return;
+
           const disabledButtonRow = new ActionRowBuilder().addComponents(
             buttonRow.components[0].setDisabled(true),
             buttonRow.components[1].setDisabled(true)
           );
           await reply.edit({ components: [disabledButtonRow] });
         } catch (error) {
-          console.error("Błąd podczas dezaktywacji przycisków:", error);
+          return;
         }
       });
     } else if (subcommand === "add") {
@@ -274,7 +269,7 @@ module.exports = {
       try {
         const questionToDelete = await Question.findOne()
           .sort({ _id: 1 })
-          .skip(questionNumber - 1); // Znajdź pytanie o danym numerze
+          .skip(questionNumber - 1);
 
         if (!questionToDelete) {
           return await interaction.reply({

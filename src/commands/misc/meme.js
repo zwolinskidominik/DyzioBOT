@@ -5,7 +5,7 @@ const cooldowns = new Map();
 
 function formatMemeResponse(meme) {
   const embed = new EmbedBuilder()
-    .setColor("#00BFFF")
+    .setColor("#2b2d31")
     .setTitle(meme.title || "Random meme")
     .setTimestamp()
     .setFooter({ text: `Źródło: ${meme.source}` });

@@ -19,66 +19,40 @@ module.exports = async (oldMember, newMember) => {
       .map((member) => `${emoji} <@!${member.user.id}>`)
       .join("\n");
     const channel = guild.channels.cache.get(boosterListChannelId);
+
     if (!channel) {
       console.error("Nie znaleziono kanału do aktualizacji listy boosterów!");
       return;
     }
-    const messageContent = `${boosters}`;
+
     try {
       await fs.access(boosterListBanner);
+
       const messages = await channel.messages.fetch({ limit: 5 });
       const listMessage = messages.find(
         (msg) =>
           msg.author.id === guild.client.user.id &&
-          msg.content.includes(`${emoji}`)
+          (msg.attachments.size > 0 || msg.content.includes(`${emoji}`))
       );
+
+      const bannerMessage = {
+        files: [{ attachment: boosterListBanner, name: "boosterBanner.png" }],
+      };
+      const boosterListMessage = { content: boosters };
+
       if (listMessage) {
         try {
-          await listMessage.edit({
-            content: messageContent,
-            files: [
-              { attachment: boosterListBanner, name: "boosterBanner.png" },
-            ],
-          });
-        } catch (editError) {
-          console.error(`Nie można edytować wiadomości: ${editError}`);
-          await channel.send({
-            content: messageContent,
-            files: [
-              { attachment: boosterListBanner, name: "boosterBanner.png" },
-            ],
-          });
+          await listMessage.delete();
+        } catch (deleteError) {
+          console.error(`Nie można usunąć starej wiadomości: ${deleteError}`);
         }
-      } else {
-        await channel.send({
-          content: messageContent,
-          files: [{ attachment: boosterListBanner, name: "boosterBanner.png" }],
-        });
       }
+
+      await channel.send(bannerMessage);
+      await channel.send(boosterListMessage);
     } catch (error) {
-      console.error(`Nie znaleziono pliku z bannerem: ${error}`);
-      const messages = await channel.messages.fetch({ limit: 5 });
-      const listMessage = messages.find(
-        (msg) =>
-          msg.author.id === guild.client.user.id &&
-          msg.content.includes(`${emoji}`)
-      );
-      if (listMessage) {
-        try {
-          await listMessage.edit({
-            content: messageContent,
-          });
-        } catch (editError) {
-          console.error(`Nie można edytować wiadomości: ${editError}`);
-          await channel.send({
-            content: messageContent,
-          });
-        }
-      } else {
-        await channel.send({
-          content: messageContent,
-        });
-      }
+      console.error(`Wystąpił błąd: ${error}`);
+      await channel.send({ content: boosters });
     }
   };
 

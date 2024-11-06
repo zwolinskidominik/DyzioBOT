@@ -47,9 +47,6 @@ module.exports = async (client) => {
         warn.count = warn.warnings.length;
 
         await warn.save();
-        console.log(
-          `Zaktualizowano ostrzeżenia użytkownika o ID: ${warn.userId}.`
-        );
       }
     } catch (error) {
       console.error("Błąd podczas aktualizacji ostrzeżeń:", error);

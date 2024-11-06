@@ -8,7 +8,13 @@ const {
   MONGODB_URI,
 } = process.env;
 
-const { Client, GatewayIntentBits, REST, Routes } = require("discord.js");
+const {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  REST,
+  Routes,
+} = require("discord.js");
 const { CommandKit } = require("commandkit");
 const mongoose = require("mongoose");
 
@@ -23,7 +29,9 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessagePolls,
     GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMessageReactions,
   ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
 const parseEnvVar = (envVar) =>
@@ -65,9 +73,9 @@ mongoose.connect(MONGODB_URI).then(() => {
 process.on("unhandledRejection", (reason, promise) => {
   console.log("Unhandled Rejection Error");
   console.log(reason, promise);
-}); // Handles Unhandled Rejection Errors
+});
 
 process.on("uncaughtException", (err, origin) => {
   console.log("Uncaught Exeception Error");
   console.log(err, origin);
-}); // Handles Uncaught Excpetion Errors
+});
