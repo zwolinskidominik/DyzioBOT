@@ -9,7 +9,7 @@ class GreetingsCard extends Builder {
       type: "welcome",
       avatar: "",
       message: "",
-      backgroundImage: path.join(__dirname, "../assets/bg.jpg"),
+      backgroundImage: path.join(__dirname, "../../assets/bg.jpg"),
     });
   }
 

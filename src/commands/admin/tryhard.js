@@ -3,7 +3,7 @@ const {
   EmbedBuilder,
   PermissionFlagsBits,
 } = require("discord.js");
-const Clip = require("../models/Clip");
+const Clip = require("../../models/Clip");
 
 const JURY_ROLE_ID = "1303735601845239969";
 const SEPARATOR_GIF_URL =

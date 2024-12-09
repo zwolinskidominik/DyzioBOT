@@ -1,3 +1,5 @@
+// src/models/Birthday.js
+
 const { Schema, model } = require("mongoose");
 
 const birthdaySchema = new Schema({
@@ -16,6 +18,10 @@ const birthdaySchema = new Schema({
   yearSpecified: {
     type: Boolean,
     required: true,
+    default: true,
+  },
+  active: {
+    type: Boolean,
     default: true,
   },
 });

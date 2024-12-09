@@ -37,19 +37,16 @@ module.exports = async (reaction, user) => {
 
     const clip = await Clip.findOne({ messageId: reaction.message.id });
     if (!clip) {
-      console.log("No clip found for this message.");
       return;
     }
 
     const member = await reaction.message.guild.members.fetch(user.id);
     if (!member.roles.cache.has(JURY_ROLE_ID)) {
-      console.log("User does not have the jury role.");
       return;
     }
 
     const score = REACTION_TO_SCORE[reaction.emoji.name];
     if (!score) {
-      console.log("Reaction is not a valid score.");
       return;
     }
 

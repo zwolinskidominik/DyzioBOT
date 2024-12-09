@@ -15,7 +15,7 @@ module.exports = {
       subcommand
         .setName("add")
         .setDescription(
-          "Dodaje streamera Twitcha do listy ogłaszanych streamów."
+          "Dodaje streamerów Twitcha powiązanych z użytkownikiem Discord."
         )
         .addStringOption((option) =>
           option
@@ -23,18 +23,22 @@ module.exports = {
             .setDescription("Nazwa użytkownika na Twitchu.")
             .setRequired(true)
         )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("list")
-        .setDescription(
-          "Wyświetla listę streamerów Twitcha, którzy są ogłaszani na tym serwerze."
+        .addUserOption((option) =>
+          option
+            .setName("discord-user")
+            .setDescription("Użytkownik Discord powiązany ze streamerem.")
+            .setRequired(true)
         )
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName("list")
+        .setDescription("Wyświetla listę streamerów Twitcha na tym serwerze.")
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName("remove")
-        .setDescription("Usuwa streamera Twitcha z listy ogłaszanych streamów.")
+        .setDescription("Usuwa streamera Twitcha z listy.")
         .addStringOption((option) =>
           option
             .setName("twitch-username")
@@ -54,14 +58,24 @@ module.exports = {
 
     if (subcommand === "add") {
       const twitchChannel = interaction.options.getString("twitch-username");
+      const discordUser = interaction.options.getUser("discord-user");
+      const userId = discordUser.id;
 
       try {
         await interaction.deferReply();
 
-        let streamer = await TwitchStreamer.findOne({ guildId, twitchChannel });
+        let streamer = await TwitchStreamer.findOne({ guildId, userId });
 
         if (!streamer) {
-          streamer = new TwitchStreamer({ guildId, twitchChannel });
+          streamer = new TwitchStreamer({
+            guildId,
+            twitchChannel,
+            userId,
+            active: true,
+          });
+        } else {
+          streamer.twitchChannel = twitchChannel;
+          streamer.active = true;
         }
 
         await streamer.save();
@@ -71,7 +85,7 @@ module.exports = {
             new EmbedBuilder()
               .setColor("#6441A5")
               .setDescription(
-                `Streamer **${twitchChannel}** został dodany do listy ogłaszanych streamów.`
+                `Streamer **${twitchChannel}** powiązany z użytkownikiem <@${userId}> został dodany lub zaktualizowany.`
               ),
           ],
         });
@@ -97,7 +111,7 @@ module.exports = {
               new EmbedBuilder()
                 .setColor("#FF0000")
                 .setDescription(
-                  "Nie znaleziono żadnych dodanych streamerów Twitcha dla tego serwera."
+                  "Nie znaleziono żadnych streamerów dla tego serwera."
                 ),
             ],
           });
@@ -106,7 +120,10 @@ module.exports = {
 
         const streamerList = streamers
           .map(
-            (streamer, index) => `${index + 1} - **${streamer.twitchChannel}**`
+            (streamer, index) =>
+              `${index + 1} - **${streamer.twitchChannel}** (Użytkownik: <@${
+                streamer.userId
+              }>, Aktywny: ${streamer.active ? "tak" : "nie"})`
           )
           .join("\n");
 
@@ -114,7 +131,7 @@ module.exports = {
           embeds: [
             new EmbedBuilder()
               .setColor("#6441A5")
-              .setTitle("Lista ogłaszanych streamerów Twitcha")
+              .setTitle("Lista streamerów Twitcha")
               .setDescription(streamerList)
               .setFooter({ text: `Znaleziono ${streamers.length} streamerów` })
               .setTimestamp(),
@@ -162,7 +179,7 @@ module.exports = {
             new EmbedBuilder()
               .setColor("#6441A5")
               .setDescription(
-                `Streamer **${twitchChannel}** został usunięty z listy ogłaszanych streamów.`
+                `Streamer **${twitchChannel}** został usunięty z listy.`
               ),
           ],
         });

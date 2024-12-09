@@ -10,7 +10,7 @@ const axios = require("axios");
 
 const clientId = process.env.TWITCH_CLIENT_ID;
 const clientSecret = process.env.TWITCH_CLIENT_SECRET;
-const THUMBNAILS_DIR = path.join(process.cwd(), "src/assets/thumbnails");
+const THUMBNAILS_DIR = path.join(process.cwd(), "assets/thumbnails");
 
 const authProvider = new ClientCredentialsAuthProvider(clientId, clientSecret);
 const twitchClient = new ApiClient({ authProvider });

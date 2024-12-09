@@ -34,9 +34,9 @@ module.exports = {
   run: async ({ interaction }) => {
     await interaction.deferReply();
 
-    const robotoLight = await Font.fromFile("src/assets/Roboto-Light.ttf");
-    const robotoRegular = await Font.fromFile("src/assets/Roboto-Regular.ttf");
-    const robotoMedium = await Font.fromFile("src/assets/Roboto-Medium.ttf");
+    const robotoLight = await Font.fromFile("assets/Roboto-Light.ttf");
+    const robotoRegular = await Font.fromFile("assets/Roboto-Regular.ttf");
+    const robotoMedium = await Font.fromFile("assets/Roboto-Medium.ttf");
 
     const targetUserId = interaction.options.getUser("target-user").id;
     const reason = interaction.options.getString("reason") || "Brak";
