@@ -1,10 +1,11 @@
 const {
   SlashCommandBuilder,
   ChannelType,
-  EmbedBuilder,
   PermissionFlagsBits,
 } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const TempChannelConfiguration = require("../../models/TempChannelConfiguration");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -74,14 +75,16 @@ module.exports = {
           guildId,
           channelId: channel.id,
         });
-
         await newConfig.save();
+
         return interaction.reply({
           content: `Kanał ${channel.name} został dodany do nasłuchiwania.`,
           ephemeral: true,
         });
       } catch (error) {
-        console.error(`Błąd przy dodawaniu kanału do nasłuchiwania: ${error}`);
+        logger.error(
+          `Błąd przy dodawaniu kanału do nasłuchiwania (channelId=${channel.id}): ${error}`
+        );
         return interaction.reply({
           content: "Wystąpił błąd podczas dodawania kanału.",
           ephemeral: true,
@@ -98,9 +101,7 @@ module.exports = {
           });
         }
 
-        const embed = new EmbedBuilder()
-          .setTitle("Monitorowane kanały")
-          .setColor("#00BFFF");
+        const embed = createBaseEmbed({ title: "Monitorowane kanały" });
 
         configs.forEach((config) => {
           const channel = interaction.guild.channels.cache.get(
@@ -115,7 +116,9 @@ module.exports = {
 
         return interaction.reply({ embeds: [embed], ephemeral: true });
       } catch (error) {
-        console.error(`Błąd przy wyświetlaniu listy kanałów: ${error}`);
+        logger.error(
+          `Błąd przy wyświetlaniu listy kanałów w guildId=${guildId}: ${error}`
+        );
         return interaction.reply({
           content: "Wystąpił błąd podczas wyświetlania listy kanałów.",
           ephemeral: true,
@@ -142,7 +145,9 @@ module.exports = {
           ephemeral: true,
         });
       } catch (error) {
-        console.error(`Błąd przy usuwaniu kanału z nasłuchiwania: ${error}`);
+        logger.error(
+          `Błąd przy usuwaniu kanału z nasłuchiwania (channelId=${channel.id}): ${error}`
+        );
         return interaction.reply({
           content: "Wystąpił błąd podczas usuwania kanału.",
           ephemeral: true,

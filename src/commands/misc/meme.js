@@ -1,14 +1,16 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const { fetchMeme, SITES } = require("../../utils/memes");
+const logger = require("../../utils/logger");
 
 const cooldowns = new Map();
 
 function formatMemeResponse(meme) {
-  const embed = new EmbedBuilder()
-    .setColor("#2b2d31")
-    .setTitle(meme.title || "Random meme")
-    .setTimestamp()
-    .setFooter({ text: `Źródło: ${meme.source}` });
+  const embed = createBaseEmbed({
+    color: "#2b2d31",
+    title: meme.title || "Random meme",
+    footerText: `Źródło: ${meme.source}`,
+  });
 
   if (!meme.isVideo) {
     embed.setImage(meme.url);
@@ -37,7 +39,7 @@ async function getAlternativeMeme() {
       const meme = await fetchMeme(site);
       if (meme) return meme;
     } catch (error) {
-      console.error(`Nie udało się pobrać mema z ${site}: ${error.message}`);
+      logger.warn(`Nie udało się pobrać mema z ${site}: ${error.message}`);
       continue;
     }
   }
@@ -67,7 +69,7 @@ module.exports = {
     const timeLeft = checkCooldown(interaction.user.id);
     if (timeLeft > 0) {
       return await interaction.reply({
-        content: `Poczekaj jeszcze ${timeLeft} sekund przed użyciem tej komendy ponownie.`,
+        content: `Odczekaj jeszcze ${timeLeft} sekundy przed użyciem komendy ponownie.`,
         ephemeral: true,
       });
     }
@@ -82,6 +84,7 @@ module.exports = {
       const meme = await fetchMeme(randomSite);
 
       if (!meme) {
+        logger.warn(`Brak mema ze strony: ${randomSite}`);
         return await interaction.editReply({
           content:
             "Przepraszamy, nie udało się pobrać mema. Spróbuj ponownie później.",
@@ -90,8 +93,8 @@ module.exports = {
 
       return await interaction.editReply(formatMemeResponse(meme));
     } catch (error) {
-      console.error(`Błąd podczas wykonywania komendy meme: ${error.message}`);
-      console.error(error.stack);
+      logger.error(`Błąd podczas wykonywania komendy /meme: ${error.message}`);
+      logger.error(error.stack);
 
       try {
         const alternativeMeme = await getAlternativeMeme();
@@ -101,7 +104,7 @@ module.exports = {
           );
         }
       } catch (retryError) {
-        console.error(
+        logger.error(
           `Błąd podczas próby pobrania mema z alternatywnej strony: ${retryError.message}`
         );
       }

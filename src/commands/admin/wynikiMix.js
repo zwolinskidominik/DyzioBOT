@@ -1,34 +1,24 @@
-const {
-  SlashCommandBuilder,
-  EmbedBuilder,
-  PermissionFlagsBits,
-} = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
 const Clip = require("../../models/Clip");
+const { createBaseEmbed } = require("../../utils/embedUtils");
+const logger = require("../../utils/logger");
 
 const JURY_ROLE_ID = "1303735601845239969";
+const OWNER_ROLE_ID = "881295973782007868";
 const SEPARATOR_GIF_URL =
   "https://64.media.tumblr.com/64084f352d1664758e1a4febcb0e4464/8ac72bb49761ea20-51/s500x750/0646a52b0686cac841fd1201edde418ccddf6443.gif";
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("tryhard")
-    .setDescription("Zarządzanie konkursem CS2 Tryhard")
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .setDMPermission(false)
-    .addSubcommand((subcommand) =>
-      subcommand.setName("results").setDescription("Pokaż wyniki konkursu")
-    ),
+    .setName("wyniki-mix")
+    .setDescription("Wyświetla wyniki coponiedziałkowych mixów CS2")
+    .setDMPermission(false),
 
-  options: {
-    userPermissions: [PermissionFlagsBits.Administrator],
-    botPermissions: [PermissionFlagsBits.Administrator],
-  },
-
-  run: async ({ interaction, client }) => {
+  run: async ({ interaction }) => {
     try {
       await interaction.deferReply();
 
-      if (!interaction.member.roles.cache.has(JURY_ROLE_ID)) {
+      if (!interaction.member.roles.cache.has(JURY_ROLE_ID || OWNER_ROLE_ID)) {
         return await interaction.editReply({
           content: "Nie masz uprawnień do wyświetlania wyników!",
           ephemeral: true,
@@ -36,6 +26,7 @@ module.exports = {
       }
 
       const clips = await Clip.find();
+
       if (clips.length === 0) {
         return await interaction.editReply({
           content: "Nie znaleziono żadnych zgłoszonych klipów!",
@@ -77,20 +68,21 @@ module.exports = {
 
       await interaction.followUp({ files: [SEPARATOR_GIF_URL] });
 
-      const resultsEmbed = new EmbedBuilder()
-        .setTitle("🏆 Wyniki CS2 Tryhard")
-        .setColor("#7c000c")
-        .setTimestamp()
-        .addFields(
-          topWinners.map((result, index) => ({
-            name: `#${index + 1} Miejsce`,
-            value: `<@!${
-              result.clip.authorId
-            }> - Średnia ocena: ${result.averageScore.toFixed(
-              2
-            )} - [Link do klipu](${result.clip.messageLink})`,
-          }))
-        );
+      const resultsEmbed = createBaseEmbed({
+        title: "🏆 Wyniki coponiedziałkowych mixów CS2",
+        color: "#7c000c",
+      });
+
+      topWinners.forEach((result, index) => {
+        resultsEmbed.addFields({
+          name: `#${index + 1} Miejsce`,
+          value: `<@!${
+            result.clip.authorId
+          }> - Średnia ocena: ${result.averageScore.toFixed(
+            2
+          )} - [Link do klipu](${result.clip.messageLink})`,
+        });
+      });
 
       if (luckyLoser) {
         resultsEmbed.addFields({
@@ -109,7 +101,7 @@ module.exports = {
 
       await Clip.clearAll();
     } catch (error) {
-      console.error("Błąd podczas wykonywania komendy tryhard:", error);
+      logger.error(`Błąd podczas wykonywania komendy /wyniki-mix: ${error}`);
       await interaction.editReply({
         content: "Wystąpił błąd podczas wykonywania komendy.",
         ephemeral: true,

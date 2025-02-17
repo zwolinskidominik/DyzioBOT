@@ -1,4 +1,5 @@
 const Clip = require("../../models/Clip");
+const logger = require("../../utils/logger");
 
 const CLIPS_CHANNEL_ID = "1210246300843647047";
 const VALID_REACTIONS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"];
@@ -7,7 +8,7 @@ module.exports = async (message) => {
   try {
     if (
       message.channelId !== CLIPS_CHANNEL_ID ||
-      !message.content.includes("#tryhard")
+      !message.content.toLowerCase().includes("#mix")
     ) {
       return;
     }
@@ -19,12 +20,13 @@ module.exports = async (message) => {
     });
 
     await clip.save();
-    console.log("Klip został zapisany w bazie danych.");
 
     for (const reaction of VALID_REACTIONS) {
       await message.react(reaction);
     }
   } catch (error) {
-    console.error("Błąd podczas przetwarzania nowej wiadomości:", error);
+    logger.error(
+      `Błąd podczas przetwarzania nowej wiadomości (clip): ${error}`
+    );
   }
 };

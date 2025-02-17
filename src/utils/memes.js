@@ -1,5 +1,6 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+const logger = require("./logger");
 
 function getDefaultHeaders() {
   return {
@@ -10,10 +11,10 @@ function getDefaultHeaders() {
 
 function handleFetchError(error, site) {
   if (error.response?.status === 404) {
-    console.error(`Błąd 404: Nie znaleziono strony dla ${site}`);
+    logger.warn(`Błąd 404: Nie znaleziono strony dla ${site}`);
     throw new Error(`Strona ${site} zwróciła błąd 404`);
   }
-  console.error(`Błąd podczas pobierania mema z ${site}:`, error);
+  logger.error(`Błąd podczas pobierania mema z ${site}:`, error);
 }
 
 async function parseKwejkRandom() {
@@ -149,6 +150,11 @@ const SITES = {
   },
 };
 
+/**
+ *
+ * @param {string} site - nazwa strony z obiektu SITES (kwejk, demotywatory, mistrzowie, ivallmemy)
+ * @returns {object} - obiekt meme (title, url, isVideo, source)
+ */
 const fetchMeme = async (site) => {
   try {
     const siteConfig = SITES[site];

@@ -1,4 +1,6 @@
 const Clip = require("../../models/Clip");
+const logger = require("../../utils/logger");
+
 const CLIPS_CHANNEL_ID = "1210246300843647047";
 
 module.exports = async (message) => {
@@ -10,38 +12,25 @@ module.exports = async (message) => {
         if (error.code === 10008) {
           if (message.channelId === CLIPS_CHANNEL_ID) {
             await Clip.deleteOne({ messageId: message.id });
-            console.log(
-              `Klip (ID: ${message.id}) został usunięty z bazy danych.`
-            );
           }
           return;
         }
-
-        console.error(
-          "Błąd podczas pobierania pełnych danych wiadomości:",
-          error.code ? `Kod błędu: ${error.code}` : error
+        logger.error(
+          `Błąd podczas pobierania pełnych danych wiadomości: ${
+            error.code || error
+          }`
         );
         return;
       }
     }
 
     if (message.channelId === CLIPS_CHANNEL_ID) {
-      const deletedClip = await Clip.findOneAndDelete({
+      await Clip.findOneAndDelete({
         messageId: message.id,
       });
-
-      if (deletedClip) {
-        console.log(
-          `Klip "${deletedClip.name}" został usunięty z bazy danych.`
-        );
-      } else {
-        console.log(
-          `Nie znaleziono klipu o ID wiadomości: ${message.id} w bazie danych.`
-        );
-      }
     }
   } catch (error) {
-    console.error("Błąd podczas usuwania klipu:", {
+    logger.error("Błąd podczas usuwania klipu:", {
       errorMessage: error.message,
       errorCode: error.code,
       messageId: message?.id,

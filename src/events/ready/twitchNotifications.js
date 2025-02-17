@@ -1,5 +1,4 @@
 const cron = require("node-cron");
-const { EmbedBuilder } = require("discord.js");
 const Streamer = require("../../models/TwitchStreamer");
 const StreamConfiguration = require("../../models/StreamConfiguration");
 const { ApiClient } = require("twitch");
@@ -7,6 +6,8 @@ const { ClientCredentialsAuthProvider } = require("twitch-auth");
 const fs = require("fs").promises;
 const path = require("path");
 const axios = require("axios");
+const logger = require("../../utils/logger");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 
 const clientId = process.env.TWITCH_CLIENT_ID;
 const clientSecret = process.env.TWITCH_CLIENT_SECRET;
@@ -19,7 +20,6 @@ async function ensureThumbnailsDirectory() {
   try {
     await fs.access(THUMBNAILS_DIR);
   } catch {
-    console.log(`Tworzenie katalogu miniatur: ${THUMBNAILS_DIR}`);
     await fs.mkdir(THUMBNAILS_DIR, { recursive: true });
   }
 }
@@ -45,7 +45,7 @@ async function downloadThumbnail(url, streamerName, streamId) {
     await fs.writeFile(filepath, response.data);
     return filepath;
   } catch (error) {
-    console.error("Błąd pobierania miniatury:", {
+    logger.error("Błąd pobierania miniatury:", {
       message: error.message,
       streamer: streamerName,
       streamId: streamId,
@@ -75,15 +75,19 @@ async function cleanupOldThumbnails() {
       }
     }
   } catch (error) {
-    console.error(`Błąd podczas czyszczenia miniatur: ${error}`);
+    logger.error(`Błąd podczas czyszczenia miniatur: ${error}`);
   }
 }
 
 module.exports = (client) => {
-  ensureThumbnailsDirectory().catch(console.error);
+  ensureThumbnailsDirectory().catch((error) =>
+    logger.error(`Błąd podczas tworzenia katalogu miniatur: ${error}`)
+  );
 
   cron.schedule("0 0 * * *", () => {
-    cleanupOldThumbnails().catch(console.error);
+    cleanupOldThumbnails().catch((error) =>
+      logger.error(`Błąd przy cleanupOldThumbnails: ${error}`)
+    );
   });
 
   cron.schedule("* * * * *", async () => {
@@ -98,7 +102,7 @@ module.exports = (client) => {
           twitchChannel
         );
         if (!user) {
-          console.log(`Nie znaleziono użytkownika Twitch: ${twitchChannel}`);
+          logger.warn(`Nie znaleziono użytkownika Twitch: ${twitchChannel}`);
           continue;
         }
 
@@ -108,19 +112,24 @@ module.exports = (client) => {
 
         if (stream && !isLive) {
           const notificationChannel = channels.find(
-            (channel) => channel.guildId === guildId
+            (ch) => ch.guildId === guildId
           );
-
           if (notificationChannel) {
             const guild = client.guilds.cache.get(guildId);
+            if (!guild) {
+              continue;
+            }
+
             const channel = guild.channels.cache.get(
               notificationChannel.channelId
             );
+            if (!channel) {
+              continue;
+            }
 
             const thumbnailUrl = stream.thumbnailUrl
               .replace("{width}", "1280")
               .replace("{height}", "720");
-
             const thumbnailUrlWithCache = `${thumbnailUrl}?_t=${Date.now()}`;
 
             const localThumbnailPath = await downloadThumbnail(
@@ -129,25 +138,21 @@ module.exports = (client) => {
               stream.id
             );
 
-            const embed = new EmbedBuilder()
-              .setColor("#9146FF")
-              .setAuthor({
-                name: `${user.displayName} jest teraz live na Twitch! 🔴`,
-                url: `https://www.twitch.tv/${twitchChannel}`,
-                iconURL: user.profilePictureUrl,
-              })
-              .setTitle(stream.title)
-              .setURL(`https://www.twitch.tv/${twitchChannel}`)
-              .setDescription(`**Streamuje:** ${stream.gameName}`)
-              .setFooter({
-                text: client.user.username,
-                iconURL: client.user.displayAvatarURL(),
-              })
-              .setTimestamp();
+            const embed = createBaseEmbed({
+              color: "#9146FF",
+              title: stream.title,
+              description: `**Streamuje:** ${stream.gameName}`,
+              footerText: client.user.username,
+              footerIcon: client.user.displayAvatarURL(),
+              authorName: `${user.displayName} jest teraz live na Twitch! 🔴`,
+              authorUrl: `https://www.twitch.tv/${twitchChannel}`,
+              authorIcon: user.profilePictureUrl,
+              url: `https://www.twitch.tv/${twitchChannel}`,
+            });
 
             try {
               if (localThumbnailPath) {
-                embed.setImage(`attachment://thumbnail.jpg`);
+                embed.setImage("attachment://thumbnail.jpg");
                 await channel.send({
                   embeds: [embed],
                   files: [
@@ -162,9 +167,12 @@ module.exports = (client) => {
                 await channel.send({ embeds: [embed] });
               }
             } catch (sendError) {
-              console.error(`Błąd podczas wysyłania powiadomienia:`, sendError);
               embed.setImage(null);
-              await channel.send({ embeds: [embed] }).catch(console.error);
+              await channel
+                .send({ embeds: [embed] })
+                .catch((err) =>
+                  logger.error(`Nadal błąd przy wysyłaniu embeda: ${err}`)
+                );
             }
 
             streamer.isLive = true;
@@ -176,7 +184,7 @@ module.exports = (client) => {
         }
       }
     } catch (error) {
-      console.error(`Błąd podczas sprawdzania streamów:`, error);
+      logger.error(`Błąd podczas sprawdzania streamów: ${error}`);
     }
   });
 };

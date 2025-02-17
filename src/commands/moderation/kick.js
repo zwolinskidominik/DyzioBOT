@@ -1,8 +1,6 @@
-const {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-  EmbedBuilder,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -29,25 +27,28 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const errorEmbed = new EmbedBuilder()
-      .setColor("#FF0000")
-      .setTimestamp()
-      .setFooter({ text: interaction.guild.name });
+    const errorEmbed = createBaseEmbed({
+      isError: true,
+      footerText: interaction.guild.name,
+    });
 
     try {
+      await interaction.deferReply();
       const targetUserId = interaction.options.getUser("target-user").id;
       const reason = interaction.options.getString("reason") || "Brak";
-      await interaction.deferReply();
+
       const targetUser = await interaction.guild.members.fetch(targetUserId);
 
-      const successEmbed = new EmbedBuilder()
-        .setColor("#00BFFF")
-        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
-        .setFooter({
-          text: `${interaction.user.username}`,
-          iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
-        })
-        .setTimestamp();
+      const successEmbed = createBaseEmbed({
+        isError: true,
+        footerText: interaction.user.username,
+        footerIcon: interaction.user.displayAvatarURL({ dynamic: true }),
+      });
+      if (targetUser) {
+        successEmbed.setThumbnail(
+          targetUser.user.displayAvatarURL({ dynamic: true })
+        );
+      }
 
       if (!targetUser) {
         await interaction.editReply({
@@ -82,23 +83,20 @@ module.exports = {
 
       await targetUser.kick(reason);
 
-      await interaction.editReply({
-        embeds: [
-          successEmbed
-            .setDescription(`**Użytkownik ${targetUser} został wyrzucony.**`)
-            .addFields(
-              {
-                name: "Moderator:",
-                value: `${interaction.user}`,
-                inline: true,
-              },
-              { name: "Powód:", value: `${reason}`, inline: true }
-            ),
-        ],
-      });
-    } catch (error) {
-      console.log(`Wystąpił błąd podczas wyrzucenia: ${error}`);
+      successEmbed
+        .setDescription(`### Wyrzucono użytkownika ${targetUser}`)
+        .addFields(
+          {
+            name: "Moderator:",
+            value: `${interaction.user}`,
+            inline: true,
+          },
+          { name: "Powód:", value: `${reason}`, inline: true }
+        );
 
+      await interaction.editReply({ embeds: [successEmbed] });
+    } catch (error) {
+      logger.error(`Błąd podczas wyrzucenia użytkownika: ${error}`);
       await interaction.editReply({
         embeds: [
           errorEmbed.setDescription(

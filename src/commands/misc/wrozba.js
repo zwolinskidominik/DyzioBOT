@@ -1,5 +1,7 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const { Fortune, FortuneUsage } = require("../../models/Fortune");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -16,13 +18,12 @@ module.exports = {
 
       const user = interaction.user;
       const now = new Date();
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       const fortunes = await Fortune.find();
-
       if (!fortunes || fortunes.length === 0) {
+        logger.warn("Brak wróżb w bazie. Nie można wyświetlić /wrozba");
         return await interaction.editReply({
           content:
             "Brak wróżb w bazie danych! Skontaktuj się z administratorem.",
@@ -74,27 +75,24 @@ module.exports = {
       usage.lastUsed = now;
       await usage.save();
 
-      const fortuneEmbed = new EmbedBuilder()
-        .setColor("#AA8DD8")
-        .setTitle("🔮 Twoja Wróżba")
-        .addFields(
-          {
-            name: "Przepowiednia",
-            value: randomFortune.content || "Brak przepowiedni",
-          },
-          {
-            name: "Pozostałe wróżby na dziś",
-            value: `${2 - usage.dailyUsageCount}/2`,
-          }
-        )
-        .setFooter({
-          text: `Limit zresetuje się o 1:00`,
-        })
-        .setTimestamp();
+      const fortuneEmbed = createBaseEmbed({
+        color: "#AA8DD8",
+        title: "🔮 Twoja Wróżba",
+        footerText: "Limit zresetuje się o 1:00",
+      }).addFields(
+        {
+          name: "Przepowiednia",
+          value: randomFortune.content || "Brak przepowiedni",
+        },
+        {
+          name: "Pozostałe wróżby na dziś",
+          value: `${2 - usage.dailyUsageCount}/2`,
+        }
+      );
 
       await interaction.editReply({ embeds: [fortuneEmbed] });
     } catch (error) {
-      console.error("Błąd podczas wykonywania komendy wrozba:", error);
+      logger.error(`Błąd podczas wykonywania komendy /wrozba: ${error}`);
       await interaction.editReply({
         content: `Wystąpił błąd podczas sprawdzania wróżby: ${error.message}`,
         ephemeral: true,

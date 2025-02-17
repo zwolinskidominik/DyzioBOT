@@ -1,5 +1,6 @@
 const Suggestion = require("../../models/Suggestion");
 const formatResults = require("../../utils/formatResults");
+const logger = require("../../utils/logger");
 
 module.exports = async (interaction) => {
   if (!interaction.isButton() || !interaction.customId) return;
@@ -31,6 +32,7 @@ module.exports = async (interaction) => {
     const alreadyVoted =
       targetSuggestion.upvotes.includes(interaction.user.id) ||
       targetSuggestion.downvotes.includes(interaction.user.id);
+
     if (alreadyVoted) {
       await interaction.editReply("Oddano już głos na tę sugestię.");
       return;
@@ -52,8 +54,9 @@ module.exports = async (interaction) => {
       targetSuggestion.upvotes,
       targetSuggestion.downvotes
     );
+
     await targetMessage.edit({ embeds: [targetMessageEmbed] });
   } catch (error) {
-    console.log(`Error in handleSuggestion.js: ${error}`);
+    logger.error(`Error in handleSuggestion.js: ${error}`);
   }
 };

@@ -1,33 +1,32 @@
 const {
-  EmbedBuilder,
   ChannelType,
   SlashCommandBuilder,
   PermissionFlagsBits,
 } = require("discord.js");
-const StreamChannel = require("../../models/StreamConfiguration");
+const { createBaseEmbed } = require("../../utils/embedUtils");
+const GreetingsConfiguration = require("../../models/GreetingsConfiguration");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("config-twitch")
-    .setDescription("Ustawia kanał Discorda do ogłaszania streamów Twitcha.")
+    .setName("config-greetings")
+    .setDescription("Skonfiguruj karty powitalne.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setDMPermission(false)
     .addSubcommand((subcommand) =>
       subcommand
         .setName("add")
-        .setDescription("Dodaje kanał do powiadomień o streamach Twitch.")
+        .setDescription("Dodaje kanał powitań.")
         .addChannelOption((option) =>
           option
             .setName("channel")
-            .setDescription("Kanał Discorda do ogłaszania streamów z Twitcha.")
+            .setDescription("Kanał, który chcesz ustawić jako kanał powitań.")
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
         )
     )
     .addSubcommand((subcommand) =>
-      subcommand
-        .setName("remove")
-        .setDescription("Usuwa kanał do powiadomień o streamach Twitch.")
+      subcommand.setName("remove").setDescription("Usuwa kanał powitań.")
     ),
 
   options: {
@@ -36,8 +35,8 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const errorEmbed = new EmbedBuilder().setColor("#FF0000");
-    const successEmbed = new EmbedBuilder().setColor("#00BFFF");
+    const errorEmbed = createBaseEmbed({ isError: true });
+    const successEmbed = createBaseEmbed();
 
     const subcommand = interaction.options.getSubcommand();
     const channel = interaction.options.getChannel("channel");
@@ -46,31 +45,34 @@ module.exports = {
     try {
       await interaction.deferReply({ ephemeral: true });
 
-      const existingConfig = await StreamChannel.findOne({ guildId });
+      const existingConfig = await GreetingsConfiguration.findOne({ guildId });
 
       if (subcommand === "add") {
-        if (existingConfig && existingConfig.channelId === channel.id) {
+        if (
+          existingConfig &&
+          existingConfig.greetingsChannelId === channel.id
+        ) {
           await interaction.editReply({
             embeds: [
               errorEmbed.setDescription(
-                `Kanał ${channel} jest już ustawiony jako kanał powiadomień o streamach Twitch.`
+                `Kanał ${channel} jest już ustawiony jako kanał powitań.\nAby wyłączyć, uruchom \`/config-greetings remove\`.`
               ),
             ],
             ephemeral: true,
           });
           return;
         }
-
-        const config = existingConfig || new StreamChannel({ guildId });
-        config.channelId = channel.id;
+        const config =
+          existingConfig || new GreetingsConfiguration({ guildId });
+        config.greetingsChannelId = channel.id;
         await config.save();
 
         await interaction.editReply({
           embeds: [
             successEmbed.setDescription(
               existingConfig
-                ? `Zaktualizowano kanał powiadomień o streamach Twitch na ${channel}.`
-                : `Ustawiono kanał powiadomień o streamach Twitch na ${channel}.`
+                ? `Zaktualizowano kanał powitań na ${channel}.\nAby wyłączyć, uruchom \`/config-greetings remove\`.`
+                : `Ustawiono kanał powitań na ${channel}.\nAby wyłączyć, uruchom \`/config-greetings remove\`.`
             ),
           ],
           ephemeral: true,
@@ -83,7 +85,7 @@ module.exports = {
           await interaction.editReply({
             embeds: [
               errorEmbed.setDescription(
-                "Nie znaleziono skonfigurowanego kanału do usunięcia."
+                "Brak skonfigurowanego kanału powitań.\nAby skonfigurować, uruchom `/config-greetings add`."
               ),
             ],
             ephemeral: true,
@@ -91,20 +93,20 @@ module.exports = {
           return;
         }
 
-        await StreamChannel.findOneAndDelete({ guildId });
+        await GreetingsConfiguration.findOneAndDelete({ guildId });
+        logger.info(`Usunięto kanał powitań w guildId=${guildId}`);
 
         await interaction.editReply({
           embeds: [
             successEmbed.setDescription(
-              `Kanał ${channel} został usunięty z powiadomień o streamach Twitch.`
+              "Kanał powitań został wyłączony dla tego serwera. \nAby skonfigurować ponownie, uruchom `/config-greetings add`."
             ),
           ],
           ephemeral: true,
         });
       }
     } catch (error) {
-      console.error(`Błąd podczas zapisywania konfiguracji kanału: ${error}`);
-
+      logger.error(`Błąd podczas zapisywania konfiguracji kanału: ${error}`);
       await interaction.editReply({
         embeds: [
           errorEmbed.setDescription(

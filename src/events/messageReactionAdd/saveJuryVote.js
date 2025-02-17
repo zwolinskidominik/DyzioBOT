@@ -1,4 +1,5 @@
 const Clip = require("../../models/Clip");
+const logger = require("../../utils/logger");
 
 const JURY_ROLE_ID = "1303735601845239969";
 const REACTION_TO_SCORE = {
@@ -18,7 +19,9 @@ module.exports = async (reaction, user) => {
       try {
         await reaction.fetch();
       } catch (error) {
-        console.error("Błąd podczas pobierania pełnych danych reakcji:", error);
+        logger.error(
+          `Błąd podczas pobierania pełnych danych reakcji: ${error}`
+        );
         return;
       }
     }
@@ -27,9 +30,8 @@ module.exports = async (reaction, user) => {
       try {
         await reaction.message.fetch();
       } catch (error) {
-        console.error(
-          "Błąd podczas pobierania pełnych danych wiadomości:",
-          error
+        logger.error(
+          `Błąd podczas pobierania pełnych danych wiadomości: ${error}`
         );
         return;
       }
@@ -54,14 +56,14 @@ module.exports = async (reaction, user) => {
       { messageId: reaction.message.id },
       { $pull: { votes: { juryId: user.id } } }
     );
-    console.log("Previous vote removed if existed.");
+    logger.info(`Poprzedni głos usunięty, jeśli istniał (userId=${user.id}).`);
 
     await Clip.updateOne(
       { messageId: reaction.message.id },
       { $push: { votes: { juryId: user.id, score } } }
     );
-    console.log(`Vote added: ${user.id} scored ${score}`);
+    logger.info(`Dodano głos: userId=${user.id}, score=${score}`);
   } catch (error) {
-    console.error("Błąd podczas przetwarzania reakcji:", error);
+    logger.error(`Błąd podczas przetwarzania reakcji clip-vote: ${error}`);
   }
 };

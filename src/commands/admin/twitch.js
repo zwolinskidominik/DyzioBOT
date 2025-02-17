@@ -1,9 +1,7 @@
-const {
-  SlashCommandBuilder,
-  EmbedBuilder,
-  PermissionFlagsBits,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const TwitchStreamer = require("../../models/TwitchStreamer");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -65,7 +63,6 @@ module.exports = {
         await interaction.deferReply();
 
         let streamer = await TwitchStreamer.findOne({ guildId, userId });
-
         if (!streamer) {
           streamer = new TwitchStreamer({
             guildId,
@@ -77,44 +74,33 @@ module.exports = {
           streamer.twitchChannel = twitchChannel;
           streamer.active = true;
         }
-
         await streamer.save();
 
-        await interaction.editReply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor("#6441A5")
-              .setDescription(
-                `Streamer **${twitchChannel}** powiązany z użytkownikiem <@${userId}> został dodany lub zaktualizowany.`
-              ),
-          ],
+        const successEmbed = createBaseEmbed({
+          description: `Streamer **${twitchChannel}** powiązany z użytkownikiem <@${userId}> został dodany lub zaktualizowany.`,
+          color: "#6441A5",
         });
+
+        await interaction.editReply({ embeds: [successEmbed] });
       } catch (error) {
-        console.error(`Błąd podczas zapisywania streamera: ${error}`);
-        await interaction.editReply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor("#FF0000")
-              .setDescription("Wystąpił błąd podczas zapisywania streamera."),
-          ],
+        logger.error(`Błąd podczas zapisywania streamera: ${error}`);
+        const errorEmbed = createBaseEmbed({
+          isError: true,
+          description: "Wystąpił błąd podczas zapisywania streamera.",
         });
+        await interaction.editReply({ embeds: [errorEmbed] });
       }
     } else if (subcommand === "list") {
       try {
         await interaction.deferReply();
 
-        const streamers = await TwitchStreamer.find({ guildId });
-
+        const streamers = await TwitchStreamer.find({ guildId, active: true });
         if (!streamers.length) {
-          await interaction.editReply({
-            embeds: [
-              new EmbedBuilder()
-                .setColor("#FF0000")
-                .setDescription(
-                  "Nie znaleziono żadnych streamerów dla tego serwera."
-                ),
-            ],
+          const notFoundEmbed = createBaseEmbed({
+            isError: true,
+            description: "Nie znaleziono żadnych streamerów dla tego serwera.",
           });
+          await interaction.editReply({ embeds: [notFoundEmbed] });
           return;
         }
 
@@ -123,31 +109,25 @@ module.exports = {
             (streamer, index) =>
               `${index + 1} - **${streamer.twitchChannel}** (Użytkownik: <@${
                 streamer.userId
-              }>, Aktywny: ${streamer.active ? "tak" : "nie"})`
+              }>)`
           )
           .join("\n");
 
-        await interaction.editReply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor("#6441A5")
-              .setTitle("Lista streamerów Twitcha")
-              .setDescription(streamerList)
-              .setFooter({ text: `Znaleziono ${streamers.length} streamerów` })
-              .setTimestamp(),
-          ],
+        const listEmbed = createBaseEmbed({
+          title: "Lista streamerów Twitcha",
+          description: streamerList,
+          footerText: `Znaleziono ${streamers.length} streamerów`,
+          color: "#6441A5",
         });
+
+        await interaction.editReply({ embeds: [listEmbed] });
       } catch (error) {
-        console.error(`Błąd podczas pobierania listy streamerów: ${error}`);
-        await interaction.editReply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor("#FF0000")
-              .setDescription(
-                "Wystąpił błąd podczas pobierania listy streamerów."
-              ),
-          ],
+        logger.error(`Błąd podczas pobierania listy streamerów: ${error}`);
+        const errorEmbed = createBaseEmbed({
+          isError: true,
+          description: "Wystąpił błąd podczas pobierania listy streamerów.",
         });
+        await interaction.editReply({ embeds: [errorEmbed] });
       }
     } else if (subcommand === "remove") {
       const twitchChannel = interaction.options.getString("twitch-username");
@@ -159,39 +139,29 @@ module.exports = {
           guildId,
           twitchChannel,
         });
-
         if (!streamer) {
-          return await interaction.editReply({
-            embeds: [
-              new EmbedBuilder()
-                .setColor("#FF0000")
-                .setDescription(
-                  `Streamer **${twitchChannel}** nie został znaleziony w bazie danych.`
-                ),
-            ],
+          const notFoundEmbed = createBaseEmbed({
+            isError: true,
+            description: `Streamer **${twitchChannel}** nie został znaleziony w bazie danych.`,
           });
+          return await interaction.editReply({ embeds: [notFoundEmbed] });
         }
 
         await TwitchStreamer.deleteOne({ guildId, twitchChannel });
 
-        await interaction.editReply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor("#6441A5")
-              .setDescription(
-                `Streamer **${twitchChannel}** został usunięty z listy.`
-              ),
-          ],
+        const successEmbed = createBaseEmbed({
+          description: `Streamer **${twitchChannel}** został usunięty z listy.`,
+          color: "#6441A5",
         });
+
+        await interaction.editReply({ embeds: [successEmbed] });
       } catch (error) {
-        console.error(`Błąd podczas usuwania streamera: ${error}`);
-        await interaction.editReply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor("#FF0000")
-              .setDescription("Wystąpił błąd podczas usuwania streamera."),
-          ],
+        logger.error(`Błąd podczas usuwania streamera: ${error}`);
+        const errorEmbed = createBaseEmbed({
+          isError: true,
+          description: "Wystąpił błąd podczas usuwania streamera.",
         });
+        await interaction.editReply({ embeds: [errorEmbed] });
       }
     }
   },

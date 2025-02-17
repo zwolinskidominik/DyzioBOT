@@ -1,13 +1,14 @@
 const {
-  EmbedBuilder,
+  ChannelType,
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
-  ChannelType,
 } = require("discord.js");
 const SuggestionConfiguration = require("../../models/SuggestionConfiguration");
-const formatResults = require("../../utils/formatResults");
 const Suggestion = require("../../models/Suggestion");
+const formatResults = require("../../utils/formatResults");
+const logger = require("../../utils/logger");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 
 module.exports = async (message) => {
   const guildId = message.guild.id;
@@ -16,17 +17,18 @@ module.exports = async (message) => {
     message.author.bot ||
     message.channel.type === ChannelType.GroupDM ||
     message.channel.type === ChannelType.DM
-  )
+  ) {
     return;
+  }
 
   try {
     const suggestionConfig = await SuggestionConfiguration.findOne({ guildId });
-
     if (
       !suggestionConfig ||
       suggestionConfig.suggestionChannelId !== message.channelId
-    )
+    ) {
       return;
+    }
 
     const suggestionText = message.content;
     await message.delete();
@@ -41,7 +43,6 @@ module.exports = async (message) => {
       messageId: suggestionMessage.id,
       content: suggestionText,
     });
-
     await newSuggestion.save();
 
     let threadName =
@@ -56,25 +57,23 @@ module.exports = async (message) => {
       startMessage: suggestionMessage,
     });
 
-    const suggestionEmbed = new EmbedBuilder()
-      .setAuthor({
-        name: message.author.username,
-        iconURL: message.author.displayAvatarURL({ size: 256 }),
-      })
-      .addFields([
-        { name: "Sugestia", value: suggestionText },
-        { name: "Głosy", value: formatResults() },
-      ])
-      .setColor("#2B2D31");
+    const suggestionEmbed = createBaseEmbed({
+      color: "#2B2D31",
+      authorName: message.author.username,
+      authorIcon: message.author.displayAvatarURL({ size: 256 }),
+    }).addFields([
+      { name: "Sugestia", value: suggestionText },
+      { name: "Głosy", value: formatResults() },
+    ]);
 
     const upvoteButton = new ButtonBuilder()
-      .setEmoji("<:pingu_yes:1162408115677958184>")
+      .setEmoji("<:yes:1341047246120026254>")
       .setLabel("Za")
       .setStyle(ButtonStyle.Secondary)
       .setCustomId(`suggestion.${newSuggestion.suggestionId}.upvote`);
 
     const downvoteButton = new ButtonBuilder()
-      .setEmoji("<:pingu_no:1162408119196995696>")
+      .setEmoji("<:no:1341047256387682456>")
       .setLabel("Przeciw")
       .setStyle(ButtonStyle.Secondary)
       .setCustomId(`suggestion.${newSuggestion.suggestionId}.downvote`);
@@ -84,13 +83,13 @@ module.exports = async (message) => {
       downvoteButton
     );
 
-    suggestionMessage.edit({
+    await suggestionMessage.edit({
       content: "",
       embeds: [suggestionEmbed],
       components: [firstRow],
     });
   } catch (error) {
-    console.error("Błąd podczas tworzenia sugestii:", error);
+    logger.error(`Błąd podczas tworzenia sugestii: ${error}`);
     message.channel.send("Wystąpił błąd podczas tworzenia sugestii.");
   }
 };

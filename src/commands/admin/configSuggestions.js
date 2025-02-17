@@ -1,21 +1,22 @@
 const {
-  SlashCommandBuilder,
   ChannelType,
-  EmbedBuilder,
+  SlashCommandBuilder,
   PermissionFlagsBits,
 } = require("discord.js");
-const QuestionConfiguration = require("../../models/QuestionConfiguration");
+const { createBaseEmbed } = require("../../utils/embedUtils");
+const SuggestionConfiguration = require("../../models/SuggestionConfiguration");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("config-questions")
-    .setDescription("Skonfiguruj pytania dnia.")
+    .setName("config-suggestions")
+    .setDescription("Skonfiguruj kanały sugestii.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setDMPermission(false)
     .addSubcommand((subcommand) =>
       subcommand
         .setName("add")
-        .setDescription("Dodaje kanał dla pytań dnia.")
+        .setDescription("Dodaje kanał sugestii.")
         .addChannelOption((option) =>
           option
             .setName("channel")
@@ -23,17 +24,9 @@ module.exports = {
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
         )
-        .addRoleOption((option) =>
-          option
-            .setName("ping_role")
-            .setDescription(
-              "Rola, która będzie pingowana przy dodawaniu pytania dnia."
-            )
-            .setRequired(false)
-        )
     )
     .addSubcommand((subcommand) =>
-      subcommand.setName("remove").setDescription("Usuwa kanał dla pytań dnia.")
+      subcommand.setName("remove").setDescription("Usuwa kanał sugestii.")
     ),
 
   options: {
@@ -42,25 +35,27 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const errorEmbed = new EmbedBuilder().setColor("#FF0000");
-    const successEmbed = new EmbedBuilder().setColor("#00BFFF");
+    const errorEmbed = createBaseEmbed({ isError: true });
+    const successEmbed = createBaseEmbed();
 
     const subcommand = interaction.options.getSubcommand();
     const channel = interaction.options.getChannel("channel");
-    const pingRole = interaction.options.getRole("ping_role");
     const guildId = interaction.guild.id;
 
     try {
       await interaction.deferReply({ ephemeral: true });
 
-      const existingConfig = await QuestionConfiguration.findOne({ guildId });
+      const existingConfig = await SuggestionConfiguration.findOne({ guildId });
 
       if (subcommand === "add") {
-        if (existingConfig && existingConfig.questionChannelId === channel.id) {
+        if (
+          existingConfig &&
+          existingConfig.suggestionChannelId === channel.id
+        ) {
           await interaction.editReply({
             embeds: [
               errorEmbed.setDescription(
-                `Kanał ${channel} jest już ustawiony jako kanał pytań dnia.`
+                `${channel} jest już kanałem sugestii.\nAby wyłączyć, uruchom \`/config-suggestions remove\`.`
               ),
             ],
             ephemeral: true,
@@ -68,17 +63,17 @@ module.exports = {
           return;
         }
 
-        const config = existingConfig || new QuestionConfiguration({ guildId });
-        config.questionChannelId = channel.id;
-        config.pingRoleId = pingRole ? pingRole.id : null;
+        const config =
+          existingConfig || new SuggestionConfiguration({ guildId });
+        config.suggestionChannelId = channel.id;
         await config.save();
 
         await interaction.editReply({
           embeds: [
             successEmbed.setDescription(
               existingConfig
-                ? `Zaktualizowano kanał pytań dnia na ${channel}.`
-                : `Ustawiono kanał pytań dnia na ${channel}.`
+                ? `Zaktualizowano kanał sugestii na ${channel}.\nAby wyłączyć, uruchom \`/config-suggestions remove\`.`
+                : `Ustawiono kanał sugestii na ${channel}.\nAby wyłączyć, uruchom \`/config-suggestions remove\`.`
             ),
           ],
           ephemeral: true,
@@ -91,7 +86,7 @@ module.exports = {
           await interaction.editReply({
             embeds: [
               errorEmbed.setDescription(
-                "Brak skonfigurowanego kanału pytań dnia."
+                "Brak skonfigurowanego kanału sugestii.\nAby skonfigurować, uruchom `/config-suggestions add`."
               ),
             ],
             ephemeral: true,
@@ -99,18 +94,24 @@ module.exports = {
           return;
         }
 
-        await QuestionConfiguration.findOneAndDelete({ guildId });
+        await SuggestionConfiguration.findOneAndDelete({ guildId });
+        logger.info(`Usunięto kanał sugestii w guildId=${guildId}`);
+
         await interaction.editReply({
-          embeds: [successEmbed.setDescription("Usunięto kanał pytań dnia.")],
+          embeds: [
+            successEmbed.setDescription(
+              "Usunięto kanał sugestii.\nAby skonfigurować ponownie, uruchom `/config-suggestions add`."
+            ),
+          ],
           ephemeral: true,
         });
       }
     } catch (error) {
-      console.error(`Błąd podczas konfigurowania kanału pytań dnia: ${error}`);
+      logger.error(`Błąd podczas konfigurowania kanałów sugestii: ${error}`);
       await interaction.editReply({
         embeds: [
           errorEmbed.setDescription(
-            "Wystąpił błąd podczas konfigurowania kanału pytań dnia."
+            "Wystąpił błąd podczas konfigurowania kanałów sugestii."
           ),
         ],
         ephemeral: true,

@@ -1,10 +1,11 @@
 const {
-  EmbedBuilder,
   ChannelType,
   SlashCommandBuilder,
   PermissionFlagsBits,
 } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const BirthdayConfiguration = require("../../models/BirthdayConfiguration");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -36,8 +37,8 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const errorEmbed = new EmbedBuilder().setColor("#FF0000");
-    const successEmbed = new EmbedBuilder().setColor("#00BFFF");
+    const errorEmbed = createBaseEmbed({ isError: true });
+    const successEmbed = createBaseEmbed();
 
     const subcommand = interaction.options.getSubcommand();
     const channel = interaction.options.getChannel("channel");
@@ -53,7 +54,7 @@ module.exports = {
           await interaction.editReply({
             embeds: [
               errorEmbed.setDescription(
-                `Kanał ${channel} jest już ustawiony jako kanał do wysyłania życzeń urodzinowych.`
+                `Kanał ${channel} jest już ustawiony jako kanał do wysyłania życzeń urodzinowych.\nAby wyłączyć, uruchom \`/config-birthday remove\`.`
               ),
             ],
             ephemeral: true,
@@ -68,8 +69,8 @@ module.exports = {
           embeds: [
             successEmbed.setDescription(
               existingConfig
-                ? `Zaktualizowano kanał do wysyłania życzeń urodzinowych na ${channel}.`
-                : `Ustawiono kanał do wysyłania życzeń urodzinowych na ${channel}.`
+                ? `Zaktualizowano kanał do wysyłania życzeń urodzinowych na ${channel}.\nAby wyłączyć, uruchom \`/config-birthday remove\`.`
+                : `Ustawiono kanał do wysyłania życzeń urodzinowych na ${channel}\nAby wyłączyć, uruchom \`/config-birthday remove\`.`
             ),
           ],
           ephemeral: true,
@@ -82,7 +83,7 @@ module.exports = {
           await interaction.editReply({
             embeds: [
               errorEmbed.setDescription(
-                "Brak skonfigurowanego kanału do wysyłania życzeń urodzinowych."
+                "Brak skonfigurowanego kanału do wysyłania życzeń urodzinowych.\nAby skonfigurować, uruchom `/config-birthday add`."
               ),
             ],
             ephemeral: true,
@@ -91,17 +92,19 @@ module.exports = {
         }
 
         await BirthdayConfiguration.findOneAndDelete({ guildId });
+        logger.info(`Usunięto kanał urodzin w guildId=${guildId}`);
+
         await interaction.editReply({
           embeds: [
             successEmbed.setDescription(
-              "Usunięto kanał do wysyłania życzeń urodzinowych."
+              "Usunięto kanał do wysyłania życzeń urodzinowych.\nAby skonfigurować ponownie, uruchom `/config-birthday add`."
             ),
           ],
           ephemeral: true,
         });
       }
     } catch (error) {
-      console.error(`Błąd podczas zapisywania konfiguracji kanału: ${error}`);
+      logger.error(`Błąd podczas zapisywania konfiguracji kanału: ${error}`);
       await interaction.editReply({
         embeds: [
           errorEmbed.setDescription(

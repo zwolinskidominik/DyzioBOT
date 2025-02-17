@@ -1,7 +1,9 @@
-const { AttachmentBuilder, EmbedBuilder } = require("discord.js");
+const { AttachmentBuilder } = require("discord.js");
 const { Font } = require("canvacord");
 const { GreetingsCard } = require("../../utils/GreetingsCard");
 const GreetingsConfiguration = require("../../models/GreetingsConfiguration");
+const logger = require("../../utils/logger");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 
 module.exports = async (member) => {
   try {
@@ -30,13 +32,17 @@ module.exports = async (member) => {
     const image = await card.build({ format: "png" });
     const attachment = new AttachmentBuilder(image, { name: "welcome.png" });
 
-    const embed = new EmbedBuilder()
-      .setDescription(`### Żegnaj <@!${member.user.id}>! 😟`)
-      .setImage("attachment://welcome.png")
-      .setColor("#FF0000");
+    const embed = createBaseEmbed({
+      description: `### Żegnaj <@!${member.user.id}>! <:bye:1341059186607390770>`,
+      image: "attachment://welcome.png",
+      color: "#FF0000",
+      timestamp: false,
+    });
 
     await channel.send({ embeds: [embed], files: [attachment] });
   } catch (error) {
-    console.log("Wystąpił błąd: ", error);
+    logger.error(
+      `Błąd w goodbyeCard.js przy userId=${member?.user?.id}: ${error}`
+    );
   }
 };

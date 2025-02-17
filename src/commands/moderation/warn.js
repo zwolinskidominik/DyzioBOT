@@ -5,7 +5,9 @@ const {
 } = require("discord.js");
 const { Font } = require("canvacord");
 const { WarnCard } = require("../../utils/WarnCard");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const Warn = require("../../models/Warn");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -43,7 +45,6 @@ module.exports = {
     const guildId = interaction.guild.id;
 
     const user = await interaction.guild.members.fetch(targetUserId);
-
     if (!user) {
       await interaction.editReply({
         content: "Nie znaleziono użytkownika.",
@@ -70,7 +71,6 @@ module.exports = {
 
     try {
       const avatar = user.user.displayAvatarURL({ format: "png" });
-
       let warn = await Warn.findOne({ userId: targetUserId, guildId });
       if (!warn) {
         warn = new Warn({
@@ -123,7 +123,6 @@ module.exports = {
         .setAuthorFont(robotoMedium);
 
       const image = await card.build({ format: "png" });
-
       const attachment = new AttachmentBuilder(image, { name: "warn.png" });
 
       if (banUser) {
@@ -131,30 +130,27 @@ module.exports = {
         unbanDate.setMonth(unbanDate.getMonth() + 1);
         warn.banUntil = unbanDate;
 
-        const embed = new EmbedBuilder()
-          .setColor("#FF0000")
-          .setTitle("Tymczasowy ban na serwerze GameZone")
-          .setDescription(
-            `Zostałeś/aś **tymczasowo zbanowany/a na serwerze GameZone** na okres 1 miesiąca.
+        const embed = createBaseEmbed({
+          isError: true,
+          title: "Tymczasowy ban na serwerze GameZone",
+          description: `Zostałeś/aś **tymczasowo zbanowany/a na serwerze GameZone** na okres 1 miesiąca.
   
-  **Powód:** ${muteReason}
-  
-  • *Przypominamy, że naruszenie zasad serwera prowadzi do konsekwencji.*
-  • *Po upływie kary będziesz mógł ponownie dołączyć do naszej społeczności.*
-  • *W razie wątpliwości lub chęci odwołania się, skontaktuj się z administracją.*
-  
-  Twój ban wygaśnie: ${unbanDate.toLocaleString()}`
-          )
-          .setTimestamp();
+          **Powód:** ${muteReason}
+            
+          • *Przypominamy, że naruszenie zasad serwera prowadzi do konsekwencji.*
+          • *Po upływie kary będziesz mógł ponownie dołączyć do naszej społeczności.*
+          • *W razie wątpliwości lub chęci odwołania się, skontaktuj się z administracją.*
+
+          Twój ban wygaśnie: ${unbanDate.toLocaleString()}`,
+        });
 
         try {
           await user.send({ embeds: [embed] });
         } catch (error) {
-          console.error(
-            `Nie można wysłać wiadomości do użytkownika ${user.user.tag}`,
+          logger.error(
+            `Nie można wysłać wiadomości do użytkownika ${user.user.tag}:`,
             error
           );
-          // Możemy dodać informację o tym do odpowiedzi interakcji
           await interaction.followUp({
             content: `Nie udało się wysłać prywatnej wiadomości do ${user.user.tag}. Użytkownik może mieć wyłączone wiadomości prywatne.`,
             ephemeral: true,
@@ -172,7 +168,7 @@ module.exports = {
         files: [attachment],
       });
     } catch (error) {
-      console.error("Błąd podczas generowania ostrzeżenia:", error);
+      logger.error("Błąd podczas generowania ostrzeżenia:", error);
       await interaction.editReply({
         content: "Wystąpił błąd podczas generowania ostrzeżenia.",
         ephemeral: true,

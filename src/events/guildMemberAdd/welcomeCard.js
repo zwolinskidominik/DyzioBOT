@@ -1,7 +1,9 @@
-const { AttachmentBuilder, EmbedBuilder } = require("discord.js");
+const { AttachmentBuilder } = require("discord.js");
 const { Font } = require("canvacord");
 const { GreetingsCard } = require("../../utils/GreetingsCard");
 const GreetingsConfiguration = require("../../models/GreetingsConfiguration");
+const logger = require("../../utils/logger");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 
 module.exports = async (member) => {
   try {
@@ -28,18 +30,19 @@ module.exports = async (member) => {
       .setMessage(`Jesteś ${guild.memberCount} osóbką na serwerze!`);
 
     const image = await card.build({ format: "png" });
-
     const attachment = new AttachmentBuilder(image, { name: "welcome.png" });
 
-    const embed = new EmbedBuilder()
-      .setDescription(
-        `### Siema <@!${member.user.id}>! 😎 ###\nWitaj na serwerze ${guild.name}! 🕹️`
-      )
-      .setImage("attachment://welcome.png")
-      .setColor("#86c232");
+    const embed = createBaseEmbed({
+      description: `### Siema <@!${member.user.id}>! <:hi:1341059174888509521> ###\nWitaj na serwerze ${guild.name}! 🕹️`,
+      image: "attachment://welcome.png",
+      color: "#86c232",
+      timestamp: false,
+    });
 
     await channel.send({ embeds: [embed], files: [attachment] });
   } catch (error) {
-    console.log("Wystąpił błąd: ", error);
+    logger.error(
+      `Błąd w welcomeCard.js przy userId=${member?.user?.id}: ${error}`
+    );
   }
 };

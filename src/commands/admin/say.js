@@ -3,10 +3,11 @@ const {
   TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
-  EmbedBuilder,
   SlashCommandBuilder,
   PermissionFlagsBits,
 } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -54,9 +55,7 @@ module.exports = {
       const message = response.fields.getTextInputValue("sayMessage");
       const embedSay = response.fields.getTextInputValue("embedMode");
 
-      const embed = new EmbedBuilder()
-        .setDescription(message)
-        .setColor("#00BFFF");
+      const embed = createBaseEmbed({ description: message });
 
       if (embedSay && embedSay.toLowerCase() === "on") {
         await channel.send({ embeds: [embed] });
@@ -69,7 +68,7 @@ module.exports = {
         ephemeral: true,
       });
     } catch (error) {
-      console.error("Błąd podczas wysyłania wiadomości:", error);
+      logger.error(`Błąd podczas wysyłania wiadomości w /say: ${error}`);
       await interaction.editReply({
         content: "Nie udało się wysłać wiadomości. Spróbuj ponownie.",
         ephemeral: true,

@@ -3,6 +3,7 @@ const Question = require("../../models/Question");
 const QuestionConfiguration = require("../../models/QuestionConfiguration");
 const cron = require("node-cron");
 const { GUILD_ID } = process.env;
+const logger = require("../../utils/logger");
 
 module.exports = async (client) => {
   cron.schedule("0 0 9 * * *", async () => {
@@ -12,7 +13,7 @@ module.exports = async (client) => {
       });
 
       if (!questionConfig) {
-        console.error("Konfiguracja kanału pytań nie istnieje!");
+        logger.warn("Konfiguracja kanału pytań nie istnieje!");
         return;
       }
 
@@ -20,12 +21,13 @@ module.exports = async (client) => {
         questionConfig.questionChannelId
       );
       if (!questionChannel) {
-        console.error("Kanał pytań nie istnieje!");
+        logger.warn("Kanał pytań nie istnieje!");
         return;
       }
 
       const questions = await Question.find();
       if (questions.length === 0) {
+        logger.info("Brak pytań w bazie danych!");
         questionChannel.send("Brak pytań w bazie danych!");
         return;
       }
@@ -38,6 +40,7 @@ module.exports = async (client) => {
       const messageContent = questionConfig.pingRoleId
         ? `<@&${questionConfig.pingRoleId}>\n\n**Pytanie dnia:**\n${randomQuestion.content}`
         : `**Pytanie dnia:**\n${randomQuestion.content}`;
+
       const questionMessage = await questionChannel.send(messageContent);
 
       await questionChannel.threads.create({
@@ -51,13 +54,13 @@ module.exports = async (client) => {
         try {
           await questionMessage.react(reaction);
         } catch (error) {
-          console.error("Błąd podczas dodawania reakcji:", error);
+          logger.warn(`Błąd podczas dodawania reakcji "${reaction}": ${error}`);
         }
       });
 
       await Question.findByIdAndDelete(randomQuestion._id);
     } catch (error) {
-      console.error("Błąd wysyłania pytania dnia:", error);
+      logger.error(`Błąd wysyłania pytania dnia: ${error}`);
     }
   });
 };

@@ -1,9 +1,7 @@
-const {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-  EmbedBuilder,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const Warn = require("../../models/Warn");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -32,15 +30,15 @@ module.exports = {
     const guildId = interaction.guild.id;
 
     try {
-      const errorEmbed = new EmbedBuilder()
-        .setColor("#FF0000")
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
+      const errorEmbed = createBaseEmbed({
+        isError: true,
+        footerText: interaction.guild.name,
+      });
 
-      const successEmbed = new EmbedBuilder()
-        .setColor("#00BFFF")
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
+      const successEmbed = createBaseEmbed({
+        isError: true,
+        footerText: interaction.guild.name,
+      });
 
       const warn = await Warn.findOne({ userId: targetUserId, guildId });
 
@@ -82,8 +80,14 @@ module.exports = {
         ephemeral: true,
       });
     } catch (error) {
-      console.error("Błąd podczas usuwania ostrzeżenia:", error);
-      errorEmbed.setDescription("Wystąpił błąd podczas usuwania ostrzeżenia.");
+      logger.error(
+        `Błąd podczas usuwania ostrzeżenia userId=${targetUserId}: ${error}`
+      );
+
+      const errorEmbed = createBaseEmbed({
+        isError: true,
+        description: "Wystąpił błąd podczas usuwania ostrzeżenia.",
+      });
       await interaction.editReply({
         embeds: [errorEmbed],
         ephemeral: true,

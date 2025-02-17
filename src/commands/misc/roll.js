@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require("discord.js");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -14,15 +15,23 @@ module.exports = {
     ),
 
   run: async ({ interaction }) => {
-    const sides = interaction.options.getInteger("sides") || 6;
+    try {
+      const sides = interaction.options.getInteger("sides") || 6;
 
-    if (sides < 2) {
-      await interaction.reply("Kostka musi mieć co najmniej 2 ścianki.");
-      return;
+      if (sides < 2) {
+        await interaction.reply("Kostka musi mieć co najmniej 2 ścianki.");
+        return;
+      }
+
+      const result = Math.floor(Math.random() * sides) + 1;
+
+      await interaction.reply(`:game_die: ${result} (1 - ${sides})`);
+    } catch (error) {
+      logger.error(`Błąd podczas wykonywania komendy /roll: ${error}`);
+      await interaction.reply({
+        content: "Wystąpił błąd podczas rzucania kostką.",
+        ephemeral: true,
+      });
     }
-
-    const result = Math.floor(Math.random() * sides) + 1;
-
-    await interaction.reply(`:game_die: ${result} (1 - ${sides})`);
   },
 };

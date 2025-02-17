@@ -1,4 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -20,16 +22,15 @@ module.exports = {
         size: 1024,
       });
 
-      const embed = new EmbedBuilder()
-        .setTitle(`Avatar użytkownika: ${targetUser.tag}`)
-        .setImage(avatarURL)
-        .setColor("#00BFFF")
-        .setFooter({ text: `ID: ${targetUser.id}` })
-        .setTimestamp();
+      const embed = createBaseEmbed({
+        footerText: `ID: ${targetUser.id}`,
+        title: `Avatar użytkownika ${targetUser.tag}`,
+        image: avatarURL,
+      });
 
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      console.error("Błąd podczas wyświetlania avataru: ", error);
+      logger.error(`Błąd podczas wyświetlania avataru: ${error}`);
       await interaction.reply({
         content:
           "Wystąpił błąd podczas próby wyświetlenia avataru użytkownika.",

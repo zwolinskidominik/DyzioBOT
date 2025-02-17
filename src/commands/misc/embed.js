@@ -1,8 +1,6 @@
-const {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-  EmbedBuilder,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -58,7 +56,7 @@ module.exports = {
   run: async ({ interaction }) => {
     const title = interaction.options.getString("title");
     const description = interaction.options.getString("description");
-    const color = interaction.options.getString("color") || "#000000";
+    const color = interaction.options.getString("color") || "#2B2D31";
     const fields = [
       {
         title: interaction.options.getString("title2"),
@@ -73,15 +71,13 @@ module.exports = {
     try {
       await interaction.deferReply();
 
-      const embed = new EmbedBuilder()
-        .setTitle(title)
-        .setDescription(description)
-        .setColor(color)
-        .setTimestamp()
-        .setFooter({
-          text: interaction.guild.name,
-          iconURL: interaction.guild.iconURL(),
-        });
+      const embed = createBaseEmbed({
+        title,
+        description,
+        color,
+        footerText: interaction.guild.name,
+        footerIcon: interaction.guild.iconURL(),
+      });
 
       fields.forEach((field) => {
         embed.addFields({
@@ -91,14 +87,9 @@ module.exports = {
         });
       });
 
-      await interaction.editReply({
-        content: "Embed został utworzony.",
-        ephemeral: true,
-      });
-
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {
-      console.error(error);
+      logger.error(`Błąd podczas tworzenia embeda: ${error}`);
       await interaction.editReply({
         content: "Wystąpił błąd podczas tworzenia embeda.",
         ephemeral: true,

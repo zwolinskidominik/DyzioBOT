@@ -1,9 +1,7 @@
-const {
-  EmbedBuilder,
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const AutoRole = require("../../models/AutoRole");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -64,8 +62,8 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const errorEmbed = new EmbedBuilder().setColor("#FF0000");
-    const successEmbed = new EmbedBuilder().setColor("#00BFFF");
+    const errorEmbed = createBaseEmbed({ isError: true });
+    const successEmbed = createBaseEmbed();
 
     const subcommand = interaction.options.getSubcommand();
     const guildId = interaction.guild.id;
@@ -102,7 +100,7 @@ module.exports = {
         await interaction.editReply({
           embeds: [
             successEmbed.setDescription(
-              "Autorole zostały skonfigurowane. Aby wyłączyć, uruchom `/config-autorole remove`."
+              "Autorole zostały skonfigurowane. \nAby wyłączyć, uruchom `/config-autorole remove`."
             ),
           ],
           ephemeral: true,
@@ -115,7 +113,7 @@ module.exports = {
           await interaction.editReply({
             embeds: [
               errorEmbed.setDescription(
-                "Autorole nie są skonfigurowane. Aby skonfigurować, uruchom `/config-autorole add`."
+                "Autorole nie są skonfigurowane. \nAby skonfigurować, uruchom `/config-autorole add`."
               ),
             ],
             ephemeral: true,
@@ -124,11 +122,12 @@ module.exports = {
         }
 
         await AutoRole.findOneAndDelete({ guildId });
+        logger.info(`Usunięto konfigurację autorole w guildId: ${guildId}`);
 
         await interaction.editReply({
           embeds: [
             successEmbed.setDescription(
-              "Autorole zostały wyłączone dla tego serwera. Aby skonfigurować, uruchom `/config-autorole add`."
+              "Autorole zostały wyłączone dla tego serwera. \nAby skonfigurować ponownie, uruchom `/config-autorole add`."
             ),
           ],
           ephemeral: true,
@@ -136,7 +135,7 @@ module.exports = {
         return;
       }
     } catch (error) {
-      console.log(`Wystąpił błąd podczas konfigurowania autoroli: ${error}`);
+      logger.error(`Wystąpił błąd podczas konfigurowania autoroli: ${error}`);
 
       await interaction.editReply({
         embeds: [

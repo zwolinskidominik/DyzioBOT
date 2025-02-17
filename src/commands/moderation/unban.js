@@ -1,8 +1,6 @@
-const {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-  EmbedBuilder,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -23,14 +21,14 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const errorEmbed = new EmbedBuilder()
-      .setColor("#FF0000")
-      .setTimestamp()
-      .setFooter({ text: interaction.guild.name });
+    const errorEmbed = createBaseEmbed({
+      isError: true,
+      footerText: interaction.guild.name,
+    });
 
     try {
-      const targetUserId = interaction.options.getString("target-user");
       await interaction.deferReply();
+      const targetUserId = interaction.options.getString("target-user");
 
       const bannedUsers = await interaction.guild.bans.fetch();
       const bannedUser = bannedUsers.find(
@@ -38,41 +36,30 @@ module.exports = {
       );
 
       if (!bannedUser) {
-        await interaction.editReply({
-          embeds: [
-            errorEmbed.setDescription(
-              "**Nie znaleziono użytkownika na liście banów.**"
-            ),
-          ],
-        });
+        errorEmbed.setDescription(
+          "**Nie znaleziono użytkownika na liście banów.**"
+        );
+        await interaction.editReply({ embeds: [errorEmbed] });
         return;
       }
 
       const member = bannedUser.user;
       await interaction.guild.bans.remove(targetUserId);
 
-      const successEmbed = new EmbedBuilder()
-        .setColor("#00BFFF")
-        .setThumbnail(member.displayAvatarURL({ dynamic: true }))
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
-
-      await interaction.editReply({
-        embeds: [
-          successEmbed
-            .setDescription(
-              `**Użytkownik ${member.username} został odbanowany**`
-            )
-            .addFields({
-              name: "Moderator:",
-              value: `${interaction.user}`,
-              inline: true,
-            }),
-        ],
+      const successEmbed = createBaseEmbed({
+        isError: true,
+        footerText: interaction.user.username,
+        description: `### Odbanowano użytkownika ${member.username}`,
+        thumbnail: member.displayAvatarURL({ dynamic: true }),
+      }).addFields({
+        name: "Moderator:",
+        value: `${interaction.user}`,
+        inline: true,
       });
-    } catch (error) {
-      console.log(`Wystąpił błąd podczas próby odbanowania: ${error}`);
 
+      await interaction.editReply({ embeds: [successEmbed] });
+    } catch (error) {
+      logger.error(`Błąd podczas próby odbanowania użytkownika: ${error}`);
       await interaction.editReply({
         embeds: [
           errorEmbed.setDescription(

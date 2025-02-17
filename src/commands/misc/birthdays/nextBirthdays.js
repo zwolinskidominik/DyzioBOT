@@ -1,5 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
+const { createBaseEmbed } = require("../../../utils/embedUtils");
 const Birthday = require("../../../models/Birthday");
+const logger = require("../../../utils/logger");
+const emoji = "<a:bday:1341064272549249116>";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -8,8 +11,8 @@ module.exports = {
     .setDMPermission(false),
 
   run: async ({ interaction }) => {
-    const errorEmbed = new EmbedBuilder().setColor("#FF0000");
-    const successEmbed = new EmbedBuilder().setColor("#00BFFF");
+    const errorEmbed = createBaseEmbed({ isError: true });
+    const successEmbed = createBaseEmbed();
 
     try {
       await interaction.deferReply();
@@ -28,25 +31,22 @@ module.exports = {
             birthdayDate.getMonth(),
             birthdayDate.getDate()
           );
-
           if (nextBirthday < today) {
             nextBirthday.setFullYear(today.getFullYear() + 1);
           }
-
           const age = birthday.yearSpecified
             ? nextBirthday.getFullYear() - birthdayDate.getFullYear()
             : null;
           const user = interaction.guild.members.cache.get(
             birthday.userId
           )?.user;
-
           return {
             user,
             date: nextBirthday,
             age,
           };
         })
-        .filter((birthday) => birthday.user)
+        .filter((b) => b.user)
         .sort((a, b) => a.date - b.date)
         .slice(0, 10);
 
@@ -55,24 +55,25 @@ module.exports = {
       } else {
         successEmbed.setTitle("Nadchodzące urodziny").setDescription(
           upcomingBirthdays
-            .map(
-              (birthday) =>
-                `**${birthday.date.toLocaleDateString("pl-PL", {
-                  day: "2-digit",
-                  month: "long",
-                  year: "numeric",
-                })}**\n${birthday.user} ${
-                  birthday.age !== null ? `(${birthday.age})` : ""
-                }`
-            )
+            .map((b) => {
+              const todayTime = today.getTime();
+              const birthdayTime = new Date(b.date).setHours(0, 0, 0, 0);
+              const isToday = todayTime === birthdayTime;
+              return `**${b.date.toLocaleDateString("pl-PL", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}**${isToday ? ` (**Dzisiaj ${emoji}**)` : ""}\n${b.user} ${
+                b.age !== null ? `(${b.age})` : ""
+              }`;
+            })
             .join("\n\n")
         );
       }
 
       await interaction.editReply({ embeds: [successEmbed] });
     } catch (error) {
-      console.error(`Błąd podczas pobierania nadchodzących urodzin: ${error}`);
-
+      logger.error(`Błąd podczas pobierania nadchodzących urodzin: ${error}`);
       await interaction.editReply({
         embeds: [
           errorEmbed.setDescription(

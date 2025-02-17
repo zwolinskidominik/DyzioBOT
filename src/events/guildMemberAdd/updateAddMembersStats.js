@@ -1,35 +1,25 @@
-const ChannelStats = require("../../models/ChannelStats");
+const debounce = require("../../utils/debounce");
+const { updateChannelStats } = require("../../utils/updateChannelStats");
+const logger = require("../../utils/logger");
 
+/**
+ * Event handler dla guildMemberAdd. Gdy użytkownik dołącza do serwera,
+ * aktualizacja statystyk (liczba użytkowników, botów, banów, najnowsza osoba)
+ * zostanie wykonana z użyciem mechanizmu debounce, aby scalić wiele wywołań.
+ *
+ * @param {GuildMember} member - Obiekt członka, który dołączył.
+ */
 module.exports = async (member) => {
-  const channelStats = await ChannelStats.findOne({ guildId: member.guild.id });
-  if (!channelStats) return;
+  const guild = member.guild;
+  if (!guild) return;
 
-  const { guild } = member;
-
-  const updateChannelName = async (type, value) => {
-    const channelData = channelStats.channels[type];
-    if (!channelData || !channelData.channelId) return;
-
-    const channel = guild.channels.cache.get(channelData.channelId);
-    if (channel) {
-      const newName = channelData.channelName.replace(/<>/g, value);
-      if (channel.name !== newName) {
-        await channel.setName(newName);
-      }
+  // Używamy debouncingu – dla danego guildId funkcja updateChannelStats zostanie wykonana
+  // tylko raz po 2000 ms od ostatniego wywołania.
+  debounce(guild.id, async () => {
+    try {
+      await updateChannelStats(guild);
+    } catch (error) {
+      logger.error(`Błąd w debounced updateChannelStats: ${error}`);
     }
-  };
-
-  const peopleCount = guild.members.cache.filter((m) => !m.user.bot).size;
-  await updateChannelName("people_channel", peopleCount);
-
-  const botsCount = guild.members.cache.filter((m) => m.user.bot).size;
-  await updateChannelName("bots_channel", botsCount);
-
-  if (channelStats.channels.newest_channel) {
-    await updateChannelName("newest_channel", member.user.username);
-    channelStats.channels.newest_channel.member = member.id;
-    await channelStats.save();
-  }
-
-  console.log(`Updated channels for new member: ${member.user.tag}`);
+  });
 };

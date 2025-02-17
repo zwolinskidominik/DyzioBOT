@@ -18,6 +18,8 @@ const {
 const { CommandKit } = require("commandkit");
 const mongoose = require("mongoose");
 
+const logger = require("./utils/logger");
+
 const guildMemberAddEvent = require("./events/guildMemberAdd/autoRole.js");
 
 const client = new Client({
@@ -56,26 +58,27 @@ client.on("guildMemberAdd", (member) => {
 });
 
 mongoose.connect(MONGODB_URI).then(() => {
-  console.log("Połączono z bazą danych.");
+  logger.info("Połączono z bazą danych.");
 
-  const rest = new REST({ version: "10" }).setToken(TOKEN);
+  // const rest = new REST({ version: "10" }).setToken(TOKEN);
+  // logger.info("Clearing commands...");
+  // rest
+  //   .put(Routes.applicationCommands(CLIENT_ID), { body: [] })
+  //   .then(() => logger.info("Commands cleared."))
+  //   .catch((err) => logger.error(`Błąd przy czyszczeniu komend: ${err}`));
 
-  console.log("Clearing commands...");
-
-  rest
-    .put(Routes.applicationCommands(CLIENT_ID), { body: [] })
-    .then(() => console.log("Commands cleared."))
-    .catch(console.error);
-
-  client.login(TOKEN);
+  client
+    .login(TOKEN)
+    .then(() => logger.info("Bot zalogowany pomyślnie!"))
+    .catch((err) => logger.error(`Nie udało się zalogować: ${err}`));
 });
 
 process.on("unhandledRejection", (reason, promise) => {
-  console.log("Unhandled Rejection Error");
-  console.log(reason, promise);
+  logger.warn("Unhandled Rejection Error");
+  logger.warn(`Powód: ${reason}`, promise);
 });
 
 process.on("uncaughtException", (err, origin) => {
-  console.log("Uncaught Exeception Error");
-  console.log(err, origin);
+  logger.error("Uncaught Exception Error!");
+  logger.error(`Błąd: ${err}\nPochodzenie: ${origin}`);
 });

@@ -1,9 +1,7 @@
-const {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-  EmbedBuilder,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const ms = require("ms");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -43,27 +41,32 @@ module.exports = {
   },
 
   run: async ({ interaction }) => {
-    const errorEmbed = new EmbedBuilder()
-      .setColor("#FF0000")
-      .setTimestamp()
-      .setFooter({ text: interaction.guild.name });
+    const errorEmbed = createBaseEmbed({
+      isError: true,
+      footerText: interaction.guild.name,
+    });
 
     try {
+      await interaction.deferReply();
       const targetUserId = interaction.options.getUser("target-user").id;
       const duration = interaction.options.getString("duration");
       const reason = interaction.options.getString("reason") || "Brak powodu.";
-      await interaction.deferReply();
+
       const targetUser = await interaction.guild.members.fetch(targetUserId);
 
-      const successEmbed = new EmbedBuilder()
-        .setColor("#00BFFF")
-        .addFields(
-          { name: "Moderator:", value: `${interaction.user}`, inline: true },
-          { name: "Powód:", value: `${reason}`, inline: true }
-        )
-        .setThumbnail(targetUser.user.displayAvatarURL({ dynamic: true }))
-        .setTimestamp()
-        .setFooter({ text: interaction.guild.name });
+      const successEmbed = createBaseEmbed({
+        isError: true,
+        footerText: interaction.guild.name,
+      }).addFields(
+        { name: "Moderator:", value: `${interaction.user}`, inline: true },
+        { name: "Powód:", value: `${reason}`, inline: true }
+      );
+
+      if (targetUser) {
+        successEmbed.setThumbnail(
+          targetUser.user.displayAvatarURL({ dynamic: true })
+        );
+      }
 
       if (!targetUser) {
         errorEmbed.setDescription(
@@ -74,7 +77,6 @@ module.exports = {
       }
 
       const msDuration = ms(duration);
-
       if (isNaN(msDuration) || msDuration < 5000 || msDuration > 2.419e9) {
         await interaction.editReply({
           content:
@@ -105,34 +107,23 @@ module.exports = {
       if (targetUser.isCommunicationDisabled()) {
         await targetUser.timeout(msDuration, reason);
 
-        await interaction.editReply({
-          embeds: [
-            successEmbed.setDescription(
-              `**Czas wyciszenia ${targetUser} został zaktualizowany: ${prettyMs(
-                msDuration
-              )}**`
-            ),
-          ],
-        });
+        successEmbed.setDescription(
+          `**Czas wyciszenia ${targetUser} został zaktualizowany: ${prettyMs(
+            msDuration
+          )}**`
+        );
+        await interaction.editReply({ embeds: [successEmbed] });
         return;
       }
 
       await targetUser.timeout(msDuration, reason);
 
-      await interaction.editReply({
-        embeds: [
-          successEmbed.setDescription(
-            `**${targetUser} został wyciszony na okres ${prettyMs(
-              msDuration
-            )}**`
-          ),
-        ],
-      });
-    } catch (error) {
-      console.log(
-        `Wystąpił błąd podczas wysyłania użytkownika na przerwę: ${error}`
+      successEmbed.setDescription(
+        `**${targetUser} został wyciszony na okres ${prettyMs(msDuration)}**`
       );
-
+      await interaction.editReply({ embeds: [successEmbed] });
+    } catch (error) {
+      logger.error(`Błąd podczas wyciszania użytkownika: ${error}`);
       await interaction.editReply({
         embeds: [
           errorEmbed.setDescription(

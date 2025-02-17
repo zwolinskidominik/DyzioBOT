@@ -1,9 +1,7 @@
-const {
-  SlashCommandBuilder,
-  EmbedBuilder,
-  PermissionFlagsBits,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const { Fortune } = require("../../models/Fortune");
+const logger = require("../../utils/logger");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -32,16 +30,16 @@ module.exports = {
         addedBy: interaction.user.id,
       });
 
-      const embed = new EmbedBuilder()
-        .setColor("#00FF00")
-        .setTitle("✨ Nowa wróżba dodana!")
-        .setDescription(`Pomyślnie dodano nową wróżbę do bazy danych.`)
-        .addFields({ name: "Treść", value: fortuneText })
-        .setTimestamp();
+      const embed = createBaseEmbed({
+        title: "✨ Nowa wróżba dodana!",
+        description: `Pomyślnie dodano nową wróżbę do bazy danych.`,
+        color: "#00FF00",
+      }).addFields({ name: "Treść", value: fortuneText });
 
       await interaction.editReply({ embeds: [embed], ephemeral: true });
     } catch (error) {
-      console.error("Błąd podczas dodawania wróżby:", error);
+      logger.error(`Błąd podczas dodawania wróżby: ${error}`);
+
       await interaction.editReply({
         content: "Wystąpił błąd podczas dodawania wróżby.",
         ephemeral: true,

@@ -1,12 +1,12 @@
 const cron = require("node-cron");
 const Warn = require("../../models/Warn");
 const { GUILD_ID } = process.env;
+const logger = require("../../utils/logger");
 
 /**
  * Moduł odpowiedzialny za kompleksową obsługę systemu ostrzeżeń i banów.
- * Wykonuje następujące zadania:
  * - Usuwa ostrzeżenia starsze niż 2 miesiące
- * - Odblokowuje użytkowników po upływie czasu bana
+ * - Odblokowuje użytkowników po upływie bana
  * - Resetuje licznik ostrzeżeń dla odbanowanych użytkowników
  * - Wysyła powiadomienia o odblokowaniu do użytkowników
  */
@@ -19,7 +19,6 @@ module.exports = async (client) => {
 
       const warnings = await Warn.find({ guildId: GUILD_ID });
       if (!warnings.length) {
-        console.log("Brak ostrzeżeń do sprawdzenia.");
         return;
       }
 
@@ -28,15 +27,14 @@ module.exports = async (client) => {
           const guild = await client.guilds.fetch(GUILD_ID);
           try {
             await guild.members.unban(warn.userId, "Ban wygasł");
-            console.log(`Odbanowano użytkownika o ID: ${warn.userId}`);
+            logger.info(`Odbanowano użytkownika o ID=${warn.userId}`);
 
             warn.count = 0;
             warn.warnings = [];
             warn.banUntil = null;
           } catch (error) {
-            console.error(
-              `Błąd podczas odbanowywania użytkownika o ID: ${warn.userId}`,
-              error
+            logger.error(
+              `Błąd podczas odbanowywania userId=${warn.userId}: ${error}`
             );
           }
         }
@@ -45,11 +43,10 @@ module.exports = async (client) => {
           (warning) => warning.date > twoMonthsAgo
         );
         warn.count = warn.warnings.length;
-
         await warn.save();
       }
     } catch (error) {
-      console.error("Błąd podczas aktualizacji ostrzeżeń:", error);
+      logger.error(`Błąd podczas aktualizacji ostrzeżeń: ${error}`);
     }
   });
 };

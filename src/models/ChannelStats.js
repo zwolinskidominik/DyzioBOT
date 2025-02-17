@@ -6,12 +6,12 @@ const channelSchema = new Schema({
 });
 
 const channelstatsSchema = new Schema({
-  guildId: { type: String, required: true },
+  guildId: String,
   channels: {
-    people: channelSchema,
-    bots: channelSchema,
-    bans: channelSchema,
-    newest: { ...channelSchema.obj, member: { type: String, default: null } },
+    lastJoined: { channelId: String, template: String, member: String },
+    users: { channelId: String, template: String },
+    bots: { channelId: String, template: String },
+    bans: { channelId: String, template: String },
   },
 });
 

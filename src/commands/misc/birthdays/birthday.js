@@ -1,5 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
+const { createBaseEmbed } = require("../../../utils/embedUtils");
 const Birthday = require("../../../models/Birthday");
+const logger = require("../../../utils/logger");
+const emoji = "<a:bday:1341064272549249116>";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -16,8 +19,8 @@ module.exports = {
     ),
 
   run: async ({ interaction }) => {
-    const errorEmbed = new EmbedBuilder().setColor("#FF0000");
-    const successEmbed = new EmbedBuilder().setColor("#00BFFF");
+    const errorEmbed = createBaseEmbed({ isError: true });
+    const successEmbed = createBaseEmbed();
 
     const targetUser =
       interaction.options.getUser("target-user") || interaction.user;
@@ -28,8 +31,7 @@ module.exports = {
       await interaction.deferReply();
 
       const birthday = await Birthday.findOne({ userId, guildId });
-
-      if (!birthday || userId === interaction.user.id) {
+      if (!birthday) {
         await interaction.editReply({
           embeds: [
             errorEmbed
@@ -47,6 +49,8 @@ module.exports = {
       }
 
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       const birthdayDate = new Date(birthday.date);
       const yearSpecified = birthday.yearSpecified;
       let age = yearSpecified
@@ -58,6 +62,7 @@ module.exports = {
         birthdayDate.getMonth(),
         birthdayDate.getDate()
       );
+
       if (nextBirthday < today) {
         nextBirthday.setFullYear(today.getFullYear() + 1);
         if (yearSpecified) {
@@ -65,27 +70,32 @@ module.exports = {
         }
       }
 
-      const diffTime = Math.abs(nextBirthday - today);
+      const diffTime = nextBirthday - today;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
       const fullDate = nextBirthday.toLocaleDateString("pl-PL", {
         day: "2-digit",
         month: "long",
         year: "numeric",
       });
 
+      let message;
+      if (diffDays === 0) {
+        message = yearSpecified
+          ? `**${age}** urodziny ${targetUser} są dziś! Wszystkiego najlepszego! ${emoji}`
+          : `Urodziny ${targetUser} są dziś! Wszystkiego najlepszego! ${emoji}`;
+      } else {
+        message = yearSpecified
+          ? `**${age}** urodziny ${targetUser} są za **${diffDays}** dni, **${fullDate}** 🎂`
+          : `**Następne** urodziny ${targetUser} są za **${diffDays}** dni, **${fullDate}** 🎂`;
+      }
+
       await interaction.editReply({
-        embeds: [
-          successEmbed.setDescription(
-            yearSpecified
-              ? `**${age}** urodziny ${targetUser} są za **${diffDays}** dni, **${fullDate}** 🎂`
-              : `**Następne** urodziny ${targetUser} są za **${diffDays}** dni, **${fullDate}** 🎂`
-          ),
-        ],
+        embeds: [successEmbed.setDescription(message)],
       });
     } catch (error) {
-      console.error(`Błąd podczas sprawdzania daty urodzin: ${error}`);
-
+      logger.error(
+        `Błąd podczas sprawdzania daty urodzin userId=${userId}: ${error}`
+      );
       await interaction.editReply({
         embeds: [
           errorEmbed.setDescription(

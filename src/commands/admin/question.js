@@ -1,13 +1,14 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
   PermissionFlagsBits,
 } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
 const Question = require("../../models/Question");
+const logger = require("../../utils/logger");
 
 const isValidEmoji = (reaction) => {
   const emojiRegex = /^(\p{Emoji}|\p{Emoji_Component})+$/u;
@@ -67,121 +68,126 @@ module.exports = {
     if (subcommand === "list") {
       await interaction.deferReply({ ephemeral: true });
 
-      const pageSize = 5;
-      let currentPage = 1;
+      try {
+        const pageSize = 5;
+        let currentPage = 1;
 
-      const generateEmbed = async (page) => {
-        const skip = (page - 1) * pageSize;
-        const totalQuestions = await Question.countDocuments();
-        const totalPages = Math.ceil(totalQuestions / pageSize);
+        const generateEmbed = async (page) => {
+          const skip = (page - 1) * pageSize;
+          const totalQuestions = await Question.countDocuments();
+          const totalPages = Math.ceil(totalQuestions / pageSize);
 
-        const questions = await Question.find()
-          .sort({ _id: 1 })
-          .skip(skip)
-          .limit(pageSize);
+          const questions = await Question.find()
+            .sort({ _id: 1 })
+            .skip(skip)
+            .limit(pageSize);
 
-        const embed = new EmbedBuilder()
-          .setColor("#00BFFF")
-          .setTitle("Lista pytań")
-          .setDescription(
-            questions
+          const embed = createBaseEmbed({
+            title: "Lista pytań",
+            footerText: `Strona ${page} z ${totalPages} | Łączna liczba pytań: ${totalQuestions}`,
+            description: questions
               .map(
                 (q, index) =>
                   `${skip + index + 1}. ${
                     q.content
                   }\nReakcje: ${q.reactions.join(" ")}`
               )
-              .join("\n\n")
-          )
-          .setFooter({
-            text: `Strona ${page} z ${totalPages} | Łączna liczba pytań: ${totalQuestions}`,
+              .join("\n\n"),
           });
 
-        return { embed, totalPages };
-      };
+          return { embed, totalPages };
+        };
 
-      const generateButtons = (currentPage, totalPages) => {
-        return new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId("prev")
-            .setLabel("Poprzednia")
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(currentPage === 1),
-          new ButtonBuilder()
-            .setCustomId("next")
-            .setLabel("Następna")
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(currentPage === totalPages)
-        );
-      };
-
-      const { embed, totalPages } = await generateEmbed(currentPage);
-      const buttonRow = generateButtons(currentPage, totalPages);
-
-      const reply = await interaction.editReply({
-        embeds: [embed],
-        components: [buttonRow],
-        ephemeral: true,
-      });
-
-      const collector = reply.createMessageComponentCollector({
-        componentType: ComponentType.Button,
-        time: 300000,
-      });
-
-      collector.on("collect", async (i) => {
-        if (i.user.id !== interaction.user.id) {
-          return i.reply({
-            content: "Nie możesz używać tych przycisków.",
-            ephemeral: true,
-          });
-        }
-
-        await i.deferUpdate();
-
-        if (i.customId === "prev" && currentPage > 1) {
-          currentPage--;
-        } else if (i.customId === "next" && currentPage < totalPages) {
-          currentPage++;
-        }
-
-        const { embed: newEmbed, totalPages: newTotalPages } =
-          await generateEmbed(currentPage);
-        const newButtonRow = generateButtons(currentPage, newTotalPages);
-
-        try {
-          await i.editReply({
-            embeds: [newEmbed],
-            components: [newButtonRow],
-          });
-        } catch (error) {
-          if (error.code === 10008) {
-            return;
-          } else {
-            console.error("Błąd podczas aktualizacji wiadomości:", error);
-          }
-        }
-      });
-
-      collector.on("end", async () => {
-        try {
-          const message = await interaction.channel.messages
-            .fetch(reply.id)
-            .catch(() => null);
-          if (!message) return;
-
-          const disabledButtonRow = new ActionRowBuilder().addComponents(
-            buttonRow.components[0].setDisabled(true),
-            buttonRow.components[1].setDisabled(true)
+        const generateButtons = (currentPage, totalPages) => {
+          return new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId("prev")
+              .setLabel("Poprzednia")
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(currentPage === 1),
+            new ButtonBuilder()
+              .setCustomId("next")
+              .setLabel("Następna")
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(currentPage === totalPages)
           );
-          await reply.edit({ components: [disabledButtonRow] });
-        } catch (error) {
-          return;
-        }
-      });
+        };
+
+        const { embed, totalPages } = await generateEmbed(currentPage);
+        const buttonRow = generateButtons(currentPage, totalPages);
+
+        const reply = await interaction.editReply({
+          embeds: [embed],
+          components: [buttonRow],
+          ephemeral: true,
+        });
+
+        const collector = reply.createMessageComponentCollector({
+          componentType: ComponentType.Button,
+          time: 300000,
+        });
+
+        collector.on("collect", async (i) => {
+          if (i.user.id !== interaction.user.id) {
+            return i.reply({
+              content: "Nie możesz używać tych przycisków.",
+              ephemeral: true,
+            });
+          }
+
+          await i.deferUpdate();
+
+          if (i.customId === "prev" && currentPage > 1) {
+            currentPage--;
+          } else if (i.customId === "next" && currentPage < totalPages) {
+            currentPage++;
+          }
+
+          const { embed: newEmbed, totalPages: newTotalPages } =
+            await generateEmbed(currentPage);
+          const newButtonRow = generateButtons(currentPage, newTotalPages);
+
+          try {
+            await i.editReply({
+              embeds: [newEmbed],
+              components: [newButtonRow],
+            });
+          } catch (error) {
+            if (error.code === 10008) {
+              return;
+            } else {
+              logger.error(`Błąd podczas aktualizacji wiadomości: ${error}`);
+            }
+          }
+        });
+
+        collector.on("end", async () => {
+          try {
+            const message = await interaction.channel.messages
+              .fetch(reply.id)
+              .catch(() => null);
+            if (!message) return;
+
+            const disabledButtonRow = new ActionRowBuilder().addComponents(
+              buttonRow.components[0].setDisabled(true),
+              buttonRow.components[1].setDisabled(true)
+            );
+            await reply.edit({ components: [disabledButtonRow] });
+          } catch (error) {
+            // ignorujemy błąd
+          }
+        });
+      } catch (error) {
+        logger.error(`Błąd podczas listowania pytań: ${error}`);
+        const errorEmbed = createBaseEmbed({
+          isError: true,
+          description: "Wystąpił błąd podczas wyświetlania listy pytań.",
+        });
+        return interaction.editReply({ embeds: [errorEmbed] });
+      }
     } else if (subcommand === "add") {
-      const errorEmbed = new EmbedBuilder().setColor("#FF0000");
-      const successEmbed = new EmbedBuilder().setColor("#00BFFF");
+      const errorEmbed = createBaseEmbed({ isError: true });
+      const successEmbed = createBaseEmbed();
 
       const question = interaction.options.getString("content").trim();
       const reactionsInput = interaction.options.getString("reactions").trim();
@@ -207,10 +213,11 @@ module.exports = {
         });
       }
 
-      const invalidReactions = reactions.filter(
-        (reaction) => !isValidEmoji(reaction)
-      );
+      const invalidReactions = reactions.filter((r) => !isValidEmoji(r));
       if (invalidReactions.length > 0) {
+        logger.warn(
+          `Niepoprawne reakcje: ${invalidReactions.join(", ")} w pytaniu`
+        );
         return await interaction.reply({
           embeds: [
             errorEmbed.setDescription(
@@ -229,7 +236,6 @@ module.exports = {
           content: question,
           reactions,
         });
-
         await questionModel.save();
 
         await interaction.reply({
@@ -239,7 +245,7 @@ module.exports = {
           ephemeral: true,
         });
       } catch (error) {
-        console.error(`Błąd podczas dodawania pytania: ${error}`);
+        logger.error(`Błąd podczas dodawania pytania: ${error}`);
         await interaction.reply({
           embeds: [
             errorEmbed.setDescription(
@@ -251,17 +257,15 @@ module.exports = {
       }
     } else if (subcommand === "remove") {
       const questionNumber = interaction.options.getInteger("number");
-
       const totalQuestions = await Question.countDocuments();
+
       if (questionNumber < 1 || questionNumber > totalQuestions) {
+        const invalidEmbed = createBaseEmbed({
+          isError: true,
+          description: `Nieprawidłowy numer pytania. Wprowadź numer od 1 do ${totalQuestions}.`,
+        });
         return await interaction.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor("#FF0000")
-              .setDescription(
-                `Nieprawidłowy numer pytania. Wprowadź numer od 1 do ${totalQuestions}.`
-              ),
-          ],
+          embeds: [invalidEmbed],
           ephemeral: true,
         });
       }
@@ -272,40 +276,29 @@ module.exports = {
           .skip(questionNumber - 1);
 
         if (!questionToDelete) {
+          const notFoundEmbed = createBaseEmbed({
+            isError: true,
+            description: `Nie znaleziono pytania o podanym numerze.`,
+          });
           return await interaction.reply({
-            embeds: [
-              new EmbedBuilder()
-                .setColor("#FF0000")
-                .setDescription("Nie znaleziono pytania o podanym numerze."),
-            ],
+            embeds: [notFoundEmbed],
             ephemeral: true,
           });
         }
 
         await Question.deleteOne({ _id: questionToDelete._id });
 
-        await interaction.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor("#00BFFF")
-              .setDescription(
-                `Pytanie nr ${questionNumber} zostało pomyślnie usunięte.`
-              ),
-          ],
-          ephemeral: true,
+        const successEmbed = createBaseEmbed({
+          description: `Pytanie nr ${questionNumber} zostało pomyślnie usunięte.`,
         });
+        await interaction.reply({ embeds: [successEmbed], ephemeral: true });
       } catch (error) {
-        console.error(`Błąd podczas usuwania pytania: ${error}`);
-        await interaction.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor("#FF0000")
-              .setDescription(
-                `Wystąpił błąd podczas usuwania pytania: ${error.message}`
-              ),
-          ],
-          ephemeral: true,
+        logger.error(`Błąd podczas usuwania pytania: ${error}`);
+        const errorEmbed = createBaseEmbed({
+          isError: true,
+          description: `Wystąpił błąd podczas usuwania pytania: ${error.message}`,
         });
+        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       }
     }
   },
