@@ -4,20 +4,22 @@ const { createBaseEmbed } = require("../../utils/embedUtils");
 const logger = require("../../utils/logger");
 
 const faceitLevelEmojis = {
-  1: "<:faceit_1lvl:1348036212728008735>",
-  2: "<:faceit_2lvl:1348036221225406576>",
-  3: "<:faceit_3lvl:1348036229521739879>",
-  4: "<:faceit_4lvl:1348036238531362886>",
-  5: "<:faceit_5lvl:1348036245347110932>",
-  6: "<:faceit_6lvl:1348036252829618307>",
-  7: "<:faceit_7lvl:1348036261503569930>",
-  8: "<:faceit_8lvl:1348036268847665202>",
-  9: "<:faceit_9lvl:1348036284706455593>",
-  10: "<:faceit_10lvl:1348036292545347645>",
+  1: "<:faceit_1lvl:1348260030750654524>",
+  2: "<:faceit_2lvl:1348260039768543304>",
+  3: "<:faceit_3lvl:1348260049730011137>",
+  4: "<:faceit_4lvl:1348260058366218395>",
+  5: "<:faceit_5lvl:1348260068470296587>",
+  6: "<:faceit_6lvl:1348260077911539733>",
+  7: "<:faceit_7lvl:1348260087801843853>",
+  8: "<:faceit_8lvl:1348260099138785350>",
+  9: "<:faceit_9lvl:1348260109528338534>",
+  10: "<:faceit_10lvl:1348260121226121310>",
 };
 
-const checkmarkEmoji = "<:checkmark:1348054647117578311>";
-const crossmarkEmoji = "<:crossmark:1348054636942196756>";
+const checkmarkEmoji = "<:checkmark:1348260004045520977>";
+const crossmarkEmoji = "<:crossmark:1348260013260541983>";
+
+const cryEmoji = "<:cry:1348603778613379082>";
 
 const data = new SlashCommandBuilder()
   .setName("faceit")
@@ -38,12 +40,12 @@ async function run({ interaction }) {
 
     const playerData = await fetchPlayerData(nickname);
     if (!playerData) {
-      return interaction.editReply(`<:cry:1348444208553529364> Nie znaleziono gracza o nicku **${nickname}**. Upewnij się, że podałeś poprawny nick.`);
+      return interaction.editReply(`${cryEmoji} Nie znaleziono gracza o nicku **${nickname}**. Upewnij się, że podałeś poprawny nick.`);
     }
 
     const cs2Stats = await fetchPlayerStats(playerData.player_id);
     if (!cs2Stats) {
-      return interaction.editReply(`<:cry:1348444208553529364> Nie znaleziono statystyk dla gracza **${nickname}**. Możliwe, że gracz nie rozegrał żadnych meczów w CS2.`);
+      return interaction.editReply(`${cryEmoji} Nie znaleziono statystyk dla gracza **${nickname}**. Możliwe, że gracz nie rozegrał żadnych meczów w CS2.`);
     }
 
     const faceitEmbed = buildFaceitEmbed(playerData, cs2Stats);
