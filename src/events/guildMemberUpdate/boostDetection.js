@@ -72,32 +72,9 @@ module.exports = async (oldMember, newMember) => {
       );
     }
     await updateBoosterList(newMember.guild);
-
-    const boosterRole = newMember.guild.roles.cache.get(boosterRoleId);
-    if (boosterRole) {
-      try {
-        await newMember.roles.add(boosterRole);
-      } catch (error) {
-        logger.error(`Błąd podczas przypisywania roli boostera: ${error}`);
-      }
-    } else {
-      logger.warn("Nie znaleziono roli boostera!");
-    }
   }
 
   if (oldStatus && !newStatus) {
     await updateBoosterList(newMember.guild);
-
-    const boosterRole = newMember.guild.roles.cache.get(boosterRoleId);
-    if (boosterRole) {
-      try {
-        await newMember.roles.remove(boosterRole);
-        logger.info(
-          `Rola boostera została usunięta użytkownikowi userId=${newMember.user.id}.`
-        );
-      } catch (error) {
-        logger.error(`Błąd podczas usuwania roli boostera: ${error}`);
-      }
-    }
   }
 };

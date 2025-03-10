@@ -7,4 +7,6 @@ const tempChannelSchema = new Schema({
   ownerId: { type: String, required: true },
 });
 
+tempChannelSchema.index({ guildId: 1 });
+
 module.exports = model("TempChannel", tempChannelSchema);

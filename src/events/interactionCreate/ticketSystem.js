@@ -9,6 +9,7 @@ const {
 const path = require("path");
 const TicketStats = require("../../models/TicketStats");
 const TicketConfig = require("../../models/TicketConfig");
+const TicketState = require("../../models/TicketState");
 const { createBaseEmbed } = require("../../utils/embedUtils");
 
 const ROLES = {
@@ -203,26 +204,60 @@ module.exports = async (interaction) => {
         const hasRole = interaction.member.roles.cache.some((role) =>
           Object.values(ROLES).includes(role.id)
         );
-
         if (!hasRole) {
           return interaction.reply({
             content: "Nie masz uprawnień do zajmowania zgłoszeń!",
             ephemeral: true,
           });
         }
-
+      
+        await interaction.deferUpdate();
+      
+        const ticketInDB = await TicketState.findOne({ channelId: interaction.channel.id });
+        if (ticketInDB && ticketInDB.assignedTo) {
+          return interaction.followUp({
+            content: "To zgłoszenie zostało już zajęte!",
+            ephemeral: true,
+          });
+        }
+      
+        await TicketState.findOneAndUpdate(
+          { channelId: interaction.channel.id },
+          { assignedTo: interaction.user.id },
+          { upsert: true, new: true }
+        );
+      
         await TicketStats.findOneAndUpdate(
           { guildId: interaction.guild.id, userId: interaction.user.id },
           { $inc: { count: 1 } },
           { upsert: true, new: true }
         );
-
-        await interaction.reply({
-          content: `${interaction.user} zajął(ęła) się zgłoszeniem!`,
+      
+        const oldComponents = interaction.message.components;
+        if (!oldComponents?.length) {
+          return;
+        }
+        const actionRow = ActionRowBuilder.from(oldComponents[0]);
+        const zajmijButton = actionRow.components.find(
+          (btn) => btn.customId === "zajmij-zgloszenie"
+        );
+        if (zajmijButton) {
+          zajmijButton.setDisabled(true);
+          zajmijButton.setLabel("Zajęto");
+        }
+      
+        await interaction.message.edit({
+          components: [actionRow],
         });
+      
+        await interaction.followUp({
+          content: `${interaction.user} zajął(ęła) się tym zgłoszeniem!`,
+          ephemeral: false,
+        });
+      
         break;
-      }
-
+      }            
+      
       case "zamknij-zgloszenie": {
         const hasRole = interaction.member.roles.cache.some((role) =>
           Object.values(ROLES).includes(role.id)
@@ -264,24 +299,29 @@ module.exports = async (interaction) => {
           content: "Zgłoszenie zostanie zamknięte za 5 sekund...",
           ephemeral: true,
         });
-
+      
+        const channelId = interaction.channel?.id;
+      
         setTimeout(async () => {
-          if (interaction.channel) {
-            try {
+          try {
+            if (interaction.channel) {
               await interaction.channel.delete();
-            } catch (error) {
-              console.warn(
-                `Nie udało się usunąć kanału ticketu: ${error.message}`
-              );
+            } else {
+              console.warn("Kanał ticketu już nie istnieje.");
             }
-          } else {
+      
+            if (channelId) {
+              await TicketState.findOneAndDelete({ channelId });
+            }
+          } catch (error) {
             console.warn(
-              "Kanał ticketu już nie istnieje, nie można go usunąć."
+              `Nie udało się usunąć kanału ticketu lub rekordu w bazie: ${error.message}`
             );
           }
         }, 5000);
+      
         break;
-      }
+      }        
 
       case "anuluj-zamkniecie": {
         await interaction.reply({

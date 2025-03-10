@@ -11,4 +11,6 @@ const StreamConfigurationSchema = new Schema({
   },
 });
 
+StreamConfigurationSchema.index({ guildId: 1 });
+
 module.exports = model("StreamConfiguration", StreamConfigurationSchema);

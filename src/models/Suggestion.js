@@ -44,4 +44,6 @@ const suggestionSchema = new Schema(
   { timestamps: true }
 );
 
+suggestionSchema.index({ guildId: 1 });
+
 module.exports = model("Suggestion", suggestionSchema);

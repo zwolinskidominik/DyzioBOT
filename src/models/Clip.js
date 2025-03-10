@@ -36,4 +36,6 @@ clipSchema.statics.clearAll = async function () {
   await this.deleteMany({});
 };
 
+clipSchema.index({ authorId: 1 });
+
 module.exports = mongoose.model("Clip", clipSchema);

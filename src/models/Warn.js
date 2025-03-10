@@ -27,4 +27,6 @@ const warnSchema = new Schema({
   },
 });
 
+warnSchema.index({ userId: 1, guildId: 1 });
+
 module.exports = model("Warn", warnSchema);

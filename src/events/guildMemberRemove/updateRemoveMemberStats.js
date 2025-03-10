@@ -3,11 +3,7 @@ const { updateChannelStats } = require("../../utils/updateChannelStats");
 const logger = require("../../utils/logger");
 
 /**
- * Event handler dla guildMemberRemove.
- * Przy opuszczeniu serwera, aktualizuje statystyki (liczba użytkowników, botów, banów oraz ostatnia osoba)
- * z użyciem mechanizmu debounce, aby ograniczyć liczbę wywołań API.
- *
- * @param {GuildMember} member - Członek, który opuścił serwer.
+ * @param {GuildMember} member
  */
 module.exports = async (member) => {
   const guild = member.guild;

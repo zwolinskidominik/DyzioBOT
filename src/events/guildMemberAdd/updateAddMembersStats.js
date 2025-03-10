@@ -3,11 +3,7 @@ const { updateChannelStats } = require("../../utils/updateChannelStats");
 const logger = require("../../utils/logger");
 
 /**
- * Event handler dla guildMemberAdd. Gdy użytkownik dołącza do serwera,
- * aktualizacja statystyk (liczba użytkowników, botów, banów, najnowsza osoba)
- * zostanie wykonana z użyciem mechanizmu debounce, aby scalić wiele wywołań.
- *
- * @param {GuildMember} member - Obiekt członka, który dołączył.
+ * @param {GuildMember} member
  */
 module.exports = async (member) => {
   const guild = member.guild;

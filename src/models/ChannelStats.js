@@ -1,12 +1,7 @@
 const { Schema, model } = require("mongoose");
 
-const channelSchema = new Schema({
-  channelName: { type: String, default: null },
-  channelId: { type: String, default: null },
-});
-
 const channelstatsSchema = new Schema({
-  guildId: String,
+  guildId: { type: String, required: true },
   channels: {
     lastJoined: { channelId: String, template: String, member: String },
     users: { channelId: String, template: String },
@@ -14,5 +9,7 @@ const channelstatsSchema = new Schema({
     bans: { channelId: String, template: String },
   },
 });
+
+channelstatsSchema.index({ guildId: 1 });
 
 module.exports = model("ChannelStats", channelstatsSchema);

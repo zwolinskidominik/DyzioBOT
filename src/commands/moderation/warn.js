@@ -1,11 +1,8 @@
-const {
-  SlashCommandBuilder,
-  AttachmentBuilder,
-  PermissionFlagsBits,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits, AttachmentBuilder } = require("discord.js");
+const { createBaseEmbed } = require("../../utils/embedUtils");
+const checkRole = require("../../utils/checkRole");
 const { Font } = require("canvacord");
 const { WarnCard } = require("../../utils/WarnCard");
-const { createBaseEmbed } = require("../../utils/embedUtils");
 const Warn = require("../../models/Warn");
 const logger = require("../../utils/logger");
 
@@ -27,12 +24,10 @@ module.exports = {
         .setDescription("Powód upomnienia.")
         .setRequired(true)
     ),
-
   options: {
     userPermissions: [PermissionFlagsBits.ModerateMembers],
     botPermissions: [PermissionFlagsBits.ModerateMembers],
   },
-
   run: async ({ interaction }) => {
     await interaction.deferReply();
 
@@ -44,8 +39,8 @@ module.exports = {
     const reason = interaction.options.getString("reason") || "Brak";
     const guildId = interaction.guild.id;
 
-    const user = await interaction.guild.members.fetch(targetUserId);
-    if (!user) {
+    const targetMember = await interaction.guild.members.fetch(targetUserId);
+    if (!targetMember) {
       await interaction.editReply({
         content: "Nie znaleziono użytkownika.",
         ephemeral: true,
@@ -53,14 +48,7 @@ module.exports = {
       return;
     }
 
-    const targetUserRolePosition = user.roles.highest.position;
-    const requestUserRolePosition = interaction.member.roles.highest.position;
-    const botRolePosition = interaction.guild.members.me.roles.highest.position;
-
-    if (
-      targetUserRolePosition >= requestUserRolePosition ||
-      targetUserRolePosition >= botRolePosition
-    ) {
+    if (!checkRole(targetMember, interaction.member, interaction.guild.members.me)) {
       await interaction.editReply({
         content:
           "Nie możesz nadać ostrzeżenia użytkownikowi z wyższą lub równą rolą.",
@@ -70,10 +58,10 @@ module.exports = {
     }
 
     try {
-      const avatar = user.user.displayAvatarURL({ format: "png" });
-      let warn = await Warn.findOne({ userId: targetUserId, guildId });
-      if (!warn) {
-        warn = new Warn({
+      const avatar = targetMember.user.displayAvatarURL({ format: "png" });
+      let warnRecord = await Warn.findOne({ userId: targetUserId, guildId });
+      if (!warnRecord) {
+        warnRecord = new Warn({
           userId: targetUserId,
           guildId,
           count: 0,
@@ -81,30 +69,30 @@ module.exports = {
         });
       }
 
-      warn.count += 1;
+      warnRecord.count += 1;
 
       let muteDuration;
       let muteReason;
       let banUser = false;
 
-      if (warn.count === 1) {
+      if (warnRecord.count === 1) {
         muteDuration = 3600 * 1000;
         muteReason = "1 ostrzeżenie - czasowe wyciszenie na 1 godzinę.";
-      } else if (warn.count === 2) {
+      } else if (warnRecord.count === 2) {
         muteDuration = 3 * 3600 * 1000;
         muteReason = "2 ostrzeżenie - czasowe wyciszenie na 3 godziny.";
-      } else if (warn.count === 3) {
+      } else if (warnRecord.count === 3) {
         muteDuration = 24 * 3600 * 1000;
         muteReason = "3 ostrzeżenie - czasowe wyciszenie na 1 dzień.";
-      } else if (warn.count === 4) {
+      } else if (warnRecord.count === 4) {
         muteDuration = 7 * 24 * 3600 * 1000;
         muteReason = "4 ostrzeżenie - czasowe wyciszenie na 7 dni.";
-      } else if (warn.count >= 5) {
+      } else if (warnRecord.count >= 5) {
         banUser = true;
         muteReason = "5 ostrzeżenie - tymczasowy ban na serwerze na 1 miesiąc.";
       }
 
-      warn.warnings.push({
+      warnRecord.warnings.push({
         reason,
         date: new Date(),
         moderator: interaction.user.tag,
@@ -112,7 +100,7 @@ module.exports = {
 
       const card = new WarnCard()
         .setAvatar(avatar)
-        .setDisplayName(user.user.tag)
+        .setDisplayName(targetMember.user.tag)
         .setMessage(`Został nadany 1 punkt ostrzeżeń`)
         .setReason(reason)
         .setMuteReason(muteReason)
@@ -128,41 +116,37 @@ module.exports = {
       if (banUser) {
         const unbanDate = new Date();
         unbanDate.setMonth(unbanDate.getMonth() + 1);
-        warn.banUntil = unbanDate;
+        warnRecord.banUntil = unbanDate;
 
         const embed = createBaseEmbed({
           isError: true,
-          title: "Tymczasowy ban na serwerze GameZone",
-          description: `Zostałeś/aś **tymczasowo zbanowany/a na serwerze GameZone** na okres 1 miesiąca.
-  
-          **Powód:** ${muteReason}
-            
-          • *Przypominamy, że naruszenie zasad serwera prowadzi do konsekwencji.*
-          • *Po upływie kary będziesz mógł ponownie dołączyć do naszej społeczności.*
-          • *W razie wątpliwości lub chęci odwołania się, skontaktuj się z administracją.*
-
-          Twój ban wygaśnie: ${unbanDate.toLocaleString()}`,
+          title: "Tymczasowy ban na serwerze",
+          description: `Zostałeś/aś tymczasowo zbanowany/a na okres 1 miesiąca.
+          
+          Powód: ${muteReason}
+          
+          Ban wygasa: ${unbanDate.toLocaleString()}`,
         });
 
         try {
-          await user.send({ embeds: [embed] });
+          await targetMember.send({ embeds: [embed] });
         } catch (error) {
           logger.error(
-            `Nie można wysłać wiadomości do użytkownika ${user.user.tag}:`,
+            `Nie można wysłać wiadomości do użytkownika ${targetMember.user.tag}:`,
             error
           );
           await interaction.followUp({
-            content: `Nie udało się wysłać prywatnej wiadomości do ${user.user.tag}. Użytkownik może mieć wyłączone wiadomości prywatne.`,
+            content: `Nie udało się wysłać prywatnej wiadomości do ${targetMember.user.tag}. Użytkownik może mieć wyłączone wiadomości prywatne.`,
             ephemeral: true,
           });
         }
 
-        await user.ban({ reason: muteReason });
+        await targetMember.ban({ reason: muteReason });
       } else {
-        await user.timeout(muteDuration, muteReason);
+        await targetMember.timeout(muteDuration, muteReason);
       }
 
-      await warn.save();
+      await warnRecord.save();
 
       await interaction.editReply({
         files: [attachment],

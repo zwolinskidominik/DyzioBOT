@@ -11,4 +11,6 @@ const tempChannelConfigSchema = new Schema({
   },
 });
 
+tempChannelConfigSchema.index({ guildId: 1 });
+
 module.exports = model("TempChannelConfiguration", tempChannelConfigSchema);
