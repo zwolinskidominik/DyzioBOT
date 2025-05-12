@@ -1,6 +1,5 @@
-.env
 node_modules
 src/utils/formatResults.js
 assets/*.*
 assets/thumbnails/*
-config.json
+.env
