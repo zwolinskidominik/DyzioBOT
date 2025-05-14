@@ -3,3 +3,5 @@ src/utils/formatResults.js
 assets/*.*
 assets/thumbnails/*
 .env
+dist
+logs/*

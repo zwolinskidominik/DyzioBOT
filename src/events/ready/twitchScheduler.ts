@@ -8,8 +8,8 @@ import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 import { env } from '../../config';
-import { ClientCredentialsAuthProvider } from 'twitch-auth';
-import { ApiClient, HelixStream, HelixUser } from 'twitch';
+import { AppTokenAuthProvider } from '@twurple/auth';
+import { ApiClient, HelixStream, HelixUser } from '@twurple/api';
 import { schedule } from 'node-cron';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -24,7 +24,7 @@ const { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET } = env();
 
 const clientId: string = TWITCH_CLIENT_ID as string;
 const clientSecret: string = TWITCH_CLIENT_SECRET as string;
-const authProvider = new ClientCredentialsAuthProvider(clientId, clientSecret);
+const authProvider = new AppTokenAuthProvider(clientId, clientSecret);
 const twitchClient = new ApiClient({ authProvider });
 
 export default async function run(client: Client): Promise<void> {
@@ -222,13 +222,13 @@ async function checkStreams(client: Client): Promise<void> {
       }
 
       try {
-        const user = await twitchClient.helix.users.getUserByName(twitchChannel);
+        const user = await twitchClient.users.getUserByName(twitchChannel);
         if (!user) {
           logger.warn(`Nie znaleziono użytkownika Twitch: ${twitchChannel}`);
           continue;
         }
 
-        const stream = await twitchClient.helix.streams.getStreamByUserId(user.id);
+        const stream = await twitchClient.streams.getStreamByUserId(user.id);
 
         if (stream && !isLive) {
           const notificationChannelConfig = channels.find(

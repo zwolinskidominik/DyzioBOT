@@ -31,7 +31,7 @@ export default async function run(oldState: VoiceState, newState: VoiceState): P
 
 async function retryOperation<T>(
   operation: () => Promise<T>,
-  attempts = 3,
+  attempts = 2,
   delayMs = 1_000
 ): Promise<T> {
   let lastError: unknown;

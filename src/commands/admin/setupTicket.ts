@@ -70,15 +70,16 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     return;
   }
 
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
   const channel = interaction.channel as TextChannel;
   const guild = interaction.guild!;
   const categoryId = channel.parentId;
 
   if (!categoryId) {
-    await interaction.reply({
+    await interaction.editReply({
       content:
         'Ten kanał nie należy do żadnej kategorii. Przenieś się do kanału, który jest w kategorii, lub skontaktuj się z administracją.',
-      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -99,15 +100,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       files: [setupImage],
     });
 
-    await interaction.reply({
+    await interaction.editReply({
       content: 'System ticketów został pomyślnie skonfigurowany!',
-      flags: MessageFlags.Ephemeral,
     });
   } catch (error) {
     logger.error(`Błąd podczas konfiguracji systemu ticketów: ${error}`);
-    await interaction.reply({
+    await interaction.editReply({
       content: 'Wystąpił błąd podczas konfiguracji systemu ticketów.',
-      flags: MessageFlags.Ephemeral,
     });
   }
 }

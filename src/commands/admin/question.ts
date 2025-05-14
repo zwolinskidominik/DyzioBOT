@@ -181,6 +181,7 @@ async function handleListSubcommand(interaction: ChatInputCommandInteraction): P
 }
 
 async function handleAddSubcommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const errorEmbed = createBaseEmbed({ isError: true });
   const successEmbed = createBaseEmbed();
 
@@ -188,9 +189,8 @@ async function handleAddSubcommand(interaction: ChatInputCommandInteraction): Pr
   const reactionsInput = interaction.options.getString('reactions')?.trim() || '';
 
   if (question.length < 5) {
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [errorEmbed.setDescription('Pytanie musi mieć co najmniej 5 znaków.')],
-      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -198,9 +198,8 @@ async function handleAddSubcommand(interaction: ChatInputCommandInteraction): Pr
   const reactions = reactionsInput.split(/\s+/).filter(Boolean);
 
   if (reactions.length < 2 || reactions.length > 5) {
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [errorEmbed.setDescription('Musisz podać od 2 do 5 reakcji.')],
-      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -208,13 +207,12 @@ async function handleAddSubcommand(interaction: ChatInputCommandInteraction): Pr
   const invalidReactions = reactions.filter((r: string) => !isValidEmoji(r));
   if (invalidReactions.length > 0) {
     logger.warn(`Niepoprawne reakcje: ${invalidReactions.join(', ')} w pytaniu`);
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         errorEmbed.setDescription(
           `Następujące reakcje są nieprawidłowe: ${invalidReactions.join(', ')}`
         ),
       ],
-      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -228,15 +226,13 @@ async function handleAddSubcommand(interaction: ChatInputCommandInteraction): Pr
 
     await newQuestion.save();
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [successEmbed.setDescription('Pomyślnie dodano pytanie dnia!')],
-      flags: MessageFlags.Ephemeral,
     });
   } catch (error: unknown) {
     logger.error(`Błąd podczas dodawania pytania: ${error}`);
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [errorEmbed.setDescription(`Wystąpił błąd podczas dodawania pytania: ${error}`)],
-      flags: MessageFlags.Ephemeral,
     });
   }
 }
