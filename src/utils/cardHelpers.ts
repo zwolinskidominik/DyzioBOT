@@ -2,7 +2,6 @@ import { Builder, loadImage, JSX } from 'canvacord';
 import type { ICardOptions, IGreetingType } from '../interfaces/Cards';
 import { COLORS } from '../config/constants/colors';
 import * as path from 'path';
-import * as fs from 'fs';
 
 const BLANK_PNG = path.resolve(__dirname, '../../assets/bg.jpg');
 
@@ -54,9 +53,7 @@ export class GreetingsCard extends Builder {
       }
 
       if (src.startsWith('/') || src.includes(':\\')) {
-        if (!fs.existsSync(src)) {
-          return await loadImage(BLANK_PNG);
-        }
+        return await loadImage(BLANK_PNG);
       }
 
       return await loadImage(src);
@@ -66,40 +63,12 @@ export class GreetingsCard extends Builder {
     }
   }
 
-  private static async loadWithRetry(src: string, retries = 3, timeout = 5000) {
+  private static async loadWithRetry(src: string, retries = 3) {
     let lastError;
 
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-        const response = await fetch(src, {
-          signal: controller.signal,
-          headers: {
-            'User-Agent': 'Dyzio (https://yourbot.com, v1.0.0)',
-          },
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const tempFilePath = path.resolve(__dirname, `../temp/temp_${Date.now()}.png`);
-
-        const tempDir = path.dirname(tempFilePath);
-        if (!fs.existsSync(tempDir)) {
-          fs.mkdirSync(tempDir, { recursive: true });
-        }
-
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        fs.writeFileSync(tempFilePath, buffer);
-
-        return await loadImage(tempFilePath);
+        return await loadImage(src);
       } catch (error) {
         lastError = error;
         await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));

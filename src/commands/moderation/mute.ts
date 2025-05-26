@@ -2,7 +2,6 @@ import {
   SlashCommandBuilder,
   PermissionFlagsBits,
   GuildMember,
-  User,
   Guild,
   MessageFlags,
 } from 'discord.js';
@@ -36,8 +35,8 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  userPermissions: [PermissionFlagsBits.ModerateMembers],
-  botPermissions: [PermissionFlagsBits.ModerateMembers],
+  userPermissions: PermissionFlagsBits.ModerateMembers,
+  botPermissions: PermissionFlagsBits.ModerateMembers,
 };
 
 function parseDuration(durationStr: string): number {
@@ -77,11 +76,11 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   const guild: Guild = interaction.guild;
   const errorEmbed = createModErrorEmbed('', guild.name);
-
   try {
     await interaction.deferReply();
 
-    const targetUser: User = interaction.options.getUser('uzytkownik', true);
+    const targetUser =
+      interaction.options.getUser('użytkownik') || interaction.options.getUser('uzytkownik');
     if (!targetUser) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription(`**${'Nie znaleziono użytkownika.'}**`)],
@@ -89,7 +88,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const duration: string = interaction.options.getString('czas_trwania', true);
+    const duration = interaction.options.getString('czas_trwania');
     if (!duration) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription(`**${'Nie podano czasu wyciszenia.'}**`)],
@@ -97,7 +96,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const reason: string = interaction.options.getString('powod', true);
+    const reason = interaction.options.getString('powod');
+    if (!reason) {
+      await interaction.editReply({
+        embeds: [errorEmbed.setDescription(`**${'Nie podano powodu.'}**`)],
+      });
+      return;
+    }
 
     let targetMember: GuildMember;
     try {

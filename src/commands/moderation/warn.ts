@@ -36,86 +36,101 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     });
     return;
   }
-
   await interaction.deferReply();
 
-  const targetUser = interaction.options.getUser('uzytkownik', true);
-  const reason = interaction.options.getString('powod', true);
-  const guild = interaction.guild;
-  const botId = interaction.client.user!.id;
-  let member: GuildMember;
-
   try {
-    member = await guild.members.fetch(targetUser.id);
-  } catch {
-    await interaction.editReply('Nie udało się znaleźć użytkownika na serwerze.');
-    return;
-  }
-  if (
-    !guild.members.me ||
-    !checkModPermissions(member, interaction.member as GuildMember, guild.members.me)
-  ) {
-    logger.debug(
-      `Warn command permissions check failed for ${interaction.user.tag} trying to warn ${targetUser.tag}`
-    );
-    await interaction.editReply('Nie masz uprawnień do ostrzegania tego użytkownika.');
-    return;
-  }
+    const targetUser =
+      interaction.options.getUser('użytkownik') || interaction.options.getUser('uzytkownik');
+    if (!targetUser) {
+      await interaction.editReply('Nie podano użytkownika');
+      return;
+    }
 
-  let record = (await WarnModel.findOne({
-    userId: targetUser.id,
-    guildId: guild.id,
-  })) as WarnDocument;
-  if (!record) {
-    record = new WarnModel({
+    const reason = interaction.options.getString('powod');
+    if (!reason) {
+      await interaction.editReply('Nie podano powodu');
+      return;
+    }
+
+    const guild = interaction.guild;
+    const botId = interaction.client.user!.id;
+    let member: GuildMember;
+
+    try {
+      member = await guild.members.fetch(targetUser.id);
+    } catch {
+      await interaction.editReply('Nie udało się znaleźć użytkownika na serwerze.');
+      return;
+    }
+    if (
+      !guild.members.me ||
+      !checkModPermissions(member, interaction.member as GuildMember, guild.members.me)
+    ) {
+      logger.debug(
+        `Warn command permissions check failed for ${interaction.user.tag} trying to warn ${targetUser.tag}`
+      );
+      await interaction.editReply('Nie masz uprawnień do ostrzegania tego użytkownika.');
+      return;
+    }
+
+    let record = (await WarnModel.findOne({
       userId: targetUser.id,
       guildId: guild.id,
-      warnings: [],
-    }) as WarnDocument;
-  }
-
-  record.warnings.push({ reason, date: new Date(), moderator: interaction.user.tag });
-
-  await record.save();
-
-  const count = record.warnings.length;
-
-  let muteDurationMs = 0;
-  if (count === 1) muteDurationMs = 15 * 60 * 1000;
-  else if (count === 2) muteDurationMs = 15 * 60 * 1000;
-  else if (count >= 3) muteDurationMs = 24 * 60 * 60 * 1000;
-
-  let muteEndTs: number | null = null;
-  try {
-    if (muteDurationMs > 0) {
-      await member.timeout(muteDurationMs, reason);
-      muteEndTs = Math.floor((Date.now() + muteDurationMs) / 1000);
+    })) as WarnDocument;
+    if (!record) {
+      record = new WarnModel({
+        userId: targetUser.id,
+        guildId: guild.id,
+        warnings: [],
+      }) as WarnDocument;
     }
-  } catch (err) {
-    logger.error(`Błąd przy nakładaniu kary na ${member.id}: ${err}`);
+
+    record.warnings.push({ reason, date: new Date(), moderator: interaction.user.tag });
+
+    await record.save();
+
+    const count = record.warnings.length;
+
+    let muteDurationMs = 0;
+    if (count === 1) muteDurationMs = 15 * 60 * 1000;
+    else if (count === 2) muteDurationMs = 15 * 60 * 1000;
+    else if (count >= 3) muteDurationMs = 24 * 60 * 60 * 1000;
+
+    let muteEndTs: number | null = null;
+    try {
+      if (muteDurationMs > 0) {
+        await member.timeout(muteDurationMs, reason);
+        muteEndTs = Math.floor((Date.now() + muteDurationMs) / 1000);
+      }
+    } catch (err) {
+      logger.error(`Błąd przy nakładaniu kary na ${member.id}: ${err}`);
+    }
+
+    const bar = formatWarnBar(botId, count);
+    const percent = Math.round((count / WARN_LIMIT) * 100);
+
+    const embed = createBaseEmbed({
+      title: `Został nadany ${count} punkt ostrzeżeń`,
+      color: COLORS.WARN,
+      timestamp: false,
+    }).addFields([
+      { name: 'Użytkownik', value: `<@!${targetUser.id}>`, inline: true },
+      { name: 'Moderator', value: `<@!${interaction.user.id}>`, inline: true },
+      { name: 'Powód', value: reason, inline: false },
+      {
+        name: 'Czas trwania',
+        value: muteEndTs ? `<t:${muteEndTs}:F>` : 'Brak wyciszenia',
+        inline: false,
+      },
+      {
+        name: 'Suma punktów',
+        value: `Mute: ${count}p ${bar} ${WARN_LIMIT}p (${percent}%)`,
+      },
+    ]);
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Błąd podczas wykonywania komendy warn: ${errorMessage}`);
   }
-
-  const bar = formatWarnBar(botId, count);
-  const percent = Math.round((count / WARN_LIMIT) * 100);
-
-  const embed = createBaseEmbed({
-    title: `Został nadany ${count} punkt ostrzeżeń`,
-    color: COLORS.WARN,
-    timestamp: false,
-  }).addFields([
-    { name: 'Użytkownik', value: `<@!${targetUser.id}>`, inline: true },
-    { name: 'Moderator', value: `<@!${interaction.user.id}>`, inline: true },
-    { name: 'Powód', value: reason, inline: false },
-    {
-      name: 'Czas trwania',
-      value: muteEndTs ? `<t:${muteEndTs}:F>` : 'Brak wyciszenia',
-      inline: false,
-    },
-    {
-      name: 'Suma punktów',
-      value: `Mute: ${count}p ${bar} ${WARN_LIMIT}p (${percent}%)`,
-    },
-  ]);
-
-  await interaction.editReply({ embeds: [embed] });
 }

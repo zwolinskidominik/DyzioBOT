@@ -2,7 +2,6 @@ import {
   SlashCommandBuilder,
   PermissionFlagsBits,
   GuildMember,
-  User,
   Guild,
   MessageFlags,
 } from 'discord.js';
@@ -30,8 +29,8 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  userPermissions: [PermissionFlagsBits.KickMembers],
-  botPermissions: [PermissionFlagsBits.KickMembers],
+  userPermissions: PermissionFlagsBits.KickMembers,
+  botPermissions: PermissionFlagsBits.KickMembers,
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
@@ -45,13 +44,26 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   const guild: Guild = interaction.guild;
   const errorEmbed = createModErrorEmbed('', guild.name);
-
   try {
     await interaction.deferReply();
 
-    const targetUser: User = interaction.options.getUser('uzytkownik', true);
-    const targetUserId: string = targetUser.id;
-    const reason: string = interaction.options.getString('powod', true);
+    const targetUser =
+      interaction.options.getUser('użytkownik') || interaction.options.getUser('uzytkownik');
+    if (!targetUser) {
+      await interaction.editReply({
+        embeds: [errorEmbed.setDescription('**Nie znaleziono użytkownika.**')],
+      });
+      return;
+    }
+    const targetUserId = targetUser.id;
+
+    const reason = interaction.options.getString('powod');
+    if (!reason) {
+      await interaction.editReply({
+        embeds: [errorEmbed.setDescription('**Nie podano powodu.**')],
+      });
+      return;
+    }
 
     let targetMember: GuildMember;
     try {

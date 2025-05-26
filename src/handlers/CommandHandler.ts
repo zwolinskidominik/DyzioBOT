@@ -35,6 +35,12 @@ export class CommandHandler {
 
     this.client.on('interactionCreate', this.handleInteraction.bind(this));
     this.client.once('ready', async () => {
+      if (this.config.bulkRegister) {
+        await this.clearCommands()
+          .then(() => console.log('✅ Wyczyszczono wszystkie komendy.'))
+          .catch((err) => console.error('❌ Błąd czyszczenia komend:', err));
+      }
+
       await this.registerCommands()
         .then(() => console.log('✅ Zarejestrowano komendy aplikacji.'))
         .catch((err) => console.error('❌ Błąd rejestracji komend:', err));
@@ -180,6 +186,29 @@ export class CommandHandler {
             await guild.commands.edit(found.id, cmdData as ApplicationCommandData);
             console.log(`✅ Zktualizowano "${cmdData.name}" na serwerze "${guild.name}".`);
           }
+        }
+      }
+    }
+  }
+
+  public async clearCommands(): Promise<void> {
+    if (!this.client.application) {
+      throw new Error('Klient Discord jeszcze nie gotowy (brak client.application)');
+    }
+
+    await this.client.application.commands.set([]);
+    console.log('🧹 Wyczyszczono globalne komendy');
+
+    if (this.config.devGuildIds?.length) {
+      for (const guildId of this.config.devGuildIds) {
+        try {
+          const guild = await this.client.guilds.fetch(guildId);
+          if (guild) {
+            await guild.commands.set([]);
+            console.log(`🧹 Wyczyszczono komendy na serwerze "${guild.name}"`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Nie udało się wyczyścić komend na serwerze ${guildId}:`, error);
         }
       }
     }
