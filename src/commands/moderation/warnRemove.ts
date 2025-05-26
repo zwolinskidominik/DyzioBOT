@@ -28,7 +28,10 @@ export const data = new SlashCommandBuilder()
       .setRequired(true)
   );
 
-export const options = {};
+export const options = {
+  userPermissions: PermissionFlagsBits.ModerateMembers,
+  botPermissions: PermissionFlagsBits.ModerateMembers,
+};
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   if (!interaction.guild) {
