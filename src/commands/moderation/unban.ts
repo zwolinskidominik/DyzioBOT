@@ -14,7 +14,7 @@ export const data = new SlashCommandBuilder()
   .setDMPermission(false)
   .addStringOption((option) =>
     option
-      .setName('target-user')
+      .setName('id_uzytkownika')
       .setDescription('ID użytkownika, którego chcesz odbanować.')
       .setRequired(true)
   );
@@ -39,7 +39,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     await interaction.deferReply();
 
-    const targetUserId = interaction.options.getString('target-user', true);
+    const targetUserId = interaction.options.getString('id_uzytkownika', true);
 
     const bannedUser = await findBannedUser(guild, targetUserId);
     if (!bannedUser) {

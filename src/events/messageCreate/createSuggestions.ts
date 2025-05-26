@@ -11,7 +11,7 @@ import { SuggestionConfigurationModel } from '../../models/SuggestionConfigurati
 import { SuggestionModel } from '../../models/Suggestion';
 import type { ISuggestion } from '../../interfaces/Models';
 import { formatResults, createBaseEmbed } from '../../utils/embedHelpers';
-import { getGuildConfig } from '../../config/guild';
+import { getBotConfig } from '../../config/bot';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
@@ -20,6 +20,7 @@ export default async function run(message: Message): Promise<void> {
     if (!shouldProcessMessage(message)) return;
 
     const guildId = message.guild!.id;
+    const botId = message.client.user!.id;
 
     const suggestionConfig = await SuggestionConfigurationModel.findOne({ guildId });
     if (!suggestionConfig || suggestionConfig.suggestionChannelId !== message.channelId) {
@@ -53,8 +54,8 @@ export default async function run(message: Message): Promise<void> {
 
     await createDiscussionThread(message.channel as TextChannel, suggestionMessage, suggestionText);
 
-    const suggestionEmbed = createSuggestionEmbed(guildId, message, suggestionText);
-    const components = createVotingButtons(guildId, newSuggestion.suggestionId);
+    const suggestionEmbed = createSuggestionEmbed(botId, message, suggestionText);
+    const components = createVotingButtons(botId, newSuggestion.suggestionId);
 
     await suggestionMessage.edit({
       content: '',
@@ -120,23 +121,23 @@ async function createDiscussionThread(
   }
 }
 
-function createSuggestionEmbed(guildId: string, message: Message, suggestionText: string) {
+function createSuggestionEmbed(botId: string, message: Message, suggestionText: string) {
   return createBaseEmbed({
     color: COLORS.DEFAULT,
     authorName: message.author.username,
     authorIcon: message.author.displayAvatarURL({ size: 256 }),
   }).addFields([
     { name: 'Sugestia', value: suggestionText },
-    { name: 'Głosy', value: formatResults(guildId) },
+    { name: 'Głosy', value: formatResults(botId) },
   ]);
 }
 
-function createVotingButtons(guildId: string, suggestionId: string) {
+function createVotingButtons(botId: string, suggestionId: string) {
   const {
     emojis: {
       suggestion: { upvote: upvoteEmoji, downvote: downvoteEmoji },
     },
-  } = getGuildConfig(guildId);
+  } = getBotConfig(botId);
 
   const upvoteButton = new ButtonBuilder()
     .setEmoji(upvoteEmoji)

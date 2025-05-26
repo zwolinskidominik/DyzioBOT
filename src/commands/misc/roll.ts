@@ -6,10 +6,10 @@ const RESULT_EMOJI = ':game_die:';
 
 export const data = new SlashCommandBuilder()
   .setName('roll')
-  .setDescription('Rzuć kością, domyślnie 6-ścienną lub podaj liczbę ścianek.')
+  .setDescription('Losuje randomową liczbę. (Standardowo D6)')
   .addIntegerOption((option) =>
     option
-      .setName('sides')
+      .setName('max-liczba')
       .setDescription('Liczba ścianek kostki (np. 20 dla D20)')
       .setRequired(false)
   );
@@ -18,7 +18,7 @@ export const options = {};
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
-    const sides = interaction.options.getInteger('sides') ?? 6;
+    const sides = interaction.options.getInteger('max-liczba') ?? 6;
 
     if (!isValidSides(sides)) {
       await interaction.reply('Kostka musi mieć co najmniej 2 ścianki.');

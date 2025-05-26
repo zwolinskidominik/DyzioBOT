@@ -14,12 +14,12 @@ import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
-  .setName('warnings')
+  .setName('ostrzezenia')
   .setDescription('Sprawdza liczbę ostrzeżeń użytkownika.')
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('user')
+      .setName('nick')
       .setDescription('Użytkownik, którego liczba ostrzeżeń ma zostać sprawdzona.')
       .setRequired(false)
   );
@@ -35,7 +35,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     return;
   }
 
-  const targetUser: User = interaction.options.getUser('user') || interaction.user;
+  const targetUser: User = interaction.options.getUser('nick') || interaction.user;
   const userId = targetUser.id;
   const guildId = interaction.guild.id;
 

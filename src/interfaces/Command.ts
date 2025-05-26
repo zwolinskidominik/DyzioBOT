@@ -3,7 +3,6 @@ import {
   ChatInputCommandInteraction,
   AutocompleteInteraction,
   Client,
-  PermissionsBitField,
 } from 'discord.js';
 
 export interface ICommand {
@@ -17,8 +16,8 @@ export interface ICommand {
 }
 
 export interface ICommandConfig {
-  userPermissions?: Array<keyof typeof PermissionsBitField.Flags>;
-  botPermissions?: Array<keyof typeof PermissionsBitField.Flags>;
+  userPermissions?: bigint | bigint[];
+  botPermissions?: bigint | bigint[];
   deleted?: boolean;
   cooldown?: number;
   devOnly?: boolean;

@@ -10,7 +10,7 @@ import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import { env } from '../../config';
-import { getGuildConfig } from '../../config/guild';
+import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
 import { request } from 'undici';
 
@@ -32,13 +32,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     await interaction.deferReply();
 
-    const guildId = interaction.guild!.id;
+    const botId = interaction.client.application!.id;
 
     const {
       emojis: {
         faceit: { cry: CRY_EMOJI },
       },
-    } = getGuildConfig(guildId);
+    } = getBotConfig(botId);
 
     const nickname = interaction.options.getString('nick');
     if (!nickname) {
@@ -64,7 +64,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     const processedStats = processPlayerStats(playerData, cs2Stats);
 
-    const faceitEmbed = buildFaceitEmbed(guildId, processedStats);
+    const faceitEmbed = buildFaceitEmbed(botId, processedStats);
     const buttonRow = createProfileButtons(nickname, playerData.steam_id_64 || '0');
 
     await interaction.editReply({
@@ -129,12 +129,12 @@ function getCountryFlag(countryCode: string): string {
   );
 }
 
-function getFaceitLevelEmoji(guildId: string, level: number | string): string {
+function getFaceitLevelEmoji(botId: string, level: number | string): string {
   const {
     emojis: {
       faceit: { levels: LEVEL_EMOJI },
     },
-  } = getGuildConfig(guildId);
+  } = getBotConfig(botId);
   const lvl = typeof level === 'string' ? parseInt(level, 10) : level;
   if (!lvl || lvl < 1 || lvl > 10) return level.toString();
   return LEVEL_EMOJI[lvl as keyof typeof LEVEL_EMOJI] ?? level.toString();
@@ -184,20 +184,20 @@ function processPlayerStats(playerData: IFaceitPlayer, cs2Stats: ICS2Stats): IPl
   };
 }
 
-function formatRecentResults(guildId: string, results: string[]): string {
+function formatRecentResults(botId: string, results: string[]): string {
   if (!results.length) return 'Brak';
   const {
     emojis: {
       faceit: { checkmark: CHECK_EMOJI, crossmark: CROSS_EMOJI },
     },
-  } = getGuildConfig(guildId);
+  } = getBotConfig(botId);
 
   return results.map((r) => (r === '1' ? CHECK_EMOJI : CROSS_EMOJI)).join(' ');
 }
 
-function buildFaceitEmbed(guildId: string, stats: IPlayerStats): EmbedBuilder {
-  const lastResultsEmoji = formatRecentResults(guildId, stats.recentResults);
-  const skillLevelEmoji = getFaceitLevelEmoji(guildId, stats.skillLevel);
+function buildFaceitEmbed(botId: string, stats: IPlayerStats): EmbedBuilder {
+  const lastResultsEmoji = formatRecentResults(botId, stats.recentResults);
+  const skillLevelEmoji = getFaceitLevelEmoji(botId, stats.skillLevel);
 
   return createBaseEmbed({
     title: `Profil **${stats.nickname}**`,

@@ -21,12 +21,12 @@ export const data = new SlashCommandBuilder()
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('target-user')
+      .setName('uzytkownik')
       .setDescription('Użytkownik, którego chcesz wyrzucić.')
       .setRequired(true)
   )
   .addStringOption((option) =>
-    option.setName('reason').setDescription('Powód wyrzucenia.').setRequired(true)
+    option.setName('powod').setDescription('Powód wyrzucenia.').setRequired(true)
   );
 
 export const options = {
@@ -49,9 +49,9 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     await interaction.deferReply();
 
-    const targetUser: User = interaction.options.getUser('target-user', true);
+    const targetUser: User = interaction.options.getUser('uzytkownik', true);
     const targetUserId: string = targetUser.id;
-    const reason: string = interaction.options.getString('reason', true);
+    const reason: string = interaction.options.getString('powod', true);
 
     let targetMember: GuildMember;
     try {

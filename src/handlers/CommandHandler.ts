@@ -4,7 +4,6 @@ import {
   Interaction,
   MessageFlags,
   ApplicationCommandData,
-  PermissionsBitField,
   AutocompleteInteraction,
   ChatInputCommandInteraction,
   MessageContextMenuCommandInteraction,
@@ -214,12 +213,13 @@ export class CommandHandler {
       return;
     }
     if (command.options?.userPermissions && interaction.memberPermissions) {
-      const missing = command.options.userPermissions.filter(
-        (perm) => !interaction.memberPermissions?.has(PermissionsBitField.Flags[perm])
-      );
+      const perms = Array.isArray(command.options.userPermissions)
+        ? command.options.userPermissions
+        : [command.options.userPermissions];
+      const missing = perms.filter((perm) => !interaction.memberPermissions?.has(perm));
       if (missing.length > 0) {
         await interaction.reply({
-          content: `⛔ Potrzebujesz uprawnień: ${missing.join(', ')}`,
+          content: `⛔ Potrzebujesz uprawnień do wykonania tej komendy.`,
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -227,12 +227,13 @@ export class CommandHandler {
     }
     if (command.options?.botPermissions && interaction.guild?.members.me) {
       const botPerms = interaction.guild.members.me;
-      const missing = command.options.botPermissions.filter(
-        (perm) => !botPerms.permissions.has(PermissionsBitField.Flags[perm])
-      );
+      const perms = Array.isArray(command.options.botPermissions)
+        ? command.options.botPermissions
+        : [command.options.botPermissions];
+      const missing = perms.filter((perm) => !botPerms.permissions.has(perm));
       if (missing.length > 0) {
         await interaction.reply({
-          content: `⛔ Bot potrzebuje uprawnień: ${missing.join(', ')}`,
+          content: `⛔ Bot potrzebuje uprawnień do wykonania tej komendy.`,
           flags: MessageFlags.Ephemeral,
         });
         return;

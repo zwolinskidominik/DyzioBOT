@@ -53,7 +53,7 @@ export default async function run(interaction: ButtonInteraction): Promise<void>
     await targetSuggestion.save();
 
     targetMessageEmbed.fields[1].value = formatResults(
-      interaction.guild!.id,
+      interaction.client.user!.id,
       targetSuggestion.upvotes,
       targetSuggestion.downvotes
     );

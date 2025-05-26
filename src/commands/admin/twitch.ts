@@ -20,31 +20,33 @@ export const data = new SlashCommandBuilder()
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('add')
+      .setName('dodaj')
       .setDescription('Dodaje streamerów Twitcha powiązanych z użytkownikiem Discord.')
       .addStringOption((option) =>
         option
-          .setName('twitch-username')
+          .setName('twitch-nick')
           .setDescription('Nazwa użytkownika na Twitchu.')
           .setRequired(true)
       )
       .addUserOption((option) =>
         option
-          .setName('discord-user')
+          .setName('discord-uzytkownik')
           .setDescription('Użytkownik Discord powiązany ze streamerem.')
           .setRequired(true)
       )
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName('list').setDescription('Wyświetla listę streamerów Twitcha na tym serwerze.')
+    subcommand
+      .setName('lista')
+      .setDescription('Wyświetla listę streamerów Twitcha na tym serwerze.')
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('remove')
+      .setName('usun')
       .setDescription('Usuwa streamera Twitcha z listy.')
       .addStringOption((option) =>
         option
-          .setName('twitch-username')
+          .setName('twitch-nick')
           .setDescription('Nazwa użytkownika na Twitchu.')
           .setRequired(true)
       )
@@ -68,13 +70,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   }
 
   switch (subcommand) {
-    case 'add':
+    case 'dodaj':
       await handleAddStreamer(interaction, guild);
       break;
-    case 'list':
+    case 'lista':
       await handleListStreamers(interaction, guild);
       break;
-    case 'remove':
+    case 'usun':
       await handleRemoveStreamer(interaction, guild);
       break;
   }
@@ -84,8 +86,8 @@ async function handleAddStreamer(
   interaction: ChatInputCommandInteraction,
   guild: Guild
 ): Promise<void> {
-  const twitchChannel = interaction.options.getString('twitch-username', true);
-  const discordUser = interaction.options.getUser('discord-user', true) as User;
+  const twitchChannel = interaction.options.getString('twitch-nick', true);
+  const discordUser = interaction.options.getUser('discord-uzytkownik', true) as User;
   const userId = discordUser.id;
 
   if (!twitchChannel) {
@@ -198,7 +200,7 @@ async function handleRemoveStreamer(
   interaction: ChatInputCommandInteraction,
   guild: Guild
 ): Promise<void> {
-  const twitchChannel = interaction.options.getString('twitch-username', true);
+  const twitchChannel = interaction.options.getString('twitch-nick', true);
 
   if (!twitchChannel) {
     await interaction.reply({

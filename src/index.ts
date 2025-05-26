@@ -1,9 +1,11 @@
 import { Client, Partials, GatewayIntentBits } from 'discord.js';
 import { CommandHandler } from './handlers/CommandHandler';
 import { EventHandler } from './handlers/EventHandler';
+//import flushXp from './events/ready/xpFlush';
 import logger from './utils/logger';
 import { env } from './config';
 import mongoose from 'mongoose';
+import 'reflect-metadata';
 
 const { TOKEN, MONGODB_URI, DEV_GUILD_IDS, DEV_USER_IDS, DEV_ROLE_IDS } = env();
 
@@ -60,10 +62,14 @@ process.on('uncaughtException', (err, origin) => {
   logger.error(`Błąd: ${err}\nPochodzenie: ${origin}`);
 });
 
-process.on('SIGINT', gracefulShutdown);
-process.on('SIGTERM', gracefulShutdown);
-
 async function gracefulShutdown() {
+  console.log('⚙️  Received shutdown signal — flushing XP cache…');
+  try {
+    //    await flushXp();
+  } catch (err) {
+    console.error('❌ Błąd podczas ostatniego flushu XP:', err);
+  }
+
   if (client && client.isReady()) {
     logger.info('Wylogowywanie klienta Discord...');
     await client.destroy();
@@ -74,6 +80,10 @@ async function gracefulShutdown() {
     await mongoose.connection.close();
   }
 
-  logger.info('Zamykanie zakończone. Do widzenia!');
   process.exit(0);
 }
+
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
+
+process.on('beforeExit', gracefulShutdown);

@@ -11,7 +11,7 @@ import {
 import { GiveawayModel, GiveawayDocument } from '../../models/Giveaway';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
-import { getGuildConfig } from '../../config/guild';
+import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
 import { chunk } from 'lodash';
 
@@ -190,7 +190,7 @@ async function updateGiveawayMessage(giveaway: GiveawayDocument, client: Client)
       emojis: {
         giveaway: { join: joinEmoji, list: listEmoji },
       },
-    } = getGuildConfig(guild.id);
+    } = getBotConfig(client.user!.id);
 
     const channel = guild.channels.cache.get(giveaway.channelId);
     if (!channel || !('messages' in channel)) return;

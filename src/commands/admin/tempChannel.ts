@@ -19,26 +19,26 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('add')
+      .setName('dodaj')
       .setDescription('Dodaje kanał do nasłuchiwania.')
       .addChannelOption((option) =>
         option
-          .setName('channel')
+          .setName('kanal')
           .setDescription('Kanał głosowy, który chcesz dodać do nasłuchiwania.')
           .setRequired(true)
           .addChannelTypes(ChannelType.GuildVoice)
       )
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName('list').setDescription('Wyświetla listę kanałów, które są monitorowane.')
+    subcommand.setName('lista').setDescription('Wyświetla listę kanałów, które są monitorowane.')
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('remove')
+      .setName('usun')
       .setDescription('Usuwa kanał głosowy z monitorowanych.')
       .addChannelOption((option) =>
         option
-          .setName('channel')
+          .setName('kanal')
           .setDescription('Kanał głosowy, który chcesz usunąć z nasłuchiwania.')
           .setRequired(true)
           .addChannelTypes(ChannelType.GuildVoice)
@@ -63,15 +63,15 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const subcommand = interaction.options.getSubcommand();
 
   switch (subcommand) {
-    case 'add':
+    case 'dodaj':
       await handleAddSubcommand(interaction, guildId);
       break;
 
-    case 'list':
+    case 'lista':
       await handleListSubcommand(interaction, guildId);
       break;
 
-    case 'remove':
+    case 'usun':
       await handleRemoveSubcommand(interaction, guildId);
       break;
 

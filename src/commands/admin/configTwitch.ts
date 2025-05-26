@@ -34,14 +34,14 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
-    subcommand.setName('setup').setDescription('Konfiguruje kanał powiadomień o streamach Twitch.')
+    subcommand.setName('ustaw').setDescription('Konfiguruje kanał powiadomień o streamach Twitch.')
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName('clear').setDescription('Usuwa kanał powiadomień o streamach Twitch.')
+    subcommand.setName('usun').setDescription('Usuwa kanał powiadomień o streamach Twitch.')
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('show')
+      .setName('pokaz')
       .setDescription('Wyświetla aktualnie skonfigurowany kanał powiadomień o streamach Twitch')
   );
 
@@ -63,13 +63,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const subcommand = interaction.options.getSubcommand();
 
     switch (subcommand) {
-      case 'setup':
+      case 'ustaw':
         await handleSetupSubcommand(interaction, guild);
         break;
-      case 'clear':
+      case 'usun':
         await handleClearSubcommand(interaction, guild);
         break;
-      case 'show':
+      case 'pokaz':
         await handleShowSubcommand(interaction, guild);
         break;
     }
@@ -176,7 +176,7 @@ async function handleSetupSubcommand(
           embed.addFields({
             name: 'Jak to działa',
             value:
-              'Na tym kanale będą się pojawiać powiadomienia o rozpoczętych streamach.\nAby dodać streamerów do śledzenia, użyj komendy `/twitch add`.',
+              'Na tym kanale będą się pojawiać powiadomienia o rozpoczętych streamach.\nAby dodać streamerów do śledzenia, użyj komendy `/twitch dodaj`.',
           });
 
           await interaction.editReply({
@@ -238,7 +238,7 @@ async function handleClearSubcommand(
   if (!existingConfig) {
     await replyWithError(
       interaction,
-      'Brak skonfigurowanego kanału powiadomień Twitch.\nAby skonfigurować, uruchom `/config-twitch setup`.'
+      'Brak skonfigurowanego kanału powiadomień Twitch.\nAby skonfigurować, uruchom `/config-twitch ustaw`.'
     );
     return;
   }
@@ -247,7 +247,7 @@ async function handleClearSubcommand(
 
   await replyWithSuccess(
     interaction,
-    'Usunięto kanał powiadomień Twitch.\nAby skonfigurować ponownie, uruchom `/config-twitch setup`.'
+    'Usunięto kanał powiadomień Twitch.\nAby skonfigurować ponownie, uruchom `/config-twitch ustaw`.'
   );
 }
 
@@ -264,7 +264,7 @@ async function handleShowSubcommand(
   if (!existingConfig || !existingConfig.channelId) {
     await replyWithError(
       interaction,
-      'Brak skonfigurowanego kanału powiadomień Twitch.\nAby skonfigurować, uruchom `/config-twitch setup`.'
+      'Brak skonfigurowanego kanału powiadomień Twitch.\nAby skonfigurować, uruchom `/config-twitch ustaw`.'
     );
     return;
   }
@@ -295,7 +295,7 @@ async function handleShowSubcommand(
   embed.addFields({
     name: 'Jak to działa',
     value:
-      'Na tym kanale będą się pojawiać powiadomienia o rozpoczętych streamach.\nAby dodać streamerów do śledzenia, użyj komendy `/twitch add`.',
+      'Na tym kanale będą się pojawiać powiadomienia o rozpoczętych streamach.\nAby dodać streamerów do śledzenia, użyj komendy `/twitch dodaj`.',
   });
 
   await interaction.editReply({ embeds: [embed] });

@@ -23,7 +23,7 @@ const STAT_TYPES: Record<StatType, string> = {
 };
 
 export const data = new SlashCommandBuilder()
-  .setName('channel-stats')
+  .setName('config-statystyki')
   .setDescription(
     'Tworzy kanał statystyk serwera (ostatnia osoba, liczba użytkowników, botów, banów)'
   )
@@ -31,19 +31,19 @@ export const data = new SlashCommandBuilder()
   .setDMPermission(false)
   .addStringOption((option) =>
     option
-      .setName('type')
+      .setName('rodzaj')
       .setDescription('Wybierz typ kanału statystyk')
       .setRequired(true)
       .addChoices(...Object.entries(STAT_TYPES).map(([value, name]) => ({ name, value })))
   )
   .addStringOption((option) =>
     option
-      .setName('template')
+      .setName('nazwa-kanalu')
       .setDescription('Nazwa kanału (użyj "<>" jako placeholder, np. "<> osób")')
       .setRequired(true)
   );
 
-export const options = {};
+export const options = { deleted: true };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
@@ -57,8 +57,8 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const type = interaction.options.getString('type', true) as StatType;
-    const template = interaction.options.getString('template', true);
+    const type = interaction.options.getString('rodzaj', true) as StatType;
+    const template = interaction.options.getString('nazwa-kanalu', true);
 
     if (!template.includes('<>')) {
       await interaction.editReply({

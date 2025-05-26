@@ -7,7 +7,7 @@ import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
-  .setName('wrozba-add')
+  .setName('wrozba-dodaj')
   .setDescription('Dodaj nową wróżbę do bazy danych')
   .setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers)
   .setDMPermission(false)

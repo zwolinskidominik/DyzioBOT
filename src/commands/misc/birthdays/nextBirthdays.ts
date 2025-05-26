@@ -3,13 +3,13 @@ import { BirthdayModel, BirthdayDocument } from '../../../models/Birthday';
 import type { IBirthday } from '../../../interfaces/Models';
 import type { IUpcomingBirthday } from '../../../interfaces/Birthday';
 import type { ICommandOptions } from '../../../interfaces/Command';
-import { getGuildConfig } from '../../../config/guild';
+import { getBotConfig } from '../../../config/bot';
 import { COLORS } from '../../../config/constants/colors';
 import { createBaseEmbed } from '../../../utils/embedHelpers';
 import logger from '../../../utils/logger';
 
 export const data = new SlashCommandBuilder()
-  .setName('next-birthdays')
+  .setName('urodziny-nastepne')
   .setDescription('Wyświetla następne 10 urodzin użytkowników.')
   .setDMPermission(false);
 
@@ -22,6 +22,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     await interaction.deferReply();
     const guildId = interaction.guild?.id;
+    const botId = interaction.client.application!.id;
 
     if (!guildId) {
       await interaction.editReply({
@@ -40,7 +41,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       await interaction.editReply({
         embeds: [
           successEmbed.setDescription(
-            'Brak zapisanych urodzin na tym serwerze. Użyj `/remember-birthday` aby dodać swoje!'
+            'Brak zapisanych urodzin na tym serwerze. Użyj `/urodziny-zapisz` aby dodać swoje!'
           ),
         ],
       });
@@ -103,7 +104,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     const {
       emojis: { birthday: emoji },
-    } = getGuildConfig(guildId);
+    } = getBotConfig(botId);
 
     successEmbed
       .setTitle(`${emoji} Nadchodzące urodziny`)

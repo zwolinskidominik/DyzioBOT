@@ -10,7 +10,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Wyświetla avatar użytkownika w większym formacie.')
   .addUserOption((option) =>
     option
-      .setName('user')
+      .setName('uzytkownik')
       .setDescription('Użytkownik, którego avatar chcesz zobaczyć.')
       .setRequired(false)
   );
@@ -19,7 +19,7 @@ export const options = {};
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
-    const targetUser: User = interaction.options.getUser('user') || interaction.user;
+    const targetUser: User = interaction.options.getUser('uzytkownik') || interaction.user;
     const avatarURL: string = getUserAvatarURL(targetUser);
     const guild: Guild = interaction.guild!;
     const embed = createAvatarEmbed(targetUser, avatarURL, guild);

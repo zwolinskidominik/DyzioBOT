@@ -14,43 +14,39 @@ import { QuestionModel } from '../../models/Question';
 import type { ICommandOptions } from '../../interfaces/Command';
 import type { IQuestion } from '../../interfaces/Models';
 import type { IEmbedData } from '../../interfaces/Embed';
-import { getGuildConfig } from '../../config/guild';
+import { getBotConfig } from '../../config/bot';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 import { chunk } from 'lodash';
 
 export const data = new SlashCommandBuilder()
-  .setName('question')
+  .setName('pytanie-dnia')
   .setDescription('Zarządzaj pytaniami dnia')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
-    subcommand.setName('list').setDescription('Wyświetl listę pytań w bazie danych')
+    subcommand.setName('lista').setDescription('Wyświetl listę pytań w bazie danych')
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('add')
+      .setName('dodaj')
       .setDescription('Dodaj nowe pytanie')
       .addStringOption((option) =>
-        option
-          .setName('content')
-          .setDescription('Treść pytania')
-          .setRequired(true)
-          .setMaxLength(1000)
+        option.setName('tresc').setDescription('Treść pytania').setRequired(true).setMaxLength(1000)
       )
       .addStringOption((option) =>
         option
-          .setName('reactions')
+          .setName('reakcje')
           .setDescription('Reakcje na pytanie (oddzielone spacją)')
           .setRequired(true)
       )
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('remove')
+      .setName('usun')
       .setDescription('Usuń pytanie o danym numerze')
       .addIntegerOption((option) =>
-        option.setName('number').setDescription('Numer pytania do usunięcia').setRequired(true)
+        option.setName('numer').setDescription('Numer pytania do usunięcia').setRequired(true)
       )
   );
 
@@ -63,13 +59,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const subcommand = interaction.options.getSubcommand();
 
   switch (subcommand) {
-    case 'list':
+    case 'lista':
       await handleListSubcommand(interaction);
       break;
-    case 'add':
+    case 'dodaj':
       await handleAddSubcommand(interaction);
       break;
-    case 'remove':
+    case 'usun':
       await handleRemoveSubcommand(interaction);
       break;
   }
@@ -103,10 +99,10 @@ async function handleListSubcommand(interaction: ChatInputCommandInteraction): P
       return { embed, totalPages };
     };
 
-    function generateButtons(guildId: string, currentPage: number, totalPages: number) {
+    function generateButtons(currentPage: number, totalPages: number) {
       const {
         emojis: { next: NEXT, previous: PREVIOUS },
-      } = getGuildConfig(guildId);
+      } = getBotConfig(interaction.client.application!.id);
       return new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId('prev')
@@ -122,7 +118,7 @@ async function handleListSubcommand(interaction: ChatInputCommandInteraction): P
     }
 
     const { embed } = generateEmbed(currentPage);
-    const buttonRow = generateButtons(interaction.guild!.id, currentPage, totalPages);
+    const buttonRow = generateButtons(currentPage, totalPages);
 
     const reply = await interaction.editReply({ embeds: [embed], components: [buttonRow] });
 
@@ -149,7 +145,7 @@ async function handleListSubcommand(interaction: ChatInputCommandInteraction): P
       }
 
       const { embed: newEmbed } = generateEmbed(currentPage);
-      const newButtonRow = generateButtons(interaction.guild!.id, currentPage, totalPages);
+      const newButtonRow = generateButtons(currentPage, totalPages);
 
       await btnInteraction.editReply({ embeds: [newEmbed], components: [newButtonRow] });
     });
@@ -185,8 +181,8 @@ async function handleAddSubcommand(interaction: ChatInputCommandInteraction): Pr
   const errorEmbed = createBaseEmbed({ isError: true });
   const successEmbed = createBaseEmbed();
 
-  const question = interaction.options.getString('content')?.trim() || '';
-  const reactionsInput = interaction.options.getString('reactions')?.trim() || '';
+  const question = interaction.options.getString('tresc')?.trim() || '';
+  const reactionsInput = interaction.options.getString('reakcje')?.trim() || '';
 
   if (question.length < 5) {
     await interaction.editReply({

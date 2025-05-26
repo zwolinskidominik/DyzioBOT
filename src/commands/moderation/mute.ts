@@ -21,18 +21,18 @@ export const data = new SlashCommandBuilder()
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('target-user')
+      .setName('uzytkownik')
       .setDescription('Użytkownik, którego chcesz wyciszyć.')
       .setRequired(true)
   )
   .addStringOption((option) =>
     option
-      .setName('duration')
+      .setName('czas_trwania')
       .setDescription('Czas trwania wyciszenia (np. 30min, 1h, 1 dzień, 2h 30min).')
       .setRequired(true)
   )
   .addStringOption((option) =>
-    option.setName('reason').setDescription('Powód wyciszenia.').setRequired(true)
+    option.setName('powod').setDescription('Powód wyciszenia.').setRequired(true)
   );
 
 export const options = {
@@ -81,7 +81,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     await interaction.deferReply();
 
-    const targetUser: User = interaction.options.getUser('target-user', true);
+    const targetUser: User = interaction.options.getUser('uzytkownik', true);
     if (!targetUser) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription(`**${'Nie znaleziono użytkownika.'}**`)],
@@ -89,7 +89,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const duration: string = interaction.options.getString('duration', true);
+    const duration: string = interaction.options.getString('czas_trwania', true);
     if (!duration) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription(`**${'Nie podano czasu wyciszenia.'}**`)],
@@ -97,7 +97,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const reason: string = interaction.options.getString('reason', true);
+    const reason: string = interaction.options.getString('powod', true);
 
     let targetMember: GuildMember;
     try {

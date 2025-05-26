@@ -15,17 +15,17 @@ export const data = new SlashCommandBuilder()
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('target-user')
+      .setName('uzytkownik')
       .setDescription('Użytkownik, któremu chcesz nadać upomnienie.')
       .setRequired(true)
   )
   .addStringOption((option) =>
-    option.setName('reason').setDescription('Powód upomnienia.').setRequired(true)
+    option.setName('powod').setDescription('Powód upomnienia.').setRequired(true)
   );
 
 export const options = {
-  userPermissions: [PermissionFlagsBits.ModerateMembers],
-  botPermissions: [PermissionFlagsBits.ModerateMembers],
+  userPermissions: PermissionFlagsBits.ModerateMembers,
+  botPermissions: PermissionFlagsBits.ModerateMembers,
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
@@ -39,9 +39,10 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   await interaction.deferReply();
 
-  const targetUser = interaction.options.getUser('target-user', true);
-  const reason = interaction.options.getString('reason', true);
+  const targetUser = interaction.options.getUser('uzytkownik', true);
+  const reason = interaction.options.getString('powod', true);
   const guild = interaction.guild;
+  const botId = interaction.client.user!.id;
   let member: GuildMember;
 
   try {
@@ -50,11 +51,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     await interaction.editReply('Nie udało się znaleźć użytkownika na serwerze.');
     return;
   }
-
   if (
     !guild.members.me ||
     !checkModPermissions(member, interaction.member as GuildMember, guild.members.me)
   ) {
+    logger.debug(
+      `Warn command permissions check failed for ${interaction.user.tag} trying to warn ${targetUser.tag}`
+    );
     await interaction.editReply('Nie masz uprawnień do ostrzegania tego użytkownika.');
     return;
   }
@@ -92,7 +95,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     logger.error(`Błąd przy nakładaniu kary na ${member.id}: ${err}`);
   }
 
-  const bar = formatWarnBar(guild.id, count);
+  const bar = formatWarnBar(botId, count);
   const percent = Math.round((count / WARN_LIMIT) * 100);
 
   const embed = createBaseEmbed({

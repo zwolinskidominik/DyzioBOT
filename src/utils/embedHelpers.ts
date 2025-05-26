@@ -1,6 +1,6 @@
 import { EmbedBuilder, ColorResolvable } from 'discord.js';
 import { IBaseEmbedOptions } from '../interfaces/Embed';
-import { getGuildConfig } from '../config/guild';
+import { getBotConfig } from '../config/bot';
 import { COLORS } from '../config/constants/colors';
 
 export function createBaseEmbed(options: IBaseEmbedOptions = {}): EmbedBuilder {
@@ -44,13 +44,13 @@ export function createBaseEmbed(options: IBaseEmbedOptions = {}): EmbedBuilder {
 }
 
 export function formatResults(
-  guildId: string,
+  botId: string,
   upvotes: string[] = [],
   downvotes: string[] = []
 ): string {
   const {
     emojis: { suggestionPB },
-  } = getGuildConfig(guildId);
+  } = getBotConfig(botId);
 
   const total = upvotes.length + downvotes.length;
   const length = 14;
@@ -68,10 +68,10 @@ export function formatResults(
   return `👍 ${upvotes.length} głosów na tak (${upP.toFixed(1)}%) • 👎 ${downvotes.length} głosów na nie (${downP.toFixed(1)}%)\n${bar}`;
 }
 
-export function formatWarnBar(guildId: string, count: number): string {
+export function formatWarnBar(botId: string, count: number): string {
   const {
     emojis: { warnPB },
-  } = getGuildConfig(guildId);
+  } = getBotConfig(botId);
 
   const length = 9;
   const maxWarnings = 3;

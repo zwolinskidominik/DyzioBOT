@@ -5,18 +5,19 @@ import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 import { Font } from 'canvacord';
-import { getGuildConfig } from '../..//config/guild';
+import { getBotConfig } from '../../config/bot';
 
 export default async function run(member: GuildMember): Promise<void> {
   try {
     const guild = member.guild;
+    const botId = member.client.user?.id;
     if (!guild) return;
 
     const {
       emojis: {
         greetings: { hi: hiEmoji },
       },
-    } = getGuildConfig(guild.id);
+    } = getBotConfig(botId);
 
     const config = await GreetingsConfigurationModel.findOne({ guildId: guild.id });
     if (!config?.greetingsChannelId) return;

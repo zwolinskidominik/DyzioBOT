@@ -13,7 +13,7 @@ import { ApiClient, HelixStream, HelixUser } from '@twurple/api';
 import { schedule } from 'node-cron';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import axios from 'axios';
+import { fetch } from 'undici';
 
 const THUMBNAIL_WIDTH = '1280';
 const THUMBNAIL_HEIGHT = '720';
@@ -22,9 +22,10 @@ const MAX_THUMBNAILS = 100;
 
 const { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET } = env();
 
-const clientId: string = TWITCH_CLIENT_ID as string;
-const clientSecret: string = TWITCH_CLIENT_SECRET as string;
-const authProvider = new AppTokenAuthProvider(clientId, clientSecret);
+const authProvider = new AppTokenAuthProvider(
+  TWITCH_CLIENT_ID as string,
+  TWITCH_CLIENT_SECRET as string
+);
 const twitchClient = new ApiClient({ authProvider });
 
 export default async function run(client: Client): Promise<void> {
@@ -57,16 +58,12 @@ export default async function run(client: Client): Promise<void> {
 }
 
 async function ensureThumbnailsDirectory(): Promise<void> {
-  const assetsDir = path.resolve(__dirname, '../../../assets');
-  try {
-    await fs.access(assetsDir);
-  } catch {
-    await fs.mkdir(assetsDir, { recursive: true });
-  }
-  try {
-    await fs.access(THUMBNAILS_DIR);
-  } catch {
-    await fs.mkdir(THUMBNAILS_DIR, { recursive: true });
+  for (const dir of [path.resolve(__dirname, '../../../assets'), THUMBNAILS_DIR]) {
+    try {
+      await fs.access(dir);
+    } catch {
+      await fs.mkdir(dir, { recursive: true });
+    }
   }
 }
 
@@ -75,20 +72,26 @@ async function downloadThumbnail(
   streamerName: string,
   streamId: string
 ): Promise<string | null> {
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 10_000);
+
   try {
-    const response = await axios.get(url, {
-      responseType: 'arraybuffer',
+    const res = await fetch(url, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
       },
-      timeout: 10_000,
+      signal: ctrl.signal,
     });
 
-    const filename = `${streamerName}_${streamId}_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const buf = Buffer.from(await res.arrayBuffer());
+
+    const filename = `${streamerName}_${streamId}_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
     const filepath = path.join(THUMBNAILS_DIR, filename);
 
-    await fs.writeFile(filepath, response.data);
+    await fs.writeFile(filepath, buf);
 
     return filepath;
   } catch (error: unknown) {
@@ -100,6 +103,8 @@ async function downloadThumbnail(
       url,
     });
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -107,23 +112,18 @@ async function cleanupOldThumbnails(): Promise<void> {
   try {
     const files = await fs.readdir(THUMBNAILS_DIR);
 
-    if (files.length > MAX_THUMBNAILS) {
-      const fileStats = await Promise.all(
-        files.map(async (file) => ({
-          name: file,
-          time: (await fs.stat(path.join(THUMBNAILS_DIR, file))).mtime.getTime(),
-        }))
-      );
+    if (files.length <= MAX_THUMBNAILS) return;
 
-      const sortedFiles = fileStats.sort((a, b) => b.time - a.time);
+    const fileStats = await Promise.all(
+      files.map(async (file) => ({
+        name: file,
+        time: (await fs.stat(path.join(THUMBNAILS_DIR, file))).mtime.getTime(),
+      }))
+    );
 
-      const filesToDelete = sortedFiles.slice(MAX_THUMBNAILS);
+    const sortedFiles = fileStats.sort((a, b) => b.time - a.time).slice(MAX_THUMBNAILS);
 
-      for (const file of filesToDelete) {
-        await fs.unlink(path.join(THUMBNAILS_DIR, file.name));
-      }
-    } else {
-    }
+    await Promise.all(sortedFiles.map((file) => fs.unlink(path.join(THUMBNAILS_DIR, file.name))));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`Błąd podczas czyszczenia miniatur: ${message}`);
@@ -157,113 +157,83 @@ async function sendStreamNotification(
   user: HelixUser,
   twitchChannel: string
 ): Promise<boolean> {
+  const guild = client.guilds.cache.get(guildId);
+  if (!guild) {
+    logger.warn(`Nie znaleziono serwera o ID: ${guildId}`);
+    return false;
+  }
+
+  const channel = guild.channels.cache.get(channelId) as TextChannel | undefined;
+  if (!channel || !('send' in channel)) {
+    logger.warn(`Nie znaleziono kanału o ID: ${channelId} lub nie jest to kanał tekstowy`);
+    return false;
+  }
+
+  const thumbnailUrl = `${stream.thumbnailUrl
+    .replace('{width}', THUMBNAIL_WIDTH)
+    .replace('{height}', THUMBNAIL_HEIGHT)}?_t=${Date.now()}`;
+
+  const localThumbnailPath = await downloadThumbnail(thumbnailUrl, twitchChannel, stream.id);
+
+  const embed = createStreamNotificationEmbed(client, stream, user, twitchChannel);
+
   try {
-    const guild = client.guilds.cache.get(guildId);
-    if (!guild) {
-      logger.warn(`Nie znaleziono serwera o ID: ${guildId}`);
-      return false;
-    }
-
-    const channel = guild.channels.cache.get(channelId);
-    if (!channel || !('send' in channel)) {
-      logger.warn(`Nie znaleziono kanału o ID: ${channelId} lub nie jest to kanał tekstowy`);
-      return false;
-    }
-
-    const textChannel = channel as TextChannel;
-
-    const rawThumbnailUrl = stream.thumbnailUrl
-      .replace('{width}', THUMBNAIL_WIDTH)
-      .replace('{height}', THUMBNAIL_HEIGHT);
-    const thumbnailUrl = `${rawThumbnailUrl}?_t=${Date.now()}`;
-
-    const localThumbnailPath = await downloadThumbnail(thumbnailUrl, twitchChannel, stream.id);
-
-    const embed = createStreamNotificationEmbed(client, stream, user, twitchChannel);
-
-    try {
-      if (localThumbnailPath) {
-        embed.setImage('attachment://thumbnail.jpg');
-        await textChannel.send({
-          embeds: [embed],
-          files: [{ attachment: localThumbnailPath, name: 'thumbnail.jpg' }],
-        });
-      } else {
-        embed.setImage(thumbnailUrl);
-        await textChannel.send({ embeds: [embed] });
-      }
-      return true;
-    } catch (sendError: unknown) {
-      const msg = sendError instanceof Error ? sendError.message : String(sendError);
-      logger.warn(`Błąd wysyłania powiadomienia z miniaturą: ${msg}, próba bez miniatury`);
-      embed.setImage(null);
-      await textChannel.send({ embeds: [embed] });
+    if (localThumbnailPath) {
+      embed.setImage('attachment://thumbnail.jpg');
+      await channel.send({
+        embeds: [embed],
+        files: [{ attachment: localThumbnailPath, name: 'thumbnail.jpg' }],
+      });
+    } else {
+      embed.setImage(thumbnailUrl);
+      await channel.send({ embeds: [embed] });
     }
     return true;
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.error(`Błąd wysyłania powiadomienia o streamie: ${message}`);
+  } catch (sendError: unknown) {
+    const msg = sendError instanceof Error ? sendError.message : String(sendError);
+    logger.warn(`Błąd wysyłania powiadomienia z miniaturą: ${msg}`);
+    await channel.send({ embeds: [embed] });
     return false;
   }
 }
 
 async function checkStreams(client: Client): Promise<void> {
-  try {
-    const streamers = (await TwitchStreamerModel.find().exec()) as TwitchStreamerDocument[];
-    const channels = await StreamConfigurationModel.find<StreamConfigurationDocument>()
-      .lean()
-      .exec();
+  const streamers = await TwitchStreamerModel.find<TwitchStreamerDocument>().exec();
+  const channelCfg = await StreamConfigurationModel.find<StreamConfigurationDocument>()
+    .lean()
+    .exec();
 
-    for (const streamer of streamers) {
-      const { guildId, twitchChannel, isLive, active } = streamer;
+  for (const s of streamers) {
+    if (!s.active) continue;
 
-      if (!active) {
-        continue;
-      }
+    try {
+      const user = await twitchClient.users.getUserByName(s.twitchChannel);
+      const stream = user ? await twitchClient.streams.getStreamByUserId(user.id) : null;
 
-      try {
-        const user = await twitchClient.users.getUserByName(twitchChannel);
-        if (!user) {
-          logger.warn(`Nie znaleziono użytkownika Twitch: ${twitchChannel}`);
-          continue;
-        }
-
-        const stream = await twitchClient.streams.getStreamByUserId(user.id);
-
-        if (stream && !isLive) {
-          const notificationChannelConfig = channels.find(
-            (ch: { guildId: string; channelId: string }) => ch.guildId === guildId
-          );
-
-          if (!notificationChannelConfig) {
-            logger.debug(`Brak konfiguracji kanału powiadomień dla serwera: ${guildId}`);
-            continue;
-          }
-
-          const success = await sendStreamNotification(
+      if (stream && !s.isLive) {
+        const cfg = channelCfg.find((c) => c.guildId === s.guildId);
+        if (
+          cfg &&
+          (await sendStreamNotification(
             client,
-            guildId,
-            notificationChannelConfig.channelId,
+            s.guildId,
+            cfg.channelId,
             stream,
-            user,
-            twitchChannel
-          );
-
-          if (success) {
-            streamer.isLive = true;
-            await streamer.save();
-          }
-        } else if (!stream && isLive) {
-          streamer.isLive = false;
-          await streamer.save();
+            user!,
+            s.twitchChannel
+          ))
+        ) {
+          s.isLive = true;
+          await s.save();
         }
-      } catch (streamerError: unknown) {
-        const msg = streamerError instanceof Error ? streamerError.message : String(streamerError);
-        logger.error(`Błąd podczas sprawdzania streamera ${twitchChannel}: ${msg}`);
       }
+
+      if (!stream && s.isLive) {
+        s.isLive = false;
+        await s.save();
+      }
+    } catch (err) {
+      logger.error(`Streamer ${s.twitchChannel}: ${err instanceof Error ? err.message : err}`);
     }
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.error(`Błąd podczas sprawdzania streamów: ${message}`);
   }
 }

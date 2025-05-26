@@ -16,7 +16,7 @@ import type { IWinnerUser } from '../../interfaces/Giveaway';
 import { pickWinners } from '../../utils/giveawayHelpers';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
-import { getGuildConfig } from '../../config/guild';
+import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
 import { randomUUID } from 'crypto';
 
@@ -26,74 +26,74 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('create')
+      .setName('stworz')
       .setDescription('Tworzy nowy giveaway')
       .addStringOption((option) =>
-        option.setName('prize').setDescription('Nagroda giveawayu').setRequired(true)
+        option.setName('nagroda').setDescription('Nagroda giveawayu').setRequired(true)
       )
       .addStringOption((option) =>
-        option.setName('description').setDescription('Treść giveawayu').setRequired(true)
+        option.setName('opis').setDescription('Treść giveawayu').setRequired(true)
       )
       .addIntegerOption((option) =>
-        option.setName('winners').setDescription('Liczba wygranych').setRequired(true)
+        option.setName('liczba_wygranych').setDescription('Liczba wygranych').setRequired(true)
       )
       .addStringOption((option) =>
         option
-          .setName('duration')
+          .setName('czas_trwania')
           .setDescription("Czas trwania giveawayu (np. '5 days 4 hours 2 minutes')")
           .setRequired(true)
       )
       .addRoleOption((option) =>
-        option
-          .setName('pingrole')
-          .setDescription('Rola do pingowania (opcjonalnie)')
-          .setRequired(false)
+        option.setName('ping').setDescription('Rola do pingowania (opcjonalnie)').setRequired(false)
       )
       .addRoleOption((option) =>
         option
-          .setName('multiplier_role')
+          .setName('mnoznik_roli')
           .setDescription('Rola, dla której wejścia będą zwiększone (opcjonalnie)')
           .setRequired(false)
       )
       .addIntegerOption((option) =>
         option
-          .setName('multiplier')
+          .setName('mnoznik')
           .setDescription('Ilość wejść dla powyższej roli (domyślnie 1)')
           .setRequired(false)
       )
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('edit')
+      .setName('edytuj')
       .setDescription('Edytuje istniejący giveaway')
       .addStringOption((option) =>
         option.setName('id').setDescription('ID giveawayu do edycji').setRequired(true)
       )
       .addStringOption((option) =>
-        option.setName('prize').setDescription('Nowa nagroda giveawayu').setRequired(false)
+        option.setName('nagroda').setDescription('Nowa nagroda giveawayu').setRequired(false)
       )
       .addStringOption((option) =>
-        option.setName('description').setDescription('Nowa treść giveawayu').setRequired(false)
+        option.setName('opis').setDescription('Nowa treść giveawayu').setRequired(false)
       )
       .addIntegerOption((option) =>
-        option.setName('winners').setDescription('Nowa liczba wygranych').setRequired(false)
+        option
+          .setName('liczba_wygranych')
+          .setDescription('Nowa liczba wygranych')
+          .setRequired(false)
       )
       .addStringOption((option) =>
         option
-          .setName('duration')
+          .setName('czas_trwania')
           .setDescription("Nowy czas trwania giveawayu (np. '5 days 4 hours 2 minutes')")
           .setRequired(false)
       )
       .addRoleOption((option) =>
         option
-          .setName('pingrole')
+          .setName('ping')
           .setDescription('Nowa rola do pingowania (opcjonalnie)')
           .setRequired(false)
       )
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('delete')
+      .setName('usun')
       .setDescription('Usuwa istniejący giveaway')
       .addStringOption((option) =>
         option.setName('id').setDescription('ID giveawayu do usunięcia').setRequired(true)
@@ -101,18 +101,18 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('end')
+      .setName('zakoncz')
       .setDescription('Kończy działający giveaway i losuje zwycięzców')
       .addStringOption((option) =>
         option.setName('id').setDescription('ID giveawayu do zakończenia').setRequired(true)
       )
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName('list').setDescription('Wyświetla listę aktywnych giveawayów')
+    subcommand.setName('lista').setDescription('Wyświetla listę aktywnych giveawayów')
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('reroll')
+      .setName('losuj-ponownie')
       .setDescription('Losuje nowych zwycięzców dla zakończonego giveawayu')
       .addStringOption((option) =>
         option.setName('id').setDescription('ID giveawayu do rerollu').setRequired(true)
@@ -128,22 +128,22 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   try {
     switch (subcommand) {
-      case 'create':
+      case 'stworz':
         await handleCreateGiveaway(interaction);
         break;
-      case 'edit':
+      case 'edytuj':
         await handleEditGiveaway(interaction);
         break;
-      case 'delete':
+      case 'usun':
         await handleDeleteGiveaway(interaction);
         break;
-      case 'end':
+      case 'zakoncz':
         await handleEndGiveaway(interaction);
         break;
-      case 'list':
+      case 'lista':
         await handleListGiveaways(interaction);
         break;
-      case 'reroll':
+      case 'losuj-ponownie':
         await handleRerollGiveaway(interaction);
         break;
       default:
@@ -202,13 +202,13 @@ function getTimestamp(date: Date): number {
 async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const prize = interaction.options.getString('prize', true);
-  const description = interaction.options.getString('description', true);
-  const winnersCount = interaction.options.getInteger('winners', true);
-  const durationStr = interaction.options.getString('duration', true);
-  const pingRole = interaction.options.getRole('pingrole');
-  const multiplierRole = interaction.options.getRole('multiplier_role');
-  const multiplier = interaction.options.getInteger('multiplier') || 1;
+  const prize = interaction.options.getString('nagroda', true);
+  const description = interaction.options.getString('opis', true);
+  const winnersCount = interaction.options.getInteger('liczba_wygranych', true);
+  const durationStr = interaction.options.getString('czas_trwania', true);
+  const pingRole = interaction.options.getRole('ping');
+  const multiplierRole = interaction.options.getRole('mnoznik_roli');
+  const multiplier = interaction.options.getInteger('mnoznik') || 1;
 
   const durationMs = parseDuration(durationStr);
   if (isNaN(durationMs) || durationMs <= 0) {
@@ -232,7 +232,7 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
     emojis: {
       giveaway: { join: joinEmoji, list: listEmoji },
     },
-  } = getGuildConfig(interaction.guild!.id);
+  } = getBotConfig(interaction.client.application!.id);
 
   const uniqueCount = 0;
 
@@ -292,11 +292,11 @@ async function handleEditGiveaway(interaction: ChatInputCommandInteraction): Pro
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const giveawayId = interaction.options.getString('id', true);
-  const newPrize = interaction.options.getString('prize');
-  const newDescription = interaction.options.getString('description');
-  const newWinners = interaction.options.getInteger('winners');
-  const newDurationStr = interaction.options.getString('duration');
-  const newPingRole = interaction.options.getRole('pingrole');
+  const newPrize = interaction.options.getString('nagroda');
+  const newDescription = interaction.options.getString('opis');
+  const newWinners = interaction.options.getInteger('liczba_wygranych');
+  const newDurationStr = interaction.options.getString('czas_trwania');
+  const newPingRole = interaction.options.getRole('ping');
 
   if (!newPrize && !newDescription && !newWinners && !newDurationStr && !newPingRole) {
     await interaction.editReply('Nie podałeś żadnych wartości do edycji giveawayu.');

@@ -28,18 +28,16 @@ const CUSTOM_ID = {
 const COLLECTION_TIMEOUT = 60_000;
 
 export const data = new SlashCommandBuilder()
-  .setName('config-suggestions')
+  .setName('config-pomysly')
   .setDescription('Skonfiguruj kanał sugestii.')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
-    subcommand.setName('setup').setDescription('Konfiguruje kanał sugestii.')
+    subcommand.setName('ustaw').setDescription('Konfiguruje kanał sugestii.')
   )
+  .addSubcommand((subcommand) => subcommand.setName('usun').setDescription('Usuwa kanał sugestii.'))
   .addSubcommand((subcommand) =>
-    subcommand.setName('clear').setDescription('Usuwa kanał sugestii.')
-  )
-  .addSubcommand((subcommand) =>
-    subcommand.setName('show').setDescription('Wyświetla aktualnie skonfigurowany kanał sugestii')
+    subcommand.setName('pokaz').setDescription('Wyświetla aktualnie skonfigurowany kanał sugestii')
   );
 
 export const options = {
@@ -60,13 +58,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const subcommand = interaction.options.getSubcommand();
 
     switch (subcommand) {
-      case 'setup':
+      case 'ustaw':
         await handleSetupSubcommand(interaction, guild);
         break;
-      case 'clear':
+      case 'usun':
         await handleClearSubcommand(interaction, guild);
         break;
-      case 'show':
+      case 'pokaz':
         await handleShowSubcommand(interaction, guild);
         break;
     }
@@ -231,7 +229,7 @@ async function handleClearSubcommand(
   if (!existingConfig) {
     await replyWithError(
       interaction,
-      'Brak skonfigurowanego kanału sugestii.\nAby skonfigurować, uruchom `/config-suggestions setup`.'
+      'Brak skonfigurowanego kanału sugestii.\nAby skonfigurować, uruchom `/config-pomysly ustaw`.'
     );
     return;
   }
@@ -240,7 +238,7 @@ async function handleClearSubcommand(
 
   await replyWithSuccess(
     interaction,
-    'Usunięto kanał sugestii.\nAby skonfigurować ponownie, uruchom `/config-suggestions setup`.'
+    'Usunięto kanał sugestii.\nAby skonfigurować ponownie, uruchom `/config-pomysly ustaw`.'
   );
 }
 
@@ -257,7 +255,7 @@ async function handleShowSubcommand(
   if (!existingConfig || !existingConfig.suggestionChannelId) {
     await replyWithError(
       interaction,
-      'Brak skonfigurowanego kanału sugestii.\nAby skonfigurować, uruchom `/config-suggestions setup`.'
+      'Brak skonfigurowanego kanału sugestii.\nAby skonfigurować, uruchom `/config-pomysly ustaw`.'
     );
     return;
   }

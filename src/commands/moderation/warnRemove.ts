@@ -11,19 +11,19 @@ import { createBaseEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
-  .setName('warn-remove')
+  .setName('warn-usun')
   .setDescription('Usuwa ostrzeżenie użytkownika o podanym identyfikatorze.')
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('target-user')
+      .setName('uzytkownik')
       .setDescription('Użytkownik, któremu chcesz usunąć ostrzeżenie.')
       .setRequired(true)
   )
   .addIntegerOption((option) =>
     option
-      .setName('warning-id')
+      .setName('id_ostrzezenia')
       .setDescription('Identyfikator ostrzeżenia do usunięcia.')
       .setRequired(true)
   );
@@ -41,9 +41,9 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   await interaction.deferReply();
 
-  const targetUser: User | null = interaction.options.getUser('target-user', true);
+  const targetUser: User | null = interaction.options.getUser('uzytkownik', true);
   const targetUserId: string = targetUser.id;
-  const warningId: number = interaction.options.getInteger('warning-id', true);
+  const warningId: number = interaction.options.getInteger('id_ostrzezenia', true);
   const guildId: string = interaction.guild.id;
 
   if (warningId === null) {

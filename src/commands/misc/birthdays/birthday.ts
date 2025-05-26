@@ -8,7 +8,7 @@ import {
 import { BirthdayModel, BirthdayDocument } from '../../../models/Birthday';
 import type { IBirthday } from '../../../interfaces/Models';
 import type { ICommandOptions } from '../../../interfaces/Command';
-import { getGuildConfig } from '../../../config/guild';
+import { getBotConfig } from '../../../config/bot';
 import { COLORS } from '../../../config/constants/colors';
 import { createBaseEmbed } from '../../../utils/embedHelpers';
 import logger from '../../../utils/logger';
@@ -17,12 +17,12 @@ const REMEMBER_BIRTHDAY_COMMAND_ID = '1244599618617081864';
 const SET_USER_BIRTHDAY_COMMAND_ID = '1244599618747109506';
 
 export const data = new SlashCommandBuilder()
-  .setName('birthday')
+  .setName('urodziny')
   .setDescription('Wyświetla Twoją datę urodzin lub datę urodzin innego użytkownika.')
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('target-user')
+      .setName('uzytkownik')
       .setDescription('Użytkownik, którego datę urodzin chcesz sprawdzić.')
       .setRequired(false)
   );
@@ -32,9 +32,10 @@ export const options = {};
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   const errorEmbed = createBaseEmbed({ isError: true });
   const successEmbed = createBaseEmbed({ color: COLORS.BIRTHDAY });
-  const targetUser = interaction.options.getUser('target-user') || interaction.user;
+  const targetUser = interaction.options.getUser('uzytkownik') || interaction.user;
   const userId = targetUser.id;
   const guildId = interaction.guild?.id;
+  const botId = interaction.client.application!.id;
 
   if (!guildId) {
     await replyWithGuildOnlyError(interaction, errorEmbed);
@@ -50,14 +51,14 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const birthdayMessage = createBirthdayMessage(guildId, birthday, targetUser);
+    const birthdayMessage = createBirthdayMessage(botId, birthday, targetUser);
     await interaction.editReply({ embeds: [successEmbed.setDescription(birthdayMessage)] });
   } catch (error) {
     await handleError(interaction, errorEmbed, userId, error);
   }
 }
 
-function createBirthdayMessage(guildId: string, birthday: IBirthday, targetUser: User) {
+function createBirthdayMessage(botId: string, birthday: IBirthday, targetUser: User) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -97,7 +98,7 @@ function createBirthdayMessage(guildId: string, birthday: IBirthday, targetUser:
 
   const {
     emojis: { birthday: EMOJI },
-  } = getGuildConfig(guildId);
+  } = getBotConfig(botId);
 
   if (diffDays === 0) {
     return yearSpecified && age !== null
@@ -138,14 +139,14 @@ async function replyWithNoBirthdayInfo(
     embeds: [
       errorEmbed
         .setDescription(
-          `Nie znam **jeszcze** daty urodzin ${targetUser}.\n\nUżyj </remember-birthday:${REMEMBER_BIRTHDAY_COMMAND_ID}> lub </set-user-birthday:${SET_USER_BIRTHDAY_COMMAND_ID}>, aby ustawić datę urodzin.`
+          `Nie znam **jeszcze** daty urodzin ${targetUser}.\n\nUżyj </urodziny-zapisz:${REMEMBER_BIRTHDAY_COMMAND_ID}> lub </urodziny-ustaw:${SET_USER_BIRTHDAY_COMMAND_ID}>, aby ustawić datę urodzin.`
         )
         .addFields({
           name: 'Przykłady:',
           value:
-            `- </remember-birthday:${REMEMBER_BIRTHDAY_COMMAND_ID}> 15-04\n` +
-            `- </remember-birthday:${REMEMBER_BIRTHDAY_COMMAND_ID}> 13-09-2004\n` +
-            `- </set-user-birthday:${SET_USER_BIRTHDAY_COMMAND_ID}> 15-04-1994 \`@Dyzio\``,
+            `- </urodziny-zapisz:${REMEMBER_BIRTHDAY_COMMAND_ID}> 15-04\n` +
+            `- </urodziny-zapisz:${REMEMBER_BIRTHDAY_COMMAND_ID}> 13-09-2004\n` +
+            `- </urodziny-ustaw:${SET_USER_BIRTHDAY_COMMAND_ID}> 15-04-1994 \`@Dyzio\``,
         }),
     ],
   });

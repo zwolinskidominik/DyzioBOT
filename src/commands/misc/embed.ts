@@ -17,28 +17,28 @@ export const data = new SlashCommandBuilder()
   .setDMPermission(false)
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addStringOption((option) =>
-    option.setName('title').setDescription('Tytuł embeda').setRequired(true)
+    option.setName('tytul').setDescription('Tytuł embeda').setRequired(true)
   )
   .addStringOption((option) =>
-    option.setName('description').setDescription('Opis embeda').setRequired(true)
+    option.setName('opis').setDescription('Opis embeda').setRequired(true)
   )
   .addStringOption((option) =>
     option
-      .setName('color')
+      .setName('kolor')
       .setDescription('Kolor embeda w formacie HEX (#000000)')
       .setRequired(false)
   )
   .addStringOption((option) =>
-    option.setName('title2').setDescription('Tytuł drugiego pola').setRequired(false)
+    option.setName('tytul2').setDescription('Tytuł drugiego pola').setRequired(false)
   )
   .addStringOption((option) =>
-    option.setName('description2').setDescription('Opis drugiego pola').setRequired(false)
+    option.setName('opis2').setDescription('Opis drugiego pola').setRequired(false)
   )
   .addStringOption((option) =>
-    option.setName('title3').setDescription('Tytuł trzeciego pola').setRequired(false)
+    option.setName('tytul3').setDescription('Tytuł trzeciego pola').setRequired(false)
   )
   .addStringOption((option) =>
-    option.setName('description3').setDescription('Opis trzeciego pola').setRequired(false)
+    option.setName('opis3').setDescription('Opis trzeciego pola').setRequired(false)
   );
 
 export const options = {
@@ -76,12 +76,12 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 function getEmbedFields(interaction: ChatInputCommandInteraction): APIEmbedField[] {
   const fields: IEmbedField[] = [
     {
-      title: interaction.options.getString('title2'),
-      description: interaction.options.getString('description2'),
+      title: interaction.options.getString('tytul2'),
+      description: interaction.options.getString('opis2'),
     },
     {
-      title: interaction.options.getString('title3'),
-      description: interaction.options.getString('description3'),
+      title: interaction.options.getString('tytul3'),
+      description: interaction.options.getString('opis3'),
     },
   ];
 
@@ -100,9 +100,9 @@ function getEmbedFields(interaction: ChatInputCommandInteraction): APIEmbedField
 function buildEmbed(interaction: ChatInputCommandInteraction): EmbedBuilder | null {
   if (!interaction.guild) return null;
 
-  const title = interaction.options.getString('title');
-  const description = interaction.options.getString('description');
-  const color = interaction.options.getString('color') || COLORS.EMBED;
+  const title = interaction.options.getString('tytul');
+  const description = interaction.options.getString('opis');
+  const color = interaction.options.getString('kolor') || COLORS.EMBED;
 
   return createBaseEmbed({
     title: title || undefined,

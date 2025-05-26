@@ -1,5 +1,6 @@
 import { Guild, GuildMember, TextChannel } from 'discord.js';
 import { getGuildConfig } from '../../config/guild';
+import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -10,12 +11,11 @@ export default async function run(oldMember: GuildMember, newMember: GuildMember
   const oldStatus = oldMember.premiumSince;
   const newStatus = newMember.premiumSince;
 
-  const {
-    channels: { boostNotification },
-    emojis: {
-      boost: { thanks: thanksEmoji },
-    },
-  } = getGuildConfig(newMember.guild.id);
+  const guildCfg = getGuildConfig(newMember.guild.id);
+  const botCfg = getBotConfig(newMember.client.user.id);
+
+  const boostNotification = guildCfg.channels.boostNotification;
+  const thanksEmoji = botCfg.emojis.boost.thanks;
 
   if (!oldStatus && newStatus) {
     const boostChannel = newMember.guild.channels.cache.get(boostNotification);
@@ -34,19 +34,18 @@ export default async function run(oldMember: GuildMember, newMember: GuildMember
 }
 
 async function updateBoosterList(guild: Guild): Promise<void> {
-  const {
-    channels: { boosterList },
-    emojis: {
-      boost: { list: listEmoji },
-    },
-  } = getGuildConfig(guild.id);
+  const guildCfg = getGuildConfig(guild.id);
+  const botCfg = getBotConfig(guild.client.user.id);
+
+  const boosterListChannel = guildCfg.channels.boosterList;
+  const listEmoji = botCfg.emojis.boost.list;
 
   const boosters = guild.members.cache
     .filter((member) => member.premiumSince)
     .map((member) => `${listEmoji} <@!${member.user.id}>`)
     .join('\n');
 
-  const channel = guild.channels.cache.get(boosterList);
+  const channel = guild.channels.cache.get(boosterListChannel);
   if (!channel) {
     logger.error('Nie znaleziono kanału do aktualizacji listy boosterów!');
     return;

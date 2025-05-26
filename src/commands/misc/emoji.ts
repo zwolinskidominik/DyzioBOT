@@ -13,7 +13,7 @@ import {
 import { chunk } from 'lodash';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed } from '../../utils/embedHelpers';
-import { getGuildConfig } from '../../config/guild';
+import { getBotConfig } from '../../config/bot';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
@@ -62,7 +62,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     const {
       emojis: { next: NEXT, previous: PREVIOUS },
-    } = getGuildConfig(interaction.guild.id);
+    } = getBotConfig(interaction.client.application!.id);
 
     const navRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()

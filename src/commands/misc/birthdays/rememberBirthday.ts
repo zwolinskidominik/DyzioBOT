@@ -8,7 +8,7 @@ import { BirthdayModel, BirthdayDocument } from '../../../models/Birthday';
 import type { IBirthday } from '../../../interfaces/Models';
 import type { IParsedDateResult } from '../../../interfaces/Birthday';
 import type { ICommandOptions } from '../../../interfaces/Command';
-import { getGuildConfig } from '../../../config/guild';
+import { getBotConfig } from '../../../config/bot';
 import { COLORS } from '../../../config/constants/colors';
 import { createBaseEmbed } from '../../../utils/embedHelpers';
 import logger from '../../../utils/logger';
@@ -17,12 +17,12 @@ const DATE_PATTERN_WITH_YEAR = /^\d{2}-\d{2}-\d{4}$/;
 const DATE_PATTERN_WITHOUT_YEAR = /^\d{2}-\d{2}$/;
 
 export const data = new SlashCommandBuilder()
-  .setName('remember-birthday')
+  .setName('urodziny-zapisz')
   .setDescription('Ustawia datę urodzin użytkownika.')
   .setDMPermission(false)
   .addStringOption((option) =>
     option
-      .setName('date')
+      .setName('data')
       .setDescription('Data urodzin w formacie DD-MM-YYYY lub DD-MM.')
       .setRequired(true)
   );
@@ -33,9 +33,10 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const errorEmbed = createBaseEmbed({ isError: true });
   const successEmbed = createBaseEmbed({ color: COLORS.BIRTHDAY });
 
-  const dateString = interaction.options.getString('date', true);
+  const dateString = interaction.options.getString('data', true);
   const userId = interaction.user.id;
   const guildId = interaction.guild?.id;
+  const botId = interaction.client.application!.id;
 
   if (!guildId) {
     await replyWithError(interaction, errorEmbed, 'Ta komenda działa tylko na serwerze.');
@@ -54,7 +55,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     await saveBirthdayToDatabase(userId, guildId, parsedDate.date, parsedDate.yearSpecified);
 
     const birthdayMessage = createBirthdayMessage(
-      guildId,
+      botId,
       userId,
       parsedDate.date,
       parsedDate.yearSpecified
@@ -114,7 +115,7 @@ async function saveBirthdayToDatabase(
 }
 
 function createBirthdayMessage(
-  guildId: string,
+  botId: string,
   userId: string,
   date: Date,
   yearSpecified: boolean
@@ -151,7 +152,7 @@ function createBirthdayMessage(
 
   const {
     emojis: { birthday: EMOJI },
-  } = getGuildConfig(guildId);
+  } = getBotConfig(botId);
 
   return diffDays === 0
     ? `Zanotowano, **${ageMessage}** urodziny <@!${userId}> są dziś! Wszystkiego najlepszego! ${EMOJI}`

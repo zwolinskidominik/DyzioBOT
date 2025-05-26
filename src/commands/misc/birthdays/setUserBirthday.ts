@@ -8,7 +8,7 @@ import {
 import { BirthdayModel, BirthdayDocument } from '../../../models/Birthday';
 import type { IParsedDateResult } from '../../../interfaces/Birthday';
 import type { ICommandOptions } from '../../../interfaces/Command';
-import { getGuildConfig } from '../../../config/guild';
+import { getBotConfig } from '../../../config/bot';
 import { COLORS } from '../../../config/constants/colors';
 import { createBaseEmbed } from '../../../utils/embedHelpers';
 import logger from '../../../utils/logger';
@@ -17,19 +17,19 @@ const DATE_PATTERN_WITH_YEAR = /^\d{2}-\d{2}-\d{4}$/;
 const DATE_PATTERN_WITHOUT_YEAR = /^\d{2}-\d{2}$/;
 
 export const data = new SlashCommandBuilder()
-  .setName('set-user-birthday')
+  .setName('urodziny-ustaw')
   .setDescription('Ustawia datę urodzin innego użytkownika.')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('user')
+      .setName('uzytkownik')
       .setDescription('Użytkownik, którego datę urodzin chcesz ustawić.')
       .setRequired(true)
   )
   .addStringOption((option) =>
     option
-      .setName('date')
+      .setName('data')
       .setDescription('Data urodzin w formacie DD-MM-YYYY lub DD-MM.')
       .setRequired(true)
   );
@@ -43,9 +43,10 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const errorEmbed = createBaseEmbed({ isError: true });
   const successEmbed = createBaseEmbed({ color: COLORS.BIRTHDAY });
 
-  const dateString = interaction.options.getString('date', true);
-  const userOption = interaction.options.getUser('user', true);
+  const dateString = interaction.options.getString('data', true);
+  const userOption = interaction.options.getUser('uzytkownik', true);
   const guildId = interaction.guild?.id;
+  const botId = interaction.client.application!.id;
 
   if (!dateString || !userOption) {
     await replyWithError(
@@ -66,7 +67,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     await replyWithError(
       interaction,
       errorEmbed,
-      'Aby ustawić urodziny dla siebie użyj komendy /remember-birthday.'
+      'Aby ustawić urodziny dla siebie użyj komendy /urodziny-zapisz.'
     );
     return;
   }
@@ -82,7 +83,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     await saveBirthdayToDatabase(userId, guildId, date, yearSpecified);
 
-    const birthdayMessage = createBirthdayMessage(guildId, userId, date, yearSpecified);
+    const birthdayMessage = createBirthdayMessage(botId, userId, date, yearSpecified);
 
     await interaction.editReply({
       embeds: [successEmbed.setDescription(birthdayMessage)],
@@ -142,7 +143,7 @@ async function saveBirthdayToDatabase(
 }
 
 function createBirthdayMessage(
-  guildId: string,
+  botId: string,
   userId: string,
   date: Date,
   yearSpecified: boolean
@@ -186,7 +187,7 @@ function createBirthdayMessage(
 
   const {
     emojis: { birthday: EMOJI },
-  } = getGuildConfig(guildId);
+  } = getBotConfig(botId);
 
   if (diffDays === 0) {
     return `Zanotowano, **${ageMessage}** urodziny <@!${userId}> są dziś! Wszystkiego najlepszego! ${EMOJI}`;

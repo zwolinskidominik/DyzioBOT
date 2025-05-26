@@ -6,7 +6,7 @@ import { pickWinners } from '../../utils/giveawayHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
-export default function run(client: Client): void {
+export default async function run(client: Client): Promise<void> {
   schedule(
     '* * * * *',
     async () => {

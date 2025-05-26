@@ -32,13 +32,13 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addSubcommand((sub) =>
-    sub.setName('show').setDescription('Wyświetla aktualnie skonfigurowane automatyczne role')
+    sub.setName('pokaz').setDescription('Wyświetla aktualnie skonfigurowane automatyczne role')
   )
   .addSubcommand((sub) =>
-    sub.setName('setup').setDescription('Konfiguruje automatyczne role dla nowych członków')
+    sub.setName('ustaw').setDescription('Konfiguruje automatyczne role dla nowych członków')
   )
   .addSubcommand((sub) =>
-    sub.setName('clear').setDescription('Usuwa wszystkie skonfigurowane automatyczne role')
+    sub.setName('usun').setDescription('Usuwa wszystkie skonfigurowane automatyczne role')
   );
 
 export const options = {
@@ -56,13 +56,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const subcommand = interaction.options.getSubcommand();
     const guild = interaction.guild;
     switch (subcommand) {
-      case 'setup':
+      case 'ustaw':
         await handleSetup(interaction, guild);
         break;
-      case 'clear':
+      case 'usun':
         await handleClear(interaction, guild);
         break;
-      case 'show':
+      case 'pokaz':
         await handleShow(interaction, guild);
         break;
     }

@@ -8,9 +8,8 @@ export function checkRole(
   if (!targetMember || !requestMember || !botMember) {
     throw new Error('Wszystkie trzy parametry muszą być dostarczone.');
   }
-  if (targetMember.id === targetMember.guild.ownerId) {
-    return false;
-  }
+  if (targetMember.id === targetMember.guild.ownerId) return false;
+
   const targetPos = targetMember.roles.highest.position;
   const requestPos = requestMember.roles.highest.position;
   const botPos = botMember.roles.highest.position;
