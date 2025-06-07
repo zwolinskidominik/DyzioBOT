@@ -9,7 +9,7 @@ import { createBaseEmbed } from '../../../utils/embedHelpers';
 import logger from '../../../utils/logger';
 
 export const data = new SlashCommandBuilder()
-  .setName('urodziny-nastepne')
+  .setName('birthdays-next')
   .setDescription('Wyświetla następne 10 urodzin użytkowników.')
   .setDMPermission(false);
 
@@ -41,7 +41,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       await interaction.editReply({
         embeds: [
           successEmbed.setDescription(
-            'Brak zapisanych urodzin na tym serwerze. Użyj `/urodziny-zapisz` aby dodać swoje!'
+            'Brak zapisanych urodzin na tym serwerze. Użyj `/birthday-remember` aby dodać swoje!'
           ),
         ],
       });

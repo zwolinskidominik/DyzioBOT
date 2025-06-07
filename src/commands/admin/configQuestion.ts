@@ -30,20 +30,18 @@ const CUSTOM_ID = {
 const COLLECTION_TIMEOUT = 120_000;
 
 export const data = new SlashCommandBuilder()
-  .setName('config-pytania-dnia')
+  .setName('config-questions')
   .setDescription('Skonfiguruj kanał pytań dnia.')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
-    subcommand.setName('ustaw').setDescription('Konfiguruje kanał pytań dnia.')
+    subcommand.setName('set').setDescription('Konfiguruje kanał pytań dnia.')
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName('usun').setDescription('Usuwa kanał pytań dnia.')
+    subcommand.setName('remove').setDescription('Usuwa kanał pytań dnia.')
   )
   .addSubcommand((subcommand) =>
-    subcommand
-      .setName('pokaz')
-      .setDescription('Wyświetla aktualnie skonfigurowany kanał pytań dnia')
+    subcommand.setName('show').setDescription('Wyświetla aktualnie skonfigurowany kanał pytań dnia')
   );
 
 export const options = {
@@ -64,13 +62,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const subcommand = interaction.options.getSubcommand();
 
     switch (subcommand) {
-      case 'ustaw':
+      case 'set':
         await handleSetupSubcommand(interaction, guild);
         break;
-      case 'usun':
+      case 'remove':
         await handleClearSubcommand(interaction, guild);
         break;
-      case 'pokaz':
+      case 'show':
         await handleShowSubcommand(interaction, guild);
         break;
     }
@@ -336,7 +334,7 @@ async function handleClearSubcommand(
   if (!existingConfig) {
     await replyWithError(
       interaction,
-      'Brak skonfigurowanego kanału pytań dnia.\nAby skonfigurować, uruchom `/config-pytanie-dnia ustaw`.'
+      'Brak skonfigurowanego kanału pytań dnia.\nAby skonfigurować, uruchom `/config-pytanie-dnia set`.'
     );
     return;
   }
@@ -345,7 +343,7 @@ async function handleClearSubcommand(
 
   await replyWithSuccess(
     interaction,
-    'Usunięto kanał pytań dnia.\nAby skonfigurować ponownie, uruchom `/config-pytanie-dnia ustaw`.'
+    'Usunięto kanał pytań dnia.\nAby skonfigurować ponownie, uruchom `/config-pytanie-dnia set`.'
   );
 }
 
@@ -362,7 +360,7 @@ async function handleShowSubcommand(
   if (!existingConfig || !existingConfig.questionChannelId) {
     await replyWithError(
       interaction,
-      'Brak skonfigurowanego kanału pytań dnia.\nAby skonfigurować, uruchom `/config-pytanie-dnia ustaw`.'
+      'Brak skonfigurowanego kanału pytań dnia.\nAby skonfigurować, uruchom `/config-pytanie-dnia set`.'
     );
     return;
   }

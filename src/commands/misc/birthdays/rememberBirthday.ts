@@ -17,7 +17,7 @@ const DATE_PATTERN_WITH_YEAR = /^\d{2}-\d{2}-\d{4}$/;
 const DATE_PATTERN_WITHOUT_YEAR = /^\d{2}-\d{2}$/;
 
 export const data = new SlashCommandBuilder()
-  .setName('urodziny-zapisz')
+  .setName('birthday-remember')
   .setDescription('Ustawia datę urodzin użytkownika.')
   .setDMPermission(false)
   .addStringOption((option) =>

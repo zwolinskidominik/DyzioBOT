@@ -11,7 +11,7 @@ import { createBaseEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
-  .setName('warn-usun')
+  .setName('warn-remove')
   .setDescription('Usuwa ostrzeżenie użytkownika o podanym identyfikatorze.')
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .setDMPermission(false)

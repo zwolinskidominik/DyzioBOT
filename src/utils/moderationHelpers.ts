@@ -27,18 +27,18 @@ export function createModSuccessEmbed(
 
   switch (action) {
     case 'ban':
-      description = `### Zbanowano użytkownika ${target}`;
+      description = `### Zbanowano użytkownika <@!${target.id}>`;
       break;
     case 'kick':
-      description = `### Wyrzucono użytkownika ${target}`;
+      description = `### Wyrzucono użytkownika <@!${target.id}>`;
       break;
     case 'mute':
       description = duration
-        ? `**${target} został wyciszony na okres ${duration}**`
-        : `**${target} został wyciszony**`;
+        ? `**<@!${target.id}> został wyciszony na okres ${duration}**`
+        : `**<@!${target.id}> został wyciszony**`;
       break;
     case 'unban':
-      description = `### Odbanowano użytkownika ${target}`;
+      description = `### Odbanowano użytkownika <@!${target.id}>`;
       break;
   }
 

@@ -17,7 +17,7 @@ const DATE_PATTERN_WITH_YEAR = /^\d{2}-\d{2}-\d{4}$/;
 const DATE_PATTERN_WITHOUT_YEAR = /^\d{2}-\d{2}$/;
 
 export const data = new SlashCommandBuilder()
-  .setName('urodziny-ustaw')
+  .setName('birthday-set-user')
   .setDescription('Ustawia datę urodzin innego użytkownika.')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
@@ -67,7 +67,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     await replyWithError(
       interaction,
       errorEmbed,
-      'Aby ustawić urodziny dla siebie użyj komendy /urodziny-zapisz.'
+      'Aby ustawić urodziny dla siebie użyj komendy /birthday-remember.'
     );
     return;
   }

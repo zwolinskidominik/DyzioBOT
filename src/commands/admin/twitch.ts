@@ -20,7 +20,7 @@ export const data = new SlashCommandBuilder()
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('dodaj')
+      .setName('add')
       .setDescription('Dodaje streamerów Twitcha powiązanych z użytkownikiem Discord.')
       .addStringOption((option) =>
         option
@@ -36,13 +36,11 @@ export const data = new SlashCommandBuilder()
       )
   )
   .addSubcommand((subcommand) =>
-    subcommand
-      .setName('lista')
-      .setDescription('Wyświetla listę streamerów Twitcha na tym serwerze.')
+    subcommand.setName('list').setDescription('Wyświetla listę streamerów Twitcha na tym serwerze.')
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('usun')
+      .setName('remove')
       .setDescription('Usuwa streamera Twitcha z listy.')
       .addStringOption((option) =>
         option
@@ -70,13 +68,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   }
 
   switch (subcommand) {
-    case 'dodaj':
+    case 'add':
       await handleAddStreamer(interaction, guild);
       break;
-    case 'lista':
+    case 'list':
       await handleListStreamers(interaction, guild);
       break;
-    case 'usun':
+    case 'remove':
       await handleRemoveStreamer(interaction, guild);
       break;
   }

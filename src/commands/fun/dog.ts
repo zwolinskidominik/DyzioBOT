@@ -17,7 +17,7 @@ const DOG_CONFIG: IAnimalCommandConfig = {
 };
 
 export const data = new SlashCommandBuilder()
-  .setName('piesek')
+  .setName('dog')
   .setDescription('Wysyła losowe zdjęcie psa');
 
 export const options = {};

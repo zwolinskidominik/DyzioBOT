@@ -23,7 +23,7 @@ const STAT_TYPES: Record<StatType, string> = {
 };
 
 export const data = new SlashCommandBuilder()
-  .setName('config-statystyki')
+  .setName('config-stats')
   .setDescription(
     'Tworzy kanał statystyk serwera (ostatnia osoba, liczba użytkowników, botów, banów)'
   )

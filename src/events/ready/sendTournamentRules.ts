@@ -30,7 +30,7 @@ export default async function run(client: Client): Promise<void> {
 
         const rulesMessage =
           await textChannel.send(`## Zasady co poniedziałkowych mix-ów 5vs5vs15vs20 w CS2 na GameZone
-|| <@881295994963243028> ||
+|| <@&881295994963243028> ||
 **Do kogo można się zgłaszać z dodatkowymi pytaniami o turniej?** 
 **-->** <@&1292916653377720400>: <@518738731105124352> <@416669555075579925> <@813135633248682064>
 

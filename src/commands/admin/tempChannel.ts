@@ -19,7 +19,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('dodaj')
+      .setName('add')
       .setDescription('Dodaje kanał do nasłuchiwania.')
       .addChannelOption((option) =>
         option
@@ -30,11 +30,11 @@ export const data = new SlashCommandBuilder()
       )
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName('lista').setDescription('Wyświetla listę kanałów, które są monitorowane.')
+    subcommand.setName('list').setDescription('Wyświetla listę kanałów, które są monitorowane.')
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('usun')
+      .setName('remove')
       .setDescription('Usuwa kanał głosowy z monitorowanych.')
       .addChannelOption((option) =>
         option
@@ -63,15 +63,15 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const subcommand = interaction.options.getSubcommand();
 
   switch (subcommand) {
-    case 'dodaj':
+    case 'add':
       await handleAddSubcommand(interaction, guildId);
       break;
 
-    case 'lista':
+    case 'list':
       await handleListSubcommand(interaction, guildId);
       break;
 
-    case 'usun':
+    case 'remove':
       await handleRemoveSubcommand(interaction, guildId);
       break;
 
@@ -87,7 +87,7 @@ async function handleAddSubcommand(
   interaction: ChatInputCommandInteraction,
   guildId: string
 ): Promise<void> {
-  const channel = interaction.options.getChannel('channel') as VoiceChannel;
+  const channel = interaction.options.getChannel('kanal') as VoiceChannel;
 
   try {
     const existingConfig = await TempChannelConfigurationModel.findOne({
@@ -171,7 +171,7 @@ async function handleRemoveSubcommand(
   interaction: ChatInputCommandInteraction,
   guildId: string
 ): Promise<void> {
-  const channel = interaction.options.getChannel('channel') as VoiceChannel;
+  const channel = interaction.options.getChannel('kanal') as VoiceChannel;
 
   try {
     const existingConfig = await TempChannelConfigurationModel.findOneAndDelete({

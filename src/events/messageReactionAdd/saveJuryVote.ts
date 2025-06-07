@@ -22,7 +22,15 @@ export default async function run(reaction: MessageReaction, user: User): Promis
     if (score === undefined) return;
 
     await removePreviousVote(reaction.message.id, user.id);
-    await addNewVote(reaction.message.id, user.id, score);
+
+    let juryName = '';
+    try {
+      const member = await reaction.message.guild!.members.fetch(user.id);
+      juryName = member.user.tag;
+    } catch (e) {
+      juryName = user.id;
+    }
+    await addNewVote(reaction.message.id, user.id, score, juryName);
   } catch (error: unknown) {
     logger.error(`Błąd podczas przetwarzania reakcji clip-vote: ${error}`);
   }
@@ -67,10 +75,16 @@ async function hasJuryRole(reaction: MessageReaction, userId: string): Promise<b
 
 async function removePreviousVote(messageId: string, userId: string): Promise<void> {
   await ClipModel.updateOne({ messageId }, { $pull: { votes: { juryId: userId } } });
-  logger.info(`Poprzedni głos usunięty, jeśli istniał (userId=${userId}).`);
 }
 
-async function addNewVote(messageId: string, userId: string, score: number): Promise<void> {
-  await ClipModel.updateOne({ messageId }, { $push: { votes: { juryId: userId, score } } });
-  logger.info(`Dodano głos: userId=${userId}, score=${score}`);
+async function addNewVote(
+  messageId: string,
+  userId: string,
+  score: number,
+  juryName: string
+): Promise<void> {
+  await ClipModel.updateOne(
+    { messageId },
+    { $push: { votes: { juryId: userId, score, juryName } } }
+  );
 }

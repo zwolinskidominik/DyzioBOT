@@ -17,7 +17,7 @@ const REMEMBER_BIRTHDAY_COMMAND_ID = '1244599618617081864';
 const SET_USER_BIRTHDAY_COMMAND_ID = '1244599618747109506';
 
 export const data = new SlashCommandBuilder()
-  .setName('urodziny')
+  .setName('birthday')
   .setDescription('Wyświetla Twoją datę urodzin lub datę urodzin innego użytkownika.')
   .setDMPermission(false)
   .addUserOption((option) =>
@@ -139,14 +139,14 @@ async function replyWithNoBirthdayInfo(
     embeds: [
       errorEmbed
         .setDescription(
-          `Nie znam **jeszcze** daty urodzin ${targetUser}.\n\nUżyj </urodziny-zapisz:${REMEMBER_BIRTHDAY_COMMAND_ID}> lub </urodziny-ustaw:${SET_USER_BIRTHDAY_COMMAND_ID}>, aby ustawić datę urodzin.`
+          `Nie znam **jeszcze** daty urodzin ${targetUser}.\n\nUżyj </birthday-remember:${REMEMBER_BIRTHDAY_COMMAND_ID}> lub </birthday-set-user:${SET_USER_BIRTHDAY_COMMAND_ID}>, aby ustawić datę urodzin.`
         )
         .addFields({
           name: 'Przykłady:',
           value:
-            `- </urodziny-zapisz:${REMEMBER_BIRTHDAY_COMMAND_ID}> 15-04\n` +
-            `- </urodziny-zapisz:${REMEMBER_BIRTHDAY_COMMAND_ID}> 13-09-2004\n` +
-            `- </urodziny-ustaw:${SET_USER_BIRTHDAY_COMMAND_ID}> 15-04-1994 \`@Dyzio\``,
+            `- </birthday-remember:${REMEMBER_BIRTHDAY_COMMAND_ID}> 15-04\n` +
+            `- </birthday-remember:${REMEMBER_BIRTHDAY_COMMAND_ID}> 13-09-2004\n` +
+            `- </birthday-set-user:${SET_USER_BIRTHDAY_COMMAND_ID}> 15-04-1994 \`@Dyzio\``,
         }),
     ],
   });

@@ -13,6 +13,9 @@ class Vote {
 
   @prop({ type: () => Number })
   public score?: number;
+
+  @prop({ type: () => String })
+  public juryName?: string;
 }
 
 @modelOptions({

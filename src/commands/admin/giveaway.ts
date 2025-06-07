@@ -26,7 +26,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('stworz')
+      .setName('create')
       .setDescription('Tworzy nowy giveaway')
       .addStringOption((option) =>
         option.setName('nagroda').setDescription('Nagroda giveawayu').setRequired(true)
@@ -61,7 +61,7 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('edytuj')
+      .setName('edit')
       .setDescription('Edytuje istniejący giveaway')
       .addStringOption((option) =>
         option.setName('id').setDescription('ID giveawayu do edycji').setRequired(true)
@@ -93,7 +93,7 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('usun')
+      .setName('remove')
       .setDescription('Usuwa istniejący giveaway')
       .addStringOption((option) =>
         option.setName('id').setDescription('ID giveawayu do usunięcia').setRequired(true)
@@ -101,18 +101,18 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('zakoncz')
+      .setName('end')
       .setDescription('Kończy działający giveaway i losuje zwycięzców')
       .addStringOption((option) =>
         option.setName('id').setDescription('ID giveawayu do zakończenia').setRequired(true)
       )
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName('lista').setDescription('Wyświetla listę aktywnych giveawayów')
+    subcommand.setName('list').setDescription('Wyświetla listę aktywnych giveawayów')
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('losuj-ponownie')
+      .setName('reroll')
       .setDescription('Losuje nowych zwycięzców dla zakończonego giveawayu')
       .addStringOption((option) =>
         option.setName('id').setDescription('ID giveawayu do rerollu').setRequired(true)
@@ -128,22 +128,22 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   try {
     switch (subcommand) {
-      case 'stworz':
+      case 'create':
         await handleCreateGiveaway(interaction);
         break;
-      case 'edytuj':
+      case 'edit':
         await handleEditGiveaway(interaction);
         break;
-      case 'usun':
+      case 'remove':
         await handleDeleteGiveaway(interaction);
         break;
-      case 'zakoncz':
+      case 'end':
         await handleEndGiveaway(interaction);
         break;
-      case 'lista':
+      case 'list':
         await handleListGiveaways(interaction);
         break;
-      case 'losuj-ponownie':
+      case 'reroll':
         await handleRerollGiveaway(interaction);
         break;
       default:

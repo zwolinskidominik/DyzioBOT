@@ -35,11 +35,11 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addSubcommand((sub) =>
-    sub.setName('ustaw').setDescription('Konfiguruje kanał powitań i pożegnań.')
+    sub.setName('set').setDescription('Konfiguruje kanał powitań i pożegnań.')
   )
-  .addSubcommand((sub) => sub.setName('usun').setDescription('Usuwa kanał powitań i pożegnań.'))
+  .addSubcommand((sub) => sub.setName('remove').setDescription('Usuwa kanał powitań i pożegnań.'))
   .addSubcommand((sub) =>
-    sub.setName('pokaz').setDescription('Wyświetla aktualnie skonfigurowany kanał powitań.')
+    sub.setName('show').setDescription('Wyświetla aktualnie skonfigurowany kanał powitań.')
   );
 
 export const options = {
@@ -60,13 +60,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const subcommand = interaction.options.getSubcommand();
 
     switch (subcommand) {
-      case 'ustaw':
+      case 'set':
         await handleSetup(interaction, guild);
         break;
-      case 'usun':
+      case 'remove':
         await handleClear(interaction, guild);
         break;
-      case 'pokaz':
+      case 'show':
         await handleShow(interaction, guild);
         break;
     }
@@ -198,8 +198,7 @@ async function handleClear(interaction: ChatInputCommandInteraction, guild: Guil
   if (!cfg) {
     await replyWithError(
       interaction,
-      'Brak skonfigurowanego kanału powitań.\n' +
-        'Aby skonfigurować, uruchom `/config-lobby ustaw`.'
+      'Brak skonfigurowanego kanału powitań.\n' + 'Aby skonfigurować, uruchom `/config-lobby set`.'
     );
     return;
   }
@@ -207,8 +206,7 @@ async function handleClear(interaction: ChatInputCommandInteraction, guild: Guil
   await GreetingsConfigurationModel.deleteOne({ guildId: guild.id });
   await replyWithSuccess(
     interaction,
-    'Kanał powitań został wyłączony.\n' +
-      'Aby skonfigurować ponownie, uruchom `/config-lobby ustaw`.'
+    'Kanał powitań został wyłączony.\n' + 'Aby skonfigurować ponownie, uruchom `/config-lobby set`.'
   );
 }
 
@@ -220,8 +218,7 @@ async function handleShow(interaction: ChatInputCommandInteraction, guild: Guild
   if (!cfg?.greetingsChannelId) {
     await replyWithError(
       interaction,
-      'Brak skonfigurowanego kanału powitań.\n' +
-        'Aby skonfigurować, uruchom `/config-lobby ustaw`.'
+      'Brak skonfigurowanego kanału powitań.\n' + 'Aby skonfigurować, uruchom `/config-lobby set`.'
     );
     return;
   }

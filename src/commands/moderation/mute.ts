@@ -16,7 +16,7 @@ import logger from '../../utils/logger';
 export const data = new SlashCommandBuilder()
   .setName('mute')
   .setDescription('Wysyła użytkownika na wakacje od serwera.')
-  .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+  .setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
     option
@@ -35,8 +35,8 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  userPermissions: PermissionFlagsBits.ModerateMembers,
-  botPermissions: PermissionFlagsBits.ModerateMembers,
+  userPermissions: PermissionFlagsBits.MuteMembers,
+  botPermissions: PermissionFlagsBits.MuteMembers,
 };
 
 function parseDuration(durationStr: string): number {

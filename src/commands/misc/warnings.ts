@@ -14,7 +14,7 @@ import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
-  .setName('ostrzezenia')
+  .setName('warnings')
   .setDescription('Sprawdza liczbę ostrzeżeń użytkownika.')
   .setDMPermission(false)
   .addUserOption((option) =>

@@ -2,6 +2,7 @@ import { Client, Partials, GatewayIntentBits } from 'discord.js';
 import { CommandHandler } from './handlers/CommandHandler';
 import { EventHandler } from './handlers/EventHandler';
 //import flushXp from './events/ready/xpFlush';
+//import xpCache from './cache/xpCache';
 import logger from './utils/logger';
 import { env } from './config';
 import mongoose from 'mongoose';
@@ -26,7 +27,7 @@ new CommandHandler(client, {
   devGuildIds: DEV_GUILD_IDS,
   devUserIds: DEV_USER_IDS,
   devRoleIds: DEV_ROLE_IDS,
-  bulkRegister: false,
+  bulkRegister: true,
 });
 
 new EventHandler(client);
@@ -46,6 +47,7 @@ mongoose
       .login(TOKEN)
       .then(async () => {
         if (!client.user) return;
+        //       await xpCache.setClient(client);
         logger.info(`${client.user.tag} jest online.`);
       })
       .catch((err) => logger.error(`❌ Nie udało się zalogować: ${err}`));

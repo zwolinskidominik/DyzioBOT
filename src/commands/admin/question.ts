@@ -20,16 +20,16 @@ import logger from '../../utils/logger';
 import { chunk } from 'lodash';
 
 export const data = new SlashCommandBuilder()
-  .setName('pytanie-dnia')
+  .setName('question')
   .setDescription('Zarządzaj pytaniami dnia')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addSubcommand((subcommand) =>
-    subcommand.setName('lista').setDescription('Wyświetl listę pytań w bazie danych')
+    subcommand.setName('list').setDescription('Wyświetl listę pytań w bazie danych')
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('dodaj')
+      .setName('add')
       .setDescription('Dodaj nowe pytanie')
       .addStringOption((option) =>
         option.setName('tresc').setDescription('Treść pytania').setRequired(true).setMaxLength(1000)
@@ -43,7 +43,7 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('usun')
+      .setName('remove')
       .setDescription('Usuń pytanie o danym numerze')
       .addIntegerOption((option) =>
         option.setName('numer').setDescription('Numer pytania do usunięcia').setRequired(true)
@@ -59,13 +59,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const subcommand = interaction.options.getSubcommand();
 
   switch (subcommand) {
-    case 'lista':
+    case 'list':
       await handleListSubcommand(interaction);
       break;
-    case 'dodaj':
+    case 'add':
       await handleAddSubcommand(interaction);
       break;
-    case 'usun':
+    case 'remove':
       await handleRemoveSubcommand(interaction);
       break;
   }
@@ -234,7 +234,7 @@ async function handleAddSubcommand(interaction: ChatInputCommandInteraction): Pr
 }
 
 async function handleRemoveSubcommand(interaction: ChatInputCommandInteraction): Promise<void> {
-  const questionNumber = interaction.options.getInteger('number', true);
+  const questionNumber = interaction.options.getInteger('numer', true);
   const totalQuestions = await QuestionModel.countDocuments();
 
   if (questionNumber < 1 || questionNumber > totalQuestions) {
