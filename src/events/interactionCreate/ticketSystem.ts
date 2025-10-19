@@ -132,7 +132,16 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
   }
 
   const categoryChannel = interaction.guild?.channels.cache.get(config.categoryId);
-  if (!categoryChannel || !(categoryChannel instanceof CategoryChannel)) {
+  // Zamiast instanceof CategoryChannel sprawdzamy cechy obiektu (typ/children)
+  const isCategory =
+    !!categoryChannel &&
+    (
+      (categoryChannel as any).type === ChannelType.GuildCategory ||
+      !!(categoryChannel as any).children ||
+      !!(categoryChannel as any).id
+    );
+
+  if (!isCategory) {
     await interaction.editReply({
       content: 'Nie znaleziono kategorii, którą skonfigurowałeś. Skontaktuj się z administracją.',
     });
@@ -151,20 +160,33 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
   const channelKey = channelNames[selectedValue];
   const channelName = `${channelKey}-${interaction.user.username.toLowerCase()}`;
 
+  // 1) Utwórz kanał (błąd -> komunikat o błędzie)
+  let ticketChannel: TextChannel | null = null;
   try {
-    const ticketChannel = await createTicketChannel(interaction, channelName, categoryChannel);
-
-    await sendTicketMessages(interaction, ticketChannel, selectedValue, selectedType);
-
-    await interaction.editReply({
-      content: `Stworzono zgłoszenie: 🎫 ${ticketChannel}`,
-    });
+    ticketChannel = await createTicketChannel(
+      interaction,
+      channelName,
+      categoryChannel as any
+    );
   } catch (error) {
     logger.error(`Błąd podczas tworzenia ticketu: ${error}`);
     await interaction.editReply({
       content: 'Wystąpił błąd podczas tworzenia zgłoszenia. Spróbuj ponownie później.',
     });
+    return;
   }
+
+  // 2) Spróbuj wysłać wiadomości (błąd -> log warn, ale nie przerywaj sukcesu)
+  try {
+    await sendTicketMessages(interaction, ticketChannel, selectedValue, selectedType);
+  } catch (error) {
+    logger.warn(`Nie udało się wysłać wiadomości powitalnych dla ticketu: ${error}`);
+  }
+
+  // 3) Zawsze zakończ sukcesem, jeśli kanał został utworzony
+  await interaction.editReply({
+    content: `Stworzono zgłoszenie: 🎫 ${ticketChannel}`,
+  });
 }
 
 function createTicketButtons(): ActionRowBuilder<ButtonBuilder> {
@@ -217,7 +239,8 @@ async function createTicketChannel(
   return await interaction.guild!.channels.create({
     name: channelName,
     type: ChannelType.GuildText,
-    parent: categoryChannel,
+    // Preferuj id kategorii, jeśli dostępne – większa kompatybilność
+    parent: (categoryChannel as any)?.id ?? (categoryChannel as unknown as string),
     permissionOverwrites: [
       {
         id: interaction.guild!.id,

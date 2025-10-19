@@ -1,4 +1,4 @@
-import { Guild, GuildMember, TextChannel } from 'discord.js';
+import type { Guild, GuildMember, TextChannel } from 'discord.js';
 import { getGuildConfig } from '../../config/guild';
 import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
@@ -6,6 +6,12 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 
 const BANNER_PATH = path.join(__dirname, '../../../assets/boosterBanner.png');
+
+// Test seam: allow overriding fs.access for stable tests
+let fsAccess: typeof fs.access = fs.access.bind(fs);
+export const __setFsAccess = (fn: typeof fs.access) => {
+  fsAccess = fn;
+};
 
 export default async function run(oldMember: GuildMember, newMember: GuildMember): Promise<void> {
   const oldStatus = oldMember.premiumSince;
@@ -54,7 +60,7 @@ async function updateBoosterList(guild: Guild): Promise<void> {
   const textChannel = channel as TextChannel;
 
   try {
-    await fs.access(BANNER_PATH);
+  await fsAccess(BANNER_PATH);
 
     const messages = await textChannel.messages.fetch({ limit: 10 });
     const botMessages = messages.filter((msg) => msg.author.id === guild.client.user?.id);

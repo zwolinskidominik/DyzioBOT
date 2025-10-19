@@ -3,43 +3,25 @@ import { IBaseEmbedOptions } from '../interfaces/Embed';
 import { getBotConfig } from '../config/bot';
 import { COLORS } from '../config/constants/colors';
 
-export function createBaseEmbed(options: IBaseEmbedOptions = {}): EmbedBuilder {
-  const {
-    isError = false,
-    color = '',
-    title = '',
-    description = '',
-    footerText = '',
-    footerIcon = '',
-    image = '',
-    thumbnail = '',
-    authorName = '',
-    authorIcon = '',
-    authorUrl = '',
-    url = '',
-    timestamp = false,
-  } = options;
-
-  const finalColor = color || (isError ? COLORS.ERROR : COLORS.DEFAULT);
-  const embed = new EmbedBuilder().setColor(finalColor as ColorResolvable);
-  if (timestamp) embed.setTimestamp();
-
-  if (title) embed.setTitle(title);
-  if (description) embed.setDescription(description);
-  if (footerText) {
-    embed.setFooter({ text: footerText, iconURL: footerIcon || undefined });
-  }
-  if (image) embed.setImage(image);
-  if (thumbnail) embed.setThumbnail(thumbnail);
-  if (authorName) {
+export function createBaseEmbed(opts: IBaseEmbedOptions = {}): EmbedBuilder {
+  const finalColor = (opts.color ||
+    (opts.isError ? COLORS.ERROR : COLORS.DEFAULT)) as ColorResolvable;
+  const embed = new EmbedBuilder().setColor(finalColor);
+  if (opts.timestamp) embed.setTimestamp();
+  if (opts.title) embed.setTitle(opts.title);
+  if (opts.description) embed.setDescription(opts.description);
+  if (opts.footerText)
+    embed.setFooter({ text: opts.footerText, iconURL: opts.footerIcon || undefined });
+  if (opts.image) embed.setImage(opts.image);
+  if (opts.thumbnail) embed.setThumbnail(opts.thumbnail);
+  if (opts.authorName) {
     embed.setAuthor({
-      name: authorName,
-      iconURL: authorIcon || undefined,
-      url: authorUrl || undefined,
+      name: opts.authorName,
+      iconURL: opts.authorIcon || undefined,
+      url: opts.authorUrl || undefined,
     });
   }
-  if (url) embed.setURL(url);
-
+  if (opts.url) embed.setURL(opts.url);
   return embed;
 }
 
@@ -75,7 +57,7 @@ export function formatWarnBar(botId: string, count: number): string {
 
   const length = 9;
   const maxWarnings = 3;
-  const filled = Math.round((count / maxWarnings) * length);
+  const filled = Math.round((Math.min(count, maxWarnings) / maxWarnings) * length);
   const empty = length - filled;
 
   const start = filled > 0 ? warnPB.lf : warnPB.le;

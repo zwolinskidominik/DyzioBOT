@@ -1,6 +1,7 @@
 import { prop, getModelForClass, index, DocumentType } from '@typegoose/typegoose';
 
 @index({ guildId: 1 })
+@index({ guildId: 1, channelId: 1 }, { unique: true })
 class TempChannel {
   @prop({ required: true, type: () => String })
   public guildId!: string;

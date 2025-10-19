@@ -275,6 +275,7 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
     hostId: interaction.user.id,
     createdAt: new Date(),
     roleMultipliers,
+    finalized: false,
   };
 
   await GiveawayModel.create(giveawayData);
@@ -430,6 +431,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
   }
 
   giveaway.active = false;
+  giveaway.finalized = true;
   await giveaway.save();
 
   const channel = interaction.guild!.channels.cache.get(giveaway.channelId) as
@@ -475,14 +477,29 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
     components: [],
   });
 
-  if (winners.length > 0) {
-    await giveawayMessage.reply({
-      content: `🎉 Gratulacje ${winners.map((user: IWinnerUser) => `<@${user.id}>`).join(', ')}! **${giveaway.prize}** jest Twoje!`,
-    });
-  } else {
-    await giveawayMessage.reply({
-      content: 'Brak zgłoszeń, więc nie udało się wyłonić zwycięzcy!',
-    });
+  {
+    const winnerContent = winners.length
+      ? `🎉 Gratulacje ${winners
+          .map((user: IWinnerUser) => `<@${user.id}>`)
+          .join(', ')}! **${giveaway.prize}** jest Twoje!`
+      : 'Brak zgłoszeń, więc nie udało się wyłonić zwycięzcy!';
+    let sent = false;
+    try {
+      await giveawayMessage.reply({ content: winnerContent });
+      sent = true;
+    } catch (err) {
+      logger.warn(`End giveaway: reply nie wysłany (spróbuję channel.send): ${err}`);
+    }
+    if (!sent) {
+      try {
+        await (channel as TextChannel).send({
+          content: winnerContent,
+          reply: { messageReference: giveawayMessage.id },
+        });
+      } catch (fallbackErr) {
+        logger.error(`End giveaway: channel.send także nieudane: ${fallbackErr}`);
+      }
+    }
   }
 
   const confirmEmbed = createBaseEmbed({
@@ -593,14 +610,29 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction): P
     components: [],
   });
 
-  if (winners.length > 0) {
-    await giveawayMessage.reply({
-      content: `🎉 **REROLL!** Gratulacje nowym zwycięzcom: ${winners.map((user: IWinnerUser) => `<@${user.id}>`).join(', ')}! **${giveaway.prize}** jest Twoje!`,
-    });
-  } else {
-    await giveawayMessage.reply({
-      content: 'Brak wystarczającej liczby uczestników, nie udało się wyłonić nowych zwycięzców!',
-    });
+  {
+    const winnerContent = winners.length
+      ? `🎉 **REROLL!** Gratulacje nowym zwycięzcom: ${winners
+          .map((user: IWinnerUser) => `<@${user.id}>`)
+          .join(', ')}! **${giveaway.prize}** jest Twoje!`
+      : 'Brak wystarczającej liczby uczestników, nie udało się wyłonić nowych zwycięzców!';
+    let sent = false;
+    try {
+      await giveawayMessage.reply({ content: winnerContent });
+      sent = true;
+    } catch (err) {
+      logger.warn(`Reroll giveaway: reply nie wysłany (spróbuję channel.send): ${err}`);
+    }
+    if (!sent) {
+      try {
+        await (channel as TextChannel).send({
+          content: winnerContent,
+          reply: { messageReference: giveawayMessage.id },
+        });
+      } catch (fallbackErr) {
+        logger.error(`Reroll giveaway: channel.send także nieudane: ${fallbackErr}`);
+      }
+    }
   }
 
   const confirmEmbed = createBaseEmbed({

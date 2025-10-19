@@ -1,6 +1,7 @@
-import { prop, getModelForClass, DocumentType } from '@typegoose/typegoose';
+import { prop, getModelForClass, DocumentType, index } from '@typegoose/typegoose';
 import { randomUUID } from 'crypto';
 
+@index({ content: 1 }, { unique: true })
 class Question {
   @prop({ default: () => randomUUID(), type: () => String })
   public questionId!: string;

@@ -1,5 +1,3 @@
-import type { ClipDocument } from '../models/Clip';
-
 export interface IAutoRole {
   guildId: string;
   roleIds: string[];
@@ -16,6 +14,8 @@ export interface IBirthday {
 export interface IBirthdayConfiguration {
   guildId: string;
   birthdayChannelId: string;
+  roleId?: string;
+  message?: string;
 }
 
 export interface IChannelsConfig {
@@ -34,16 +34,6 @@ export interface IChannelInfo {
 export interface IChannelStats {
   guildId: string;
   channels: IChannelsConfig;
-}
-
-export interface IClipResult {
-  clip: ClipDocument;
-  averageScore: number;
-}
-
-export interface IClipVote {
-  juryId: string;
-  score: number;
 }
 
 export interface IFortune {
@@ -74,6 +64,7 @@ export interface IGiveaway {
   hostId: string;
   createdAt: Date;
   roleMultipliers: Record<string, number>;
+  finalized: boolean;
 }
 
 export interface IGreetingsConfiguration {

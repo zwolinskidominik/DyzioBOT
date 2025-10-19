@@ -1,5 +1,10 @@
-import { Guild, TextChannel } from 'discord.js';
+import { Collection, Guild, GuildMember, TextChannel } from 'discord.js';
 import { ChannelStatsModel } from '../models/ChannelStats';
+import logger from './logger';
+
+// Track in-flight rename intentions per channel to ensure last-write-wins and avoid double retries
+const renameTokens = new Map<string, number>();
+let renameSeq = 0;
 
 export async function safeSetChannelName(
   channel: TextChannel,
@@ -7,31 +12,117 @@ export async function safeSetChannelName(
   retries = 3,
   delay = 1_000
 ): Promise<void> {
-  try {
-    await channel.setName(newName);
-  } catch (error: unknown) {
-    const e = error as { httpStatus?: number; code?: number };
-    if (retries > 0 && (e.httpStatus === 429 || e.code === 50_013)) {
-      console.warn(`Rate-limited przy zmianie nazwy, retry za ${delay} ms…`);
-      await new Promise((r) => setTimeout(r, delay));
-      return safeSetChannelName(channel, newName, retries - 1, delay * 2);
+  if (channel.name === newName) return;
+  const chanId = (channel as any).id ?? '';
+  const myToken = ++renameSeq;
+  renameTokens.set(chanId, myToken);
+
+  const attempt = async (left: number, nextDelay: number): Promise<void> => {
+    // Abort if a newer rename request exists for this channel
+    if (renameTokens.get(chanId) !== myToken) return;
+    try {
+      await channel.setName(newName);
+    } catch (error: unknown) {
+      const e = error as { httpStatus?: number; code?: number };
+      if (e.code === 50_013) {
+        logger.warn(`Brak uprawnień do zmiany nazwy kanału ${channel.id}`);
+        return;
+      }
+      if (left > 0 && e?.httpStatus === 429) {
+        logger.warn(
+          `Rate-limit przy zmianie nazwy kanału ${channel.id}. Retry za ${nextDelay} ms (pozostało ${left}).`
+        );
+        await new Promise((r) => setTimeout(r, nextDelay));
+        // check again before retrying to avoid double-retry overriding a newer request
+        if (renameTokens.get(chanId) !== myToken) return;
+        return attempt(left - 1, Math.min(nextDelay * 2, 30_000));
+      }
+      throw error;
     }
-    throw error;
-  }
+  };
+
+  await attempt(retries, delay);
+}
+
+export interface SimpleChannelConfig {
+  channelId?: string;
+  template?: string;
+  member?: string;
+}
+
+function buildChannelName(template: string | undefined, value: string | number): string {
+  if (!template) return String(value);
+  return template.replace(/<>|{value}/g, String(value)).slice(0, 100);
 }
 
 export async function updateChannelName(
   guild: Guild,
-  channelConfig: { channelId?: string; template: string } | undefined,
+  channelConfig: SimpleChannelConfig | undefined,
   newValue: string | number
 ): Promise<void> {
   if (!channelConfig?.channelId) return;
   const channel = guild.channels.cache.get(channelConfig.channelId);
-  if (!channel || !('setName' in channel)) return;
+  if (
+    !channel ||
+    typeof (channel as any).setName !== 'function' ||
+    typeof (channel as any).name !== 'string'
+  )
+    return;
 
-  const newName = channelConfig.template.replace(/<>/g, String(newValue));
-  if ((channel as TextChannel).name !== newName) {
-    await safeSetChannelName(channel as TextChannel, newName);
+  const newName = buildChannelName(channelConfig.template, newValue);
+  await safeSetChannelName(channel as TextChannel, newName);
+}
+
+const BAN_CACHE_TTL = 10 * 60 * 1000;
+const banCache = new Map<string, { count: number; timestamp: number }>();
+
+const MEMBER_FETCH_TTL = 5 * 60 * 1000;
+const lastMemberFetch = new Map<string, number>();
+
+async function ensureFreshMembers(guild: Guild): Promise<void> {
+  const incomplete = guild.members.cache.size < guild.memberCount;
+  const now = Date.now();
+  const last = lastMemberFetch.get(guild.id) ?? 0;
+
+  if (!incomplete) return;
+  if (now - last < MEMBER_FETCH_TTL) return;
+
+  try {
+    await guild.members.fetch();
+    lastMemberFetch.set(guild.id, now);
+  } catch (err) {
+    logger.warn(`Nie udało się pobrać pełnej listy członków guild=${guild.id}: ${err}`);
+  }
+}
+
+function computeNewestNonBotMember(
+  members: Collection<string, GuildMember>
+): GuildMember | undefined {
+  let newest: GuildMember | undefined;
+  let newestTs = -1;
+  for (const m of members.values()) {
+    if (m.user.bot) continue;
+    const ts = m.joinedTimestamp ?? 0;
+    if (ts > newestTs) {
+      newestTs = ts;
+      newest = m;
+    }
+  }
+  return newest;
+}
+
+async function getBanCount(guild: Guild): Promise<number> {
+  const cached = banCache.get(guild.id);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < BAN_CACHE_TTL) return cached.count;
+  try {
+    const bans = await guild.bans.fetch();
+    const count = bans.size;
+    banCache.set(guild.id, { count, timestamp: now });
+    return count;
+  } catch (err) {
+    logger.error(`Błąd przy pobieraniu banów dla guild=${guild.id}: ${err}`);
+    return cached?.count ?? 0;
   }
 }
 
@@ -40,79 +131,42 @@ export async function updateChannelStats(guild: Guild): Promise<void> {
   if (!channelStats) return;
 
   try {
-    const nonBotMembers = guild.members.cache.filter((m) => !m.user.bot);
-    const botMembers = guild.members.cache.filter((m) => m.user.bot);
+    await ensureFreshMembers(guild);
+
+    const membersCache = guild.members.cache;
+    const nonBotMembers = membersCache.filter((m) => !m.user.bot);
+    const botMembers = membersCache.filter((m) => m.user.bot);
 
     const userCount = nonBotMembers.size;
     const botCount = botMembers.size;
 
-    const newestMember = nonBotMembers
-      .sort((a, b) => (b.joinedTimestamp ?? 0) - (a.joinedTimestamp ?? 0))
-      .first();
+    const newestMember = computeNewestNonBotMember(nonBotMembers);
     const newestValue = newestMember?.user.username ?? 'Brak';
 
-    let banCount = 0;
-    try {
-      banCount = (await guild.bans.fetch()).size;
-    } catch (err) {
-      console.error(`Błąd przy pobieraniu banów: ${err}`);
-    }
+    const banCount = await getBanCount(guild);
 
     const tasks: Promise<void>[] = [];
 
-    if (channelStats.channels.users)
+    if (channelStats.channels.users) {
+      tasks.push(updateChannelName(guild, channelStats.channels.users, userCount));
+    }
+    if (channelStats.channels.bots) {
+      tasks.push(updateChannelName(guild, channelStats.channels.bots, botCount));
+    }
+    if (channelStats.channels.bans) {
+      tasks.push(updateChannelName(guild, channelStats.channels.bans, banCount));
+    }
+    if (channelStats.channels.lastJoined) {
       tasks.push(
-        updateChannelName(
-          guild,
-          {
-            ...channelStats.channels.users,
-            template: channelStats.channels.users.template || '',
-          },
-          userCount
-        )
-      );
-
-    if (channelStats.channels.bots)
-      tasks.push(
-        updateChannelName(
-          guild,
-          {
-            ...channelStats.channels.bots,
-            template: channelStats.channels.bots.template || '',
-          },
-          botCount
-        )
-      );
-
-    if (channelStats.channels.bans)
-      tasks.push(
-        updateChannelName(
-          guild,
-          {
-            ...channelStats.channels.bans,
-            template: channelStats.channels.bans.template || '',
-          },
-          banCount
-        )
-      );
-
-    if (channelStats.channels.lastJoined)
-      tasks.push(
-        updateChannelName(
-          guild,
-          {
-            ...channelStats.channels.lastJoined,
-            template: channelStats.channels.lastJoined.template || '',
-          },
-          newestValue
-        ).then(() => {
+        updateChannelName(guild, channelStats.channels.lastJoined, newestValue).then(() => {
           channelStats.channels.lastJoined!.member = newestMember?.id;
         })
       );
+    }
 
     await Promise.all(tasks);
     await channelStats.save();
   } catch (err) {
-    console.error(`Błąd przy aktualizacji statystyk: ${err}`);
+    logger.error(`Błąd przy aktualizacji statystyk (guild=${guild.id}): ${err}`);
   }
 }

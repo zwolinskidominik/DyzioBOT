@@ -1,11 +1,17 @@
-import { getModelForClass, index, prop, DocumentType } from '@typegoose/typegoose';
+import { getModelForClass, index, prop, DocumentType, pre } from '@typegoose/typegoose';
 
+@pre<TwitchStreamer>('save', function () {
+  if (typeof this.twitchChannel === 'string') {
+    this.twitchChannel = this.twitchChannel.toLowerCase();
+  }
+})
 @index({ guildId: 1, userId: 1 }, { unique: true })
+@index({ guildId: 1, twitchChannel: 1 }, { unique: true })
 class TwitchStreamer {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
-  @prop({ required: true, type: () => String })
+  @prop({ required: true, type: () => String, lowercase: true, trim: true })
   public twitchChannel!: string;
 
   @prop({ required: true, type: () => String })

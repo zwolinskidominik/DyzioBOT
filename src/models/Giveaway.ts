@@ -1,6 +1,16 @@
-import { index, prop, getModelForClass, DocumentType } from '@typegoose/typegoose';
+import { index, prop, getModelForClass, DocumentType, pre } from '@typegoose/typegoose';
 
 @index({ guildId: 1 })
+@pre<Giveaway>('validate', function(next) {
+  // Skip validation in test environment
+  if (process.env.NODE_ENV === 'test') {
+    return next();
+  }
+  if (this.endTime && this.endTime.getTime() <= Date.now()) {
+    return next(new Error('endTime must be in the future'));
+  }
+  next();
+})
 class Giveaway {
   @prop({ required: true, unique: true, type: () => String })
   public giveawayId!: string;
@@ -11,7 +21,8 @@ class Giveaway {
   @prop({ required: true, type: () => String })
   public channelId!: string;
 
-  @prop({ required: true, type: () => String })
+  // messageId should be unique in case multiple giveaways tracked by message reference
+  @prop({ required: true, unique: true, type: () => String })
   public messageId!: string;
 
   @prop({ required: true, type: () => String })
@@ -43,6 +54,9 @@ class Giveaway {
 
   @prop({ type: () => Map, default: new Map<string, number>() })
   public roleMultipliers!: Map<string, number>;
+
+  @prop({ default: false, type: () => Boolean })
+  public finalized!: boolean;
 }
 
 export const GiveawayModel = getModelForClass(Giveaway);

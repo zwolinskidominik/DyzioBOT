@@ -32,11 +32,21 @@ const GUILD_ASSETS: Record<string, IGuildConfig> = {
   },
 };
 
+const DEFAULTS: IGuildConfig = {
+  roles: { owner: '', admin: '', mod: '', partnership: '' },
+  channels: { boostNotification: '', boosterList: '', tournamentRules: '' },
+};
+
 export function getGuildConfig(guildId: string): IGuildConfig {
-  return (
-    GUILD_ASSETS[guildId] ?? {
-      roles: { owner: '', admin: '', mod: '', partnership: '' },
-      channels: { birthday: '', giveaway: '', clips: '' },
-    }
-  );
+  const found = GUILD_ASSETS[guildId];
+  if (!found) return { ...DEFAULTS, roles: { ...DEFAULTS.roles }, channels: { ...DEFAULTS.channels } };
+  return {
+    roles: { ...DEFAULTS.roles, ...(found.roles ?? {}) },
+    channels: { ...DEFAULTS.channels, ...(found.channels ?? {}) },
+  };
+}
+
+// Test-only helper: allow tests to inspect/mutate assets for partial config scenarios
+export function __getGuildAssetsUnsafeForTests(): Record<string, IGuildConfig> {
+  return GUILD_ASSETS as any;
 }

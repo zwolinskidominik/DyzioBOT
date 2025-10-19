@@ -7,6 +7,12 @@ class BirthdayConfiguration {
 
   @prop({ required: true, type: () => String })
   public birthdayChannelId!: string;
+
+  @prop({ type: () => String })
+  public roleId?: string;
+
+  @prop({ type: () => String })
+  public message?: string;
 }
 
 export const BirthdayConfigurationModel = getModelForClass(BirthdayConfiguration);

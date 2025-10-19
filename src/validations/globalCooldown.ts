@@ -1,25 +1,35 @@
 import { ChatInputCommandInteraction } from 'discord.js';
 import type { ICommand } from '../interfaces/Command';
 
-const cooldowns = new Map<string, number>();
-const DEFAULT_COOLDOWN = 2_500;
+const userCooldownUntil = new Map<string, number>();
+let checks = 0;
 
-export default async (
+export default async function globalCooldown(
   interaction: ChatInputCommandInteraction,
   command: ICommand
-): Promise<string | null> => {
+): Promise<string | null> {
   const userId = interaction.user.id;
   const now = Date.now();
+  const cooldownSeconds = command.options?.cooldown ?? 2.5; // Default 2.5 seconds
+  const cooldownMs = cooldownSeconds * 1000; // Convert to milliseconds
 
-  const cooldown =
-    command.options && command.options.cooldown ? command.options.cooldown : DEFAULT_COOLDOWN;
-
-  const expiry = cooldowns.get(userId);
-  if (expiry && now < expiry) {
-    const remainingSeconds = Math.ceil((expiry - now) / 1_000);
+  const until = userCooldownUntil.get(userId) || 0;
+  if (until > now) {
+    const remainingSeconds = Math.ceil((until - now) / 1000);
     return `Odczekaj jeszcze ${remainingSeconds} sekund przed ponownym użyciem tej komendy.`;
   }
 
-  cooldowns.set(userId, now + cooldown);
+  userCooldownUntil.set(userId, now + cooldownMs);
+
+  if (++checks % 200 === 0 || userCooldownUntil.size > 10_000) {
+    for (const [id, ts] of userCooldownUntil) if (ts <= now) userCooldownUntil.delete(id);
+    if (checks > 1_000_000) checks = 0;
+  }
+
   return null;
-};
+}
+
+// Export function for testing
+export function clearCooldowns(): void {
+  userCooldownUntil.clear();
+}

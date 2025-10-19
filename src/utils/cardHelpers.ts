@@ -2,6 +2,7 @@ import { Builder, loadImage, JSX } from 'canvacord';
 import type { ICardOptions, IGreetingType } from '../interfaces/Cards';
 import { COLORS } from '../config/constants/colors';
 import * as path from 'path';
+import logger from './logger';
 
 const BLANK_PNG = path.resolve(__dirname, '../../assets/bg.jpg');
 
@@ -46,37 +47,44 @@ export class GreetingsCard extends Builder {
     return this;
   }
 
-  private static async safeLoad(src: string) {
+  private static imageCache = new Map<string, any>();
+  private static readonly MAX_CACHE = 50;
+
+  private static async loadImageCached(src: string) {
+    if (!src) return loadImage(BLANK_PNG);
+    const cached = this.imageCache.get(src);
+    if (cached) return cached;
+
+    const isDiscordCdn = src.includes('cdn.discordapp.com');
+    const isLocalPath = /^(?:[A-Za-z]:\\|\/)/.test(src);
+
+    const target = isLocalPath ? src : src;
+    let img;
     try {
-      if (src.includes('cdn.discordapp.com')) {
-        return await this.loadWithRetry(src);
-      }
-
-      if (src.startsWith('/') || src.includes(':\\')) {
-        return await loadImage(BLANK_PNG);
-      }
-
-      return await loadImage(src);
-    } catch (error) {
-      console.error(`Failed to load image from ${src}:`, error);
-      return await loadImage(BLANK_PNG);
-    }
-  }
-
-  private static async loadWithRetry(src: string, retries = 3) {
-    let lastError;
-
-    for (let attempt = 0; attempt < retries; attempt++) {
-      try {
-        return await loadImage(src);
-      } catch (error) {
-        lastError = error;
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+      img = await loadImage(target);
+    } catch (err) {
+      if (isDiscordCdn) {
+        await new Promise((r) => setTimeout(r, 150));
+        try {
+          img = await loadImage(target);
+        } catch (err2) {
+          logger.warn(`Avatar load failed (2 próby) src=${src} -> fallback`);
+          img = await loadImage(BLANK_PNG);
+        }
+      } else {
+        logger.warn(`Image load failed src=${src} -> fallback`);
+        img = await loadImage(BLANK_PNG);
       }
     }
 
-    console.error(`All retries failed for ${src}:`, lastError);
-    return await loadImage(BLANK_PNG);
+    if (this.imageCache.size >= this.MAX_CACHE) {
+      const iter = this.imageCache.keys().next();
+      if (!iter.done && typeof iter.value === 'string') {
+        this.imageCache.delete(iter.value);
+      }
+    }
+    this.imageCache.set(src, img);
+    return img;
   }
 
   public async render(): Promise<JSX.Element> {
@@ -85,19 +93,19 @@ export class GreetingsCard extends Builder {
     let avatarImg, bgImg;
     try {
       [bgImg, avatarImg] = await Promise.all([
-        GreetingsCard.safeLoad(backgroundImage),
-        GreetingsCard.safeLoad(avatar),
+        GreetingsCard.loadImageCached(backgroundImage),
+        GreetingsCard.loadImageCached(avatar),
       ]);
     } catch (error) {
-      console.error('Error loading images:', error);
+      logger.error(`Error loading images (primary pass): ${error}`);
       try {
-        bgImg = await GreetingsCard.safeLoad(backgroundImage);
+        bgImg = await GreetingsCard.loadImageCached(backgroundImage);
       } catch {
         bgImg = await loadImage(BLANK_PNG);
       }
 
       try {
-        avatarImg = await GreetingsCard.safeLoad(avatar);
+        avatarImg = await GreetingsCard.loadImageCached(avatar);
       } catch {
         avatarImg = await loadImage(BLANK_PNG);
       }

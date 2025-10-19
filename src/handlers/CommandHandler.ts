@@ -8,10 +8,13 @@ import {
   ChatInputCommandInteraction,
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction,
+  type ApplicationCommand,
+  type InteractionReplyOptions,
 } from 'discord.js';
 import type { ICommand, ICommandHandlerConfig } from '../interfaces/Command';
 import { readdirSync, statSync } from 'fs';
 import { join } from 'path';
+import logger from '../utils/logger';
 
 type CommandInteraction =
   | ChatInputCommandInteraction
@@ -38,12 +41,12 @@ export class CommandHandler {
       if (this.config.bulkRegister) {
         await this.clearCommands()
           .then(() => console.log('✅ Wyczyszczono wszystkie komendy.'))
-          .catch((err) => console.error('❌ Błąd czyszczenia komend:', err));
+          .catch((err) => logger.error(`❌ Błąd czyszczenia komend: ${err}`));
       }
 
       await this.registerCommands()
         .then(() => console.log('✅ Zarejestrowano komendy aplikacji.'))
-        .catch((err) => console.error('❌ Błąd rejestracji komend:', err));
+        .catch((err) => logger.error(`❌ Błąd rejestracji komend: ${err}`));
     });
   }
 
@@ -145,14 +148,8 @@ export class CommandHandler {
           console.log(`✅ Utworzono globalnie "${cmdData.name}".`);
           continue;
         }
-
-        const changed =
-          (found as any).description !==
-          ((cmdData as any).description ||
-            ((found as any).options?.length ?? 0) !== ((cmdData as any).options?.length ?? 0));
-
-        if (changed) {
-          await this.client.application.commands.edit(found.id, cmdData as ApplicationCommandData);
+        if (this.commandChanged(found, cmdData)) {
+          await this.client.application.commands.edit(found.id, cmdData);
           console.log(`✅ Zaktualizowano globalnie "${cmdData.name}".`);
         }
       }
@@ -170,21 +167,14 @@ export class CommandHandler {
 
         for (const cmdData of devCommands) {
           const found = existing.find((cmd) => cmd.name === cmdData.name);
-
           if (!found) {
             await guild.commands.create(cmdData);
             console.log(`✅ Utworzono "${cmdData.name}" na serwerze "${guild.name}".`);
             continue;
           }
-
-          const changed =
-            (found as any).description !==
-            ((cmdData as any).description ||
-              ((found as any).options?.length ?? 0) !== ((cmdData as any).options?.length ?? 0));
-
-          if (changed) {
-            await guild.commands.edit(found.id, cmdData as ApplicationCommandData);
-            console.log(`✅ Zktualizowano "${cmdData.name}" na serwerze "${guild.name}".`);
+          if (this.commandChanged(found, cmdData)) {
+            await guild.commands.edit(found.id, cmdData);
+            console.log(`✅ Zaktualizowano "${cmdData.name}" na serwerze "${guild.name}".`);
           }
         }
       }
@@ -229,13 +219,13 @@ export class CommandHandler {
     for (const validate of this.validations) {
       const errorMessage = await validate(interaction, command);
       if (errorMessage) {
-        await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
+        await this.respond(interaction, { content: errorMessage, flags: MessageFlags.Ephemeral });
         return;
       }
     }
 
     if (command.options?.devOnly && !this.isDeveloper(interaction)) {
-      await interaction.reply({
+      await this.respond(interaction, {
         content: '⛔ Ta komenda jest dostępna tylko dla deweloperów.',
         flags: MessageFlags.Ephemeral,
       });
@@ -247,7 +237,7 @@ export class CommandHandler {
         : [command.options.userPermissions];
       const missing = perms.filter((perm) => !interaction.memberPermissions?.has(perm));
       if (missing.length > 0) {
-        await interaction.reply({
+        await this.respond(interaction, {
           content: `⛔ Potrzebujesz uprawnień do wykonania tej komendy.`,
           flags: MessageFlags.Ephemeral,
         });
@@ -261,7 +251,7 @@ export class CommandHandler {
         : [command.options.botPermissions];
       const missing = perms.filter((perm) => !botPerms.permissions.has(perm));
       if (missing.length > 0) {
-        await interaction.reply({
+        await this.respond(interaction, {
           content: `⛔ Bot potrzebuje uprawnień do wykonania tej komendy.`,
           flags: MessageFlags.Ephemeral,
         });
@@ -275,8 +265,8 @@ export class CommandHandler {
         client: this.client,
       });
     } catch (error) {
-      console.error(`❌ Błąd podczas wykonywania komendy "${interaction.commandName}":`, error);
-      await interaction.reply({
+  logger.error(`❌ Błąd podczas wykonywania komendy "${interaction.commandName}": ${error}`);
+      await this.respond(interaction, {
         content: 'Wystąpił błąd podczas wykonywania komendy.',
         flags: MessageFlags.Ephemeral,
       });
@@ -290,7 +280,7 @@ export class CommandHandler {
     try {
       await command.autocomplete({ interaction, client: this.client });
     } catch (error) {
-      console.error(`❌ Błąd autocomplete "${interaction.commandName}":`, error);
+  logger.error(`❌ Błąd autocomplete "${interaction.commandName}": ${error}`);
     }
   }
 
@@ -303,5 +293,35 @@ export class CommandHandler {
     if (member && devRoleIds.some((roleId) => member.roles.cache.has(roleId))) return true;
 
     return false;
+  }
+
+  private commandChanged(existing: ApplicationCommand, next: ApplicationCommandData): boolean {
+    const existingSummary = this.summarize(existing);
+    const nextSummary = this.summarize(next);
+    return existingSummary !== nextSummary;
+  }
+
+  private summarize(cmd: ApplicationCommand | ApplicationCommandData): string {
+    const base: any = {
+      name: (cmd as any).name,
+      description: (cmd as any).description || '',
+      type: (cmd as any).type || 1,
+    };
+    const opts = (cmd as any).options || [];
+    if (opts.length) {
+      base.options = opts.map((o: any) => ({
+        name: o.name,
+        type: o.type,
+        description: o.description || '',
+        required: !!o.required,
+        choices: o.choices?.map((c: any) => ({ name: c.name, value: c.value })) || undefined,
+      }));
+    }
+    return JSON.stringify(base);
+  }
+
+  private async respond(interaction: CommandInteraction, payload: InteractionReplyOptions) {
+    if (interaction.replied || interaction.deferred) return interaction.followUp(payload);
+    return interaction.reply(payload);
   }
 }

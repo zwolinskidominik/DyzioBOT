@@ -8,10 +8,10 @@ class Level {
   @prop({ required: true, type: () => String })
   public userId!: string;
 
-  @prop({ default: 0, type: () => Number })
+  @prop({ default: 0, type: () => Number, min: 0 })
   public xp!: number;
 
-  @prop({ default: 1, type: () => Number })
+  @prop({ default: 1, type: () => Number, min: 1 })
   public level!: number;
 
   @prop({ type: () => Date })

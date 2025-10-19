@@ -1,7 +1,7 @@
 import { getModelForClass, index, prop, DocumentType } from '@typegoose/typegoose';
 
 class RoleReward {
-  @prop({ required: true, type: () => Number })
+  @prop({ required: true, type: () => Number, min: 1 })
   public level!: number;
 
   @prop({ required: true, type: () => String })
@@ -16,13 +16,13 @@ export class LevelConfig {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
-  @prop({ default: 5, type: () => Number })
+  @prop({ default: 5, type: () => Number, min: 0 })
   public xpPerMsg!: number;
 
-  @prop({ default: 10, type: () => Number })
+  @prop({ default: 10, type: () => Number, min: 0 })
   public xpPerMinVc!: number;
 
-  @prop({ default: 0, type: () => Number })
+  @prop({ default: 0, type: () => Number, min: 0 })
   public cooldownSec!: number;
 
   @prop({ type: () => String })

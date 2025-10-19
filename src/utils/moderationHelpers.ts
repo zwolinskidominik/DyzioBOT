@@ -1,8 +1,9 @@
-import { EmbedBuilder, GuildMember, Guild, User, Collection, GuildBan } from 'discord.js';
+import { EmbedBuilder, GuildMember, Guild, User } from 'discord.js';
 import { createBaseEmbed } from '../utils/embedHelpers';
 import { checkRole } from '../utils/roleHelpers';
 import logger from '../utils/logger';
 import ms from 'ms';
+import prettyMs from 'pretty-ms';
 
 export type ModAction = 'ban' | 'kick' | 'mute' | 'unban';
 
@@ -17,45 +18,33 @@ export function createModErrorEmbed(description: string, guildName?: string): Em
 export function createModSuccessEmbed(
   action: ModAction,
   target: User,
-  moderatorName: User,
+  moderator: User,
   guildIcon: string | null | undefined,
   guildName: string,
   reason?: string,
   duration?: string
 ): EmbedBuilder {
-  let description: string;
-
-  switch (action) {
-    case 'ban':
-      description = `### Zbanowano użytkownika <@!${target.id}>`;
-      break;
-    case 'kick':
-      description = `### Wyrzucono użytkownika <@!${target.id}>`;
-      break;
-    case 'mute':
-      description = duration
-        ? `**<@!${target.id}> został wyciszony na okres ${duration}**`
-        : `**<@!${target.id}> został wyciszony**`;
-      break;
-    case 'unban':
-      description = `### Odbanowano użytkownika <@!${target.id}>`;
-      break;
-  }
+  const actionDescriptions: Record<ModAction, string> = {
+    ban: `### Zbanowano użytkownika <@!${target.id}>`,
+    kick: `### Wyrzucono użytkownika <@!${target.id}>`,
+    mute: duration
+      ? `**<@!${target.id}> został wyciszony na okres ${duration}**`
+      : `**<@!${target.id}> został wyciszony**`,
+    unban: `### Odbanowano użytkownika <@!${target.id}>`,
+  };
 
   const embed = createBaseEmbed({
-    isError: action !== 'unban',
-    description,
+    isError: false,
+    description: actionDescriptions[action],
     thumbnail: target.displayAvatarURL(),
     footerText: guildName,
     footerIcon: guildIcon || undefined,
   });
 
-  embed.addFields({ name: 'Moderator', value: `${moderatorName}`, inline: true });
-
-  if (reason && (action === 'ban' || action === 'kick' || action === 'mute')) {
-    embed.addFields({ name: 'Powód:', value: reason, inline: true });
-  }
-
+  embed.addFields({ name: 'Moderator', value: `<@!${moderator.id}>`, inline: true });
+  if (reason && action !== 'unban') embed.addFields({ name: 'Powód', value: reason, inline: true });
+  if (duration && action === 'mute')
+    embed.addFields({ name: 'Czas', value: duration, inline: true });
   return embed;
 }
 
@@ -76,18 +65,20 @@ export function validateDuration(durationStr: string): number | null {
   return duration;
 }
 
-export async function formatDuration(ms: number): Promise<string> {
-  const { default: prettyMs } = await import('pretty-ms');
-  return prettyMs(ms);
+export async function formatDuration(durationMs: number): Promise<string> {
+  return prettyMs(durationMs, { verbose: false });
 }
 
 export async function findBannedUser(guild: Guild, userId: string): Promise<User | null> {
   try {
-    const bannedUsers: Collection<string, GuildBan> = await guild.bans.fetch();
-    const bannedUser = bannedUsers.find((ban) => ban.user.id === userId);
-    return bannedUser ? bannedUser.user : null;
+    const existing = guild.bans.cache.get(userId as any);
+    if (existing) return existing.user;
+    const ban = await guild.bans.fetch(userId).catch(() => null);
+    return ban?.user ?? null;
   } catch (error) {
-    logger.error(`Błąd podczas pobierania listy banów: ${error}`);
+    logger.error(
+      `Błąd podczas sprawdzania bana użytkownika ${userId} na guild=${guild.id}: ${error}`
+    );
     return null;
   }
 }

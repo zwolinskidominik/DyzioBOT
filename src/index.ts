@@ -27,7 +27,7 @@ new CommandHandler(client, {
   devGuildIds: DEV_GUILD_IDS,
   devUserIds: DEV_USER_IDS,
   devRoleIds: DEV_ROLE_IDS,
-  bulkRegister: true,
+  bulkRegister: false,
 });
 
 new EventHandler(client);

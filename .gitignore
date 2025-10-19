@@ -4,4 +4,6 @@ assets/*.*
 assets/thumbnails/*
 .env
 dist
-logs/*
+coverage
+logs
+.vscode
