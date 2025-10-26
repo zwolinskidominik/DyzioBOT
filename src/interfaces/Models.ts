@@ -70,6 +70,9 @@ export interface IGiveaway {
 export interface IGreetingsConfiguration {
   guildId: string;
   greetingsChannelId: string;
+  rulesChannelId?: string;
+  rolesChannelId?: string;
+  chatChannelId?: string;
 }
 
 export interface IQuestion {
@@ -112,6 +115,7 @@ export interface ITempChannel {
   parentId: string;
   channelId: string;
   ownerId: string;
+  controlMessageId?: string;
 }
 
 export interface ITempChannelConfiguration {
@@ -146,7 +150,9 @@ export interface ITwitchStreamer {
 export interface IWarnEntry {
   reason: string;
   date: Date;
-  moderator: string;
+  moderatorId: string;
+  moderatorTag?: string;
+  moderator?: string; // Dla wstecznej kompatybilności ze starymi ostrzeżeniami
 }
 
 export interface IWarnDocument {
@@ -154,4 +160,18 @@ export interface IWarnDocument {
   guildId: string;
   count: number;
   warnings: IWarnEntry[];
+}
+
+export interface IReactionRoleMapping {
+  emoji: string;
+  roleId: string;
+  description?: string;
+}
+
+export interface IReactionRole {
+  guildId: string;
+  channelId: string;
+  messageId: string;
+  title?: string;
+  reactions: IReactionRoleMapping[];
 }

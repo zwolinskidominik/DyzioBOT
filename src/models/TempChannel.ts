@@ -14,6 +14,9 @@ class TempChannel {
 
   @prop({ required: true, type: () => String })
   public ownerId!: string;
+
+  @prop({ required: false, type: () => String })
+  public controlMessageId?: string;
 }
 
 export const TempChannelModel = getModelForClass(TempChannel);

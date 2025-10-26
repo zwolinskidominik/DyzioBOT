@@ -6,11 +6,18 @@ import { createBaseEmbed, formatWarnBar } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
-const WARN_LIMIT = 3;
+const WARN_LIMIT = 4;
+
+const WARN_PUNISHMENTS = {
+  1: { duration: 15 * 60 * 1000, label: '15 minut' },      // 15 min
+  2: { duration: 3 * 60 * 60 * 1000, label: '3 godziny' }, // 3h
+  3: { duration: 24 * 60 * 60 * 1000, label: '1 dzień' },  // 24h
+  4: { duration: 0, label: 'BAN' },                        // Auto-ban
+} as const;
 
 export const data = new SlashCommandBuilder()
   .setName('warn')
-  .setDescription('Nadaje ostrzeżenie użytkownikowi (max 3: mute 15m, 30m, potem ban).')
+  .setDescription('Nadaje ostrzeżenie użytkownikowi (4 ostrzeżenia = auto-ban).')
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
@@ -85,16 +92,65 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       }) as WarnDocument;
     }
 
-    record.warnings.push({ reason, date: new Date(), moderator: interaction.user.tag });
+    record.warnings.push({ 
+      reason, 
+      date: new Date(), 
+      moderatorId: interaction.user.id,
+      moderatorTag: interaction.user.tag 
+    });
 
     await record.save();
 
     const count = record.warnings.length;
 
-    let muteDurationMs = 0;
-    if (count === 1) muteDurationMs = 15 * 60 * 1000;
-    else if (count === 2) muteDurationMs = 15 * 60 * 1000;
-    else if (count >= 3) muteDurationMs = 24 * 60 * 60 * 1000;
+    // Sprawdź czy jest auto-ban (4 ostrzeżenie)
+    if (count >= 4) {
+      try {
+        await member.ban({ reason: `Auto-ban: osiągnięto limit ostrzeżeń (${count})` });
+        
+        // Wyślij DM przed banem
+        try {
+          await targetUser.send({
+            embeds: [createBaseEmbed({
+              title: '🚫 Zostałeś zbanowany',
+              description: 
+                `**Serwer:** ${guild.name}\n` +
+                `**Powód ostrzeżenia:** ${reason}\n` +
+                `**Moderator:** <@${interaction.user.id}>\n\n` +
+                `⚠️ **Osiągnięto limit ostrzeżeń (${count}/${WARN_LIMIT})**\n` +
+                `Zostałeś permanentnie zbanowany z serwera.`,
+              color: COLORS.ERROR,
+            })]
+          });
+        } catch {
+          logger.debug(`Nie można wysłać DM do ${targetUser.tag}`);
+        }
+
+        const embed = createBaseEmbed({
+          title: `🚫 Auto-ban: ${count} ostrzeżeń`,
+          color: COLORS.ERROR,
+          timestamp: false,
+        }).addFields([
+          { name: 'Użytkownik', value: `<@!${targetUser.id}>`, inline: true },
+          { name: 'Moderator', value: `<@${interaction.user.id}>`, inline: true },
+          { name: 'Powód', value: reason, inline: false },
+          { name: 'Kara', value: '**PERMANENTNY BAN**', inline: false },
+          {
+            name: 'Suma punktów',
+            value: `Ban: ${count}p ${formatWarnBar(botId, count)} ${WARN_LIMIT}p (100%)`,
+          },
+        ]);
+
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      } catch (err) {
+        logger.error(`Błąd przy banowaniu ${member.id}: ${err}`);
+      }
+    }
+
+    // Zwykłe ostrzeżenie z timeout
+    const punishment = WARN_PUNISHMENTS[count as keyof typeof WARN_PUNISHMENTS];
+    const muteDurationMs = punishment?.duration || 0;
 
     let muteEndTs: number | null = null;
     try {
@@ -106,6 +162,30 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       logger.error(`Błąd przy nakładaniu kary na ${member.id}: ${err}`);
     }
 
+    // Wyślij DM do użytkownika
+    try {
+      const nextPunishment = WARN_PUNISHMENTS[(count + 1) as keyof typeof WARN_PUNISHMENTS];
+      const consequencesText = nextPunishment 
+        ? `\n\n⚠️ **Kolejne ostrzeżenie:** ${nextPunishment.label}`
+        : '';
+
+      await targetUser.send({
+        embeds: [createBaseEmbed({
+          title: '⚠️ Otrzymałeś ostrzeżenie',
+          description: 
+            `**Serwer:** ${guild.name}\n` +
+            `**Powód:** ${reason}\n` +
+            `**Moderator:** <@${interaction.user.id}>\n` +
+            `**Kara:** ${punishment ? punishment.label : 'Brak'} wyciszenia\n` +
+            `**Ostrzeżenia:** ${count}/${WARN_LIMIT}` +
+            consequencesText,
+          color: COLORS.WARN,
+        })]
+      });
+    } catch {
+      logger.debug(`Nie można wysłać DM do ${targetUser.tag}`);
+    }
+
     const bar = formatWarnBar(botId, count);
     const percent = Math.round((count / WARN_LIMIT) * 100);
 
@@ -115,7 +195,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       timestamp: false,
     }).addFields([
       { name: 'Użytkownik', value: `<@!${targetUser.id}>`, inline: true },
-      { name: 'Moderator', value: `<@!${interaction.user.id}>`, inline: true },
+      { name: 'Moderator', value: `<@${interaction.user.id}>`, inline: true },
       { name: 'Powód', value: reason, inline: false },
       {
         name: 'Czas trwania',
@@ -124,7 +204,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       },
       {
         name: 'Suma punktów',
-        value: `Mute: ${count}p ${bar} ${WARN_LIMIT}p (${percent}%)`,
+        value: `Ban: ${count}p ${bar} ${WARN_LIMIT}p (${percent}%)`,
       },
     ]);
 

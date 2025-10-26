@@ -43,7 +43,7 @@ export default async function run(client: Client): Promise<void> {
             const birthdayChannel = channel as TextChannel;
 
             // Find today's birthdays for this guild
-            const birthdays = await BirthdayModel.find({ guildId: birthdayConfig.guildId });
+            const birthdays = await BirthdayModel.find({ guildId: birthdayConfig.guildId, active: true });
             const todaysBirthdays = birthdays.filter((birthday) => {
               return birthday.day === day && birthday.month === month;
             });

@@ -122,9 +122,10 @@ Easy-to-use Discord bot with many features including moderation, fun commands, l
    DEV_USER_IDS=123456789
    DEV_ROLE_IDS=123456789
 
-   # Optional - Twitch Integration
+   # Optional - External APIs
    TWITCH_CLIENT_ID=your_twitch_client_id
    TWITCH_CLIENT_SECRET=your_twitch_client_secret
+   FACEIT_API_KEY=your_faceit_api_key
    ```
 
 2. **Configure guild-specific settings:**

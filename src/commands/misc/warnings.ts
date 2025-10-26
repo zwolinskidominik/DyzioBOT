@@ -74,10 +74,14 @@ const WarnHelpers = {
   formatWarningList: (warnings: IWarnDocument['warnings']): string => {
     return warnings
       .map(
-        (warning, index) =>
-          `**⏱️ ${warning.date.toLocaleString()}**\nID ostrzeżenia (**${
+        (warning, index) => {
+          const moderator = warning.moderatorId 
+            ? `<@${warning.moderatorId}>` 
+            : warning.moderator || 'Nieznany';
+          return `**⏱️ ${warning.date.toLocaleString()}**\nID ostrzeżenia (**${
             index + 1
-          }**) - Moderator: ${warning.moderator}\n\`${warning.reason}\``
+          }**) - Moderator: ${moderator}\n\`${warning.reason}\``;
+        }
       )
       .join('\n\n');
   },

@@ -112,7 +112,7 @@ function createBirthdayMessage(botId: string, birthday: IBirthday, targetUser: U
 }
 
 async function getBirthdayInfo(userId: string, guildId: string): Promise<BirthdayDocument | null> {
-  return await BirthdayModel.findOne({ userId, guildId }).exec();
+  return await BirthdayModel.findOne({ userId, guildId, active: true }).exec();
 }
 
 function getDaysForm(days: number): string {

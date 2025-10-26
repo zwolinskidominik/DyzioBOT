@@ -2,6 +2,9 @@ node_modules
 src/utils/formatResults.js
 assets/*.*
 assets/thumbnails/*
+!assets/lobby/
+assets/lobby/*.gif
+assets/lobby/*.md
 .env
 dist
 coverage

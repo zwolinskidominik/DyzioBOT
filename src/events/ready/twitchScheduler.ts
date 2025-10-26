@@ -198,13 +198,12 @@ async function sendStreamNotification(
 }
 
 async function checkStreams(client: Client): Promise<void> {
-  const streamers = await TwitchStreamerModel.find<TwitchStreamerDocument>().exec();
+  const streamers = await TwitchStreamerModel.find<TwitchStreamerDocument>({ active: true }).exec();
   const channelCfg = await StreamConfigurationModel.find<StreamConfigurationDocument>()
     .lean()
     .exec();
 
   for (const s of streamers) {
-    if (!s.active) continue;
 
     try {
       const user = await twitchClient.users.getUserByName(s.twitchChannel);

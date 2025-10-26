@@ -11,31 +11,31 @@ export default async function run(member: GuildMember): Promise<void> {
   const userId = member.user.id;
 
   try {
-    await reactivateEntry(
+    await deactivateEntry(
       BirthdayModel as ReturnModelType<typeof BirthdayModel, BirthdayDocument>,
       'birthday',
       { guildId, userId }
     );
-    await reactivateEntry(
+    await deactivateEntry(
       TwitchStreamerModel as ReturnModelType<typeof TwitchStreamerModel, TwitchStreamerDocument>,
       'twitch',
       { guildId, userId }
     );
   } catch (err) {
-    logger.error(`Błąd podczas reaktywacji wpisów userId=${userId}: ${err}`);
+    logger.error(`Błąd podczas dezaktywacji wpisów userId=${userId}: ${err}`);
   }
 }
 
-async function reactivateEntry<TDoc extends { active?: boolean }>(
+async function deactivateEntry<TDoc extends { active?: boolean }>(
   model: ReturnModelType<any, DocumentType<TDoc>>,
   modelName: string,
   filter: FilterQuery<DocumentType<TDoc>>
 ): Promise<void> {
   const entry = await model.findOne(filter).exec();
 
-  if (entry && entry.active === false) {
-    const update: UpdateQuery<DocumentType<TDoc>> = { $set: { active: true } };
+  if (entry && entry.active !== false) {
+    const update: UpdateQuery<DocumentType<TDoc>> = { $set: { active: false } };
     await model.findOneAndUpdate(filter, update).exec();
-    logger.debug(`Reaktywowano wpis ${modelName} dla userId=${filter.userId}`);
+    logger.debug(`Dezaktywowano wpis ${modelName} dla userId=${filter.userId}`);
   }
 }

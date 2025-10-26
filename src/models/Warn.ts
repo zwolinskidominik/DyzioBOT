@@ -8,7 +8,10 @@ class WarnEntry {
   public date!: Date;
 
   @prop({ required: true, type: () => String })
-  public moderator!: string;
+  public moderatorId!: string;
+
+  @prop({ type: () => String })
+  public moderatorTag?: string;
 }
 
 @index({ userId: 1, guildId: 1 })
