@@ -1,4 +1,3 @@
-// Debounce per key (np. guildId)
 const debounceMap = new Map<string, NodeJS.Timeout>();
 export function debounce(key: string, fn: () => void, delay = 2000): void {
   const existing = debounceMap.get(key);
@@ -13,7 +12,6 @@ export function debounce(key: string, fn: () => void, delay = 2000): void {
   debounceMap.set(key, t);
 }
 
-// Throttle (leading + optional trailing) – minimalna implementacja bez zbędnych alokacji
 interface ThrottleState {
   last: number;
   timeout?: NodeJS.Timeout;
@@ -55,7 +53,6 @@ export function throttle(
   }
 }
 
-// Simple cooldown guard returning whether an action is allowed now (true) or suppressed (false)
 const lastCallMap = new Map<string, number>();
 export function tryAcquireCooldown(key: string, interval = 2000): boolean {
   const now = Date.now();

@@ -17,9 +17,6 @@ export class AutoRoleFactory extends BaseFactory<AutoRoleDocument> {
     return AutoRoleFactory.instance;
   }
 
-  /**
-   * Build AutoRole object without saving to database
-   */
   build(overrides: Partial<AutoRoleFactoryData> = {}): AutoRoleDocument {
     const defaults: AutoRoleFactoryData = {
       guildId: overrides.guildId || BaseFactory.pick(BaseFactory.SAMPLE_GUILD_IDS),
@@ -30,17 +27,11 @@ export class AutoRoleFactory extends BaseFactory<AutoRoleDocument> {
     return new AutoRoleModel(data) as AutoRoleDocument;
   }
 
-  /**
-   * Create and save AutoRole to database
-   */
   async create(overrides: Partial<AutoRoleFactoryData> = {}): Promise<AutoRoleDocument> {
     const autoRoleDoc = this.build(overrides);
     return await autoRoleDoc.save();
   }
 
-  /**
-   * Create AutoRole with empty role list
-   */
   buildEmpty(overrides: Partial<AutoRoleFactoryData> = {}): AutoRoleDocument {
     return this.build({
       ...overrides,
@@ -48,9 +39,6 @@ export class AutoRoleFactory extends BaseFactory<AutoRoleDocument> {
     });
   }
 
-  /**
-   * Create AutoRole with single role
-   */
   buildSingleRole(overrides: Partial<AutoRoleFactoryData> = {}): AutoRoleDocument {
     return this.build({
       ...overrides,
@@ -58,9 +46,6 @@ export class AutoRoleFactory extends BaseFactory<AutoRoleDocument> {
     });
   }
 
-  /**
-   * Create AutoRole with multiple roles
-   */
   buildMultipleRoles(roleCount: number = 3, overrides: Partial<AutoRoleFactoryData> = {}): AutoRoleDocument {
     const roleIds = [];
     for (let i = 0; i < roleCount; i++) {
@@ -73,18 +58,12 @@ export class AutoRoleFactory extends BaseFactory<AutoRoleDocument> {
     });
   }
 
-  /**
-   * Generate single role ID
-   */
   private generateRoleId(): string {
     return BaseFactory.pick(BaseFactory.SAMPLE_ROLE_IDS);
   }
 
-  /**
-   * Generate default role IDs for testing
-   */
   private generateRoleIds(): string[] {
-    const roleCount = randomInt(1, 5); // 1-5 roles
+    const roleCount = randomInt(1, 5);
     const roleIds = [];
     
     for (let i = 0; i < roleCount; i++) {
@@ -94,9 +73,6 @@ export class AutoRoleFactory extends BaseFactory<AutoRoleDocument> {
     return roleIds;
   }
 
-  /**
-   * Create bulk AutoRole configurations for testing
-   */
   async createBulk(count: number, baseOverrides: Partial<AutoRoleFactoryData> = {}): Promise<AutoRoleDocument[]> {
     const autoRoles = [];
     
@@ -113,5 +89,4 @@ export class AutoRoleFactory extends BaseFactory<AutoRoleDocument> {
   }
 }
 
-// Export singleton instance
 export const autoRoleFactory = AutoRoleFactory.getInstance();

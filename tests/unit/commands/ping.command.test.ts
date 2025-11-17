@@ -2,7 +2,6 @@ import { EmbedBuilder } from 'discord.js';
 import * as pingCmd from '../../../src/commands/misc/ping';
 import logger from '../../../src/utils/logger';
 
-// Simple helper to create a fake interaction with needed methods mocked
 function createMockInteraction() {
   const calls: Record<string, any[]> = {};
   const record = (name: string) => (...args: any[]) => {
@@ -36,10 +35,7 @@ describe('command: /ping', () => {
 
     await pingCmd.run({ interaction, client } as any);
 
-    // fetchReply used to compute latency
     expect(interaction.fetchReply).toHaveBeenCalledTimes(1);
-
-    // Should edit original reply with an embed
     const edits = interaction.calls.editReply || [];
     expect(edits.length).toBe(1);
     const payload = edits[0][0];
@@ -48,21 +44,17 @@ describe('command: /ping', () => {
   });
 
   it('logs error and edits with error embed when run throws', async () => {
-    // Mock editReply to throw first, then allow catch branch to call editReply again (ignored by catch)
     const interaction = createMockInteraction();
     const client = createMockClient(50);
 
-    // Force an error by making fetchReply reject
     (interaction.fetchReply as jest.Mock).mockRejectedValueOnce(new Error('network'));
 
-    // Spy on logger to ensure error path reached
   const spy = jest
       .spyOn(logger, 'error')
       .mockImplementation((..._args: any[]) => logger as any);
 
     await pingCmd.run({ interaction, client } as any);
 
-    // Despite error, catch block should try to edit reply with error embed
     const edits = interaction.calls.editReply || [];
     expect(edits.length).toBe(1);
     const payload = edits[0][0];

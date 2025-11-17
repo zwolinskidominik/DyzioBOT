@@ -29,9 +29,6 @@ export class GiveawayFactory extends BaseFactory<GiveawayDocument> {
     return GiveawayFactory.instance;
   }
 
-  /**
-   * Build Giveaway object without saving to database
-   */
   build(overrides: Partial<GiveawayFactoryData> = {}): GiveawayDocument {
     const defaults: GiveawayFactoryData = {
       giveawayId: overrides.giveawayId || randomUUID(),
@@ -40,8 +37,8 @@ export class GiveawayFactory extends BaseFactory<GiveawayDocument> {
       messageId: overrides.messageId || BaseFactory.randomSnowflake(),
       prize: overrides.prize || this.generateRandomPrize(),
       description: overrides.description || this.generateRandomDescription(),
-      winnersCount: overrides.winnersCount ?? Math.floor(Math.random() * 5) + 1, // 1-5 winners
-      endTime: overrides.endTime || BaseFactory.futureDate(14), // 1-14 days from now
+      winnersCount: overrides.winnersCount ?? Math.floor(Math.random() * 5) + 1,
+      endTime: overrides.endTime || BaseFactory.futureDate(14),
       pingRoleId: overrides.pingRoleId || (Math.random() > 0.5 ? BaseFactory.pick(BaseFactory.SAMPLE_ROLE_IDS) : undefined),
       active: overrides.active ?? true,
       participants: overrides.participants || this.generateParticipants(),
@@ -55,41 +52,29 @@ export class GiveawayFactory extends BaseFactory<GiveawayDocument> {
     return new GiveawayModel(data) as GiveawayDocument;
   }
 
-  /**
-   * Create and save Giveaway to database
-   */
   async create(overrides: Partial<GiveawayFactoryData> = {}): Promise<GiveawayDocument> {
     const giveawayDoc = this.build(overrides);
     return await giveawayDoc.save();
   }
 
-  /**
-   * Create active giveaway (not ended, not finalized)
-   */
   async createActive(overrides: Partial<GiveawayFactoryData> = {}): Promise<GiveawayDocument> {
     return this.create({
       ...overrides,
       active: true,
       finalized: false,
-      endTime: BaseFactory.futureDate(7), // Ensure it's in the future
+      endTime: BaseFactory.futureDate(7),
     });
   }
 
-  /**
-   * Create ended giveaway (past end time, but not finalized)
-   */
   async createEnded(overrides: Partial<GiveawayFactoryData> = {}): Promise<GiveawayDocument> {
     return this.create({
       ...overrides,
       active: true,
       finalized: false,
-      endTime: BaseFactory.pastDate(1), // Already ended
+      endTime: BaseFactory.pastDate(1),
     });
   }
 
-  /**
-   * Create finalized giveaway (completely done)
-   */
   async createFinalized(overrides: Partial<GiveawayFactoryData> = {}): Promise<GiveawayDocument> {
     return this.create({
       ...overrides,
@@ -99,9 +84,6 @@ export class GiveawayFactory extends BaseFactory<GiveawayDocument> {
     });
   }
 
-  /**
-   * Create giveaway with many participants
-   */
   async createPopular(participantCount = 50, overrides: Partial<GiveawayFactoryData> = {}): Promise<GiveawayDocument> {
     const participants = Array.from({ length: participantCount }, () => BaseFactory.randomSnowflake());
     return this.create({
@@ -110,18 +92,12 @@ export class GiveawayFactory extends BaseFactory<GiveawayDocument> {
     });
   }
 
-  /**
-   * Create multiple giveaways for same guild
-   */
   async createForGuild(guildId: string, count = 3): Promise<GiveawayDocument[]> {
     return Promise.all(
       Array.from({ length: count }, () => this.create({ guildId }))
     );
   }
 
-  /**
-   * Create giveaways in different states for testing scheduler
-   */
   async createSchedulerTestSet(guildId: string): Promise<{
     active: GiveawayDocument[];
     ended: GiveawayDocument[];
@@ -144,9 +120,6 @@ export class GiveawayFactory extends BaseFactory<GiveawayDocument> {
     return { active, ended, finalized };
   }
 
-  /**
-   * Generate random prize name
-   */
   private generateRandomPrize(): string {
     const prizes = [
       'Discord Nitro',
@@ -163,9 +136,6 @@ export class GiveawayFactory extends BaseFactory<GiveawayDocument> {
     return BaseFactory.pick(prizes);
   }
 
-  /**
-   * Generate random giveaway description
-   */
   private generateRandomDescription(): string {
     const descriptions = [
       'Join our amazing giveaway for a chance to win!',
@@ -180,25 +150,18 @@ export class GiveawayFactory extends BaseFactory<GiveawayDocument> {
     return BaseFactory.pick(descriptions);
   }
 
-  /**
-   * Generate random participants list
-   */
   private generateParticipants(): string[] {
-    const count = Math.floor(Math.random() * 20) + 5; // 5-24 participants
+    const count = Math.floor(Math.random() * 20) + 5;
     return Array.from({ length: count }, () => BaseFactory.randomSnowflake());
   }
 
-  /**
-   * Generate random role multipliers
-   */
   private generateRoleMultipliers(): Map<string, number> {
     const multipliers = new Map<string, number>();
     
-    // Randomly add 0-2 role multipliers
     const roleCount = Math.floor(Math.random() * 3);
     for (let i = 0; i < roleCount; i++) {
       const roleId = BaseFactory.pick(BaseFactory.SAMPLE_ROLE_IDS);
-      const multiplier = Math.floor(Math.random() * 5) + 2; // 2-6x multiplier
+      const multiplier = Math.floor(Math.random() * 5) + 2;
       multipliers.set(roleId, multiplier);
     }
     
@@ -206,5 +169,4 @@ export class GiveawayFactory extends BaseFactory<GiveawayDocument> {
   }
 }
 
-// Export singleton instance
 export const giveawayFactory = GiveawayFactory.getInstance();

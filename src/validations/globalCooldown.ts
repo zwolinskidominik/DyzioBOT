@@ -10,8 +10,8 @@ export default async function globalCooldown(
 ): Promise<string | null> {
   const userId = interaction.user.id;
   const now = Date.now();
-  const cooldownSeconds = command.options?.cooldown ?? 2.5; // Default 2.5 seconds
-  const cooldownMs = cooldownSeconds * 1000; // Convert to milliseconds
+  const cooldownSeconds = command.options?.cooldown ?? 2.0;
+  const cooldownMs = cooldownSeconds * 1000;
 
   const until = userCooldownUntil.get(userId) || 0;
   if (until > now) {
@@ -29,7 +29,6 @@ export default async function globalCooldown(
   return null;
 }
 
-// Export function for testing
 export function clearCooldowns(): void {
   userCooldownUntil.clear();
 }

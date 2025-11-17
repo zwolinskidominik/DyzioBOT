@@ -1,6 +1,5 @@
 export {};
 
-// Common mocks
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
@@ -150,7 +149,6 @@ describe('admin/giveaway command', () => {
         interaction.channel.send = jest.fn().mockResolvedValue({ id: 'msg1' });
         const { run } = await import('../../../../src/commands/admin/giveaway');
         await run({ interaction, client: {} as any });
-        // run() catches and replies with generic error when interaction is not marked as deferred in our mock
         expect(interaction.reply).toHaveBeenCalledWith(
           expect.objectContaining({ content: expect.stringContaining('Wystąpił błąd') })
         );
@@ -187,7 +185,6 @@ describe('admin/giveaway command', () => {
         interaction.options.getString.mockImplementation((name: string) =>
           name === 'id' ? 'gid' : null
         );
-        // Provide one change so it doesn't short-circuit
         interaction.options.getString.mockImplementationOnce((n: string) => (n === 'id' ? 'gid' : null));
         interaction.options.getString.mockImplementationOnce((n: string) => (n === 'nagroda' ? 'X' : null));
         const { run } = await import('../../../../src/commands/admin/giveaway');

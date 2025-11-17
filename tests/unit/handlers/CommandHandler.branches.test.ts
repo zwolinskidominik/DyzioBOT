@@ -1,12 +1,10 @@
 import { SlashCommandBuilder } from 'discord.js';
 
-// Reuse logger mock shape from other tests to avoid real logging noise
 jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
 }));
 
-// Prevent loading real command/validation files (which may import ESM-only deps) by mocking fs directory reads
 jest.mock('fs', () => {
   const real = jest.requireActual('fs');
   const readdirSync = (dir: string) => {
@@ -67,24 +65,21 @@ describe('CommandHandler extra branches', () => {
 
   test('non-bulk: only dev commands and no devGuildIds -> skip both global and dev registrations', async () => {
     const handler = new CommandHandlerClass(client, {});
-    // Replace commands map with only one dev-only command
     const map = (handler as any).commands as Map<string, any>;
     map.clear();
     map.set('devonly', { data: sc('devonly'), options: { devOnly: true }, run: async () => {} });
     const appFetchSpy = jest.spyOn((client as any).application.commands, 'fetch');
     await (handler as any).registerCommands();
-    expect(appFetchSpy).not.toHaveBeenCalled(); // no global commands means no fetch/create/edit
-    expect(client.guilds.fetch).not.toHaveBeenCalled(); // no devGuildIds configured
+    expect(appFetchSpy).not.toHaveBeenCalled();
+    expect(client.guilds.fetch).not.toHaveBeenCalled();
   });
 
   test('summarize covers options with choices and empty options path', () => {
     const handler = new CommandHandlerClass(client, {});
     const summarize = (handler as any).summarize.bind(handler) as (x: any) => string;
-    // Empty options branch
     const noOpts = { name: 'x', description: '', type: 1 };
     const s1 = summarize(noOpts);
     expect(typeof s1).toBe('string');
-    // Options with required and choices branch
     const withOpts = {
       name: 'y',
       description: undefined,

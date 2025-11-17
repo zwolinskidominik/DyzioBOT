@@ -1,6 +1,5 @@
 export {};
 
-// Mocks
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
@@ -60,7 +59,6 @@ const buildInteraction = (guildChannels: string[] = []) => {
   const firstEdit = jest
     .fn()
     .mockResolvedValue({ createMessageComponentCollector: jest.fn(() => collector) });
-  // For set subcommand, first editReply returns the response with collector; others resolve normally
   editReply.mockImplementationOnce(firstEdit).mockResolvedValue(undefined);
 
   const interaction: any = {
@@ -127,7 +125,6 @@ describe('admin/config-suggestions command', () => {
       };
       await collector.handlers.collect!(confirmInteraction);
 
-      // error embed
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({ embeds: [expect.any(Object)] })
       );

@@ -10,12 +10,12 @@ jest.mock('../../../../src/utils/logger', () => ({
   },
 }));
 
-// Minimal embed capturing like in warn tests
 const embedInstance = () => {
   const inst = {
     setDescription: jest.fn(function (this: any) { return this; }),
     setFooter: jest.fn(function (this: any) { return this; }),
     setThumbnail: jest.fn(function (this: any) { return this; }),
+    setAuthor: jest.fn(function (this: any) { return this; }),
     _desc: '',
   } as any;
   const orig = inst.setDescription;
@@ -35,7 +35,6 @@ jest.mock('../../../../src/utils/embedHelpers', () => ({
   }),
 }));
 
-// Mock WarnModel
 const warnCtor: any = jest.fn(function (this: any, props: any) {
   Object.assign(this, props);
   this.warnings = this.warnings || [];
@@ -68,19 +67,19 @@ describe('commands/moderation/warnRemove', () => {
     (global as any).__warnRemoveLastEmbed = undefined;
   });
 
-  test('brak rekordu → error embed', async () => {
+  test('brak warn → error content', async () => {
     await jest.isolateModules(async () => {
       warnCtor.findOne.mockReturnValue({ exec: jest.fn().mockResolvedValue(null) });
       const { run } = await import('../../../../src/commands/moderation/warnRemove');
       const interaction = buildInteraction();
       await run({ interaction, client: {} as any });
-      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: [expect.any(Object)] }));
-  const embed = (interaction.editReply as jest.Mock).mock.calls[0][0].embeds[0];
-  expect(embed._desc).toMatch(/Użytkownik nie posiada żadnych ostrzeżeń\.|Wystąpił błąd podczas usuwania ostrzeżenia\./);
+      expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ 
+        content: 'Użytkownik nie posiada żadnych ostrzeżeń.' 
+      }));
     });
   });
 
-  test('id < 1 → error embed', async () => {
+  test('id < 1 → error content', async () => {
     await jest.isolateModules(async () => {
       const warn = { warnings: [{}, {}], save: jest.fn().mockResolvedValue(undefined) };
       warnCtor.findOne.mockReturnValue({ exec: jest.fn().mockResolvedValue(warn) });
@@ -89,13 +88,13 @@ describe('commands/moderation/warnRemove', () => {
       interaction.options.getUser = jest.fn(() => ({ id: 'target', displayAvatarURL: jest.fn(() => 'url') }));
       interaction.options.getInteger = jest.fn(() => 0);
       await run({ interaction, client: {} as any });
-      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: [expect.any(Object)] }));
-      const embed = (interaction.editReply as jest.Mock).mock.calls[0][0].embeds[0];
-      expect(embed._desc).toMatch(/Nie znaleziono ostrzeżenia o ID: 0/);
+      expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ 
+        content: 'Nie znaleziono ostrzeżenia o ID: 0.' 
+      }));
     });
   });
 
-  test('id > długości → error embed', async () => {
+  test('id > długości → error content', async () => {
     await jest.isolateModules(async () => {
       const warn = { warnings: [{}, {}], save: jest.fn().mockResolvedValue(undefined) };
       warnCtor.findOne.mockReturnValue({ exec: jest.fn().mockResolvedValue(warn) });
@@ -104,9 +103,9 @@ describe('commands/moderation/warnRemove', () => {
       interaction.options.getUser = jest.fn(() => ({ id: 'target', displayAvatarURL: jest.fn(() => 'url') }));
       interaction.options.getInteger = jest.fn(() => 3);
       await run({ interaction, client: {} as any });
-      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: [expect.any(Object)] }));
-      const embed = (interaction.editReply as jest.Mock).mock.calls[0][0].embeds[0];
-      expect(embed._desc).toMatch(/Nie znaleziono ostrzeżenia o ID: 3/);
+      expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ 
+        content: 'Nie znaleziono ostrzeżenia o ID: 3.' 
+      }));
     });
   });
 
@@ -118,8 +117,8 @@ describe('commands/moderation/warnRemove', () => {
       const interaction = buildInteraction({ options: { getUser: jest.fn(() => ({ id: 'target', displayAvatarURL: jest.fn(() => 'url') })), getInteger: jest.fn(() => 2) } });
       await run({ interaction, client: {} as any });
       expect(warn.warnings.length).toBe(1);
-      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: [expect.any(Object)] }));
-      const embed = (interaction.editReply as jest.Mock).mock.calls[0][0].embeds[0];
+      expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ embeds: [expect.any(Object)] }));
+      const embed = (interaction.reply as jest.Mock).mock.calls[0][0].embeds[0];
       expect(embed._desc).toContain('Ostrzeżenie o ID: 2 zostało usunięte');
     });
   });
@@ -133,8 +132,8 @@ describe('commands/moderation/warnRemove', () => {
       const interaction = buildInteraction({ options: { getUser: jest.fn(() => ({ id: 'target', displayAvatarURL: jest.fn(() => 'url') })), getInteger: jest.fn(() => 1) } });
       await run({ interaction, client: {} as any });
       expect(logger.error).toHaveBeenCalled();
-      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: [expect.any(Object)] }));
-      const embed = (interaction.editReply as jest.Mock).mock.calls[0][0].embeds[0];
+      expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ embeds: [expect.any(Object)] }));
+      const embed = (interaction.reply as jest.Mock).mock.calls[0][0].embeds[0];
       expect(embed._desc).toContain('Wystąpił błąd podczas usuwania ostrzeżenia.');
     });
   });

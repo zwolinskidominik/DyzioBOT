@@ -81,11 +81,11 @@ describe('misc/birthdays: /birthday', () => {
       await run({ interaction, client: interaction.client });
       let arg = (interaction.editReply as jest.Mock).mock.calls.pop()[0];
       expect(arg.embeds?.[0]?.description || '').toMatch(/są dziś/i);
-      expect(arg.embeds?.[0]?.description || '').toMatch(/\*\*\d+\*\*/); // age bold
+      expect(arg.embeds?.[0]?.description || '').toMatch(/\*\*\d+\*\*/);
       await run({ interaction, client: interaction.client });
       arg = (interaction.editReply as jest.Mock).mock.calls.pop()[0];
       expect(arg.embeds?.[0]?.description || '').toMatch(/są dziś/i);
-      expect(arg.embeds?.[0]?.description || '').toMatch(/Urodziny/); // without age prefix
+      expect(arg.embeds?.[0]?.description || '').toMatch(/Urodziny/);
     });
   });
 

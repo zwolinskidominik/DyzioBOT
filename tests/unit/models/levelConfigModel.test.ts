@@ -219,10 +219,8 @@ describe('LevelConfig Model Unit Tests', () => {
     it('should enforce unique guildId constraint', async () => {
       const guildId = 'unique-constraint-test';
       
-      // First creation should succeed
       await LevelConfigModel.create({ guildId });
 
-      // Second creation with same guildId should fail
       await expect(
         LevelConfigModel.create({ guildId })
       ).rejects.toThrow();
@@ -333,7 +331,7 @@ describe('LevelConfig Model Unit Tests', () => {
         await LevelConfigModel.create({ guildId });
         fail('Should have thrown duplicate key error');
       } catch (error: any) {
-        expect(error.code).toBe(11000); // MongoDB duplicate key error code
+        expect(error.code).toBe(11000);
       }
     });
 
@@ -354,7 +352,6 @@ describe('LevelConfig Model Unit Tests', () => {
         guildId: 'complex-rewards'
       });
 
-      // Add valid rewards
       config.roleRewards.push({ level: 5, roleId: 'bronze' });
       config.roleRewards.push({ level: 10, roleId: 'silver', rewardMessage: 'Silver achieved!' });
       config.roleRewards.push({ level: 25, roleId: 'gold' });
@@ -372,16 +369,13 @@ describe('LevelConfig Model Unit Tests', () => {
         xpPerMsg: 1
       });
 
-      // Update 1: Change XP values
       config.xpPerMsg = 3;
       config.xpPerMinVc = 6;
       await config.save();
 
-      // Update 2: Add role rewards
       config.roleRewards.push({ level: 5, roleId: 'reward1' });
       await config.save();
 
-      // Update 3: Modify messages
       config.levelUpMessage = 'Updated level message';
       config.rewardMessage = 'Updated reward message';
       await config.save();

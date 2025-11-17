@@ -34,8 +34,6 @@ describe('TempChannel & TempChannelConfiguration Models', () => {
     ).rejects.toThrow(/duplicate key/i);
   });
 
-  // no TTL field check per user request (expiresAt removed)
-
   it('TempChannelConfiguration unique per guild', async () => {
     await TempChannelConfigurationModel.create({ guildId: 'gX', channelId: 'c1' });
     await expect(
@@ -72,7 +70,6 @@ describe('TempChannel & TempChannelConfiguration Models', () => {
   });
 
   it('TempChannelConfiguration basic CRUD operations', async () => {
-    // Create
     const created = await TempChannelConfigurationModel.create({
       guildId: 'testGuild',
       channelId: 'testChannel',
@@ -80,11 +77,9 @@ describe('TempChannel & TempChannelConfiguration Models', () => {
     expect(created.guildId).toBe('testGuild');
     expect(created.channelId).toBe('testChannel');
 
-    // Read
     const found = await TempChannelConfigurationModel.findOne({ guildId: 'testGuild' });
     expect(found?.channelId).toBe('testChannel');
 
-    // Update
     const updated = await TempChannelConfigurationModel.findOneAndUpdate(
       { guildId: 'testGuild' },
       { channelId: 'updatedChannel' },
@@ -92,7 +87,6 @@ describe('TempChannel & TempChannelConfiguration Models', () => {
     );
     expect(updated?.channelId).toBe('updatedChannel');
 
-    // Delete
     await TempChannelConfigurationModel.findOneAndDelete({ guildId: 'testGuild' });
     const deleted = await TempChannelConfigurationModel.findOne({ guildId: 'testGuild' });
     expect(deleted).toBeNull();

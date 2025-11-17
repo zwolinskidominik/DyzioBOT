@@ -16,7 +16,6 @@ import {
 import { DbManager } from '../setup/db';
 import logger from '../../../src/utils/logger';
 
-// Models
 import { LevelModel } from '../../../src/models/Level';
 import { GiveawayModel } from '../../../src/models/Giveaway';
 import { WarnModel } from '../../../src/models/Warn';
@@ -102,10 +101,6 @@ export interface TestEnvironment {
   };
 }
 
-/**
- * Comprehensive seeding utility for integration tests
- * Uses factories to create realistic test data environments
- */
 export class SeedingUtility {
   private dbManager: DbManager;
 
@@ -113,9 +108,6 @@ export class SeedingUtility {
     this.dbManager = dbManager || new DbManager();
   }
 
-  /**
-   * Seed a guild with optional configurations and related data
-   */
   async seedGuild(options: SeedGuildOptions = {}): Promise<any> {
     const guildData = guildFactory.build({
       id: options.id,
@@ -126,7 +118,6 @@ export class SeedingUtility {
       ...options
     });
 
-    // Ensure guild has a proper ID
     if (!guildData.id) {
       guildData.id = `guild-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
@@ -134,16 +125,12 @@ export class SeedingUtility {
     logger.info(`Seeding guild: ${guildData.name} (${guildData.id})`);
 
     if (options.createConfigurations) {
-      // Create guild configurations
       await this.createGuildConfigurations(guildData.id);
     }
 
     return guildData;
   }
 
-  /**
-   * Seed multiple users with optional guild membership
-   */
   async seedUsers(options: SeedUsersOptions = {}): Promise<any[]> {
     const { count = 10, guildId, includeMembers = false, userOverrides = [] } = options;
     const users: any[] = [];
@@ -161,7 +148,6 @@ export class SeedingUtility {
       users.push(userData);
 
       if (includeMembers && guildId) {
-        // Create guild member data - extend user data with guild-specific properties
         (userData as any).guildId = guildId;
         (userData as any).joinedAt = new Date();
         (userData as any).roles = ['@everyone'];
@@ -171,9 +157,6 @@ export class SeedingUtility {
     return users;
   }
 
-  /**
-   * Seed level system data for a guild
-   */
   async seedLevels(options: SeedLevelsOptions): Promise<any[]> {
     const { 
       guildId, 
@@ -188,7 +171,6 @@ export class SeedingUtility {
     const levels: any[] = [];
     const targetUserIds = userIds || (await this.seedUsers({ count: userCount })).map(u => u.id);
 
-    // Create level config if requested
     if (includeConfig) {
       const levelConfig = {
         guildId,
@@ -207,7 +189,6 @@ export class SeedingUtility {
       logger.info(`Created level config for guild ${guildId}`);
     }
 
-    // Create level data for each user
     for (const userId of targetUserIds) {
       const level: number = Math.floor(Math.random() * (levelRange[1] - levelRange[0] + 1)) + levelRange[0];
       const xp: number = Math.floor(Math.random() * 1000) + (level * 100);
@@ -227,9 +208,6 @@ export class SeedingUtility {
     return levels;
   }
 
-  /**
-   * Seed giveaways for a guild
-   */
   async seedGiveaways(guildId: string, count: number = 3): Promise<any[]> {
     logger.info(`Seeding ${count} giveaways for guild ${guildId}`);
 
@@ -242,8 +220,8 @@ export class SeedingUtility {
         description: `This is test giveaway number ${i + 1}`,
         channelId: `channel-${i + 1}`,
         messageId: `message-${i + 1}`,
-        endTime: new Date(Date.now() + (24 * 60 * 60 * 1000)), // 24 hours from now
-        active: i < 2, // First 2 are active
+        endTime: new Date(Date.now() + (24 * 60 * 60 * 1000)),
+        active: i < 2,
         winnersCount: Math.floor(Math.random() * 3) + 1,
       });
 
@@ -254,9 +232,6 @@ export class SeedingUtility {
     return giveaways;
   }
 
-  /**
-   * Seed warnings for users in a guild
-   */
   async seedWarnings(guildId: string, userIds: string[], warningsPerUser: number = 2): Promise<any[]> {
     logger.info(`Seeding warnings for ${userIds.length} users in guild ${guildId}`);
 
@@ -267,8 +242,8 @@ export class SeedingUtility {
       for (let i = 0; i < warningsPerUser; i++) {
         userWarnings.push({
           reason: `Test warning ${i + 1} for user`,
-          date: new Date(Date.now() - (i * 24 * 60 * 60 * 1000)), // Spread over days
-          moderator: 'moderator-123',
+          date: new Date(Date.now() - (i * 24 * 60 * 60 * 1000)),
+          moderatorId: 'moderator-123',
         });
       }
 
@@ -285,13 +260,9 @@ export class SeedingUtility {
     return createdWarnings;
   }
 
-  /**
-   * Seed ticket system for a guild
-   */
   async seedTicketSystem(guildId: string): Promise<{ config: any; states: any[]; stats: any[] }> {
     logger.info(`Seeding ticket system for guild ${guildId}`);
 
-    // Create ticket config
     const ticketConfig = ticketConfigFactory.build({
       guildId,
       categoryId: 'category-123',
@@ -299,19 +270,17 @@ export class SeedingUtility {
 
     const createdConfig = await TicketConfigModel.create(ticketConfig);
 
-    // Create some ticket states
     const states: any[] = [];
     for (let i = 0; i < 5; i++) {
       const stateData = ticketStateFactory.build({
         channelId: `ticket-channel-${i + 1}`,
-        assignedTo: i < 3 ? `moderator-${i + 1}` : undefined, // First 3 are assigned
+        assignedTo: i < 3 ? `moderator-${i + 1}` : undefined,
       });
 
       const createdState = await TicketStateModel.create(stateData);
       states.push(createdState);
     }
 
-    // Create ticket stats
     const stats: any[] = [];
     const statsData = ticketStatsFactory.build({
       guildId,
@@ -325,43 +294,34 @@ export class SeedingUtility {
     return { config: createdConfig, states, stats };
   }
 
-  /**
-   * Create guild configurations for various bot features
-   */
   private async createGuildConfigurations(guildId: string): Promise<void> {
     logger.info(`Creating configurations for guild ${guildId}`);
 
-    // Birthday configuration
     await BirthdayConfigurationModel.create({
       guildId,
-      birthdayChannelId: 'birthday-channel-123' // Use correct field name
+      birthdayChannelId: 'birthday-channel-123'
     });
 
-    // Greetings configuration
     await GreetingsConfigurationModel.create({
       guildId,
       greetingsChannelId: 'greetings-channel-123'
     });
 
-    // Suggestion configuration
     await SuggestionConfigurationModel.create({
       guildId,
       suggestionChannelId: 'suggestions-channel-123'
     });
 
-    // Question configuration
     await QuestionConfigurationModel.create({
       guildId,
       questionChannelId: 'questions-channel-123'
     });
 
-    // Stream configuration
     await StreamConfigurationModel.create({
       guildId,
-      channelId: '1234567890123456789' // Valid Discord snowflake format
+      channelId: '1234567890123456789'
     });
 
-    // Temp channel configuration
     await TempChannelConfigurationModel.create({
       guildId,
       channelId: 'temp-channel-123'
@@ -370,9 +330,6 @@ export class SeedingUtility {
     logger.info(`Created all configurations for guild ${guildId}`);
   }
 
-  /**
-   * Clear all test data from the database
-   */
   async clearTestData(): Promise<void> {
     logger.info('Clearing all test data from database');
 
@@ -413,9 +370,6 @@ export class SeedingUtility {
     logger.info('Test data cleared successfully');
   }
 
-  /**
-   * Create a complete test environment with all components
-   */
   async createTestEnvironment(options: TestEnvironmentOptions = {}): Promise<TestEnvironment> {
     const {
       guildName = 'Test Guild',
@@ -433,10 +387,8 @@ export class SeedingUtility {
 
     logger.info('Creating comprehensive test environment');
 
-    // Clear existing data
     await this.clearTestData();
 
-    // Create guild
     const guild = await this.seedGuild({
       name: guildName,
       createConfigurations: true,
@@ -444,7 +396,6 @@ export class SeedingUtility {
       includeRoles: true
     });
 
-    // Create users
     const users = await this.seedUsers({
       count: userCount,
       guildId: guild.id,
@@ -457,36 +408,31 @@ export class SeedingUtility {
       configurations: {}
     };
 
-    // Level system
     if (levelSystem) {
       environment.levels = await this.seedLevels({
         guildId: guild.id,
-        userIds: users.slice(0, 15).map(u => u.id), // Use first 15 users
+        userIds: users.slice(0, 15).map(u => u.id),
         includeConfig: true
       });
     }
 
-    // Giveaways
     if (giveaways > 0) {
       environment.giveaways = await this.seedGiveaways(guild.id, giveaways);
     }
 
-    // Warnings
     if (warnings > 0) {
       const usersToWarn = users.slice(0, Math.min(warnings, users.length));
       environment.warnings = await this.seedWarnings(
         guild.id, 
         usersToWarn.map(u => u.id),
-        2 // 2 warnings per user
+        2
       );
     }
 
-    // Ticket system
     if (tickets) {
       environment.tickets = await this.seedTicketSystem(guild.id);
     }
 
-    // Birthdays
     if (birthdays) {
       const birthdayUsers = users.slice(0, 5);
       for (const user of birthdayUsers) {
@@ -498,7 +444,6 @@ export class SeedingUtility {
       }
     }
 
-    // Auto role
     if (autoRole) {
       await AutoRoleModel.create({
         guildId: guild.id,
@@ -509,37 +454,34 @@ export class SeedingUtility {
       });
     }
 
-    // Suggestions
     if (suggestions) {
       for (let i = 0; i < 3; i++) {
         await SuggestionModel.create({
           guildId: guild.id,
-          authorId: users[i].id, // Use authorId instead of userId
+          authorId: users[i].id,
           messageId: `suggestion-message-${i + 1}`,
           content: `Test suggestion ${i + 1}`
         });
       }
     }
 
-    // Questions
     if (questions) {
       for (let i = 0; i < 3; i++) {
         await QuestionModel.create({
           guildId: guild.id,
-          authorId: users[i].id, // Use authorId instead of userId
+          authorId: users[i].id,
           messageId: `question-message-${i + 1}`,
           content: `Test question ${i + 1}?`
         });
       }
     }
 
-    // Twitch streamers
     if (twitchStreamers > 0) {
       for (let i = 0; i < twitchStreamers; i++) {
         await TwitchStreamerModel.create({
           guildId: guild.id,
           userId: users[i].id,
-          twitchChannel: `streamer${i + 1}` // Use twitchChannel instead of twitchUsername
+          twitchChannel: `streamer${i + 1}`
         });
       }
     }
@@ -555,10 +497,8 @@ export class SeedingUtility {
   }
 }
 
-// Export singleton instance
 export const seedingUtility = new SeedingUtility();
 
-// Export individual functions for convenience
 export const seedGuild = (options?: SeedGuildOptions) => seedingUtility.seedGuild(options);
 export const seedUsers = (options?: SeedUsersOptions) => seedingUtility.seedUsers(options);
 export const seedLevels = (options: SeedLevelsOptions) => seedingUtility.seedLevels(options);

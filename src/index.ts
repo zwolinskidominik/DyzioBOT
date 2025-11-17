@@ -1,8 +1,10 @@
 import { Client, Partials, GatewayIntentBits } from 'discord.js';
 import { CommandHandler } from './handlers/CommandHandler';
 import { EventHandler } from './handlers/EventHandler';
-//import flushXp from './events/ready/xpFlush';
-//import xpCache from './cache/xpCache';
+import flushXp, { startXpFlushScheduler } from './events/ready/xpFlush';
+import { startMonthlyStatsFlushScheduler } from './events/ready/monthlyStatsFlush';
+import xpCache from './cache/xpCache';
+import { flushMonthlyStats } from './cache/monthlyStatsCache';
 import logger from './utils/logger';
 import { env } from './config';
 import mongoose from 'mongoose';
@@ -37,17 +39,13 @@ mongoose
   .then(() => {
     logger.info('Połączono z bazą.');
 
-    // import { REST, Routes } from 'discord.js';
-    // const rest = new REST({ version: "10" }).setToken(TOKEN);
-    // rest.put(Routes.applicationCommands(CLIENT_ID), { body: [] })
-    //     .then(() => logger.info("Commands cleared."))
-    //     .catch((err) => logger.error(`Błąd przy czyszczeniu komend: ${err}`));
-
     client
       .login(TOKEN)
       .then(async () => {
         if (!client.user) return;
-        //       await xpCache.setClient(client);
+        await xpCache.setClient(client);
+        startXpFlushScheduler();
+        startMonthlyStatsFlushScheduler();
         logger.info(`${client.user.tag} jest online.`);
       })
       .catch((err) => logger.error(`❌ Nie udało się zalogować: ${err}`));
@@ -65,11 +63,20 @@ process.on('uncaughtException', (err, origin) => {
 });
 
 async function gracefulShutdown() {
-  console.log('⚙️  Received shutdown signal — flushing XP cache…');
+  console.log('⚙️  Received shutdown signal — flushing caches…');
+  
   try {
-    //    await flushXp();
+    await flushXp();
+    console.log('✅ XP cache flushed');
   } catch (err) {
     console.error('❌ Błąd podczas ostatniego flushu XP:', err);
+  }
+
+  try {
+    await flushMonthlyStats();
+    console.log('✅ Monthly stats cache flushed');
+  } catch (err) {
+    console.error('❌ Błąd podczas ostatniego flushu monthly stats:', err);
   }
 
   if (client && client.isReady()) {

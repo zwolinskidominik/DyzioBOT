@@ -11,6 +11,22 @@ class RoleReward {
   public rewardMessage?: string;
 }
 
+class RoleMultiplier {
+  @prop({ required: true, type: () => String })
+  public roleId!: string;
+
+  @prop({ required: true, type: () => Number, min: 0.1, max: 10 })
+  public multiplier!: number;
+}
+
+class ChannelMultiplier {
+  @prop({ required: true, type: () => String })
+  public channelId!: string;
+
+  @prop({ required: true, type: () => Number, min: 0.1, max: 10 })
+  public multiplier!: number;
+}
+
 @index({ guildId: 1 }, { unique: true })
 export class LevelConfig {
   @prop({ required: true, type: () => String })
@@ -28,6 +44,9 @@ export class LevelConfig {
   @prop({ type: () => String })
   public notifyChannelId?: string;
 
+  @prop({ default: false, type: () => Boolean })
+  public enableLevelUpMessages!: boolean;
+
   @prop({
     type: () => String,
     default: '{user} jesteś kozakiem! Wbiłeś/aś: **{level}** level. 👏',
@@ -42,6 +61,18 @@ export class LevelConfig {
 
   @prop({ type: () => [RoleReward], _id: false, default: [] })
   public roleRewards!: RoleReward[];
+
+  @prop({ type: () => [RoleMultiplier], _id: false, default: [] })
+  public roleMultipliers!: RoleMultiplier[];
+
+  @prop({ type: () => [ChannelMultiplier], _id: false, default: [] })
+  public channelMultipliers!: ChannelMultiplier[];
+
+  @prop({ type: () => [String], default: [] })
+  public ignoredChannels!: string[];
+
+  @prop({ type: () => [String], default: [] })
+  public ignoredRoles!: string[];
 }
 
 export const LevelConfigModel = getModelForClass(LevelConfig);

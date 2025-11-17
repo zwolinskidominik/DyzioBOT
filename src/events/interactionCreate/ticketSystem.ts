@@ -132,7 +132,6 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
   }
 
   const categoryChannel = interaction.guild?.channels.cache.get(config.categoryId);
-  // Zamiast instanceof CategoryChannel sprawdzamy cechy obiektu (typ/children)
   const isCategory =
     !!categoryChannel &&
     (
@@ -160,7 +159,6 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
   const channelKey = channelNames[selectedValue];
   const channelName = `${channelKey}-${interaction.user.username.toLowerCase()}`;
 
-  // 1) Utwórz kanał (błąd -> komunikat o błędzie)
   let ticketChannel: TextChannel | null = null;
   try {
     ticketChannel = await createTicketChannel(
@@ -176,14 +174,12 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
     return;
   }
 
-  // 2) Spróbuj wysłać wiadomości (błąd -> log warn, ale nie przerywaj sukcesu)
   try {
     await sendTicketMessages(interaction, ticketChannel, selectedValue, selectedType);
   } catch (error) {
     logger.warn(`Nie udało się wysłać wiadomości powitalnych dla ticketu: ${error}`);
   }
 
-  // 3) Zawsze zakończ sukcesem, jeśli kanał został utworzony
   await interaction.editReply({
     content: `Stworzono zgłoszenie: 🎫 ${ticketChannel}`,
   });
@@ -239,7 +235,6 @@ async function createTicketChannel(
   return await interaction.guild!.channels.create({
     name: channelName,
     type: ChannelType.GuildText,
-    // Preferuj id kategorii, jeśli dostępne – większa kompatybilność
     parent: (categoryChannel as any)?.id ?? (categoryChannel as unknown as string),
     permissionOverwrites: [
       {
@@ -369,6 +364,8 @@ async function updateTakeTicketButton(interaction: ButtonInteraction): Promise<v
   if (!oldComponents?.length) return;
 
   const oldActionRow = oldComponents[0];
+  if (!('components' in oldActionRow)) return;
+  
   const newActionRow = new ActionRowBuilder<ButtonBuilder>();
 
   for (const comp of oldActionRow.components) {

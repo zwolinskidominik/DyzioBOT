@@ -83,7 +83,6 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 }
 
 async function handleSetup(interaction: ChatInputCommandInteraction, guild: Guild): Promise<void> {
-  // Krok 1: Wybór kanału
   const channelMenu = new ChannelSelectMenuBuilder()
     .setCustomId(CUSTOM_ID.CHANNEL_SELECT)
     .setPlaceholder('Wybierz kanał urodzinowy')
@@ -173,7 +172,6 @@ async function handleSetup(interaction: ChatInputCommandInteraction, guild: Guil
 }
 
 async function handleRoleSetup(interaction: ChatInputCommandInteraction, guild: Guild, selectedChannel: TextChannel): Promise<void> {
-  // Krok 2: Wybór roli (opcjonalny)
   const roleMenu = new RoleSelectMenuBuilder()
     .setCustomId(CUSTOM_ID.ROLE_SELECT)
     .setPlaceholder('Wybierz rolę urodzinową (opcjonalnie)');
@@ -287,7 +285,6 @@ async function finalizeConfiguration(
     }
     updateData.roleId = roleId;
   } else {
-    // Jeśli nie wybrano roli, usuń pole roleId z konfiguracji
     await BirthdayConfigurationModel.findOneAndUpdate(
       { guildId: guild.id },
       { $unset: { roleId: 1 } }

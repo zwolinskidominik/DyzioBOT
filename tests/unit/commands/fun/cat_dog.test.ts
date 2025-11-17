@@ -10,8 +10,6 @@ jest.mock('../../../../src/utils/embedHelpers', () => ({
   __esModule: true,
   createBaseEmbed: jest.fn((args?: any) => embedFactory(args)),
 }));
-
-// mock animal helpers
 const helpers: any = {
   fetchRandomAnimalImage: jest.fn(),
   createAnimalEmbed: jest.fn((data: any, cfg: any) => ({ image: data.url, title: `Losowy ${cfg.animalTitle}` })),

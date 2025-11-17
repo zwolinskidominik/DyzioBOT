@@ -8,32 +8,23 @@ describe('CommandRunner Integration Tests', () => {
   let dbManager: DbManager;
 
   beforeAll(async () => {
-    // Setup database for integration tests
     dbManager = new DbManager();
     await dbManager.startDb();
   });
 
   afterAll(async () => {
-    // Cleanup database
     await dbManager.stopDb();
   });
 
   beforeEach(async () => {
-    // Clear database between tests
     await dbManager.clearCollections();
-    
-    // Clear global cooldowns from validation to avoid conflicts
     clearCooldowns();
-    
-    // Get existing instance or create new one (don't reset completely)
     commandRunner = CommandRunner.getInstance({
       enableCooldowns: true,
       enableValidations: true,
       enableLogging: true,
       mockPermissions: true,
     });
-    
-    // Clear any existing cooldowns and logs for fresh test state
     commandRunner.clearCooldowns();
     commandRunner.clearLogs();
   });
@@ -49,11 +40,8 @@ describe('CommandRunner Integration Tests', () => {
     });
 
     test('should verify specific commands exist', async () => {
-      // Test that common commands are loaded
       expect(commandRunner.hasCommand('ping')).toBe(true);
       expect(commandRunner.hasCommand('avatar')).toBe(true);
-      
-      // Test that non-existent command returns false
       expect(commandRunner.hasCommand('nonexistent')).toBe(false);
     });
 
@@ -81,8 +69,6 @@ describe('CommandRunner Integration Tests', () => {
     });
 
     test('should handle command with options', async () => {
-      // This test uses the test-options mock command
-      // Use unique user ID to avoid cooldown conflicts
       const result: CommandResult = await commandRunner.runCommand('test-options', {
         user: { id: 'options-test-user', username: 'optionsuser', discriminator: '0001' } as any,
         options: {
@@ -103,7 +89,6 @@ describe('CommandRunner Integration Tests', () => {
     });
 
     test('should handle command errors gracefully', async () => {
-      // Create an error-throwing command
       const errorCommand: ICommand = {
         data: {
           name: 'error-command',
@@ -114,11 +99,7 @@ describe('CommandRunner Integration Tests', () => {
           throw new Error('Test error');
         }
       };
-
-      // Add the error command
       commandRunner.addTestCommand('error-command', errorCommand);
-      
-      // Use unique user ID to avoid cooldown conflicts
       const result: CommandResult = await commandRunner.runCommand('error-command', {
         user: { id: 'error-test-user', username: 'erroruser', discriminator: '0001' } as any
       });
@@ -133,25 +114,20 @@ describe('CommandRunner Integration Tests', () => {
     let cooldownRunner: CommandRunner;
 
     beforeEach(() => {
-      // Create a separate CommandRunner with validations disabled for cooldown testing
       cooldownRunner = new CommandRunner({
-        enableValidations: false, // Disable validations to test only CommandRunner cooldowns
+        enableValidations: false,
       });
     });
 
     afterEach(() => {
-      // No cleanup method available, just clear cooldowns
       cooldownRunner.clearCooldowns();
     });
 
     test('should respect command cooldowns', async () => {
-      // Run command first time
       const result1: CommandResult = await cooldownRunner.runCommand('ping');
       console.log('First ping result:', result1);
       expect(result1.success).toBe(true);
       expect(result1.cooldownTriggered).toBeUndefined();
-
-      // Run same command immediately - should trigger cooldown
       const result2: CommandResult = await cooldownRunner.runCommand('ping');
       expect(result2.success).toBe(false);
       expect(result2.cooldownTriggered).toBe(true);
@@ -159,7 +135,6 @@ describe('CommandRunner Integration Tests', () => {
     });
 
     test('should allow command after cooldown expires', async () => {
-      // Use a command with very short cooldown for testing
       const shortCooldownCommand: ICommand = {
         data: {
           name: 'short-cooldown',
@@ -170,37 +145,26 @@ describe('CommandRunner Integration Tests', () => {
           await interaction.reply({ content: 'Short cooldown command executed' });
         },
         options: {
-          cooldown: 0.1, // 100ms cooldown
+          cooldown: 0.1,
         },
       };
 
       cooldownRunner.addTestCommand('short-cooldown', shortCooldownCommand);
-
-      // Run command first time
       const result1: CommandResult = await cooldownRunner.runCommand('short-cooldown');
       expect(result1.success).toBe(true);
-
-      // Run same command immediately - should trigger cooldown
       const result2: CommandResult = await cooldownRunner.runCommand('short-cooldown');
       expect(result2.success).toBe(false);
       expect(result2.cooldownTriggered).toBe(true);
-
-      // Wait for cooldown to expire
       await new Promise(resolve => setTimeout(resolve, 150));
-
-      // Should work again
       const result3: CommandResult = await cooldownRunner.runCommand('short-cooldown');
       expect(result3.success).toBe(true);
       expect(result3.cooldownTriggered).toBeUndefined();
-    }, 10000); // Increase timeout for this test
+    }, 10000);
 
     test('should respect different cooldowns for different users', async () => {
-      // Run command as user 1
       await cooldownRunner.runCommand('ping', {
         user: { id: 'user1', username: 'user1', discriminator: '0001' } as any
       });
-      
-      // Run same command as user 2 - should work
       const result: CommandResult = await cooldownRunner.runCommand('ping', {
         user: { id: 'user2', username: 'user2', discriminator: '0002' } as any
       });
@@ -210,14 +174,11 @@ describe('CommandRunner Integration Tests', () => {
     });
 
     test('should disable cooldowns when configured', async () => {
-      // Create runner with cooldowns disabled
       const noCooldownRunner = new CommandRunner({
         enableCooldowns: false,
         enableValidations: false,
         enableLogging: true,
       });
-
-      // Run command twice rapidly
       const result1 = await noCooldownRunner.runCommand('ping');
       const result2 = await noCooldownRunner.runCommand('ping');
 
@@ -230,7 +191,7 @@ describe('CommandRunner Integration Tests', () => {
   describe('Permission System', () => {
     test('should mock permissions correctly', async () => {
       const result: CommandResult = await commandRunner.runCommand('ping', {
-        memberPermissions: [BigInt(0x0000000000000001)], // CREATE_INSTANT_INVITE
+        memberPermissions: [BigInt(0x0000000000000001)],
       });
       
       expect(result.success).toBe(true);
@@ -241,8 +202,6 @@ describe('CommandRunner Integration Tests', () => {
     test('should load and run validations', async () => {
       const validations = commandRunner.getValidations();
       expect(validations.length).toBeGreaterThanOrEqual(0);
-      
-      // If validations are loaded, they should be functions
       validations.forEach((validation: any) => {
         expect(typeof validation).toBe('function');
       });
@@ -266,8 +225,6 @@ describe('CommandRunner Integration Tests', () => {
       
       const logs = commandRunner.getLogs();
       expect(logs.length).toBeGreaterThan(0);
-      
-      // Check log format
       logs.forEach((log: string) => {
         expect(log).toMatch(/^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\]/);
       });
@@ -318,12 +275,9 @@ describe('CommandRunner Integration Tests', () => {
     });
 
     test('should handle subcommands', async () => {
-      // This test assumes there's a command with subcommands
       const result: CommandResult = await commandRunner.runCommand('help', {
         subcommand: 'commands'
       });
-      
-      // Should not fail even if subcommand isn't implemented
       expect(result.error).not.toContain('No subcommand');
     });
   });
@@ -342,7 +296,7 @@ describe('CommandRunner Integration Tests', () => {
       
       results.forEach((result: CommandResult) => {
         expect(result.success).toBe(true);
-        expect(result.executionTime).toBeLessThan(1000); // Should complete within 1 second
+        expect(result.executionTime).toBeLessThan(1000);
       });
     });
 
@@ -351,7 +305,7 @@ describe('CommandRunner Integration Tests', () => {
       
       expect(result.executionTime).toBeDefined();
       expect(result.executionTime!).toBeGreaterThanOrEqual(0);
-      expect(result.executionTime!).toBeLessThan(5000); // Reasonable upper bound
+      expect(result.executionTime!).toBeLessThan(5000);
     });
   });
 });

@@ -3,15 +3,12 @@ describe('logger printf and defaults', () => {
     jest.isolateModules(() => {
       const mod = require('../../../src/utils/logger');
       const logger = mod.default as any;
-      // Spy on transports by mocking method to avoid actual IO
       const spy = jest.spyOn(logger as any, 'error').mockImplementation(() => {});
       const err = new Error('formatted-stack');
-      // trigger printf stack branch by passing Error; winston will treat as message object with stack field
       logger.error(err);
       expect(spy).toHaveBeenCalled();
       spy.mockRestore();
 
-      // Also call logOncePerInterval without interval arg to cover default value branch in coverage
       const { logOncePerInterval } = mod;
       const infoSpy = jest.spyOn(logger as any, 'info').mockImplementation(() => {});
       logOncePerInterval('info', 'default-interval-key', 'msg');

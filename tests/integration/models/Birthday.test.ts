@@ -87,23 +87,22 @@ describe('Birthday Model Integration Tests', () => {
 
       const birthday = await BirthdayModel.create(birthdayData);
 
-      expect(birthday.yearSpecified).toBe(true); // Default
-      expect(birthday.active).toBe(true); // Default
+      expect(birthday.yearSpecified).toBe(true);
+      expect(birthday.active).toBe(true);
     });
 
     it('should handle birthdays without year specified', async () => {
-      // Birthday without year - use year 1900 as default for month/day only
       const birthdayData = birthdayFactory.build({
         userId: 'user-123',
         guildId: 'guild-123',
-        date: new Date('1900-12-25'), // Christmas, no year specified
+        date: new Date('1900-12-25'),
         yearSpecified: false
       });
 
       const birthday = await BirthdayModel.create(birthdayData);
 
       expect(birthday.yearSpecified).toBe(false);
-      expect(birthday.date.getMonth()).toBe(11); // December (0-indexed)
+      expect(birthday.date.getMonth()).toBe(11);
       expect(birthday.date.getDate()).toBe(25);
     });
   });
@@ -118,11 +117,10 @@ describe('Birthday Model Integration Tests', () => {
 
       await BirthdayModel.create(birthdayData);
 
-      // Try to create another birthday for same user in same guild
       const duplicateData = birthdayFactory.build({
         userId: 'user-123',
-        guildId: 'guild-123', // same user + guild
-        date: new Date('1995-08-20') // different date
+        guildId: 'guild-123',
+        date: new Date('1995-08-20')
       });
 
       await expect(BirthdayModel.create(duplicateData)).rejects.toThrow(/duplicate key/);
@@ -136,8 +134,8 @@ describe('Birthday Model Integration Tests', () => {
       });
 
       const birthday2Data = birthdayFactory.build({
-        userId: 'user-123', // same user
-        guildId: 'guild-456', // different guild
+        userId: 'user-123',
+        guildId: 'guild-456',
         date: new Date('1990-06-15')
       });
 
@@ -158,8 +156,8 @@ describe('Birthday Model Integration Tests', () => {
       });
 
       const birthday2Data = birthdayFactory.build({
-        userId: 'user-456', // different user
-        guildId: 'guild-123', // same guild
+        userId: 'user-456',
+        guildId: 'guild-123',
         date: new Date('1995-08-20')
       });
 
@@ -182,7 +180,6 @@ describe('Birthday Model Integration Tests', () => {
         yearSpecified: true
       });
 
-      // Update birthday date
       birthday.date = new Date('1990-07-20');
       await birthday.save();
 
@@ -198,7 +195,6 @@ describe('Birthday Model Integration Tests', () => {
         yearSpecified: true
       });
 
-      // Toggle year specification
       birthday.yearSpecified = false;
       await birthday.save();
 
@@ -214,7 +210,6 @@ describe('Birthday Model Integration Tests', () => {
         active: true
       });
 
-      // Deactivate birthday
       birthday.active = false;
       await birthday.save();
 
@@ -225,8 +220,6 @@ describe('Birthday Model Integration Tests', () => {
     it('should handle bulk status updates', async () => {
       const guildId = 'guild-bulk';
       const userIds = ['user-1', 'user-2', 'user-3'];
-
-      // Create birthday records for multiple users
       for (const userId of userIds) {
         await BirthdayModel.create({
           userId,
@@ -236,7 +229,6 @@ describe('Birthday Model Integration Tests', () => {
         });
       }
 
-      // Bulk deactivate all birthdays in guild
       await BirthdayModel.updateMany(
         { guildId },
         { active: false }
@@ -250,12 +242,11 @@ describe('Birthday Model Integration Tests', () => {
 
   describe('Query Operations', () => {
     beforeEach(async () => {
-      // Create test birthday data with various dates
       const testBirthdays = [
         { guildId: 'guild-123', userId: 'user-1', date: new Date('1990-01-15'), yearSpecified: true, active: true },
         { guildId: 'guild-123', userId: 'user-2', date: new Date('1995-06-30'), yearSpecified: true, active: true },
-        { guildId: 'guild-123', userId: 'user-3', date: new Date('1900-01-15'), yearSpecified: false, active: true }, // No year
-        { guildId: 'guild-123', userId: 'user-4', date: new Date('1988-12-25'), yearSpecified: true, active: false }, // Inactive
+        { guildId: 'guild-123', userId: 'user-3', date: new Date('1900-01-15'), yearSpecified: false, active: true },
+        { guildId: 'guild-123', userId: 'user-4', date: new Date('1988-12-25'), yearSpecified: true, active: false },
         { guildId: 'guild-456', userId: 'user-1', date: new Date('1992-03-10'), yearSpecified: true, active: true }
       ];
 
@@ -292,21 +283,19 @@ describe('Birthday Model Integration Tests', () => {
     });
 
     it('should find birthdays for specific month', async () => {
-      // Find January birthdays (month 0)
       const januaryBirthdays = await BirthdayModel.find({
         guildId: 'guild-123',
-        $expr: { $eq: [{ $month: '$date' }, 1] } // MongoDB months are 1-indexed
+        $expr: { $eq: [{ $month: '$date' }, 1] }
       });
 
-      expect(januaryBirthdays).toHaveLength(2); // user-1 and user-3
-      expect(januaryBirthdays.every(b => b.date.getMonth() === 0)).toBe(true); // JS months are 0-indexed
+      expect(januaryBirthdays).toHaveLength(2);
+      expect(januaryBirthdays.every(b => b.date.getMonth() === 0)).toBe(true);
     });
 
     it('should find upcoming birthdays', async () => {
       const today = new Date();
       const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
       
-      // Find birthdays in the next 30 days (simplified query)
       const upcomingBirthdays = await BirthdayModel.find({
         guildId: 'guild-123',
         active: true,
@@ -325,10 +314,9 @@ describe('Birthday Model Integration Tests', () => {
     it('should sort birthdays by date', async () => {
       const sortedBirthdays = await BirthdayModel
         .find({ guildId: 'guild-123', active: true })
-        .sort({ date: 1 }); // Ascending order
+        .sort({ date: 1 });
 
       expect(sortedBirthdays).toHaveLength(3);
-      // Check that dates are in ascending order
       for (let i = 1; i < sortedBirthdays.length; i++) {
         expect(sortedBirthdays[i].date.getTime()).toBeGreaterThanOrEqual(
           sortedBirthdays[i - 1].date.getTime()
@@ -350,31 +338,28 @@ describe('Birthday Model Integration Tests', () => {
       expect(birthday.yearSpecified).toBe(true);
       expect(birthday.date.getFullYear()).toBe(1990);
       
-      // Calculate current age (will vary by test run date)
       const today = new Date();
       const currentAge = today.getFullYear() - birthDate.getFullYear() - 
         (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate()) ? 1 : 0);
       
-      expect(currentAge).toBeGreaterThan(30); // Person born in 1990 should be over 30
+      expect(currentAge).toBeGreaterThan(30);
     });
 
     it('should handle year-not-specified birthdays', async () => {
       const birthday = await BirthdayModel.create({
         userId: 'user-123',
         guildId: 'guild-123',
-        date: new Date('1900-12-25'), // Christmas, no specific year
+        date: new Date('1900-12-25'),
         yearSpecified: false
       });
 
       expect(birthday.yearSpecified).toBe(false);
-      expect(birthday.date.getMonth()).toBe(11); // December
+      expect(birthday.date.getMonth()).toBe(11);
       expect(birthday.date.getDate()).toBe(25);
-      // Year should be 1900 (default for no-year birthdays)
       expect(birthday.date.getFullYear()).toBe(1900);
     });
 
     it('should find birthdays by day and month regardless of year', async () => {
-      // Create multiple Christmas birthdays in different years
       await BirthdayModel.create({
         userId: 'user-1',
         guildId: 'guild-123',
@@ -396,7 +381,6 @@ describe('Birthday Model Integration Tests', () => {
         yearSpecified: false
       });
 
-      // Find all Christmas birthdays regardless of year
       const christmasBirthdays = await BirthdayModel.find({
         guildId: 'guild-123',
         $expr: {
@@ -414,7 +398,6 @@ describe('Birthday Model Integration Tests', () => {
 
   describe('Aggregation and Statistics', () => {
     beforeEach(async () => {
-      // Create diverse test data for statistics
       const testData = [
         { guildId: 'guild-123', userId: 'user-1', date: new Date('1990-01-15'), yearSpecified: true, active: true },
         { guildId: 'guild-123', userId: 'user-2', date: new Date('1995-01-20'), yearSpecified: true, active: true },
@@ -474,7 +457,6 @@ describe('Birthday Model Integration Tests', () => {
 
       expect(distribution.length).toBeGreaterThan(0);
       
-      // Find January (month 1) - should have 2 birthdays (user-1 and user-2)
       const january = distribution.find(d => d._id === 1);
       expect(january).toBeDefined();
       expect(january.count).toBe(2);
@@ -512,7 +494,6 @@ describe('Birthday Model Integration Tests', () => {
       ]);
 
       expect(ageDistribution.length).toBeGreaterThan(0);
-      // Most test users should fall in the 25-50 age range
       const middleAged = ageDistribution.find(d => d._id === 25);
       expect(middleAged).toBeDefined();
     });
@@ -527,8 +508,8 @@ describe('Birthday Model Integration Tests', () => {
         birthdays.push(birthdayFactory.build({
           guildId: 'guild-performance',
           userId: `user-${i}`,
-          date: new Date(1980 + (i % 30), i % 12, (i % 28) + 1), // Spread across years and months
-          yearSpecified: i % 5 !== 0 // 80% have year specified
+          date: new Date(1980 + (i % 30), i % 12, (i % 28) + 1),
+          yearSpecified: i % 5 !== 0
         }));
       }
 
@@ -536,9 +517,7 @@ describe('Birthday Model Integration Tests', () => {
       await BirthdayModel.insertMany(birthdays);
       const insertTime = Date.now() - insertStart;
 
-      expect(insertTime).toBeLessThan(2000); // Should insert quickly
-      
-      // Test query performance
+      expect(insertTime).toBeLessThan(2000);
       const queryStart = Date.now();
       const activeBirthdays = await BirthdayModel
         .find({ guildId: 'guild-performance', active: true })
@@ -547,7 +526,7 @@ describe('Birthday Model Integration Tests', () => {
       const queryTime = Date.now() - queryStart;
 
       expect(activeBirthdays).toHaveLength(20);
-      expect(queryTime).toBeLessThan(500); // Should query quickly
+      expect(queryTime).toBeLessThan(500);
 
       logger.info(`Performance test: insert ${insertTime}ms, query ${queryTime}ms`);
     });
@@ -560,13 +539,12 @@ describe('Birthday Model Integration Tests', () => {
         active: true
       });
 
-      // Simulate concurrent updates (toggle active status)
       const operations = [];
       for (let i = 0; i < 10; i++) {
         operations.push(
           BirthdayModel.findByIdAndUpdate(
             birthday._id,
-            { active: i % 2 === 0 }, // Alternate between true/false
+            { active: i % 2 === 0 },
             { new: true }
           )
         );
@@ -574,11 +552,8 @@ describe('Birthday Model Integration Tests', () => {
 
       const results = await Promise.all(operations);
       
-      // All operations should succeed
       expect(results).toHaveLength(10);
       expect(results.every(r => r !== null)).toBe(true);
-
-      // Verify final state
       const finalBirthday = await BirthdayModel.findById(birthday._id);
       expect(finalBirthday!.active).toBeDefined();
 
@@ -586,7 +561,6 @@ describe('Birthday Model Integration Tests', () => {
     });
 
     it('should handle birthday lookup queries efficiently', async () => {
-      // Create many birthday records
       const birthdays = [];
       for (let i = 0; i < 50; i++) {
         birthdays.push(birthdayFactory.build({
@@ -597,18 +571,16 @@ describe('Birthday Model Integration Tests', () => {
       }
 
       await BirthdayModel.insertMany(birthdays);
-
-      // Test monthly birthday lookup performance
       const queryStart = Date.now();
       const julyBirthdays = await BirthdayModel.find({
         guildId: 'guild-lookup',
         active: true,
-        $expr: { $eq: [{ $month: '$date' }, 7] } // July
+        $expr: { $eq: [{ $month: '$date' }, 7] }
       });
       const queryTime = Date.now() - queryStart;
 
       expect(julyBirthdays.length).toBeGreaterThanOrEqual(0);
-      expect(queryTime).toBeLessThan(200); // Should be very fast with index
+      expect(queryTime).toBeLessThan(200);
 
       logger.info(`Birthday lookup query took ${queryTime}ms`);
     });
@@ -619,17 +591,16 @@ describe('Birthday Model Integration Tests', () => {
       const leapYearBirthday = await BirthdayModel.create({
         userId: 'user-leap',
         guildId: 'guild-123',
-        date: new Date('1992-02-29'), // Leap year
+        date: new Date('1992-02-29'),
         yearSpecified: true
       });
 
-      expect(leapYearBirthday.date.getMonth()).toBe(1); // February
+      expect(leapYearBirthday.date.getMonth()).toBe(1);
       expect(leapYearBirthday.date.getDate()).toBe(29);
       expect(leapYearBirthday.date.getFullYear()).toBe(1992);
     });
 
     it('should handle very old and future dates', async () => {
-      // Very old birthday
       const oldBirthday = await BirthdayModel.create({
         userId: 'user-old',
         guildId: 'guild-123',
@@ -637,7 +608,6 @@ describe('Birthday Model Integration Tests', () => {
         yearSpecified: true
       });
 
-      // Future birthday (newborn)
       const futureBirthday = await BirthdayModel.create({
         userId: 'user-future',
         guildId: 'guild-123',
@@ -658,10 +628,7 @@ describe('Birthday Model Integration Tests', () => {
 
       const birthdayId = birthday._id;
 
-      // Delete the birthday record
       await BirthdayModel.findByIdAndDelete(birthdayId);
-
-      // Verify deletion
       const deletedBirthday = await BirthdayModel.findById(birthdayId);
       expect(deletedBirthday).toBeNull();
     });
@@ -678,15 +645,14 @@ describe('Birthday Model Integration Tests', () => {
     });
 
     it('should handle timezone edge cases', async () => {
-      // Test different time zones by using UTC dates
       const birthday = await BirthdayModel.create({
         userId: 'user-timezone',
         guildId: 'guild-123',
-        date: new Date(Date.UTC(1990, 5, 15, 0, 0, 0)) // UTC date
+        date: new Date(Date.UTC(1990, 5, 15, 0, 0, 0))
       });
 
       expect(birthday.date).toBeInstanceOf(Date);
-      expect(birthday.date.getUTCMonth()).toBe(5); // June in UTC
+      expect(birthday.date.getUTCMonth()).toBe(5);
       expect(birthday.date.getUTCDate()).toBe(15);
     });
   });

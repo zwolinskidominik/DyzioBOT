@@ -21,7 +21,6 @@ import logger from '../../utils/logger';
 
 export default async function run(interaction: Interaction): Promise<void> {
   try {
-    // Handle button interactions
     if (interaction.isButton()) {
       switch (interaction.customId) {
         case 'voice_limit':
@@ -42,7 +41,6 @@ export default async function run(interaction: Interaction): Promise<void> {
       }
     }
 
-    // Handle modal submissions
     if (interaction.isModalSubmit()) {
       if (interaction.customId.startsWith('voice_limit_modal_')) {
         await handleLimitModal(interaction);
@@ -51,7 +49,6 @@ export default async function run(interaction: Interaction): Promise<void> {
       }
     }
 
-    // Handle select menu interactions
     if (interaction.isStringSelectMenu()) {
       if (interaction.customId.startsWith('voice_kick_select_')) {
         await handleKickSelectMenu(interaction);
@@ -64,10 +61,6 @@ export default async function run(interaction: Interaction): Promise<void> {
   }
 }
 
-// ============================================================================
-// LIMIT BUTTON & MODAL
-// ============================================================================
-
 async function handleLimitButton(interaction: ButtonInteraction): Promise<void> {
   try {
     if (!interaction.inGuild() || !interaction.channel) {
@@ -78,7 +71,6 @@ async function handleLimitButton(interaction: ButtonInteraction): Promise<void> 
       return;
     }
 
-    // Sprawdź czy to kanał tymczasowy i czy użytkownik jest właścicielem
     const tempChannel = await TempChannelModel.findOne({
       channelId: interaction.channelId,
     });
@@ -99,7 +91,6 @@ async function handleLimitButton(interaction: ButtonInteraction): Promise<void> 
       return;
     }
 
-    // Pokaż modal z inputem limitu
     const modal = new ModalBuilder()
       .setCustomId(`voice_limit_modal_${interaction.channelId}`)
       .setTitle('Zmiana limitu użytkowników');
@@ -141,7 +132,6 @@ async function handleLimitModal(interaction: ModalSubmitInteraction): Promise<vo
       return;
     }
 
-    // Defer reply PRZED operacją setUserLimit
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const channelId = interaction.customId.split('_')[3];
@@ -173,10 +163,6 @@ async function handleLimitModal(interaction: ModalSubmitInteraction): Promise<vo
     }
   }
 }
-
-// ============================================================================
-// NAME BUTTON & MODAL
-// ============================================================================
 
 async function handleNameButton(interaction: ButtonInteraction): Promise<void> {
   try {
@@ -240,7 +226,6 @@ async function handleNameModal(interaction: ModalSubmitInteraction): Promise<voi
   try {
     const newName = interaction.fields.getTextInputValue('name_value');
     
-    // Defer reply PRZED operacją setName
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     
     const channelId = interaction.customId.split('_')[3];
@@ -273,10 +258,6 @@ async function handleNameModal(interaction: ModalSubmitInteraction): Promise<voi
   }
 }
 
-// ============================================================================
-// LOCK BUTTON
-// ============================================================================
-
 async function handleLockButton(interaction: ButtonInteraction): Promise<void> {
   try {
     if (!interaction.inGuild() || !interaction.channel || !interaction.guild) {
@@ -307,7 +288,6 @@ async function handleLockButton(interaction: ButtonInteraction): Promise<void> {
       return;
     }
 
-    // Defer reply PRZED długimi operacjami
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const channel = await interaction.guild.channels.fetch(tempChannel.channelId);
@@ -319,31 +299,25 @@ async function handleLockButton(interaction: ButtonInteraction): Promise<void> {
       return;
     }
 
-    // Sprawdź aktualny stan blokady
     const everyonePermission = channel.permissionOverwrites.cache.get(interaction.guild.id);
     const isLocked = everyonePermission?.deny.has(PermissionFlagsBits.Connect);
 
     if (isLocked) {
-      // Odblokuj kanał głosowy - usuń TYLKO Connect deny dla wszystkich
       const guildId = interaction.guild.id;
       
-      // Usuń Connect deny dla @everyone (pozostaw inne uprawnienia)
       const everyoneOverwrite = channel.permissionOverwrites.cache.get(guildId);
       if (everyoneOverwrite && everyoneOverwrite.deny.has(PermissionFlagsBits.Connect)) {
         await channel.permissionOverwrites.edit(guildId, {
-          Connect: null, // null = usuń override, przywróć domyślne
+          Connect: null,
         });
       }
       
-      // Usuń Connect deny/allow dla wszystkich ról które były zablokowane
       const roleOverwrites = channel.permissionOverwrites.cache.filter(
         overwrite => overwrite.type === 0 && overwrite.id !== guildId
       );
       
       await Promise.all(
         roleOverwrites.map(overwrite => {
-          // Jeśli rola miała tylko Connect override, usuń całą overwrite
-          // W przeciwnym razie usuń tylko Connect
           const permissions = overwrite.allow.toArray().length + overwrite.deny.toArray().length;
           if (permissions === 1 && overwrite.deny.has(PermissionFlagsBits.Connect)) {
             return channel.permissionOverwrites.delete(overwrite.id);
@@ -353,7 +327,6 @@ async function handleLockButton(interaction: ButtonInteraction): Promise<void> {
         })
       );
       
-      // Usuń override właściciela jeśli miał tylko Connect
       const ownerOverwrite = channel.permissionOverwrites.cache.get(interaction.user.id);
       if (ownerOverwrite) {
         const ownerPerms = ownerOverwrite.allow.toArray().length + ownerOverwrite.deny.toArray().length;
@@ -368,15 +341,12 @@ async function handleLockButton(interaction: ButtonInteraction): Promise<void> {
         content: '🔓 Kanał głosowy został odblokowany. Wszyscy mogą dołączyć.',
       });
     } else {
-      // Zablokuj dołączanie głosowe dla WSZYSTKICH ról i użytkowników
       const guildId = interaction.guild.id;
       
-      // 1. Zablokuj @everyone (pozostaw inne uprawnienia)
       await channel.permissionOverwrites.edit(guildId, {
         Connect: false,
       });
       
-      // 2. Zablokuj WSZYSTKIE role (type 0 = Role)
       const rolesToBlock = channel.permissionOverwrites.cache.filter(
         overwrite => overwrite.type === 0 && overwrite.id !== guildId
       );
@@ -387,7 +357,6 @@ async function handleLockButton(interaction: ButtonInteraction): Promise<void> {
         )
       );
       
-      // 3. Właściciel może dołączyć (nadpisuje wszystko)
       await channel.permissionOverwrites.edit(interaction.user.id, {
         Connect: true,
       });
@@ -410,10 +379,6 @@ async function handleLockButton(interaction: ButtonInteraction): Promise<void> {
     }
   }
 }
-
-// ============================================================================
-// KICK BUTTON & SELECT MENU
-// ============================================================================
 
 async function handleKickButton(interaction: ButtonInteraction): Promise<void> {
   try {
@@ -455,7 +420,6 @@ async function handleKickButton(interaction: ButtonInteraction): Promise<void> {
       return;
     }
 
-    // Pobierz członków kanału (bez właściciela)
     const members = Array.from(channel.members.values()).filter(
       (member) => member.id !== tempChannel.ownerId
     );
@@ -468,14 +432,12 @@ async function handleKickButton(interaction: ButtonInteraction): Promise<void> {
       return;
     }
 
-    // Stwórz ładny embed z listą użytkowników
     const embed = createBaseEmbed({
       title: '🚪 Wyrzuć użytkownika',
       description: 'Wybierz użytkownika, którego chcesz wyrzucić z kanału głosowego:',
       timestamp: false,
     });
 
-    // Stwórz select menu z lepszym formatowaniem
     const selectMenu = new StringSelectMenuBuilder()
       .setCustomId(`voice_kick_select_${tempChannel.channelId}`)
       .setPlaceholder('🎯 Wybierz użytkownika...')
@@ -548,10 +510,6 @@ async function handleKickSelectMenu(interaction: StringSelectMenuInteraction): P
   }
 }
 
-// ============================================================================
-// TRANSFER BUTTON & SELECT MENU
-// ============================================================================
-
 async function handleTransferButton(interaction: ButtonInteraction): Promise<void> {
   try {
     if (!interaction.inGuild() || !interaction.channel || !interaction.guild) {
@@ -592,7 +550,6 @@ async function handleTransferButton(interaction: ButtonInteraction): Promise<voi
       return;
     }
 
-    // Pobierz członków kanału (bez właściciela)
     const members = Array.from(channel.members.values()).filter(
       (member) => member.id !== tempChannel.ownerId
     );
@@ -605,7 +562,6 @@ async function handleTransferButton(interaction: ButtonInteraction): Promise<voi
       return;
     }
 
-    // Stwórz ładny embed
     const embed = createBaseEmbed({
       title: '👑 Przekaż Własność',
       description: 
@@ -614,7 +570,6 @@ async function handleTransferButton(interaction: ButtonInteraction): Promise<voi
       timestamp: false,
     });
 
-    // Stwórz select menu z lepszym formatowaniem
     const selectMenu = new StringSelectMenuBuilder()
       .setCustomId(`voice_transfer_select_${tempChannel.channelId}`)
       .setPlaceholder('👤 Wybierz nowego właściciela...')
@@ -684,12 +639,10 @@ async function handleTransferSelectMenu(interaction: StringSelectMenuInteraction
       return;
     }
 
-    // Zaktualizuj właściciela w bazie
     const oldOwnerId = tempChannel.ownerId;
     tempChannel.ownerId = newOwnerId;
     await tempChannel.save();
 
-    // Zaktualizuj uprawnienia kanału - nowy właściciel dostaje pełen dostęp
     await channel.permissionOverwrites.edit(newOwnerId, {
       ViewChannel: true,
       Connect: true,
@@ -697,16 +650,12 @@ async function handleTransferSelectMenu(interaction: StringSelectMenuInteraction
       Stream: true,
     });
 
-    // Usuń specjalne uprawnienia starego właściciela (jeśli nie jest @everyone)
     if (oldOwnerId !== interaction.guild?.id) {
       try {
         await channel.permissionOverwrites.delete(oldOwnerId);
-      } catch (err) {
-        // Ignoruj błąd jeśli nie ma uprawnień do usunięcia
-      }
+      } catch (err) {}
     }
 
-    // Zaktualizuj panel kontrolny
     if (tempChannel.controlMessageId) {
       try {
         const controlMessage = await channel.messages.fetch(tempChannel.controlMessageId);
@@ -765,7 +714,6 @@ async function handleTransferSelectMenu(interaction: StringSelectMenuInteraction
       components: [],
     });
 
-    // Wyślij powiadomienie na kanale
     await channel.send({
       content: `👑 <@${oldOwnerId}> przekazał własność kanału użytkownikowi <@${newOwnerId}>`,
     });

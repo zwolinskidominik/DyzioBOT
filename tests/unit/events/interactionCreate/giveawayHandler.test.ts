@@ -131,7 +131,6 @@ describe('interactionCreate/giveawayHandler', () => {
     const interaction = baseInteraction('giveaway_join_err');
     (interaction.editReply as jest.Mock).mockRejectedValueOnce(new Error('reply-fail'));
     await run(interaction as any, makeClient());
-    // error for main try/catch and error for nested editReply catch
     expect(error).toHaveBeenCalled();
   });
 });

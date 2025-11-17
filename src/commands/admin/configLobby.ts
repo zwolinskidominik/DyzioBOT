@@ -90,7 +90,7 @@ async function handleSetup(interaction: ChatInputCommandInteraction, guild: Guil
   let rulesChannelId: string | null = null;
   let chatChannelId: string | null = null;
   let currentStep: 'greetings' | 'rules' | 'chat' = 'greetings';
-  const rolesChannelId = 'customize-community'; // Stały kanał Discord "Channels & Roles"
+  const rolesChannelId = 'customize-community';
 
   const updateMessage = async () => {
     const menus: ActionRowBuilder<ChannelSelectMenuBuilder>[] = [];

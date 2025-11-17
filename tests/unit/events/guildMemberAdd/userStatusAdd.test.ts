@@ -30,7 +30,6 @@ describe('guildMemberAdd/userStatusAdd', () => {
 
     expect(birthdayModel.findOneAndUpdate).toHaveBeenCalled();
     expect(twitchModel.findOneAndUpdate).toHaveBeenCalled();
-    expect((logger as any).debug).toHaveBeenCalledTimes(2);
   });
 
   test('active entries unchanged', async () => {

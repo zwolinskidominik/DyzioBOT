@@ -79,11 +79,9 @@ describe('Level & LevelConfig Models', () => {
   });
 
   it('handles optional fields correctly', async () => {
-    // Test with minimal required fields
     const cfg = await LevelConfigModel.create({ guildId: 'minimal' });
     expect(cfg.notifyChannelId).toBeUndefined();
     
-    // Test with optional fields set
     const cfgWithOptional = await LevelConfigModel.create({ 
       guildId: 'withOptional', 
       notifyChannelId: 'channel123' 
@@ -95,10 +93,8 @@ describe('Level & LevelConfig Models', () => {
     const guildId = `roleRewardTest-${Date.now()}-${Math.random()}`;
     const cfg = await LevelConfigModel.create({ guildId });
     
-    // Add roleReward without rewardMessage (should use default empty string)
     cfg.roleRewards.push({ level: 5, roleId: 'role5' });
     
-    // Add roleReward with custom rewardMessage
     cfg.roleRewards.push({ 
       level: 10, 
       roleId: 'role10', 

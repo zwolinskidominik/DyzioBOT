@@ -70,9 +70,6 @@ export class TicketStateFactory extends BaseFactory<TicketStateDocument> {
     return await doc.save();
   }
 
-  /**
-   * Create unassigned ticket
-   */
   async createUnassigned(channelId?: string): Promise<TicketStateDocument> {
     return this.create({
       channelId: channelId || BaseFactory.randomSnowflake(),
@@ -80,9 +77,6 @@ export class TicketStateFactory extends BaseFactory<TicketStateDocument> {
     });
   }
 
-  /**
-   * Create assigned ticket
-   */
   async createAssigned(assignedTo: string, channelId?: string): Promise<TicketStateDocument> {
     return this.create({
       channelId: channelId || BaseFactory.randomSnowflake(),
@@ -90,9 +84,6 @@ export class TicketStateFactory extends BaseFactory<TicketStateDocument> {
     });
   }
 
-  /**
-   * Create multiple ticket states for testing
-   */
   async createTestSet(): Promise<{
     unassigned: TicketStateDocument[];
     assigned: TicketStateDocument[];
@@ -126,7 +117,7 @@ export class TicketStatsFactory extends BaseFactory<TicketStatsDocument> {
     const defaults: TicketStatsFactoryData = {
       guildId: overrides.guildId || BaseFactory.pick(BaseFactory.SAMPLE_GUILD_IDS),
       userId: overrides.userId || BaseFactory.pick(BaseFactory.SAMPLE_USER_IDS),
-      count: overrides.count ?? Math.floor(Math.random() * 50) + 1, // 1-50 tickets handled
+      count: overrides.count ?? Math.floor(Math.random() * 50) + 1,
     };
 
     const data = { ...defaults, ...overrides };
@@ -138,34 +129,25 @@ export class TicketStatsFactory extends BaseFactory<TicketStatsDocument> {
     return await doc.save();
   }
 
-  /**
-   * Create stats for new moderator (low count)
-   */
   async createNewModerator(userId: string, guildId: string): Promise<TicketStatsDocument> {
     return this.create({
       userId,
       guildId,
-      count: Math.floor(Math.random() * 5) + 1, // 1-5 tickets
+      count: Math.floor(Math.random() * 5) + 1,
     });
   }
 
-  /**
-   * Create stats for experienced moderator (high count)
-   */
   async createExperiencedModerator(userId: string, guildId: string): Promise<TicketStatsDocument> {
     return this.create({
       userId,
       guildId,
-      count: Math.floor(Math.random() * 100) + 50, // 50-149 tickets
+      count: Math.floor(Math.random() * 100) + 50,
     });
   }
 
-  /**
-   * Create moderator leaderboard
-   */
   async createModeratorLeaderboard(guildId: string, moderatorCount = 5): Promise<TicketStatsDocument[]> {
     const moderators = BaseFactory.SAMPLE_USER_IDS.slice(0, moderatorCount);
-    const counts = [120, 95, 78, 45, 23]; // Descending order
+    const counts = [120, 95, 78, 45, 23];
 
     return Promise.all(
       moderators.map((userId, index) => 
@@ -178,9 +160,6 @@ export class TicketStatsFactory extends BaseFactory<TicketStatsDocument> {
     );
   }
 
-  /**
-   * Create ticket system data set (config + states + stats)
-   */
   async createTicketSystemSet(guildId: string): Promise<{
     config: TicketConfigDocument;
     states: { unassigned: TicketStateDocument[]; assigned: TicketStateDocument[] };
@@ -199,9 +178,6 @@ export class TicketStatsFactory extends BaseFactory<TicketStatsDocument> {
   }
 }
 
-/**
- * Unified ticket factory for creating complete ticket ecosystem
- */
 export class TicketFactory {
   private static instance: TicketFactory;
 
@@ -224,19 +200,13 @@ export class TicketFactory {
     return TicketStatsFactory.getInstance();
   }
 
-  /**
-   * Create complete ticket system for guild
-   */
   async createCompleteSystem(guildId: string) {
     return this.stats.createTicketSystemSet(guildId);
   }
 
-  /**
-   * Create ticket workflow scenario
-   */
   async createWorkflowScenario(guildId: string) {
-    const moderator = ticketStatsFactory.build().userId; // Get user from factory
-    const channelId = ticketStateFactory.build().channelId; // Get channel from factory
+    const moderator = ticketStatsFactory.build().userId;
+    const channelId = ticketStateFactory.build().channelId;
 
     const [config, initialState, stats] = await Promise.all([
       this.config.create({ guildId }),
@@ -244,13 +214,11 @@ export class TicketFactory {
       this.stats.createNewModerator(moderator, guildId),
     ]);
 
-    // Create a copy of initial state for unassigned reference
     const unassignedState = {
       ...initialState.toObject(),
       assignedTo: undefined,
     };
 
-    // Simulate assignment by updating the existing state
     initialState.assignedTo = moderator;
     const assignedState = await initialState.save();
 
@@ -265,7 +233,6 @@ export class TicketFactory {
   }
 }
 
-// Export singleton instances
 export const ticketConfigFactory = TicketConfigFactory.getInstance();
 export const ticketStateFactory = TicketStateFactory.getInstance();
 export const ticketStatsFactory = TicketStatsFactory.getInstance();

@@ -145,12 +145,10 @@ describe('ready/twitchScheduler', () => {
 
   test('ensureThumbnailsDirectory creates folders when access fails', async () => {
     const client = makeClient();
-    // First two access calls fail (assets and thumbnails), then succeed subsequently
     fsOps.access
       .mockRejectedValueOnce(new Error('no assets'))
       .mockRejectedValueOnce(new Error('no thumbs'));
     await run(client);
-    // Called twice for creating both directories with recursive flag
     expect(fsOps.mkdir).toHaveBeenCalledWith(expect.any(String), { recursive: true });
     expect(fsOps.mkdir).toHaveBeenCalledTimes(2);
   });
@@ -159,20 +157,17 @@ describe('ready/twitchScheduler', () => {
     const client = makeClient();
     const guild = client.guilds.cache.get('g1');
     const channel = guild.channels.cache.get('liveChan');
-    // First send (with thumbnail file) fails, second send (fallback) succeeds
     channel.send.mockRejectedValueOnce(new Error('network'));
 
     streamers = [{ active: true, isLive: false, twitchChannel: 'chan', guildId: 'g1', save: jest.fn(async function(){ this.isLive=true; }) }];
     streamCfg = [{ guildId: 'g1', channelId: 'liveChan' }];
     getUserByName.mockResolvedValue({ id: 'u1', displayName: 'Chan', profilePictureUrl: 'purl' });
     getStreamByUserId.mockResolvedValue({ id: 's1', title: 'Live', gameName: 'Game', thumbnailUrl: 'http://thumb/{width}x{height}' });
-    // Ensure thumbnail download succeeds so first attempted send uses files
     fetchMock.mockResolvedValueOnce({ ok: true, arrayBuffer: async ()=> new ArrayBuffer(0) });
 
     await run(client);
     await scheduled[1].cb();
 
-    // First call attempted with files, failed; second call should be without files
     expect(channel.send).toHaveBeenCalledTimes(2);
     const firstArg = channel.send.mock.calls[0][0];
     const secondArg = channel.send.mock.calls[1][0];
@@ -185,14 +180,12 @@ describe('ready/twitchScheduler', () => {
     const client = makeClient();
     fsOps.readdir.mockRejectedValueOnce(new Error('readdirFail'));
     await run(client);
-    // Trigger daily cleanup cron
     await scheduled[0].cb();
     expect(error).toHaveBeenCalledWith(expect.stringContaining('Błąd podczas czyszczenia miniatur'));
   });
 
   test('sendStreamNotification: guild not found -> warns and no save', async () => {
     const client = makeClient();
-    // Streamer references non-existing guild
     streamers = [{ active: true, isLive: false, twitchChannel: 'chan', guildId: 'gX', save: jest.fn(async function(){ this.isLive=true; }) }];
     streamCfg = [{ guildId: 'gX', channelId: 'liveChan' }];
     getUserByName.mockResolvedValue({ id: 'u1', displayName: 'Chan', profilePictureUrl: 'purl' });
@@ -205,7 +198,6 @@ describe('ready/twitchScheduler', () => {
 
   test('sendStreamNotification: channel not found -> warns and no save', async () => {
     const client = makeClient();
-    // Guild exists but channel ID mismatches
     streamers = [{ active: true, isLive: false, twitchChannel: 'chan', guildId: 'g1', save: jest.fn(async function(){ this.isLive=true; }) }];
     streamCfg = [{ guildId: 'g1', channelId: 'missingChan' }];
     getUserByName.mockResolvedValue({ id: 'u1', displayName: 'Chan', profilePictureUrl: 'purl' });
@@ -218,19 +210,15 @@ describe('ready/twitchScheduler', () => {
 
   test('ensureThumbnailsDirectory failure is caught and logged on startup', async () => {
     const client = makeClient();
-    // Make mkdir throw on first attempt to simulate fatal fs error
     fsOps.access.mockRejectedValueOnce(new Error('no assets'));
     fsOps.mkdir.mockRejectedValueOnce(new Error('mkdir fail'));
     await run(client);
-    // Should log the startup error
     expect(error).toHaveBeenCalledWith(expect.stringContaining('Błąd podczas tworzenia katalogu miniatur'));
-    // Cron jobs still scheduled
     expect(scheduled.length).toBe(2);
   });
 
   test('sendStreamNotification: channel exists but is not text (no send) -> warns and returns false', async () => {
     const client = makeClient();
-    // Replace the channel getter to return an object without send
     (client.guilds.cache.get('g1') as any).channels.cache.get = (id: string) =>
       id === 'notText' ? ({ id: 'notText' } as any) : null;
     streamers = [{ active: true, isLive: false, twitchChannel: 'chan', guildId: 'g1', save: jest.fn(async function(){ this.isLive=true; }) }];

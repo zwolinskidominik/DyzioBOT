@@ -18,7 +18,6 @@ jest.mock('../../../../src/utils/embedHelpers', () => ({
   createBaseEmbed: jest.fn((args?: any) => embedFactory(args)),
 }));
 
-// Mock models
 const FortuneModelMock: any = { find: jest.fn() };
 const FortuneUsageModelCtor: any = jest.fn((data: any) => ({ ...data, save: jest.fn().mockResolvedValue(undefined) }));
 FortuneUsageModelCtor.findOne = jest.fn();
@@ -85,7 +84,7 @@ describe('misc/wrozba', () => {
         lean: () => ({ exec: () => Promise.resolve([{ content: 'A' }, { content: 'B' }]) }),
       });
       (FortuneUsageModelCtor.findOne as jest.Mock).mockReturnValue({ exec: () => Promise.resolve(null) });
-      jest.spyOn(Math, 'random').mockReturnValue(0); // pick first fortune deterministically
+      jest.spyOn(Math, 'random').mockReturnValue(0);
       const { run } = await import('../../../../src/commands/misc/wrozba');
       const interaction = buildInteraction();
       await run({ interaction, client: {} as any });

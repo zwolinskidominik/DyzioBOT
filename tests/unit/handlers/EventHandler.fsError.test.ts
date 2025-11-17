@@ -42,7 +42,6 @@ describe('EventHandler loadEvents error branch', () => {
     const logger = require('../../../src/utils/logger').default as { error: jest.Mock };
     const { client } = makeClient();
     new EventHandler(client);
-    // Give microtask queue a tick in case the constructor caught promise resolves later
     await new Promise((r) => setImmediate(r));
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Error loading events'));
   });

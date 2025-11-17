@@ -5,12 +5,12 @@ jest.mock('pretty-ms', () => ({ __esModule: true, default: (ms: number) => `${Ma
 jest.mock('../../../src/utils/embedHelpers', () => ({
   createBaseEmbed: jest.fn((opts: any) => {
     const fields: any[] = [];
-    return {
+    const embed: any = {
       data: { description: opts.description, footer: { text: opts.footerText, icon_url: opts.footerIcon }, thumbnail: { url: opts.thumbnail } },
-      addFields: (...f: any[]) => { fields.push(...f); return (embed as any); },
+      addFields: (...f: any[]) => { fields.push(...f); return embed; },
       get fields() { return fields; }
-    } as any;
-    var embed;
+    };
+    return embed;
   }),
 }));
 

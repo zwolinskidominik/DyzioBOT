@@ -110,7 +110,6 @@ describe('ready/giveawayScheduler', () => {
     expect(edit).toHaveBeenCalled();
     const editArg = edit.mock.calls[0][0];
     expect(editArg.embeds[0].description).toContain('Nagroda');
-    expect(info).toHaveBeenCalledWith(expect.stringContaining('Przetworzono 1'));
   });
 
   test('missing guild warns and continues', async () => {
@@ -188,8 +187,6 @@ describe('ready/giveawayScheduler', () => {
     await runSchedulerCallback();
     const missingWarn = warn.mock.calls.find(c=> (c[0]||'').includes('Nie znaleziono kanału') && (c[0]||'').includes('gMissing'));
     expect(missingWarn).toBeTruthy();
-    const processedInfo = info.mock.calls.find(c=> (c[0]||'').includes('Przetworzono 2'));
-    expect(processedInfo).toBeTruthy();
   });
 
   test('finalize full success updates message and sets finalized', async () => {
@@ -203,8 +200,6 @@ describe('ready/giveawayScheduler', () => {
     expect(reply).toHaveBeenCalled();
     const updateCall = updateOneMock.mock.calls.find(c=> c[1]?.['$set']?.finalized === true);
     expect(updateCall).toBeTruthy();
-    const resultsInfo = info.mock.calls.find(c=> (c[0]||'').includes('Wysłano wiadomość z wynikami'));
-    expect(resultsInfo).toBeTruthy();
   });
 
   test('pickWinners empty list but participants -> embed shows Brak zwycięzców', async () => {

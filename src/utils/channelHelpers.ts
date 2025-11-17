@@ -2,7 +2,6 @@ import { Collection, Guild, GuildMember, TextChannel } from 'discord.js';
 import { ChannelStatsModel } from '../models/ChannelStats';
 import logger from './logger';
 
-// Track in-flight rename intentions per channel to ensure last-write-wins and avoid double retries
 const renameTokens = new Map<string, number>();
 let renameSeq = 0;
 
@@ -18,7 +17,6 @@ export async function safeSetChannelName(
   renameTokens.set(chanId, myToken);
 
   const attempt = async (left: number, nextDelay: number): Promise<void> => {
-    // Abort if a newer rename request exists for this channel
     if (renameTokens.get(chanId) !== myToken) return;
     try {
       await channel.setName(newName);
@@ -33,7 +31,6 @@ export async function safeSetChannelName(
           `Rate-limit przy zmianie nazwy kanału ${channel.id}. Retry za ${nextDelay} ms (pozostało ${left}).`
         );
         await new Promise((r) => setTimeout(r, nextDelay));
-        // check again before retrying to avoid double-retry overriding a newer request
         if (renameTokens.get(chanId) !== myToken) return;
         return attempt(left - 1, Math.min(nextDelay * 2, 30_000));
       }

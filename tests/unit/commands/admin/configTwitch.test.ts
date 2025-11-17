@@ -1,6 +1,5 @@
 export {};
 
-// Mocks
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
@@ -10,8 +9,6 @@ jest.mock('../../../../src/utils/embedHelpers', () => ({
   __esModule: true,
   createBaseEmbed: jest.fn((args?: any) => ({ __embed: true, addFields: jest.fn(), ...args })),
 }));
-
-// Mock model
 const StreamConfModel: any = {
   findOneAndUpdate: jest.fn(),
   findOneAndDelete: jest.fn(),
@@ -24,7 +21,6 @@ jest.mock('../../../../src/models/StreamConfiguration', () => ({
 }));
 
 const buildInteraction = (over: Record<string, any> = {}) => {
-  // response from editReply with collector capabilities
   let handlers: Record<string, any> = {};
   const collector = {
     on: jest.fn((event: string, cb: any) => {
@@ -75,7 +71,6 @@ describe('admin/configTwitch', () => {
         interaction.options.getSubcommand.mockReturnValue('set');
         await run({ interaction, client: {} as any });
         const collect = collector._handlers['collect'];
-        // Confirm button pressed without prior selection
         await collect({
           user: { id: 'u1' },
           customId: 'twitch-confirm',
@@ -96,7 +91,6 @@ describe('admin/configTwitch', () => {
         interaction.options.getSubcommand.mockReturnValue('set');
         await run({ interaction, client: {} as any });
         const collect = collector._handlers['collect'];
-        // First select a channel
         await collect({
           user: { id: 'u1' },
           customId: 'twitch-channel-select',
@@ -105,7 +99,6 @@ describe('admin/configTwitch', () => {
           values: ['missing'],
           deferUpdate: jest.fn().mockResolvedValue(undefined),
         });
-        // Then confirm
         await collect({
           user: { id: 'u1' },
           customId: 'twitch-confirm',
@@ -113,7 +106,6 @@ describe('admin/configTwitch', () => {
           isButton: () => true,
           deferUpdate: jest.fn().mockResolvedValue(undefined),
         });
-        // Error embed path
         expect(interaction.editReply).toHaveBeenCalledWith(
           expect.objectContaining({ embeds: [expect.objectContaining({ isError: true })] })
         );
@@ -126,7 +118,6 @@ describe('admin/configTwitch', () => {
         const { interaction, collector } = buildInteraction();
         const { StreamConfigurationModel } = await import('../../../../src/models/StreamConfiguration');
         (StreamConfigurationModel.findOneAndUpdate as jest.Mock).mockResolvedValue({});
-        // existing channel
         const channel = { id: 'text1' };
         interaction.guild.channels.cache.get.mockReturnValue(channel);
 
@@ -134,7 +125,6 @@ describe('admin/configTwitch', () => {
         interaction.options.getSubcommand.mockReturnValue('set');
         await run({ interaction, client: {} as any });
         const collect = collector._handlers['collect'];
-        // Select channel
         await collect({
           user: { id: 'u1' },
           customId: 'twitch-channel-select',
@@ -143,7 +133,6 @@ describe('admin/configTwitch', () => {
           values: ['text1'],
           deferUpdate: jest.fn().mockResolvedValue(undefined),
         });
-        // Confirm
         await collect({
           user: { id: 'u1' },
           customId: 'twitch-confirm',
@@ -156,7 +145,6 @@ describe('admin/configTwitch', () => {
           { guildId: 'g1', channelId: 'text1' },
           expect.objectContaining({ upsert: true, new: true })
         );
-        // Success embed
         expect(interaction.editReply).toHaveBeenCalledWith(
           expect.objectContaining({ embeds: [expect.objectContaining({ description: expect.stringMatching(/został skonfigurowany/i) })], components: [] })
         );
@@ -174,7 +162,6 @@ describe('admin/configTwitch', () => {
         interaction.options.getSubcommand.mockReturnValue('set');
         await run({ interaction, client: {} as any });
         const collect = collector._handlers['collect'];
-        // Select and confirm
         await collect({ user: { id: 'u1' }, customId: 'twitch-channel-select', isChannelSelectMenu: () => true, isButton: () => false, values: ['text1'], deferUpdate: jest.fn().mockResolvedValue(undefined) });
         await expect(
           collect({ user: { id: 'u1' }, customId: 'twitch-confirm', isChannelSelectMenu: () => false, isButton: () => true, deferUpdate: jest.fn().mockResolvedValue(undefined) })

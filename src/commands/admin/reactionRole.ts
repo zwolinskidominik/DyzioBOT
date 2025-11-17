@@ -26,8 +26,8 @@ const CUSTOM_ID = {
   CANCEL: 'RR_CANCEL',
 };
 
-const COLLECTION_TIMEOUT = 300_000; // 5 minut
-const MAX_REACTIONS = 20; // Limit Discord API
+const COLLECTION_TIMEOUT = 300_000; // 5 min
+const MAX_REACTIONS = 20;
 
 export const data = new SlashCommandBuilder()
   .setName('reaction-role')
@@ -154,7 +154,6 @@ async function handleCreate(interaction: ChatInputCommandInteraction): Promise<v
 
   collector.on('collect', async (i: ButtonInteraction) => {
     if (i.customId === CUSTOM_ID.ADD_REACTION) {
-      // Sprawdź limit reakcji
       if (reactions.length >= MAX_REACTIONS) {
         await i.reply({
           content: `❌ Osiągnięto maksymalną liczbę reakcji (${MAX_REACTIONS}). Discord API ogranicza do 20 unikalnych reakcji na wiadomość.`,
@@ -194,10 +193,8 @@ async function handleCreate(interaction: ChatInputCommandInteraction): Promise<v
           return;
         }
 
-        // Walidacja emoji
         const customEmojiMatch = emoji.match(/<a?:([^:]+):(\d+)>/);
         if (customEmojiMatch) {
-          // Custom emoji - sprawdź czy istnieje na serwerze
           const emojiId = customEmojiMatch[2];
           const guildEmoji = interaction.guild?.emojis.cache.get(emojiId);
           if (!guildEmoji) {
@@ -208,9 +205,7 @@ async function handleCreate(interaction: ChatInputCommandInteraction): Promise<v
             return;
           }
         } else {
-          // Unicode emoji - spróbuj zwalidować
           try {
-            // Test czy Discord zaakceptuje to emoji jako reakcję
             if (interaction.channel && 'send' in interaction.channel) {
               const testMsg = await (interaction.channel as TextChannel).send('test');
               await testMsg.react(emoji);
@@ -289,14 +284,12 @@ async function handleCreate(interaction: ChatInputCommandInteraction): Promise<v
       const message = await (interaction.channel as TextChannel).send({ embeds: [finalEmbed] });
 
       if (message) {
-        // Dodaj reakcje do wiadomości
         for (const reaction of reactions) {
           await message.react(reaction.emoji).catch((err: Error) => {
             logger.error(`Nie można dodać reakcji ${reaction.emoji}: ${err}`);
           });
         }
 
-        // Zapisz w bazie danych
         await ReactionRoleModel.create({
           guildId: interaction.guildId!,
           channelId: message.channelId,
@@ -347,13 +340,11 @@ async function handleDelete(interaction: ChatInputCommandInteraction): Promise<v
     return;
   }
 
-  // Usuń wiadomość z kanału
   const channel = interaction.guild?.channels.cache.get(reactionRole.channelId);
   if (channel && 'messages' in channel) {
     await channel.messages.delete(messageId).catch(() => {});
   }
 
-  // Usuń z bazy danych
   await ReactionRoleModel.deleteOne({ messageId });
 
   await interaction.reply({

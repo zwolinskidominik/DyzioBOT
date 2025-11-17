@@ -1,6 +1,5 @@
 export {};
 
-// Mocks
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
@@ -60,7 +59,6 @@ const buildInteraction = (over: Record<string, any> = {}) => {
   const firstEdit = jest
     .fn()
     .mockResolvedValue({ createMessageComponentCollector: jest.fn(() => collector) });
-  // For set subcommand, first editReply returns the response with collector; others return Promise.resolve()
   editReply.mockImplementationOnce(firstEdit).mockResolvedValue(undefined);
 
   const interaction: any = {
@@ -86,7 +84,6 @@ describe('admin/config-autorole command', () => {
 
       await run({ interaction, client: {} as any });
 
-      // simulate clicking confirm without prior selection
       const confirmInteraction: any = {
         user: { id: interaction.user.id },
         isRoleSelectMenu: () => false,
@@ -113,7 +110,6 @@ describe('admin/config-autorole command', () => {
 
       await run({ interaction, client: {} as any });
 
-      // simulate selecting 3 roles (first for bots, others for users)
       const selectInteraction: any = {
         user: { id: interaction.user.id },
         isRoleSelectMenu: () => true,
@@ -138,7 +134,6 @@ describe('admin/config-autorole command', () => {
         { guildId: interaction.guild.id, roleIds: ['rBot', 'rUser1', 'rUser2'] },
         { upsert: true }
       );
-      // final editReply with embed and cleared components
       expect(interaction.editReply).toHaveBeenLastCalledWith(
         expect.objectContaining({ embeds: [expect.any(Object)], components: [] })
       );
@@ -196,7 +191,6 @@ describe('admin/config-autorole command', () => {
       const { interaction, collector } = buildInteraction();
       interaction.options.getSubcommand.mockReturnValue('set');
       await run({ interaction, client: {} as any });
-      // trigger timeout
   await collector.handlers.end!([], 'time');
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({ content: 'Czas na wybór minął. Spróbuj ponownie.', components: [] })

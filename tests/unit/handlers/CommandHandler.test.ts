@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import * as path from 'path';
 
-// Mock logger to assert error/warn calls from CommandHandler
 jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
   default: {
@@ -94,7 +93,7 @@ describe('CommandHandler', () => {
     expect(inter1.reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('deweloperów') }));
     const inter2: any = makeInteraction('devcmd', { userId: 'dev-user' });
     await (handler as any).handleInteraction(inter2);
-    expect(inter2.reply.mock.calls.find(c => c[0].content.includes('deweloperów'))).toBeUndefined();
+    expect(inter2.reply.mock.calls.find((c: any) => c[0].content.includes('deweloperów'))).toBeUndefined();
   });
 
   test('denies command on missing user permission', async () => {
@@ -142,7 +141,6 @@ describe('CommandHandler', () => {
   test('dynamic import failure triggers logger.error and user error message', async () => {
     const handler = new CommandHandlerClass(client, {});
     const map = (handler as any).commands as Map<string, any>;
-    // simulate command that performs a failing dynamic import by rejecting inside run
     map.get('aaa').run = async () => {
       await Promise.reject(new Error('dynamic import failed'));
     };
@@ -156,9 +154,7 @@ describe('CommandHandler', () => {
     mockValidation.mockResolvedValueOnce(null);
     const handler = new CommandHandlerClass(client, {});
     const inter: any = makeInteraction('aaa', { userId: 'u1' });
-    // First call should pass (validation returns null by default), then we simulate cooldown by making validation return a message
     await (handler as any).handleInteraction(inter);
-    // Next interaction triggers cooldown validation response
     mockValidation.mockResolvedValueOnce('Odczekaj jeszcze 2 sekund przed ponownym użyciem tej komendy.');
     const inter2: any = makeInteraction('aaa', { userId: 'u1' });
     await (handler as any).handleInteraction(inter2);
@@ -170,7 +166,7 @@ describe('CommandHandler', () => {
     const handler = new CommandHandlerClass(client, { devRoleIds: ['dev-role'] });
     const inter: any = makeInteraction('devcmd', { userId: 'not-dev', member: { roles: { cache: new Map([['dev-role', true]]) } } });
     await (handler as any).handleInteraction(inter);
-    const denial = inter.reply.mock.calls.find(c => String(c[0]?.content||'').includes('deweloperów'));
+    const denial = inter.reply.mock.calls.find((c: any) => String(c[0]?.content||'').includes('deweloperów'));
     expect(denial).toBeUndefined();
     expect(runSpy).toHaveBeenCalled();
   });
@@ -213,7 +209,6 @@ describe('CommandHandler', () => {
     client.guilds.fetch.mockResolvedValue({ commands: { set: devSet }, name: 'DevGuild' });
     const handler = new CommandHandlerClass(client, { bulkRegister: true, devGuildIds: ['g1'] });
     (client as any).emit('ready');
-    // allow async ready handler to resolve
     await new Promise(r => setImmediate(r));
   const globalArgs: any[] = (appSet as any).mock.lastCall || [];
   const globalLen = (globalArgs[0] || []).length;
@@ -221,25 +216,22 @@ describe('CommandHandler', () => {
   expect(devSet).toHaveBeenCalled();
   const devArgs: any[] = (devSet as any).mock.lastCall || [];
   const devLen = (devArgs[0] || []).length;
-    expect(devLen).toBe(1); // only devcmd
+    expect(devLen).toBe(1);
   });
 
   test('non-bulk: create new, edit changed, skip unchanged; deleted option skipped', async () => {
     const handler = new CommandHandlerClass(client, {});
-    // Make sure commands list contains deleted command too; it should be skipped
     const map = (handler as any).commands as Map<string, any>;
     expect(map.has('deleted')).toBe(true);
     const createSpy = jest.fn();
     const editSpy = jest.fn();
-    // Existing commands: "same" exists with outdated description -> should edit; "needperm" unchanged -> no edit
     const existing = [ { id: '1', name: 'same', description: 'outdated' }, { id: '2', name: 'needperm', description: 'd' } ];
     client.application.commands.fetch = jest.fn(async () => ({ find: (fn: any) => existing.find(fn) }));
     client.application.commands.create = createSpy;
     client.application.commands.edit = editSpy;
     await (handler as any).registerCommands();
-    // Global commands expected: aaa, same, needperm, auto, botp (deleted skipped)
-    expect(createSpy.mock.calls.length).toBeGreaterThanOrEqual(2); // at least aaa & auto; botp may add one more
-    expect(editSpy).toHaveBeenCalledTimes(1); // only 'same'
+    expect(createSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(editSpy).toHaveBeenCalledTimes(1);
   });
 
   test('bulk=true with no devGuildIds does not fetch guilds', async () => {
@@ -265,9 +257,7 @@ describe('CommandHandler', () => {
   test('non-bulk: dev guild fetch returns null -> warns and continues', async () => {
     const handler = new CommandHandlerClass(client, { devGuildIds: ['gY'] });
     client.guilds.fetch.mockResolvedValue(null);
-    // Avoid .find() on Map by returning a stub object with .find
     client.application.commands.fetch = jest.fn(async () => ({ find: (_fn: any) => undefined }));
-    // Ensure there is at least one dev command
     await (handler as any).registerCommands();
     const warned = consoleWarns.find((w) => String(w[0] || '').includes('Nie udało się pobrać gildii'));
     expect(warned).toBeTruthy();
@@ -292,10 +282,8 @@ describe('CommandHandler', () => {
   test('non-bulk dev commands per-guild: edit existing and create new', async () => {
     const handler = new CommandHandlerClass(client, { devGuildIds: ['devGuild1'] });
     const map = (handler as any).commands as Map<string, any>;
-    // Ensure devcmd exists and will be edited by changing its description
     const devCmd = map.get('devcmd');
     devCmd.data.setDescription('newdesc');
-    // Add a new dev-only command to trigger create
     const { SlashCommandBuilder } = require('discord.js');
     const newRun = jest.fn(async () => {});
     map.set('devnew', { data: new SlashCommandBuilder().setName('devnew').setDescription('d'), options: { devOnly: true }, run: newRun });
@@ -312,12 +300,11 @@ describe('CommandHandler', () => {
       },
     };
     client.guilds.fetch.mockResolvedValue(guildMock);
-  // Global existing for non-bulk global pass to avoid Map lacking .find
   client.application.commands.fetch = jest.fn(async () => ({ find: (fn: any) => [] as any }));
 
     await (handler as any).registerCommands();
 
-    expect(editSpy).toHaveBeenCalledTimes(1); // devcmd edited
-    expect(createSpy).toHaveBeenCalledTimes(1); // devnew created
+    expect(editSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledTimes(1);
   });
 });

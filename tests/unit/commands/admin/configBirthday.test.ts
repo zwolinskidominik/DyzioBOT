@@ -1,6 +1,5 @@
 export {};
 
-// Mocks
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
@@ -68,7 +67,6 @@ const buildInteraction = (guildChannels: string[] = [], roleIds: string[] = []) 
       return collectorCount === 1 ? collector : collector2;
     })
   };
-  // editReply should always return an object with createMessageComponentCollector
   editReply.mockResolvedValue(mockResponse);
 
   const interaction: any = {
@@ -110,7 +108,6 @@ describe('admin/config-birthday command', () => {
 
       await run({ interaction, client: {} as any });
 
-      // Step 1: Select non-existent channel
       const selectInteraction: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => true,
@@ -121,7 +118,6 @@ describe('admin/config-birthday command', () => {
       };
       await collector.handlers.collect!(selectInteraction);
 
-      // Step 2: Try to proceed to role setup
       const stepRoleInteraction: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => false,
@@ -130,8 +126,6 @@ describe('admin/config-birthday command', () => {
         deferUpdate: jest.fn().mockResolvedValue(undefined),
       };
       await collector.handlers.collect!(stepRoleInteraction);
-
-      // Should show error embed for missing channel
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({ embeds: [expect.any(Object)] })
       );
@@ -150,7 +144,6 @@ describe('admin/config-birthday command', () => {
 
       await run({ interaction, client: {} as any });
 
-      // Step 1: Select channel
       const selectInteraction: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => true,
@@ -161,7 +154,6 @@ describe('admin/config-birthday command', () => {
       };
       await collector.handlers.collect!(selectInteraction);
 
-      // Step 2: Go to role setup
       const stepRoleInteraction: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => false,
@@ -171,7 +163,6 @@ describe('admin/config-birthday command', () => {
       };
       await collector.handlers.collect!(stepRoleInteraction);
 
-      // Step 3: Choose no role (using second collector)
       const noRoleInteraction: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => false,
@@ -182,7 +173,6 @@ describe('admin/config-birthday command', () => {
       };
       await collector2.handlers.collect!(noRoleInteraction);
 
-      // Step 4: Confirm configuration
       const confirmInteraction: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => false,
@@ -192,13 +182,10 @@ describe('admin/config-birthday command', () => {
         deferUpdate: jest.fn().mockResolvedValue(undefined),
       };
       await collector2.handlers.collect!(confirmInteraction);
-
-      // First call should unset roleId
       expect(BirthdayConfigurationModel.findOneAndUpdate).toHaveBeenNthCalledWith(1,
         { guildId: interaction.guild.id },
         { $unset: { roleId: 1 } }
       );
-      // Second call should save the configuration
       expect(BirthdayConfigurationModel.findOneAndUpdate).toHaveBeenNthCalledWith(2,
         { guildId: interaction.guild.id },
         { guildId: interaction.guild.id, birthdayChannelId: 'c1' },
@@ -324,7 +311,6 @@ describe('admin/config-birthday command', () => {
 
       await run({ interaction, client: {} as any });
 
-      // Proceed to role step
       const selectInteraction: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => true,
@@ -343,7 +329,6 @@ describe('admin/config-birthday command', () => {
       };
       await collector.handlers.collect!(stepRoleInteraction);
 
-      // Timeout on second collector
       await collector2.handlers.end!([], 'time');
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({ content: 'Czas na wybór minął. Spróbuj ponownie.', components: [] })
@@ -359,7 +344,6 @@ describe('admin/config-birthday command', () => {
 
       await run({ interaction, client: {} as any });
 
-      // Go to role step
       await collector.handlers.collect!({
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => true,
@@ -375,7 +359,6 @@ describe('admin/config-birthday command', () => {
         deferUpdate: jest.fn().mockResolvedValue(undefined),
       });
 
-      // Cancel at role step
       await collector2.handlers.collect!({
         user: { id: interaction.user.id },
         isRoleSelectMenu: () => false,
@@ -398,7 +381,6 @@ describe('admin/config-birthday command', () => {
 
       await run({ interaction, client: {} as any });
 
-      // Enter role step
       await collector.handlers.collect!({
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => true,
@@ -413,8 +395,6 @@ describe('admin/config-birthday command', () => {
         customId: 'birthday-step-role',
         deferUpdate: jest.fn().mockResolvedValue(undefined),
       });
-
-      // Select a role that doesn't exist and confirm
       await collector2.handlers.collect!({
         user: { id: interaction.user.id },
         isRoleSelectMenu: () => true,
@@ -429,8 +409,6 @@ describe('admin/config-birthday command', () => {
         customId: 'birthday-confirm',
         deferUpdate: jest.fn().mockResolvedValue(undefined),
       });
-
-      // Should have replied with an error embed for missing role
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({ embeds: [expect.any(Object)] })
       );
@@ -455,11 +433,9 @@ describe('admin/config-birthday command', () => {
       const { run } = await import('../../../../src/commands/admin/configBirthday');
       const { interaction } = buildInteraction();
       interaction.options.getSubcommand.mockReturnValue('set');
-      // Make deferReply succeed but editReply reject to trigger outer catch reply
       interaction.editReply.mockRejectedValueOnce(new Error('fail to edit'));
       await run({ interaction, client: {} as any });
       expect(logger.error).toHaveBeenCalled();
-      // The outer catch reply will attempt to editReply with error embed as well
       expect(interaction.editReply).toHaveBeenCalled();
     });
   });

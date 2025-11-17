@@ -9,8 +9,6 @@ jest.mock('../../../../src/utils/embedHelpers', () => ({
   __esModule: true,
   createBaseEmbed: jest.fn((args?: any) => ({ __embed: true, addFields: jest.fn(), ...args })),
 }));
-
-// Mock model with constructor and statics
 const TempConfCtor: any = jest.fn(function (this: any, payload: any) {
   Object.assign(this, payload);
   this.save = jest.fn().mockResolvedValue(undefined);
@@ -77,7 +75,6 @@ describe('admin/tempChannel', () => {
       await jest.isolateModules(async () => {
         const { TempChannelConfigurationModel } = await import('../../../../src/models/TempChannelConfiguration');
         (TempChannelConfigurationModel.findOne as jest.Mock).mockReturnValue({ exec: () => Promise.resolve(null) });
-        // Make constructor instance reject on save
         (TempConfCtor as jest.Mock).mockImplementationOnce(function (this: any, payload: any) {
           Object.assign(this, payload);
           this.save = jest.fn().mockRejectedValue(new Error('db'));

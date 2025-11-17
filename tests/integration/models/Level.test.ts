@@ -74,19 +74,16 @@ describe('Level Model Integration Tests', () => {
 
       const level = await LevelModel.create(levelData);
 
-      expect(level.level).toBe(1); // Default level is 1
-      expect(level.xp).toBe(0); // Default xp is 0
+      expect(level.level).toBe(1);
+      expect(level.xp).toBe(0);
     });
 
     it('should validate minimum values', async () => {
-      // Test minimum XP validation
       await expect(LevelModel.create({
         guildId: 'guild-123',
         userId: 'user-123',
         xp: -1
       })).rejects.toThrow();
-
-      // Test minimum level validation
       await expect(LevelModel.create({
         guildId: 'guild-123',
         userId: 'user-123',
@@ -106,10 +103,9 @@ describe('Level Model Integration Tests', () => {
 
       await LevelModel.create(levelData);
 
-      // Try to create another level record for same user in same guild
       const duplicateData = levelFactory.build({
         guildId: 'guild-123',
-        userId: 'user-123', // same user + guild
+        userId: 'user-123',
         level: 10,
         xp: 1000
       });
@@ -126,8 +122,8 @@ describe('Level Model Integration Tests', () => {
       });
 
       const level2Data = levelFactory.build({
-        guildId: 'guild-456', // different guild
-        userId: 'user-123', // same user
+        guildId: 'guild-456',
+        userId: 'user-123',
         level: 10,
         xp: 1000
       });
@@ -150,8 +146,8 @@ describe('Level Model Integration Tests', () => {
       });
 
       const level2Data = levelFactory.build({
-        guildId: 'guild-123', // same guild
-        userId: 'user-456', // different user
+        guildId: 'guild-123',
+        userId: 'user-456',
         level: 8,
         xp: 800
       });
@@ -176,10 +172,8 @@ describe('Level Model Integration Tests', () => {
       });
 
       const level = await LevelModel.create(levelData);
-
-      // Add more XP
       level.xp = 750;
-      level.level = 6; // Manually update level for this test
+      level.level = 6;
       await level.save();
 
       const updatedLevel = await LevelModel.findById(level._id);
@@ -199,11 +193,8 @@ describe('Level Model Integration Tests', () => {
 
       const originalMessageTs = level.lastMessageTs;
       const originalVcTs = level.lastVcUpdateTs;
-
-      // Wait a bit to ensure timestamp difference
       await new Promise(resolve => setTimeout(resolve, 10));
 
-      // Update timestamps
       level.lastMessageTs = new Date();
       level.lastVcUpdateTs = new Date();
       await level.save();
@@ -216,8 +207,6 @@ describe('Level Model Integration Tests', () => {
     it('should handle bulk XP additions', async () => {
       const guildId = 'guild-bulk';
       const userIds = ['user-1', 'user-2', 'user-3'];
-
-      // Create level records for multiple users
       for (const userId of userIds) {
         await LevelModel.create({
           guildId,
@@ -227,7 +216,6 @@ describe('Level Model Integration Tests', () => {
         });
       }
 
-      // Bulk update XP for all users in guild
       await LevelModel.updateMany(
         { guildId },
         { $inc: { xp: 50 } }
@@ -241,7 +229,6 @@ describe('Level Model Integration Tests', () => {
 
   describe('Query Operations', () => {
     beforeEach(async () => {
-      // Create test level data
       const testLevels = [
         { guildId: 'guild-123', userId: 'user-1', level: 10, xp: 50 },
         { guildId: 'guild-123', userId: 'user-2', level: 15, xp: 200 },
@@ -268,9 +255,9 @@ describe('Level Model Integration Tests', () => {
         .sort({ level: -1 });
 
       expect(levels).toHaveLength(4);
-      expect(levels[0].userId).toBe('user-4'); // highest level (20)
+      expect(levels[0].userId).toBe('user-4');
       expect(levels[0].level).toBe(20);
-      expect(levels[3].userId).toBe('user-3'); // lowest level (8)
+      expect(levels[3].userId).toBe('user-3');
       expect(levels[3].level).toBe(8);
     });
 
@@ -296,7 +283,7 @@ describe('Level Model Integration Tests', () => {
         level: { $gt: userLevel!.level }
       });
 
-      expect(higherLevels).toHaveLength(1); // Only user-4 with level 20
+      expect(higherLevels).toHaveLength(1);
       expect(higherLevels[0].userId).toBe('user-4');
     });
 
@@ -307,14 +294,13 @@ describe('Level Model Integration Tests', () => {
         .limit(2);
 
       expect(topLevels).toHaveLength(2);
-      expect(topLevels[0].userId).toBe('user-4'); // level 20
-      expect(topLevels[1].userId).toBe('user-2'); // level 15
+      expect(topLevels[0].userId).toBe('user-4');
+      expect(topLevels[1].userId).toBe('user-2');
     });
   });
 
   describe('Aggregation and Statistics', () => {
     beforeEach(async () => {
-      // Create diverse test data for statistics
       const testData = [
         { guildId: 'guild-123', userId: 'user-1', level: 10, xp: 50 },
         { guildId: 'guild-123', userId: 'user-2', level: 15, xp: 200 },
@@ -345,10 +331,10 @@ describe('Level Model Integration Tests', () => {
 
       expect(stats).toHaveLength(1);
       expect(stats[0].userCount).toBe(4);
-      expect(stats[0].avgLevel).toBe(13.25); // (10+15+8+20)/4
+      expect(stats[0].avgLevel).toBe(13.25);
       expect(stats[0].maxLevel).toBe(20);
       expect(stats[0].minLevel).toBe(8);
-      expect(stats[0].totalXp).toBe(1100); // 50+200+750+100
+      expect(stats[0].totalXp).toBe(1100);
     });
 
     it('should find level distribution', async () => {
@@ -379,7 +365,7 @@ describe('Level Model Integration Tests', () => {
             userId: 1,
             level: 1,
             xp: 1,
-            rank: { $literal: 1 } // Simple placeholder rank
+            rank: { $literal: 1 }
           }
         },
         {
@@ -403,7 +389,6 @@ describe('Level Model Integration Tests', () => {
 
   describe('Level Configuration Integration', () => {
     it('should work with LevelConfig', async () => {
-      // Create a level configuration
       const config = await LevelConfigModel.create({
         guildId: 'guild-config',
         xpPerMsg: 10,
@@ -415,8 +400,6 @@ describe('Level Model Integration Tests', () => {
       expect(config.xpPerMsg).toBe(10);
       expect(config.xpPerMinVc).toBe(5);
       expect(config.cooldownSec).toBe(30);
-
-      // Create level records that could use this config
       const level = await LevelModel.create({
         guildId: 'guild-config',
         userId: 'user-123',
@@ -439,8 +422,6 @@ describe('Level Model Integration Tests', () => {
       expect(config.roleRewards).toHaveLength(2);
       expect(config.roleRewards[0].level).toBe(5);
       expect(config.roleRewards[1].level).toBe(10);
-
-      // Create levels that match reward thresholds
       const level1 = await LevelModel.create({
         guildId: 'guild-rewards',
         userId: 'user-1',
@@ -478,9 +459,7 @@ describe('Level Model Integration Tests', () => {
       await LevelModel.insertMany(levels);
       const insertTime = Date.now() - insertStart;
 
-      expect(insertTime).toBeLessThan(2000); // Should insert quickly
-      
-      // Test query performance
+      expect(insertTime).toBeLessThan(2000);
       const queryStart = Date.now();
       const topLevels = await LevelModel
         .find({ guildId: 'guild-performance' })
@@ -489,7 +468,7 @@ describe('Level Model Integration Tests', () => {
       const queryTime = Date.now() - queryStart;
 
       expect(topLevels).toHaveLength(10);
-      expect(queryTime).toBeLessThan(500); // Should query quickly
+      expect(queryTime).toBeLessThan(500);
 
       logger.info(`Performance test: insert ${insertTime}ms, query ${queryTime}ms`);
     });
@@ -502,7 +481,6 @@ describe('Level Model Integration Tests', () => {
         xp: 0
       });
 
-      // Simulate concurrent XP updates
       const operations = [];
       for (let i = 0; i < 10; i++) {
         operations.push(
@@ -516,20 +494,16 @@ describe('Level Model Integration Tests', () => {
 
       const results = await Promise.all(operations);
       
-      // All operations should succeed
       expect(results).toHaveLength(10);
       expect(results.every(r => r !== null)).toBe(true);
-
-      // Verify final XP count
       const finalLevel = await LevelModel.findById(level._id);
       expect(finalLevel!.xp).toBeGreaterThan(0);
-      expect(finalLevel!.xp).toBeLessThanOrEqual(100); // Maximum possible from 10 updates of 10 XP
+      expect(finalLevel!.xp).toBeLessThanOrEqual(100);
 
       logger.info(`Concurrent operations completed, final XP: ${finalLevel!.xp}`);
     });
 
     it('should handle leaderboard queries efficiently', async () => {
-      // Create many level records
       const levels = [];
       for (let i = 0; i < 50; i++) {
         levels.push(levelFactory.build({
@@ -541,8 +515,6 @@ describe('Level Model Integration Tests', () => {
       }
 
       await LevelModel.insertMany(levels);
-
-      // Test leaderboard query performance
       const queryStart = Date.now();
       const leaderboard = await LevelModel
         .find({ guildId: 'guild-leaderboard' })
@@ -551,7 +523,7 @@ describe('Level Model Integration Tests', () => {
       const queryTime = Date.now() - queryStart;
 
       expect(leaderboard).toHaveLength(20);
-      expect(queryTime).toBeLessThan(500); // Increased tolerance for system variations
+      expect(queryTime).toBeLessThan(500);
 
       logger.info(`Leaderboard query took ${queryTime}ms`);
     });
@@ -594,10 +566,7 @@ describe('Level Model Integration Tests', () => {
 
       const levelId = level._id;
 
-      // Delete the level record
       await LevelModel.findByIdAndDelete(levelId);
-
-      // Verify deletion
       const deletedLevel = await LevelModel.findById(levelId);
       expect(deletedLevel).toBeNull();
     });

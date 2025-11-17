@@ -62,7 +62,6 @@ describe('pickWinners', () => {
 
   test('deterministic winner with mocked Math.random', async () => {
     const { guild } = makeGuild(['a', 'b', 'c']);
-    // With Math.random mocked to 0.01 (see beforeAll), shuffle keeps order for first picks
     const res = await pickWinners(['a', 'b', 'c'], 1, guild);
     expect(res.map((u) => u.id)).toEqual(['a']);
   });

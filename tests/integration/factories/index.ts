@@ -1,4 +1,3 @@
-// Export all factories from a single entry point
 export { BaseFactory, randomUUID } from './BaseFactory';
 export { LevelFactory, levelFactory } from './LevelFactory';
 export { GiveawayFactory, giveawayFactory } from './GiveawayFactory';
@@ -22,7 +21,6 @@ export {
   guildFactory 
 } from './DiscordFactory';
 
-// Type exports
 export type { LevelFactoryData } from './LevelFactory';
 export type { GiveawayFactoryData } from './GiveawayFactory';
 export type { WarnFactoryData, WarnEntryData } from './WarnFactory';

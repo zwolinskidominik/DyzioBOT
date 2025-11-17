@@ -82,7 +82,6 @@ describe('misc/warnings command', () => {
       const { run } = await import('../../../../src/commands/misc/warnings');
       await run({ interaction, client: {} as any });
       expect(embedFactory).toHaveBeenCalledWith(expect.objectContaining({ title: expect.stringContaining('Liczba ostrzeżeń') }));
-      // description should be present after setDescription
       const replyArg = (interaction.reply as jest.Mock).mock.calls[0][0];
       expect(replyArg.embeds[0]).toEqual(expect.objectContaining({ __embed: true }));
     });

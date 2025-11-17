@@ -1,6 +1,5 @@
 export {};
 
-// Common mocks
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
@@ -11,12 +10,10 @@ jest.mock('../../../../src/utils/embedHelpers', () => ({
   createBaseEmbed: jest.fn((args?: any) => ({ __embed: true, ...args })),
 }));
 
-// Flexible mock for TwitchStreamerModel that supports constructor and static methods
 const ctorMock = jest.fn((payload: any) => ({
   ...payload,
   save: jest.fn().mockResolvedValue(undefined),
 }));
-// Attach static-like methods used by the command
 (ctorMock as any).findOne = jest.fn();
 (ctorMock as any).find = jest.fn();
 (ctorMock as any).deleteOne = jest.fn();
@@ -54,7 +51,6 @@ const buildInteraction = (over: Record<string, any> = {}) => {
 describe('admin/twitch command', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset constructor mock instances and static methods
     (ctorMock as jest.Mock).mockClear();
     (ctorMock as any).findOne.mockReset();
     (ctorMock as any).find.mockReset();
@@ -77,7 +73,6 @@ describe('admin/twitch command', () => {
         const { run } = await import('../../../../src/commands/admin/twitch');
         await run({ interaction, client: {} as any });
         expect(interaction.deferReply).toHaveBeenCalled();
-        // Ensure constructor was used to create new document
   expect(ctorMock.mock.calls[0][0]).toEqual(
           expect.objectContaining({ guildId: 'g1', twitchChannel: 'Nick', userId: 'u1', active: true })
         );
@@ -117,7 +112,6 @@ describe('admin/twitch command', () => {
       jest.isolateModules(async () => {
         const { TwitchStreamerModel } = await import('../../../../src/models/TwitchStreamer');
         (TwitchStreamerModel.findOne as jest.Mock).mockReturnValue({ exec: () => Promise.resolve(null) });
-        // Make constructor produce an instance whose save rejects
   ctorMock.mockImplementationOnce((payload: any) => ({
           ...payload,
           save: jest.fn().mockRejectedValue(new Error('db')),

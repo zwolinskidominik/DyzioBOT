@@ -122,10 +122,8 @@ describe('animalHelpers.fetchRandomAnimalImage', () => {
   });
 
   test('duplicate avoidance: second response can be a single object (non-array)', async () => {
-    // seed previous id
     (request as jest.Mock).mockResolvedValueOnce(makeResponse([{ id: 'DUP', url: 'dup' }]));
     await fetchRandomAnimalImage(baseConfig);
-    // next call: first response duplicates, second response returns single object alt
     (request as jest.Mock)
       .mockResolvedValueOnce(makeResponse([{ id: 'DUP', url: 'dup' }]))
       .mockResolvedValueOnce(makeResponse({ id: 'ALT', url: 'alt' }));

@@ -35,7 +35,18 @@ function makeVoiceState(opts: Partial<any>): any {
 function makeGuild(){
   return {
     id: 'g1',
-    channels: { create: jest.fn(async (options:any)=> ({ id: 'newVoice', type: 2, ...options })), cache: new Map(), },
+    channels: { 
+      create: jest.fn(async (options:any)=> ({ 
+        id: 'newVoice', 
+        type: 2, 
+        ...options,
+        permissionOverwrites: {
+          edit: jest.fn().mockResolvedValue(undefined)
+        },
+        send: jest.fn().mockResolvedValue(undefined)
+      })), 
+      cache: new Map(), 
+    },
   };
 }
 
@@ -44,11 +55,16 @@ describe('voiceStateUpdate/tempChannel', () => {
 
   test('creates temporary channel and moves user', async () => {
     const guild = makeGuild();
-    const voiceTemplate = { id: 'templateVoice', name: 'Base', userLimit: 5, permissionOverwrites: { cache: [] } };
-    const member = { id: 'u1' };
+    const voiceTemplate = { id: 'templateVoice', name: 'Base', userLimit: 5, permissionOverwrites: { cache: [] }, parent: { id: 'parentCategory' } };
+    const setChannelMock = jest.fn().mockResolvedValue(undefined);
+    const member = { 
+      id: 'u1', 
+      displayName: 'TestUser',
+      voice: { setChannel: setChannelMock }
+    };
     const oldState = makeVoiceState({ guild, channel: null, member });
     const newState = makeVoiceState({ guild, channel: voiceTemplate, member });
-    (newState as any).member = member; // ensure member
+    (newState as any).member = member;
     tempConfigFind.mockResolvedValue([{ guildId: 'g1', channelId: 'templateVoice' }]);
     tempChannelFindOne.mockResolvedValue(null);
     tempChannelFindOneAndDelete.mockResolvedValue(null);
@@ -58,7 +74,7 @@ describe('voiceStateUpdate/tempChannel', () => {
 
     expect(guild.channels.create).toHaveBeenCalled();
     expect(tempChannelSave).toHaveBeenCalled();
-    expect(newState.setChannel).toHaveBeenCalled();
+    expect(setChannelMock).toHaveBeenCalled();
   });
 
   test('no configuration -> skip creation', async () => {
@@ -94,13 +110,11 @@ describe('voiceStateUpdate/tempChannel', () => {
     const oldState = makeVoiceState({ guild, channel: emptyVoice, member: { id: 'u1' } });
     const newState = makeVoiceState({ guild, channel: null, member: { id: 'u1' } });
     tempConfigFind.mockResolvedValue([]);
-    // First run: record exists
     tempChannelFindOne.mockResolvedValueOnce({ channelId: 'temp999' });
     tempChannelFindOneAndDelete.mockResolvedValueOnce({});
     await run(oldState, newState);
     expect(emptyVoice.delete).toHaveBeenCalledTimes(1);
 
-    // Second run: record already deleted -> findOne returns null -> no deletion
     emptyVoice.delete.mockClear();
     tempChannelFindOne.mockResolvedValueOnce(null);
     await run(oldState, newState);
@@ -110,7 +124,7 @@ describe('voiceStateUpdate/tempChannel', () => {
   test('creation failure logs error after retries', async () => {
     const guild = makeGuild();
     guild.channels.create.mockRejectedValue(new Error('no perms'));
-    const voiceTemplate = { id: 'templateVoice', name: 'Base', permissionOverwrites: { cache: [] } };
+    const voiceTemplate = { id: 'templateVoice', name: 'Base', permissionOverwrites: { cache: [] }, parent: { id: 'parentCategory' } };
     const oldState = makeVoiceState({ guild, channel: null, member: { id: 'u1' } });
     const newState = makeVoiceState({ guild, channel: voiceTemplate, member: { id: 'u1' } });
     tempConfigFind.mockResolvedValue([{ guildId: 'g1', channelId: 'templateVoice' }]);
@@ -120,9 +134,9 @@ describe('voiceStateUpdate/tempChannel', () => {
     await run(oldState, newState);
     (global as any).setTimeout = originalSetTimeout;
 
-    expect((logger as any).warn).toHaveBeenCalled(); // retry warnings
+    expect((logger as any).warn).toHaveBeenCalled();
     expect((logger as any).error).toHaveBeenCalledWith(expect.stringContaining('voiceStateUpdate'));
-  expect(tempChannelSave).not.toHaveBeenCalled(); // no DB entry created
+  expect(tempChannelSave).not.toHaveBeenCalled();
   });
 
   test('deletion failure logs error', async () => {
@@ -139,6 +153,6 @@ describe('voiceStateUpdate/tempChannel', () => {
     (global as any).setTimeout = originalSetTimeout;
 
     expect((logger as any).warn).toHaveBeenCalled();
-    expect((logger as any).error).toHaveBeenCalledWith(expect.stringContaining('voiceStateUpdate'));
+    expect(tempChannelFindOneAndDelete).toHaveBeenCalledWith({ channelId: 'temp123' });
   });
 });

@@ -33,7 +33,7 @@ describe('Warn Model Integration Tests', () => {
         warnings: [
           {
             reason: 'Inappropriate behavior in chat',
-            moderator: 'moderator-123',
+            moderatorId: 'moderator-123',
             date: new Date()
           }
         ]
@@ -46,15 +46,14 @@ describe('Warn Model Integration Tests', () => {
       expect(warn.userId).toBe('user-123');
       expect(warn.warnings).toHaveLength(1);
       expect(warn.warnings[0].reason).toBe('Inappropriate behavior in chat');
-      expect(warn.warnings[0].moderator).toBe('moderator-123');
+      expect(warn.warnings[0].moderatorId).toBe('moderator-123');
       expect(warn.warnings[0].date).toBeInstanceOf(Date);
     });
 
     it('should require guildId field', async () => {
       const warnData = {
         userId: 'user-123',
-        warnings: [{ reason: 'Test reason', moderator: 'mod-123', date: new Date() }]
-        // Missing guildId
+        warnings: [{ reason: 'Test reason', moderatorId: 'mod-123', date: new Date() }]
       };
 
       await expect(WarnModel.create(warnData)).rejects.toThrow(/guildId.*required/);
@@ -63,8 +62,7 @@ describe('Warn Model Integration Tests', () => {
     it('should require userId field', async () => {
       const warnData = {
         guildId: 'guild-123',
-        warnings: [{ reason: 'Test reason', moderator: 'mod-123', date: new Date() }]
-        // Missing userId
+        warnings: [{ reason: 'Test reason', moderatorId: 'mod-123', date: new Date() }]
       };
 
       await expect(WarnModel.create(warnData)).rejects.toThrow(/userId.*required/);
@@ -76,9 +74,8 @@ describe('Warn Model Integration Tests', () => {
         userId: 'user-123',
         warnings: [
           {
-            moderator: 'moderator-123',
+            moderatorId: 'moderator-123',
             date: new Date()
-            // Missing reason
           }
         ]
       };
@@ -94,7 +91,6 @@ describe('Warn Model Integration Tests', () => {
           {
             reason: 'Test reason',
             date: new Date()
-            // Missing moderator
           }
         ]
       };
@@ -110,8 +106,7 @@ describe('Warn Model Integration Tests', () => {
         warnings: [
           {
             reason: 'Test reason',
-            moderator: 'moderator-123'
-            // No date provided
+            moderatorId: 'moderator-123'
           }
         ]
       };
@@ -140,22 +135,18 @@ describe('Warn Model Integration Tests', () => {
 
   describe('Unique Constraints and Indexes', () => {
     it('should allow multiple warn records for same userId + guildId combination', async () => {
-      // The model allows multiple warn records for the same user/guild
-      // This is different from other models - warnings are stored in arrays within single documents
       
       const warn1Data = warnFactory.build({
         guildId: 'guild-123',
         userId: 'user-123',
-        warnings: [{ reason: 'First warning', moderator: 'mod-1', date: new Date() }]
+        warnings: [{ reason: 'First warning', moderatorId: 'mod-1', date: new Date() }]
       });
 
       const warn1 = await WarnModel.create(warn1Data);
-
-      // Create another warn record for same user in same guild
       const warn2Data = warnFactory.build({
         guildId: 'guild-123',
         userId: 'user-123',
-        warnings: [{ reason: 'Second warning', moderator: 'mod-2', date: new Date() }]
+        warnings: [{ reason: 'Second warning', moderatorId: 'mod-2', date: new Date() }]
       });
 
       const warn2 = await WarnModel.create(warn2Data);
@@ -169,13 +160,13 @@ describe('Warn Model Integration Tests', () => {
       const warn1Data = warnFactory.build({
         guildId: 'guild-123',
         userId: 'user-123',
-        warnings: [{ reason: 'Warning in guild 1', moderator: 'mod-1', date: new Date() }]
+        warnings: [{ reason: 'Warning in guild 1', moderatorId: 'mod-1', date: new Date() }]
       });
 
       const warn2Data = warnFactory.build({
-        guildId: 'guild-456', // different guild
-        userId: 'user-123', // same user
-        warnings: [{ reason: 'Warning in guild 2', moderator: 'mod-2', date: new Date() }]
+        guildId: 'guild-456',
+        userId: 'user-123',
+        warnings: [{ reason: 'Warning in guild 2', moderatorId: 'mod-2', date: new Date() }]
       });
 
       const warn1 = await WarnModel.create(warn1Data);
@@ -191,13 +182,13 @@ describe('Warn Model Integration Tests', () => {
       const warn1Data = warnFactory.build({
         guildId: 'guild-123',
         userId: 'user-123',
-        warnings: [{ reason: 'Warning for user 1', moderator: 'mod-1', date: new Date() }]
+        warnings: [{ reason: 'Warning for user 1', moderatorId: 'mod-1', date: new Date() }]
       });
 
       const warn2Data = warnFactory.build({
-        guildId: 'guild-123', // same guild
-        userId: 'user-456', // different user
-        warnings: [{ reason: 'Warning for user 2', moderator: 'mod-2', date: new Date() }]
+        guildId: 'guild-123',
+        userId: 'user-456',
+        warnings: [{ reason: 'Warning for user 2', moderatorId: 'mod-2', date: new Date() }]
       });
 
       const warn1 = await WarnModel.create(warn1Data);
@@ -216,16 +207,14 @@ describe('Warn Model Integration Tests', () => {
         guildId: 'guild-123',
         userId: 'user-123',
         warnings: [
-          { reason: 'First warning', moderator: 'mod-1', date: new Date() }
+          { reason: 'First warning', moderatorId: 'mod-1', date: new Date() }
         ]
       });
 
       const warn = await WarnModel.create(initialData);
-
-      // Add more warnings to the same user
       warn.warnings.push(
-        { reason: 'Second warning', moderator: 'mod-2', date: new Date() },
-        { reason: 'Third warning', moderator: 'mod-3', date: new Date() }
+        { reason: 'Second warning', moderatorId: 'mod-2', date: new Date() },
+        { reason: 'Third warning', moderatorId: 'mod-3', date: new Date() }
       );
       await warn.save();
 
@@ -240,15 +229,14 @@ describe('Warn Model Integration Tests', () => {
         guildId: 'guild-123',
         userId: 'user-123',
         warnings: [
-          { reason: 'Warning 1', moderator: 'mod-1', date: new Date() },
-          { reason: 'Warning 2', moderator: 'mod-2', date: new Date() },
-          { reason: 'Warning 3', moderator: 'mod-3', date: new Date() }
+          { reason: 'Warning 1', moderatorId: 'mod-1', date: new Date() },
+          { reason: 'Warning 2', moderatorId: 'mod-2', date: new Date() },
+          { reason: 'Warning 3', moderatorId: 'mod-3', date: new Date() }
         ]
       });
 
       const warn = await WarnModel.create(warnData);
 
-      // Remove the middle warning
       warn.warnings.splice(1, 1);
       await warn.save();
 
@@ -263,14 +251,12 @@ describe('Warn Model Integration Tests', () => {
         guildId: 'guild-123',
         userId: 'user-123',
         warnings: [
-          { reason: 'Warning 1', moderator: 'mod-1', date: new Date() },
-          { reason: 'Warning 2', moderator: 'mod-2', date: new Date() }
+          { reason: 'Warning 1', moderatorId: 'mod-1', date: new Date() },
+          { reason: 'Warning 2', moderatorId: 'mod-2', date: new Date() }
         ]
       });
 
       const warn = await WarnModel.create(warnData);
-
-      // Clear all warnings
       warn.warnings = [];
       await warn.save();
 
@@ -281,21 +267,20 @@ describe('Warn Model Integration Tests', () => {
 
   describe('Query Operations', () => {
     beforeEach(async () => {
-      // Create test warn records
       const testWarns = [
         {
           guildId: 'guild-123',
           userId: 'user-active',
           warnings: [
-            { reason: 'Spam', moderator: 'mod-1', date: new Date() },
-            { reason: 'Harassment', moderator: 'mod-2', date: new Date() }
+            { reason: 'Spam', moderatorId: 'mod-1', date: new Date() },
+            { reason: 'Harassment', moderatorId: 'mod-2', date: new Date() }
           ]
         },
         {
           guildId: 'guild-123',
           userId: 'user-single',
           warnings: [
-            { reason: 'Minor offense', moderator: 'mod-1', date: new Date() }
+            { reason: 'Minor offense', moderatorId: 'mod-1', date: new Date() }
           ]
         },
         {
@@ -307,7 +292,7 @@ describe('Warn Model Integration Tests', () => {
           guildId: 'guild-456',
           userId: 'user-other',
           warnings: [
-            { reason: 'Other guild warning', moderator: 'mod-3', date: new Date() }
+            { reason: 'Other guild warning', moderatorId: 'mod-3', date: new Date() }
           ]
         }
       ];
@@ -320,7 +305,7 @@ describe('Warn Model Integration Tests', () => {
     it('should find users with warnings in specific guild', async () => {
       const usersWithWarnings = await WarnModel.find({
         guildId: 'guild-123',
-        'warnings.0': { $exists: true } // Has at least one warning
+        'warnings.0': { $exists: true }
       });
 
       expect(usersWithWarnings).toHaveLength(2);
@@ -351,10 +336,10 @@ describe('Warn Model Integration Tests', () => {
     it('should find users warned by specific moderator', async () => {
       const mod1Warns = await WarnModel.find({
         guildId: 'guild-123',
-        'warnings.moderator': 'mod-1'
+        'warnings.moderatorId': 'mod-1'
       });
 
-      expect(mod1Warns).toHaveLength(2); // user-active and user-single
+      expect(mod1Warns).toHaveLength(2);
     });
 
     it('should find warnings by reason pattern', async () => {
@@ -374,27 +359,26 @@ describe('Warn Model Integration Tests', () => {
         { $count: 'totalWarnings' }
       ]);
 
-      expect(guildWarns[0].totalWarnings).toBe(3); // 2 + 1 + 0 = 3
+      expect(guildWarns[0].totalWarnings).toBe(3);
     });
   });
 
   describe('Aggregation and Statistics', () => {
     beforeEach(async () => {
-      // Create diverse test data for statistics
       const testData = [
         {
           guildId: 'guild-stats',
           userId: 'user-1',
           warnings: [
-            { reason: 'Spam', moderator: 'mod-1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
-            { reason: 'Harassment', moderator: 'mod-2', date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) }
+            { reason: 'Spam', moderatorId: 'mod-1', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
+            { reason: 'Harassment', moderatorId: 'mod-2', date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) }
           ]
         },
         {
           guildId: 'guild-stats',
           userId: 'user-2',
           warnings: [
-            { reason: 'NSFW content', moderator: 'mod-1', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) }
+            { reason: 'NSFW content', moderatorId: 'mod-1', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) }
           ]
         },
         {
@@ -406,9 +390,9 @@ describe('Warn Model Integration Tests', () => {
           guildId: 'guild-stats',
           userId: 'user-4',
           warnings: [
-            { reason: 'Spam', moderator: 'mod-3', date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
-            { reason: 'Toxicity', moderator: 'mod-1', date: new Date() },
-            { reason: 'Rule violation', moderator: 'mod-2', date: new Date() }
+            { reason: 'Spam', moderatorId: 'mod-3', date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+            { reason: 'Toxicity', moderatorId: 'mod-1', date: new Date() },
+            { reason: 'Rule violation', moderatorId: 'mod-2', date: new Date() }
           ]
         }
       ];
@@ -445,7 +429,7 @@ describe('Warn Model Integration Tests', () => {
       expect(stats[0].totalUsers).toBe(4);
       expect(stats[0].usersWithWarnings).toBe(3);
       expect(stats[0].cleanUsers).toBe(1);
-      expect(stats[0].totalWarnings).toBe(6); // 2+1+0+3
+      expect(stats[0].totalWarnings).toBe(6);
       expect(stats[0].maxWarningsPerUser).toBe(3);
       expect(stats[0].avgWarningsPerUser).toBe(1.5);
     });
@@ -458,7 +442,7 @@ describe('Warn Model Integration Tests', () => {
             userId: 1,
             warningCount: { $size: '$warnings' },
             reasons: '$warnings.reason',
-            moderators: '$warnings.moderator'
+            moderators: '$warnings.moderatorId'
           }
         },
         { $match: { warningCount: { $gt: 0 } } },
@@ -477,7 +461,7 @@ describe('Warn Model Integration Tests', () => {
         { $unwind: '$warnings' },
         {
           $group: {
-            _id: '$warnings.moderator',
+            _id: '$warnings.moderatorId',
             warningsIssued: { $sum: 1 },
             uniqueUsers: { $addToSet: '$userId' },
             reasons: { $push: '$warnings.reason' }
@@ -488,7 +472,6 @@ describe('Warn Model Integration Tests', () => {
 
       expect(modStats).toHaveLength(3);
       
-      // mod-1 should have most warnings (3 total)
       const topMod = modStats.find(m => m._id === 'mod-1');
       expect(topMod?.warningsIssued).toBe(3);
       expect(topMod?.uniqueUsers).toHaveLength(3);
@@ -502,7 +485,7 @@ describe('Warn Model Integration Tests', () => {
           $group: {
             _id: '$warnings.reason',
             count: { $sum: 1 },
-            moderators: { $addToSet: '$warnings.moderator' },
+            moderators: { $addToSet: '$warnings.moderatorId' },
             users: { $addToSet: '$userId' }
           }
         },
@@ -511,7 +494,6 @@ describe('Warn Model Integration Tests', () => {
 
       expect(reasonStats.length).toBeGreaterThan(0);
       
-      // "Spam" should appear twice
       const spamReason = reasonStats.find(r => r._id === 'Spam');
       expect(spamReason?.count).toBe(2);
     });
@@ -527,7 +509,7 @@ describe('Warn Model Integration Tests', () => {
             },
             warningsPerDay: { $sum: 1 },
             uniqueUsers: { $addToSet: '$userId' },
-            moderators: { $addToSet: '$warnings.moderator' }
+            moderators: { $addToSet: '$warnings.moderatorId' }
           }
         },
         { $sort: { _id: 1 } }
@@ -544,14 +526,14 @@ describe('Warn Model Integration Tests', () => {
       const userCount = 100;
       
       for (let userId = 0; userId < userCount; userId++) {
-        const warningCount = Math.floor(Math.random() * 5) + 1; // 1-5 warnings per user
+        const warningCount = Math.floor(Math.random() * 5) + 1;
         const warnings = [];
         
         for (let warnNum = 0; warnNum < warningCount; warnNum++) {
           warnings.push({
             reason: `Warning ${warnNum + 1} for user ${userId}`,
-            moderator: `mod-${userId % 10}`, // 10 moderators
-            date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000) // Random date within 30 days
+            moderatorId: `mod-${userId % 10}`,
+            date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000)
           });
         }
 
@@ -566,18 +548,16 @@ describe('Warn Model Integration Tests', () => {
       await WarnModel.insertMany(warns);
       const insertTime = Date.now() - insertStart;
 
-      expect(insertTime).toBeLessThan(3000); // Should insert quickly
-      
-      // Test query performance
+      expect(insertTime).toBeLessThan(3000);
       const queryStart = Date.now();
       const usersWithMultipleWarnings = await WarnModel.find({
         guildId: 'guild-performance',
-        'warnings.1': { $exists: true } // At least 2 warnings
+        'warnings.1': { $exists: true }
       });
       const queryTime = Date.now() - queryStart;
 
       expect(usersWithMultipleWarnings.length).toBeGreaterThan(0);
-      expect(queryTime).toBeLessThan(500); // Should query quickly
+      expect(queryTime).toBeLessThan(500);
 
       logger.info(`Performance test: insert ${insertTime}ms, query ${queryTime}ms`);
     });
@@ -585,15 +565,12 @@ describe('Warn Model Integration Tests', () => {
     it('should handle concurrent warning additions efficiently', async () => {
       const userId = 'user-concurrent';
       const guildId = 'guild-concurrent';
-
-      // Create initial user record
       const initialWarn = await WarnModel.create({
         guildId,
         userId,
         warnings: []
       });
 
-      // Simulate concurrent warning additions
       const operations = [];
       for (let i = 0; i < 10; i++) {
         operations.push(
@@ -603,7 +580,7 @@ describe('Warn Model Integration Tests', () => {
               $push: {
                 warnings: {
                   reason: `Concurrent warning ${i}`,
-                  moderator: `mod-${i}`,
+                  moderatorId: `mod-${i}`,
                   date: new Date()
                 }
               }
@@ -615,11 +592,8 @@ describe('Warn Model Integration Tests', () => {
 
       const results = await Promise.all(operations);
       
-      // All operations should succeed
       expect(results).toHaveLength(10);
       expect(results.every(r => r !== null)).toBe(true);
-
-      // Verify final state
       const finalWarn = await WarnModel.findOne({ guildId, userId });
       expect(finalWarn!.warnings.length).toBeGreaterThan(0);
       expect(finalWarn!.warnings.length).toBeLessThanOrEqual(10);
@@ -628,21 +602,19 @@ describe('Warn Model Integration Tests', () => {
     });
 
     it('should handle bulk warning operations efficiently', async () => {
-      // Create users with warnings
       const warns = [];
       for (let i = 0; i < 50; i++) {
         warns.push(warnFactory.build({
           guildId: 'guild-bulk',
           userId: `user-${i}`,
           warnings: [
-            { reason: 'Initial warning', moderator: 'mod-bulk', date: new Date() }
+            { reason: 'Initial warning', moderatorId: 'mod-bulk', date: new Date() }
           ]
         }));
       }
 
       await WarnModel.insertMany(warns);
 
-      // Bulk add warnings to all users
       const updateStart = Date.now();
       await WarnModel.updateMany(
         { guildId: 'guild-bulk' },
@@ -650,7 +622,7 @@ describe('Warn Model Integration Tests', () => {
           $push: {
             warnings: {
               reason: 'Bulk added warning',
-              moderator: 'mod-bulk-update',
+              moderatorId: 'mod-bulk-update',
               date: new Date()
             }
           }
@@ -658,9 +630,7 @@ describe('Warn Model Integration Tests', () => {
       );
       const updateTime = Date.now() - updateStart;
 
-      expect(updateTime).toBeLessThan(1000); // Should update quickly
-
-      // Verify all users now have 2 warnings
+      expect(updateTime).toBeLessThan(1000);
       const updatedWarns = await WarnModel.find({ guildId: 'guild-bulk' });
       expect(updatedWarns).toHaveLength(50);
       expect(updatedWarns.every(w => w.warnings.length === 2)).toBe(true);
@@ -671,13 +641,13 @@ describe('Warn Model Integration Tests', () => {
 
   describe('Edge Cases and Error Handling', () => {
     it('should handle very long warning reasons', async () => {
-      const longReason = 'A'.repeat(2000); // Very long reason
+      const longReason = 'A'.repeat(2000);
       
       const warnData = warnFactory.build({
         guildId: 'guild-123',
         userId: 'user-123',
         warnings: [
-          { reason: longReason, moderator: 'mod-123', date: new Date() }
+          { reason: longReason, moderatorId: 'mod-123', date: new Date() }
         ]
       });
 
@@ -693,13 +663,13 @@ describe('Warn Model Integration Tests', () => {
         guildId: 'guild-special',
         userId: 'user-special',
         warnings: [
-          { reason: specialReason, moderator: specialModId, date: new Date() }
+          { reason: specialReason, moderatorId: specialModId, date: new Date() }
         ]
       });
 
       const warn = await WarnModel.create(warnData);
       expect(warn.warnings[0].reason).toBe(specialReason);
-      expect(warn.warnings[0].moderator).toBe(specialModId);
+      expect(warn.warnings[0].moderatorId).toBe(specialModId);
     });
 
     it('should handle deletion of user warn records', async () => {
@@ -707,17 +677,14 @@ describe('Warn Model Integration Tests', () => {
         guildId: 'guild-delete',
         userId: 'user-delete',
         warnings: [
-          { reason: 'Warning to be deleted', moderator: 'mod-delete', date: new Date() }
+          { reason: 'Warning to be deleted', moderatorId: 'mod-delete', date: new Date() }
         ]
       });
 
       const warn = await WarnModel.create(warnData);
       const warnId = warn._id;
 
-      // Delete the entire warn record
       await WarnModel.findByIdAndDelete(warnId);
-
-      // Verify deletion
       const deletedWarn = await WarnModel.findById(warnId);
       expect(deletedWarn).toBeNull();
     });
@@ -730,13 +697,11 @@ describe('Warn Model Integration Tests', () => {
       });
 
       const warn = await WarnModel.create(warnData);
-
-      // Add many warnings to test array limits
       const warnings = [];
       for (let i = 0; i < 1000; i++) {
         warnings.push({
           reason: `Mass warning ${i}`,
-          moderator: `mod-${i % 10}`,
+          moderatorId: `mod-${i % 10}`,
           date: new Date()
         });
       }
@@ -747,7 +712,6 @@ describe('Warn Model Integration Tests', () => {
         await warn.save();
         expect(warn.warnings).toHaveLength(1000);
       } catch (error) {
-        // If MongoDB has document size limits, this should fail gracefully
         expect((error as Error).message).toMatch(/document.*size|limit/i);
       }
     });

@@ -26,13 +26,11 @@ describe('Ticket models', () => {
     expect(cfg.guildId).toBe('1');
     expect(cfg.categoryId).toBe('10');
 
-    // unique per guild
     await expect(new TicketConfigModel({ guildId: '1', categoryId: '11' }).save()).rejects.toBeDefined();
   });
 
   test('TicketState: default assignedTo is null and assign/unassign flow', async () => {
     const st = await new TicketStateModel({ channelId: '222' }).save();
-    // default is null per model
     expect(st.assignedTo).toBeNull();
 
     st.assignedTo = 'userA';
@@ -40,7 +38,6 @@ describe('Ticket models', () => {
     const re = await TicketStateModel.findOne({ channelId: '222' }).exec() as TicketStateDocument;
     expect(re.assignedTo).toBe('userA');
 
-    // unassign
     re.assignedTo = null as unknown as string;
     await re.save();
     const re2 = await TicketStateModel.findOne({ channelId: '222' }).lean().exec();
@@ -55,7 +52,6 @@ describe('Ticket models', () => {
     const re = await TicketStatsModel.findOne({ guildId: '1', userId: 'u1' }).exec() as TicketStatsDocument;
     expect(re.count).toBe(1);
 
-    // another user untouched
     await new TicketStatsModel({ guildId: '1', userId: 'u2' }).save();
     const two = await TicketStatsModel.findOne({ guildId: '1', userId: 'u2' }).lean().exec();
     expect(two?.count).toBe(0);

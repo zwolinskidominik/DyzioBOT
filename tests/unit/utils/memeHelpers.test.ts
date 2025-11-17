@@ -136,13 +136,13 @@ describe('memeHelpers parsers', () => {
     fetchQueue.push(makeHtmlResponse(html));
     const { parseMistrzowieRandom } = require('../../../src/utils/memeHelpers');
     const meme = await parseMistrzowieRandom();
-    expect(meme.url).toMatch(/mistrzowie.org/); // funkcja dokleja domenę
+    expect(meme.url).toMatch(/mistrzowie.org/);
     expect(meme.isVideo).toBe(false);
   });
 
   test('parseMistrzowieRandom no img error', async () => {
     fetchQueue.push(makeRedirectResponse('https://mistrzowie.org/x5'));
-    const html = `<h1 class="picture">T</h1>`; // brak img
+    const html = `<h1 class="picture">T</h1>`;
     fetchQueue.push(makeHtmlResponse(html));
     const { parseMistrzowieRandom } = require('../../../src/utils/memeHelpers');
     await expect(parseMistrzowieRandom()).rejects.toThrow(/Brak mema/);

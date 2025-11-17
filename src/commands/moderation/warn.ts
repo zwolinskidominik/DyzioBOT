@@ -103,12 +103,10 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     const count = record.warnings.length;
 
-    // Sprawdź czy jest auto-ban (4 ostrzeżenie)
     if (count >= 4) {
       try {
         await member.ban({ reason: `Auto-ban: osiągnięto limit ostrzeżeń (${count})` });
         
-        // Wyślij DM przed banem
         try {
           await targetUser.send({
             embeds: [createBaseEmbed({
@@ -148,7 +146,6 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       }
     }
 
-    // Zwykłe ostrzeżenie z timeout
     const punishment = WARN_PUNISHMENTS[count as keyof typeof WARN_PUNISHMENTS];
     const muteDurationMs = punishment?.duration || 0;
 
@@ -162,7 +159,6 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       logger.error(`Błąd przy nakładaniu kary na ${member.id}: ${err}`);
     }
 
-    // Wyślij DM do użytkownika
     try {
       const nextPunishment = WARN_PUNISHMENTS[(count + 1) as keyof typeof WARN_PUNISHMENTS];
       const consequencesText = nextPunishment 

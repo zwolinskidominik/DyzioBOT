@@ -36,7 +36,6 @@ describe('misc/embed command', () => {
       const interaction = buildInteraction();
       const { run } = await import('../../../../src/commands/misc/embed');
       await run({ interaction, client: {} as any });
-      // Ensure color passed and fields added
       expect(embedFactory).toHaveBeenCalledWith(expect.objectContaining({ color: '#123456', title: 'T', description: 'O' }));
       const embed = (interaction.editReply as jest.Mock).mock.calls[0][0].embeds[0];
       expect(embed).toEqual(expect.objectContaining({ __embed: true }));

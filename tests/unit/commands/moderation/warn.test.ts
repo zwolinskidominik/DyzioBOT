@@ -33,7 +33,6 @@ jest.mock('../../../../src/utils/moderationHelpers', () => ({
   checkModPermissions: jest.fn(() => true),
 }));
 
-// Mock WarnModel with ctor + static findOne
 const warnCtor: any = jest.fn(function (this: any, props: any) {
   Object.assign(this, props);
   this.warnings = this.warnings || [];
@@ -160,15 +159,15 @@ describe('commands/moderation/warn', () => {
       const czas = fields.find((f: any) => f.name === 'Czas trwania').value;
       expect(czas).toMatch(/^<t:\d+:F>$/);
       const suma = fields.find((f: any) => f.name === 'Suma punktów').value as string;
-      expect(suma).toContain('Mute: 1p');
+      expect(suma).toContain('Ban: 1p');
       expect(suma).toContain('[bar]');
-      expect(suma).toContain('3p (33%)');
+      expect(suma).toContain('4p (25%)');
 
       const u = fields.find((f: any) => f.name === 'Użytkownik').value;
       const m = fields.find((f: any) => f.name === 'Moderator').value;
       const p = fields.find((f: any) => f.name === 'Powód').value;
       expect(u).toBe('<@!target>');
-      expect(m).toBe('<@!moderator>');
+      expect(m).toBe('<@moderator>');
       expect(p).toBe('powod');
     });
   });
@@ -190,8 +189,8 @@ describe('commands/moderation/warn', () => {
       expect(embed).toBeDefined();
       const fields = embed._fields;
       const suma = fields.find((f: any) => f.name === 'Suma punktów').value as string;
-      expect(suma).toContain('Mute: 2p');
-      expect(suma).toContain('3p (67%)');
+      expect(suma).toContain('Ban: 2p');
+      expect(suma).toContain('4p (50%)');
     });
   });
 
@@ -215,8 +214,8 @@ describe('commands/moderation/warn', () => {
       expect(embed).toBeDefined();
       const fields = embed._fields;
       const suma = fields.find((f: any) => f.name === 'Suma punktów').value as string;
-      expect(suma).toContain('Mute: 3p');
-      expect(suma).toContain('3p (100%)');
+      expect(suma).toContain('Ban: 3p');
+      expect(suma).toContain('4p (75%)');
     });
   });
 

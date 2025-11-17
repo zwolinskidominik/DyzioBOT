@@ -20,10 +20,6 @@ import {
   PermissionsBitField
 } from 'discord.js';
 
-/**
- * Mock implementation of Discord.js Client for integration tests
- * Provides essential methods for testing bot functionality
- */
 export class MockClient extends EventEmitter {
   public user: MockUser | null = null;
   public users: MockUserManager;
@@ -39,7 +35,6 @@ export class MockClient extends EventEmitter {
     this.channels = new MockChannelManager();
   }
 
-  // Client methods
   login(token?: string): Promise<string> {
     this.user = new MockUser({
       id: '123456789012345678',
@@ -50,7 +45,6 @@ export class MockClient extends EventEmitter {
     this.readyAt = new Date();
     this.uptime = 0;
     
-    // Emit ready event after login
     setImmediate(() => {
       this.emit('ready', this);
     });
@@ -66,7 +60,6 @@ export class MockClient extends EventEmitter {
     return Promise.resolve();
   }
 
-  // Event emission helpers for tests
   emitGuildMemberAdd(member: MockGuildMember): void {
     this.emit('guildMemberAdd', member);
   }
@@ -95,15 +88,11 @@ export class MockClient extends EventEmitter {
     this.emit('guildMemberUpdate', oldMember, newMember);
   }
 
-  // Generic emit method for any event
   emitEvent<K extends keyof ClientEvents>(event: K, ...args: ClientEvents[K]): void {
     this.emit(event, ...args);
   }
 }
 
-/**
- * Mock implementation of Discord.js User
- */
 export class MockUser {
   public id: string;
   public username: string;
@@ -145,9 +134,6 @@ export class MockUser {
   }
 }
 
-/**
- * Mock implementation of Discord.js Guild
- */
 export class MockGuild {
   public id: string;
   public name: string;
@@ -182,9 +168,6 @@ export class MockGuild {
   }
 }
 
-/**
- * Mock implementation of Discord.js GuildMember
- */
 export class MockGuildMember {
   public id: string;
   public user: MockUser;
@@ -244,9 +227,6 @@ export class MockGuildMember {
   }
 }
 
-/**
- * Mock implementation of Discord.js TextChannel
- */
 export class MockTextChannel {
   public id: string;
   public name: string;
@@ -314,9 +294,6 @@ export class MockTextChannel {
   }
 }
 
-/**
- * Mock implementation of Discord.js VoiceChannel
- */
 export class MockVoiceChannel {
   public id: string;
   public name: string;
@@ -364,9 +341,6 @@ export class MockVoiceChannel {
   }
 }
 
-/**
- * Mock implementation of Discord.js Message
- */
 export class MockMessage {
   public id: string;
   public content: string;
@@ -421,7 +395,6 @@ export class MockMessage {
   }
 }
 
-// Helper manager classes
 export class MockUserManager {
   private cache = new Collection<string, MockUser>();
 
@@ -578,7 +551,6 @@ export class MockPermissionsBitField extends BitField<string, bigint> {
   }
 
   has(permission: PermissionResolvable, checkAdmin?: boolean): boolean {
-    // For testing purposes, return true for basic permissions
     return true;
   }
 
@@ -587,7 +559,6 @@ export class MockPermissionsBitField extends BitField<string, bigint> {
   }
 }
 
-// Factory functions for easy mock creation
 export const createMockClient = (options?: any): MockClient => {
   return new MockClient();
 };
@@ -616,7 +587,6 @@ export const createMockMessage = (options?: any): MockMessage => {
   return new MockMessage(options);
 };
 
-// Type exports for better TypeScript support
 export type MockClientType = MockClient;
 export type MockGuildType = MockGuild;
 export type MockUserType = MockUser;

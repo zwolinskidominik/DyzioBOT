@@ -9,7 +9,6 @@ export default async function run(client: Client): Promise<void> {
     '0 9 * * *',
     async () => {
       try {
-        // Get all birthday configurations (not just for main guild)
         const birthdayConfigs = await BirthdayConfigurationModel.find({});
         
         if (birthdayConfigs.length === 0) {
@@ -23,14 +22,12 @@ export default async function run(client: Client): Promise<void> {
 
         for (const birthdayConfig of birthdayConfigs) {
           try {
-            // Get guild
             const guild = client.guilds.cache.get(birthdayConfig.guildId);
             if (!guild) {
               logger.warn(`Serwer nie został znaleziony: ${birthdayConfig.guildId}`);
               continue;
             }
 
-            // Get channel
             const channel = guild.channels.cache.get(birthdayConfig.birthdayChannelId);
             if (
               !channel ||
@@ -42,13 +39,11 @@ export default async function run(client: Client): Promise<void> {
 
             const birthdayChannel = channel as TextChannel;
 
-            // Find today's birthdays for this guild
             const birthdays = await BirthdayModel.find({ guildId: birthdayConfig.guildId, active: true });
             const todaysBirthdays = birthdays.filter((birthday) => {
               return birthday.day === day && birthday.month === month;
             });
 
-            // Send birthday messages and assign roles
             for (const birthday of todaysBirthdays) {
               try {
                 const member = await guild.members.fetch(birthday.userId);
@@ -57,7 +52,6 @@ export default async function run(client: Client): Promise<void> {
                   continue;
                 }
 
-                // Send birthday message
                 const message = birthdayConfig.message || 'Wszystkiego najlepszego {user}! 🥳';
                 const formattedMessage = message.replace('{user}', `<@${member.id}>`);
                 
@@ -69,7 +63,6 @@ export default async function run(client: Client): Promise<void> {
                   logger.error('Błąd podczas wysyłania wiadomości urodzinowej', sendError);
                 }
 
-                // Add birthday role if configured
                 if (birthdayConfig.roleId) {
                   try {
                     await member.roles.add(birthdayConfig.roleId);

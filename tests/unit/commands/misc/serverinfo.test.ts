@@ -68,12 +68,10 @@ describe('misc/serverinfo command', () => {
     jest.isolateModules(async () => {
       const logger = (await import('../../../../src/utils/logger')).default;
       const interaction = buildInteraction();
-      // Force outer try-catch by making interaction.reply throw synchronously
       interaction.reply = jest.fn().mockRejectedValue(new Error('network'));
       const { run } = await import('../../../../src/commands/misc/serverinfo');
       await run({ interaction, client: {} as any });
       expect(logger.error).toHaveBeenCalled();
-      // It attempts to reply with an error, but ignore .catch; ensure a call was attempted
       expect(interaction.reply).toHaveBeenCalled();
     });
   });

@@ -6,8 +6,6 @@ import mongoose from 'mongoose';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Import the functions from the script (we'll need to modify the script to export them)
-// For now, we'll copy them here to test the functionality
 
 interface IFortuneData {
   content: string;
@@ -56,21 +54,17 @@ describe('ImportFortunes Script Integration Tests', () => {
   beforeAll(async () => {
     dbManager = new DbManager();
     testDbUri = await dbManager.startDb();
-    
-    // Create a test fortunes file
     testFilePath = path.join(__dirname, 'test-fortunes.txt');
-  }, 30000); // Increased timeout for database setup
+  }, 30000);
 
   afterAll(async () => {
     await dbManager.stopDb();
     
-    // Clean up test file if it exists
     try {
       if (fs.existsSync(testFilePath)) {
         fs.unlinkSync(testFilePath);
       }
     } catch (error) {
-      // Ignore cleanup errors
     }
   });
 
@@ -81,13 +75,11 @@ describe('ImportFortunes Script Integration Tests', () => {
   afterEach(async () => {
     await clearTestData();
     
-    // Clean up test file if it exists
     try {
       if (fs.existsSync(testFilePath)) {
         fs.unlinkSync(testFilePath);
       }
     } catch (error) {
-      // Ignore cleanup errors
     }
   });
 
@@ -186,8 +178,6 @@ describe('ImportFortunes Script Integration Tests', () => {
       ];
       
       fs.writeFileSync(testFilePath, testFortunes.join('\n'), 'utf-8');
-      
-      // Ensure clean state
       await FortuneModel.deleteMany({});
       
       await importFortunes(testDbUri, testFilePath);
@@ -202,8 +192,6 @@ describe('ImportFortunes Script Integration Tests', () => {
 
     it('should clear existing fortunes before importing new ones', async () => {
       const timestamp = Date.now();
-      
-      // Create some existing fortunes
       await FortuneModel.create([
         { content: `Stara wróżba 1 ${timestamp}` },
         { content: `Stara wróżba 2 ${timestamp}` }
@@ -228,8 +216,6 @@ describe('ImportFortunes Script Integration Tests', () => {
       expect(allFortunes[0].content).toBe(`Nowa wróżba 1 ${timestamp}`);
       expect(allFortunes[1].content).toBe(`Nowa wróżba 2 ${timestamp}`);
       expect(allFortunes[2].content).toBe(`Nowa wróżba 3 ${timestamp}`);
-      
-      // Verify old fortunes are gone
       const oldFortunes = await FortuneModel.find({ 
         content: { $in: [`Stara wróżba 1 ${timestamp}`, `Stara wróżba 2 ${timestamp}`] } 
       });
@@ -240,8 +226,6 @@ describe('ImportFortunes Script Integration Tests', () => {
       const timestamp = Date.now();
       
       fs.writeFileSync(testFilePath, '', 'utf-8');
-      
-      // Create some existing fortunes
       await FortuneModel.create([
         { content: `Istniejąca wróżba ${timestamp}` }
       ]);
@@ -258,10 +242,8 @@ describe('ImportFortunes Script Integration Tests', () => {
       
       fs.writeFileSync(testFilePath, 'Test fortune', 'utf-8');
       
-      // Save current connection state
       const wasConnected = mongoose.connection.readyState === 1;
       
-      // Disconnect to force importFortunes to try connecting
       if (wasConnected) {
         await mongoose.disconnect();
       }
@@ -269,12 +251,11 @@ describe('ImportFortunes Script Integration Tests', () => {
       try {
         await expect(importFortunes(invalidUri, testFilePath)).rejects.toThrow();
       } finally {
-        // Reconnect to test database for subsequent tests
         if (wasConnected) {
           await mongoose.connect(testDbUri);
         }
       }
-    }, 45000); // Increased timeout for connection error test
+    }, 45000);
 
     it('should handle non-existent file errors gracefully', async () => {
       const nonExistentPath = path.join(__dirname, 'non-existent-fortunes.txt');
@@ -298,22 +279,19 @@ describe('ImportFortunes Script Integration Tests', () => {
       const savedFortunes = await FortuneModel.find({});
       
       expect(savedFortunes).toHaveLength(100);
-      expect(endTime - startTime).toBeLessThan(5000); // Should complete within 5 seconds
+      expect(endTime - startTime).toBeLessThan(5000);
     });
 
     it('should maintain unique constraint on fortune content', async () => {
-      // Use timestamp to ensure unique test data
       const timestamp = Date.now();
       const duplicateFortunes = [
         `Unikalna wróżba ${timestamp}`,
         `Inna wróżba ${timestamp}`,
-        `Unikalna wróżba ${timestamp}`, // Duplicate
+        `Unikalna wróżba ${timestamp}`,
         `Jeszcze inna wróżba ${timestamp}`
       ];
       
       fs.writeFileSync(testFilePath, duplicateFortunes.join('\n'), 'utf-8');
-      
-      // This should fail due to unique constraint
       await expect(importFortunes(testDbUri, testFilePath)).rejects.toThrow();
     });
   });
@@ -332,8 +310,6 @@ describe('ImportFortunes Script Integration Tests', () => {
       await FortuneModel.deleteMany({});
       
       await importFortunes(testDbUri, testFilePath);
-      
-      // Test various query patterns that the application might use
       const allFortunes = await FortuneModel.find({});
       expect(allFortunes).toHaveLength(3);
       

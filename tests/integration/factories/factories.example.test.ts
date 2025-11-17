@@ -8,9 +8,6 @@ import {
 } from '../factories';
 import { setupDatabase, teardownDatabase, cleanDatabase } from '../setup/db';
 
-/**
- * Example test demonstrating factory usage
- */
 describe('Factory Integration Examples', () => {
   beforeAll(async () => {
     await setupDatabase();
@@ -60,7 +57,7 @@ describe('Factory Integration Examples', () => {
       
       expect(giveaway.participants).toHaveLength(100);
       expect(giveaway.participants).toEqual(expect.arrayContaining([
-        expect.stringMatching(/^\d+$/) // Snowflake pattern
+        expect.stringMatching(/^\d+$/)
       ]));
     });
   });
@@ -74,12 +71,9 @@ describe('Factory Integration Examples', () => {
       
       expect(warns.warnings).toHaveLength(3);
       
-      // Sort warnings by date to check they span over time
       const sortedDates = warns.warnings
         .map(w => w.date.getTime())
         .sort((a, b) => a - b);
-      
-      // Ensure earliest and latest dates have meaningful difference (at least 1 day)
       const dayInMs = 24 * 60 * 60 * 1000;
       expect(sortedDates[sortedDates.length - 1] - sortedDates[0]).toBeGreaterThan(dayInMs);
     });
@@ -155,12 +149,8 @@ describe('Factory Integration Examples', () => {
     it('should create complex test scenario', async () => {
       const guildId = '123456789012345678';
       const userId = '234567890123456789';
-      
-      // Create user data
       const user = userFactory.build({ id: userId });
       const guild = guildFactory.build({ id: guildId });
-      
-      // Create database records
       const [level, giveaways, warns, ticketStats] = await Promise.all([
         levelFactory.create({ userId, guildId }),
         giveawayFactory.createForGuild(guildId, 2),
@@ -172,8 +162,6 @@ describe('Factory Integration Examples', () => {
       expect(giveaways).toHaveLength(2);
       expect(warns.warnings).toHaveLength(1);
       expect(ticketStats.userId).toBe(userId);
-      
-      // Verify user and guild mock data
       expect(user.id).toBe(userId);
       expect(guild.id).toBe(guildId);
     });

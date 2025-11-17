@@ -1,4 +1,3 @@
-// Removed duplicate minimal embed tests to avoid redeclaration; richer tests retained below.
 import { createBaseEmbed, formatResults, formatWarnBar } from '../../../src/utils/embedHelpers';
 import { COLORS } from '../../../src/config/constants/colors';
 
@@ -48,13 +47,12 @@ describe('embedHelpers.createBaseEmbed', () => {
   test('omits optional fields when falsy and uses DEFAULT when isError false without color', () => {
     const embed = createBaseEmbed({
       title: 'OnlyTitle',
-      description: '', // falsy -> omitted
-      footerText: '', // falsy -> omitted
+      description: '',
+      footerText: '',
       image: undefined,
       thumbnail: undefined,
       authorName: undefined as any,
       url: undefined,
-      // isError not set -> DEFAULT color
     }).toJSON();
     expect(embed.title).toBe('OnlyTitle');
     expect(embed.description).toBeUndefined();

@@ -14,6 +14,15 @@ export default async function run(member: GuildMember): Promise<void> {
     const channel = guild.channels.cache.get(config.greetingsChannelId);
     if (!channel || !('send' in channel)) return;
 
+    const botMember = guild.members.cache.get(guild.client.user.id);
+    if (!botMember) return;
+
+    const permissions = channel.permissionsFor(botMember);
+    if (!permissions || !permissions.has(['SendMessages', 'EmbedLinks'])) {
+      logger.debug(`Bot nie ma uprawnień do wysyłania wiadomości w kanale ${channel.id}`);
+      return;
+    }
+
     const avatar = member.user.displayAvatarURL({ size: 128 });
 
     const embed = new EmbedBuilder()

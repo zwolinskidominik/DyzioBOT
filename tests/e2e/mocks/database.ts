@@ -1,12 +1,10 @@
 import { jest } from '@jest/globals';
 import mongoose from 'mongoose';
 
-// Mock database models for E2E testing
 export class MockDatabase {
   private static models: Map<string, any> = new Map();
   private static connections: Map<string, boolean> = new Map();
 
-  // Connection management
   public static async connect(): Promise<void> {
     this.connections.set('default', true);
   }
@@ -20,7 +18,6 @@ export class MockDatabase {
     return this.connections.has('default');
   }
 
-  // Model registry
   public static registerModel(name: string, schema: any): any {
     const mockModel = this.createMockModel(name);
     this.models.set(name, mockModel);
@@ -31,7 +28,6 @@ export class MockDatabase {
     return this.models.get(name);
   }
 
-  // Mock model factory
   private static createMockModel(name: string) {
     return class MockModel {
       private data: any;
@@ -46,7 +42,6 @@ export class MockDatabase {
         };
       }
 
-      // Instance methods
       async save(): Promise<any> {
         MockModel.documents.set(this.data._id.toString(), { ...this.data });
         return this;
@@ -66,7 +61,6 @@ export class MockDatabase {
         return { ...this.data };
       }
 
-      // Getter methods to access data properties
       get _id() { return this.data._id; }
       get userId() { return this.data.userId; }
       get guildId() { return this.data.guildId; }
@@ -81,23 +75,21 @@ export class MockDatabase {
       get hostId() { return this.data.hostId; }
       get channelId() { return this.data.channelId; }
       get messageId() { return this.data.messageId; }
-      get roleIds() { return this.data.roleIds; }  // AutoRole field
-      get greetingsChannelId() { return this.data.greetingsChannelId; }  // GreetingsConfiguration field
-      get goodbyeChannelId() { return this.data.goodbyeChannelId; }  // GreetingsConfiguration field
-      get parentChannelId() { return this.data.parentChannelId; }  // TempChannelConfiguration field
-      get categoryId() { return this.data.categoryId; }  // TempChannelConfiguration field
-      get ownerId() { return this.data.ownerId; }  // TempChannel field
-      get parentId() { return this.data.parentId; }  // TempChannel field
-      get enabled() { return this.data.enabled; }  // Configuration field
+      get roleIds() { return this.data.roleIds; }
+      get greetingsChannelId() { return this.data.greetingsChannelId; }
+      get goodbyeChannelId() { return this.data.goodbyeChannelId; }
+      get parentChannelId() { return this.data.parentChannelId; }
+      get categoryId() { return this.data.categoryId; }
+      get ownerId() { return this.data.ownerId; }
+      get parentId() { return this.data.parentId; }
+      get enabled() { return this.data.enabled; }
 
-      // Setter methods for data modification
       set active(value: boolean) { this.data.active = value; }
       set endTime(value: Date) { this.data.endTime = value; }
       set xp(value: number) { this.data.xp = value; }
       set totalXp(value: number) { this.data.totalXp = value; }
       set level(value: number) { this.data.level = value; }
 
-      // Static methods
       static async find(query: any = {}): Promise<any[]> {
         const docs = Array.from(MockModel.documents.values());
         return docs
@@ -206,7 +198,6 @@ export class MockDatabase {
       }
 
       static async aggregate(pipeline: any[]): Promise<any[]> {
-        // Simplified aggregation - just return all documents for now
         const docs = Array.from(MockModel.documents.values());
         return docs.map(doc => new MockModel(doc));
       }
@@ -217,7 +208,6 @@ export class MockDatabase {
         return [...new Set(values)];
       }
 
-      // Query building
       static where(field: string, condition?: any) {
         return {
           equals: (value: any) => this.find({ [field]: value }),
@@ -226,17 +216,14 @@ export class MockDatabase {
         };
       }
 
-      // Clear all documents (for testing)
       static clearAll(): void {
         MockModel.documents.clear();
       }
 
-      // Get all documents (for testing)
       static getAllDocuments(): any[] {
         return Array.from(MockModel.documents.values());
       }
 
-      // Helper for query matching
       private static matchesQuery(doc: any, query: any): boolean {
         if (Object.keys(query).length === 0) return true;
 
@@ -244,7 +231,6 @@ export class MockDatabase {
           if (key === '_id') {
             if (doc._id.toString() !== value?.toString()) return false;
           } else if (typeof value === 'object' && value !== null) {
-            // Handle operators like $in, $exists, etc.
             if ('$in' in value) {
               if (!(value as any).$in.includes(doc[key])) return false;
             } else if ('$exists' in value) {
@@ -261,7 +247,6 @@ export class MockDatabase {
             } else if ('$lte' in value) {
               if (!(doc[key] <= (value as any).$lte)) return false;
             } else {
-              // Nested object comparison
               if (JSON.stringify(doc[key]) !== JSON.stringify(value)) return false;
             }
           } else {
@@ -275,9 +260,7 @@ export class MockDatabase {
   }
 }
 
-// Factory functions for creating test data
 export class TestDataFactory {
-  // User-related test data
   public static createTestUser(overrides: any = {}) {
     return {
       id: '123456789012345678',
@@ -302,13 +285,12 @@ export class TestDataFactory {
     return {
       id: '111222333444555666',
       name: 'test-channel',
-      type: 0, // TEXT_CHANNEL
+      type: 0,
       guildId: '987654321012345678',
       ...overrides,
     };
   }
 
-  // Bot-specific test data
   public static createTestLevel(overrides: any = {}) {
     return {
       userId: '123456789012345678',
@@ -342,7 +324,7 @@ export class TestDataFactory {
       prize: 'Test Prize',
       description: 'Test giveaway description',
       winnerCount: 1,
-      endTime: new Date(Date.now() + 3600000), // 1 hour from now
+      endTime: new Date(Date.now() + 3600000),
       requirements: [],
       participants: [],
       active: true,
@@ -424,7 +406,6 @@ export class TestDataFactory {
     };
   }
 
-  // Database operations helpers
   public static async seedDatabase(models: { [key: string]: any }, data: { [key: string]: any[] }) {
     for (const [modelName, documents] of Object.entries(data)) {
       const Model = models[modelName];
@@ -445,14 +426,12 @@ export class TestDataFactory {
   }
 }
 
-// Test database setup
 export const setupTestDatabase = () => {
   let mockModels: { [key: string]: any } = {};
 
   beforeAll(async () => {
     await MockDatabase.connect();
     
-    // Register all models used in the application
     mockModels = {
       Level: MockDatabase.registerModel('Level', {}),
       Birthday: MockDatabase.registerModel('Birthday', {}),
@@ -480,7 +459,6 @@ export const setupTestDatabase = () => {
   });
 
   beforeEach(async () => {
-    // Clear all data before each test
     await TestDataFactory.clearDatabase(mockModels);
   });
 

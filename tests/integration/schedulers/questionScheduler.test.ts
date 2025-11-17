@@ -3,8 +3,6 @@ import { QuestionConfigurationModel } from '../../../src/models/QuestionConfigur
 import { QuestionModel } from '../../../src/models/Question';
 import { dbManager } from '../setup/db';
 import { GuildFactory } from '../factories';
-
-// Mock logger to capture logs
 jest.mock('../../../src/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
@@ -14,11 +12,8 @@ jest.mock('../../../src/utils/logger', () => ({
 
 import logger from '../../../src/utils/logger';
 const mockLogger = logger as jest.Mocked<typeof logger>;
-
-// Mock node-cron to control scheduler execution
 jest.mock('node-cron', () => ({
   schedule: jest.fn((cronExpression, callback, options) => {
-    // Store the callback for manual execution in tests
     (callback as any).__cronCallback = callback;
     (callback as any).__cronExpression = cronExpression;
     (callback as any).__cronOptions = options;
@@ -29,8 +24,6 @@ jest.mock('node-cron', () => ({
     };
   }),
 }));
-
-// Mock environment
 jest.mock('../../../src/config', () => ({
   env: () => ({
     GUILD_ID: 'test-guild-123',
@@ -57,7 +50,6 @@ describe('Question Scheduler Integration Tests', () => {
     await dbManager.clearCollections();
     jest.clearAllMocks();
 
-    // Setup Discord mocks
     const guildFactory = new GuildFactory();
     
     mockMessage = {
@@ -72,7 +64,7 @@ describe('Question Scheduler Integration Tests', () => {
 
     mockChannel = {
       id: 'test-channel-123',
-      type: 0, // TEXT_CHANNEL
+      type: 0,
       send: jest.fn().mockResolvedValue(mockMessage),
       threads: {
         create: jest.fn().mockResolvedValue(mockThread),
@@ -93,11 +85,8 @@ describe('Question Scheduler Integration Tests', () => {
       },
     } as any;
 
-    // Import and execute scheduler to get the callback
     const questionScheduler = require('../../../src/events/ready/questionScheduler');
     await questionScheduler.default(mockClient);
-    
-    // Get the registered cron callback
     const cronModule = require('node-cron');
     const scheduleCall = cronModule.schedule.mock.calls[cronModule.schedule.mock.calls.length - 1];
     schedulerFunction = scheduleCall[1];
@@ -108,7 +97,7 @@ describe('Question Scheduler Integration Tests', () => {
       const cronModule = require('node-cron');
       const lastCall = cronModule.schedule.mock.calls[cronModule.schedule.mock.calls.length - 1];
       
-      expect(lastCall[0]).toBe('0 0 10 * * *'); // Daily at 10:00
+      expect(lastCall[0]).toBe('0 0 10 * * *');
       expect(lastCall[2]).toEqual({
         timezone: 'Europe/Warsaw',
       });
@@ -124,7 +113,6 @@ describe('Question Scheduler Integration Tests', () => {
 
   describe('Question Configuration Validation', () => {
     it('should log warning and return when no question configuration exists', async () => {
-      // No configuration in database
       
       await schedulerFunction();
 
@@ -133,14 +121,12 @@ describe('Question Scheduler Integration Tests', () => {
     });
 
     it('should log warning when channel does not exist', async () => {
-      // Create configuration with non-existent channel
       await QuestionConfigurationModel.create({
         guildId: 'test-guild-123',
         questionChannelId: 'non-existent-channel',
         pingRoleId: null,
       });
 
-      // Remove channel from client cache
       mockClient.channels.cache.clear();
 
       await schedulerFunction();
@@ -150,15 +136,12 @@ describe('Question Scheduler Integration Tests', () => {
     });
 
     it('should log warning when channel is not a text channel', async () => {
-      // Create configuration
       await QuestionConfigurationModel.create({
         guildId: 'test-guild-123',
         questionChannelId: 'test-channel-123',
         pingRoleId: null,
       });
-
-      // Mock channel without send method (voice channel)
-      const voiceChannel = { id: 'test-channel-123', type: 2 }; // VOICE_CHANNEL
+      const voiceChannel = { id: 'test-channel-123', type: 2 };
       mockClient.channels.cache.set('test-channel-123', voiceChannel as any);
 
       await schedulerFunction();
@@ -169,7 +152,6 @@ describe('Question Scheduler Integration Tests', () => {
 
   describe('Question Selection and Posting', () => {
     beforeEach(async () => {
-      // Create valid configuration
       await QuestionConfigurationModel.create({
         guildId: 'test-guild-123',
         questionChannelId: 'test-channel-123',
@@ -178,7 +160,6 @@ describe('Question Scheduler Integration Tests', () => {
     });
 
     it('should send message and return when no questions exist', async () => {
-      // No questions in database
 
       await schedulerFunction();
 
@@ -188,7 +169,6 @@ describe('Question Scheduler Integration Tests', () => {
     });
 
     it('should select random question and post it', async () => {
-      // Create test questions
       const question = await QuestionModel.create({
         authorId: 'user-123',
         content: 'What is your favorite programming language?',
@@ -203,13 +183,12 @@ describe('Question Scheduler Integration Tests', () => {
       expect(mockChannel.threads.create).toHaveBeenCalledWith({
         name: 'What is your favorite programming language?',
         autoArchiveDuration: 1440,
-        type: 11, // PublicThread
+        type: 11,
         startMessage: mockMessage,
       });
     });
 
     it('should truncate long question content for thread name', async () => {
-      // Create question with long content
       const longContent = 'This is a very long question that exceeds 97 characters and should be truncated for the thread name to fit Discord limits';
       await QuestionModel.create({
         authorId: 'user-123',
@@ -227,7 +206,6 @@ describe('Question Scheduler Integration Tests', () => {
     });
 
     it('should include ping role when configured', async () => {
-      // Update configuration with ping role
       await QuestionConfigurationModel.findOneAndUpdate(
         { guildId: 'test-guild-123' },
         { pingRoleId: 'test-role-456' }
@@ -268,11 +246,9 @@ describe('Question Scheduler Integration Tests', () => {
         content: 'Test question',
         reactions: ['❤️', '💔'],
       });
-
-      // Mock reaction failure
       mockMessage.react
-        .mockResolvedValueOnce({}) // First reaction succeeds
-        .mockRejectedValueOnce(new Error('Invalid emoji')); // Second reaction fails
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('Invalid emoji'));
 
       await schedulerFunction();
 
@@ -308,23 +284,18 @@ describe('Question Scheduler Integration Tests', () => {
     });
 
     it('should select one random question from multiple', async () => {
-      // Create multiple questions
       await QuestionModel.create([
         { authorId: 'user-123', content: 'Question 1', reactions: [] },
         { authorId: 'user-123', content: 'Question 2', reactions: [] },
         { authorId: 'user-123', content: 'Question 3', reactions: [] },
       ]);
-
-      // Mock Math.random to always select first question
       jest.spyOn(Math, 'random').mockReturnValue(0);
 
       await schedulerFunction();
-
-      // Should send one of the questions
       expect(mockChannel.send).toHaveBeenCalledWith(
         expect.stringMatching(/\*\*Pytanie dnia:\*\*\n(Question 1|Question 2|Question 3)/)
       );
-      expect(await QuestionModel.countDocuments()).toBe(2); // One deleted
+      expect(await QuestionModel.countDocuments()).toBe(2);
 
       (Math.random as jest.Mock).mockRestore();
     });
@@ -335,13 +306,9 @@ describe('Question Scheduler Integration Tests', () => {
         { authorId: 'user-123', content: 'Second', reactions: [] },
         { authorId: 'user-123', content: 'Third', reactions: [] },
       ]);
-
-      // Mock Math.random to select middle question
       jest.spyOn(Math, 'random').mockReturnValue(0.5);
 
       await schedulerFunction();
-
-      // Should send one of the questions
       expect(mockChannel.send).toHaveBeenCalledWith(
         expect.stringMatching(/\*\*Pytanie dnia:\*\*\n(First|Second|Third)/)
       );
@@ -360,7 +327,6 @@ describe('Question Scheduler Integration Tests', () => {
     });
 
     it('should handle database query errors', async () => {
-      // Mock database error
       jest.spyOn(QuestionConfigurationModel, 'findOne').mockRejectedValueOnce(
         new Error('Database connection failed')
       );
@@ -414,8 +380,6 @@ describe('Question Scheduler Integration Tests', () => {
       mockMessage.react.mockRejectedValueOnce(new Error('Reaction failed'));
 
       await schedulerFunction();
-
-      // Should still delete the question despite reaction error
       expect(await QuestionModel.findById(question._id)).toBeNull();
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'Błąd podczas dodawania reakcji "❤️": Error: Reaction failed'
@@ -425,7 +389,6 @@ describe('Question Scheduler Integration Tests', () => {
 
   describe('Database Integration', () => {
     it('should work with real database operations', async () => {
-      // Create configuration and question
       await QuestionConfigurationModel.create({
         guildId: 'test-guild-123',
         questionChannelId: 'test-channel-123',
@@ -443,7 +406,6 @@ describe('Question Scheduler Integration Tests', () => {
 
       await schedulerFunction();
 
-      // Question should be deleted, configuration should remain
       expect(await QuestionModel.countDocuments()).toBe(0);
       expect(await QuestionConfigurationModel.countDocuments()).toBe(1);
     });
@@ -454,14 +416,10 @@ describe('Question Scheduler Integration Tests', () => {
         questionChannelId: 'test-channel-123',
         pingRoleId: null,
       });
-
-      // Create multiple questions
       await QuestionModel.create([
         { authorId: 'user-123', content: 'Question A', reactions: [] },
         { authorId: 'user-123', content: 'Question B', reactions: [] },
       ]);
-
-      // Execute scheduler multiple times concurrently
       const promises = [
         schedulerFunction(),
         schedulerFunction(),
@@ -469,8 +427,6 @@ describe('Question Scheduler Integration Tests', () => {
       ];
 
       await Promise.all(promises);
-
-      // Should handle concurrency gracefully
       expect(mockChannel.send).toHaveBeenCalled();
       expect(mockLogger.error).not.toHaveBeenCalledWith(
         expect.stringContaining('concurrent')
@@ -480,7 +436,6 @@ describe('Question Scheduler Integration Tests', () => {
 
   describe('Scheduler Isolation', () => {
     it('should not affect other collections', async () => {
-      // Create some unrelated data
       await QuestionConfigurationModel.create({
         guildId: 'other-guild',
         questionChannelId: 'other-channel',
@@ -503,8 +458,6 @@ describe('Question Scheduler Integration Tests', () => {
       expect(initialConfigCount).toBe(2);
 
       await schedulerFunction();
-
-      // Should not affect other guild's configuration
       expect(await QuestionConfigurationModel.countDocuments()).toBe(2);
       expect(await QuestionModel.countDocuments()).toBe(0);
     });

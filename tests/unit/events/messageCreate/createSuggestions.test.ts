@@ -101,7 +101,7 @@ describe('messageCreate/createSuggestions', () => {
 
   test('DM or GroupDM -> shouldProcessMessage returns false (skip)', async () => {
     const { message } = makeMsg('Sugestia');
-    (message as any).channel = { type: 1 /* DM */ };
+    (message as any).channel = { type: 1 };
     (message as any).guild = null;
     findOne.mockResolvedValue({});
     await run(message as any);
@@ -111,9 +111,7 @@ describe('messageCreate/createSuggestions', () => {
   test('global catch: second channel.send also fails silently in nested try/catch', async () => {
     const { message, channel } = makeMsg('Sugestia z błędem wysyłki');
     findOne.mockResolvedValue({ guildId: 'g1', suggestionChannelId: channel.id });
-    // First send ("creating...") works, but later we throw to go to global catch and then make fallback send fail
-    createRec.mockRejectedValue(new Error('createFail')); // triggers global catch
-    // Make the fallback send in catch fail
+    createRec.mockRejectedValue(new Error('createFail'));
     const origSend = channel.send;
     channel.send = jest.fn(async (...args:any[]) => {
       if ((channel.send as any)._calledOnce) throw new Error('fallbackFail');
@@ -122,7 +120,6 @@ describe('messageCreate/createSuggestions', () => {
     }) as any;
 
     await run(message as any);
-    // Still logs error; nested catch suppresses the send error
     expect((logger as any).error).toHaveBeenCalledWith(expect.stringContaining('Błąd podczas tworzenia sugestii'));
   });
 

@@ -24,10 +24,6 @@ import {
   PermissionsBitField,
 } from 'discord.js';
 
-/**
- * Fluent API builder for creating Discord interactions in tests
- * Supports ChatInputCommand, Button, SelectMenu, and Modal interactions
- */
 export class InteractionBuilder<T = ChatInputCommandInteraction> {
   private interactionData: Partial<T> = {};
   private userData: Partial<User> = {};
@@ -40,16 +36,14 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
   private selectValues: string[] = [];
   private modalFieldsData: { [key: string]: string } = {};
   private subcommandName?: string;
-  private expectedType?: string; // To track specific interaction type
+  private expectedType?: string; 
 
-  // Interaction state tracking
   private replied = false;
   private deferred = false;
   private ephemeral = false;
   private lastResponse?: string;
 
   constructor() {
-    // Set default values
     this.setDefaultUser();
     this.setDefaultGuild();
     this.setDefaultChannel();
@@ -66,8 +60,8 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
       bot: false,
       system: false,
       tag: 'testuser#0000',
-      createdTimestamp: Date.now() - 86400000, // 1 day ago
-    } as any; // Type assertion for test mock
+      createdTimestamp: Date.now() - 86400000,
+    } as any;
     return this;
   }
 
@@ -79,11 +73,11 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
       splash: null,
       ownerId: '111222333444555666',
       memberCount: 100,
-      createdTimestamp: Date.now() - 86400000 * 30, // 30 days ago
-      members: {} as any, // Mock manager
-      channels: {} as any, // Mock manager
-      roles: {} as any, // Mock manager
-    } as any; // Type assertion for test mock
+      createdTimestamp: Date.now() - 86400000 * 30,
+      members: {} as any,
+      channels: {} as any,
+      roles: {} as any,
+    } as any;
     return this;
   }
 
@@ -92,8 +86,8 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
       id: '555666777888999000',
       type: ChannelType.GuildText,
       name: 'test-channel',
-      createdTimestamp: Date.now() - 86400000 * 7, // 7 days ago
-    } as any; // Type assertion for test mock
+      createdTimestamp: Date.now() - 86400000 * 7,
+    } as any;
     return this;
   }
 
@@ -105,22 +99,17 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
         discriminator: '0000',
         avatar: null,
         bot: true,
-      } as any, // Mock ClientUser
+      } as any,
       application: {
         id: '111222333444555666',
-      } as any, // Mock Application
+      } as any,
       ws: {
         ping: 50,
-      } as any, // Mock WebSocketManager
-    } as any; // Type assertion for test mock
+      } as any,
+    } as any;
     return this;
   }
 
-  // Fluent API methods
-
-  /**
-   * Set command name for ChatInputCommandInteraction
-   */
   command(name: string): this {
     this.interactionData = {
       ...this.interactionData,
@@ -130,95 +119,61 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
     return this;
   }
 
-  /**
-   * Set subcommand for command interactions
-   */
   subcommand(name: string): this {
     this.subcommandName = name;
     return this;
   }
 
-  /**
-   * Set custom ID for component interactions
-   */
   customId(id: string): this {
     this.componentCustomId = id;
     return this;
   }
 
-  /**
-   * Set values for select menu interactions
-   */
   values(values: string[]): this {
     this.selectValues = values;
     return this;
   }
 
-  /**
-   * Set modal fields for modal submit interactions
-   */
   modalFields(fields: { [key: string]: string }): this {
     this.modalFieldsData = fields;
     return this;
   }
 
-  // Set expected interaction type for proper building
   setType(type: string): this {
     this.expectedType = type;
     return this;
   }
 
-  /**
-   * Set user data
-   */
   user(userData: Partial<User>): this {
     this.userData = { ...this.userData, ...userData };
     return this;
   }
 
-  /**
-   * Set guild data
-   */
   guild(guildData: Partial<Guild>): this {
     this.guildData = { ...this.guildData, ...guildData };
     return this;
   }
 
-  /**
-   * Set member data
-   */
   member(memberData: Partial<GuildMember>): this {
     this.memberData = { ...this.memberData, ...memberData };
     return this;
   }
 
-  /**
-   * Set channel data
-   */
   channel(channelData: Partial<Channel>): this {
     this.channelData = { ...this.channelData, ...channelData } as any;
     return this;
   }
 
-  /**
-   * Set client data
-   */
   client(clientData: Partial<Client>): this {
     this.clientData = { ...this.clientData, ...clientData };
     return this;
   }
 
-  /**
-   * Set command/component options
-   */
   options(options: { [key: string]: any }): this {
     this.commandOptions = { ...this.commandOptions, ...options };
     return this;
   }
 
-  /**
-   * Create mock interaction methods
-   */
   private createMockMethods() {
     return {
       deferReply: jest.fn(async (opts?: { ephemeral?: boolean; fetchReply?: boolean }) => {
@@ -280,15 +235,11 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
         components: [],
       })),
 
-      // State getters for testing
       replied: () => this.replied,
       deferred: () => this.deferred,
     };
   }
 
-  /**
-   * Create command options mock
-   */
   private createOptionsBinding() {
     return {
       getSubcommand: jest.fn(() => this.subcommandName),
@@ -314,9 +265,6 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
     };
   }
 
-  /**
-   * Build ChatInputCommandInteraction
-   */
   buildChatInput(): ChatInputCommandInteraction {
     const mockUser = this.userData as User;
     const mockGuild = this.guildData as Guild;
@@ -360,7 +308,6 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
       inCachedGuild: () => true,
       inRawGuild: () => false,
       ...methods,
-      // Test state accessor - reference to live state
       _testState: this,
       ...this.interactionData,
     } as unknown as ChatInputCommandInteraction;
@@ -368,9 +315,6 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
     return interaction;
   }
 
-  /**
-   * Build ButtonInteraction
-   */
   buildButton(): ButtonInteraction {
     const mockUser = this.userData as User;
     const mockGuild = this.guildData as Guild;
@@ -433,9 +377,6 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
     return interaction;
   }
 
-  /**
-   * Build StringSelectMenuInteraction
-   */
   buildStringSelectMenu(): StringSelectMenuInteraction {
     const mockUser = this.userData as User;
     const mockGuild = this.guildData as Guild;
@@ -498,9 +439,6 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
     return interaction;
   }
 
-  /**
-   * Build ChannelSelectMenuInteraction
-   */
   buildChannelSelectMenu(): ChannelSelectMenuInteraction {
     const mockUser = this.userData as User;
     const mockGuild = this.guildData as Guild;
@@ -564,9 +502,6 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
     return interaction;
   }
 
-  /**
-   * Build ModalSubmitInteraction
-   */
   buildModalSubmit(): ModalSubmitInteraction {
     const mockUser = this.userData as User;
     const mockGuild = this.guildData as Guild;
@@ -618,9 +553,6 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
     return interaction;
   }
 
-  /**
-   * Auto-build based on type hints or default to ChatInput
-   */
   build(): T {
     if (this.componentCustomId && Object.keys(this.modalFieldsData).length > 0) {
       return this.buildModalSubmit() as T;
@@ -636,7 +568,6 @@ export class InteractionBuilder<T = ChatInputCommandInteraction> {
   }
 }
 
-// Convenience factory functions
 export function createChatInputInteraction(commandName?: string): InteractionBuilder<ChatInputCommandInteraction> {
   const builder = new InteractionBuilder<ChatInputCommandInteraction>();
   if (commandName) {

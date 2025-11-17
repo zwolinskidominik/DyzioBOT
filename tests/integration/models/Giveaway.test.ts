@@ -36,7 +36,7 @@ describe('Giveaway Model Integration Tests', () => {
         messageId: 'message-123',
         hostId: 'host-123',
         winnersCount: 1,
-        endTime: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
+        endTime: new Date(Date.now() + 24 * 60 * 60 * 1000)
       };
 
       const giveaway = await GiveawayModel.create(giveawayData);
@@ -131,7 +131,7 @@ describe('Giveaway Model Integration Tests', () => {
     });
 
     it('should validate endTime is in the future', async () => {
-      const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
+      const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
       
       const giveawayData = giveawayFactory.build({
         guildId: 'guild-123',
@@ -141,7 +141,6 @@ describe('Giveaway Model Integration Tests', () => {
         endTime: pastDate
       });
 
-      // Temporarily disable test environment check
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
       
@@ -186,12 +185,11 @@ describe('Giveaway Model Integration Tests', () => {
 
       await GiveawayModel.create(giveaway1Data);
 
-      // Try to create giveaway with same messageId
       const giveaway2Data = giveawayFactory.build({
-        guildId: 'guild-456', // different guild
+        guildId: 'guild-456',
         prize: 'Prize 2',
         channelId: 'channel-456',
-        messageId: 'message-123' // same messageId
+        messageId: 'message-123'
       });
 
       await expect(GiveawayModel.create(giveaway2Data)).rejects.toThrow(/duplicate key/);
@@ -208,9 +206,8 @@ describe('Giveaway Model Integration Tests', () => {
 
       await GiveawayModel.create(giveaway1Data);
 
-      // Try to create giveaway with same giveawayId
       const giveaway2Data = giveawayFactory.build({
-        giveawayId: 'unique-giveaway-id', // same giveawayId
+        giveawayId: 'unique-giveaway-id',
         guildId: 'guild-456',
         prize: 'Prize 2',
         channelId: 'channel-456',
@@ -253,12 +250,10 @@ describe('Giveaway Model Integration Tests', () => {
         channelId: 'channel-123',
         messageId: 'message-123',
         active: true,
-        participants: [] // Explicitly set empty participants
+        participants: []
       });
 
       const giveaway = await GiveawayModel.create(giveawayData);
-
-      // Add participants
       giveaway.participants.push('user-1', 'user-2', 'user-3');
       await giveaway.save();
 
@@ -277,12 +272,9 @@ describe('Giveaway Model Integration Tests', () => {
 
       const giveaway = await GiveawayModel.create(giveawayData);
 
-      // Try to add existing participant
       if (!giveaway.participants.includes('user-1')) {
         giveaway.participants.push('user-1');
       }
-      
-      // Add new participant
       if (!giveaway.participants.includes('user-3')) {
         giveaway.participants.push('user-3');
       }
@@ -308,7 +300,6 @@ describe('Giveaway Model Integration Tests', () => {
 
       const giveaway = await GiveawayModel.create(giveawayData);
 
-      // Simulate giveaway finalization
       giveaway.active = false;
       giveaway.finalized = true;
       await giveaway.save();
@@ -320,7 +311,7 @@ describe('Giveaway Model Integration Tests', () => {
     });
 
     it('should handle giveaway expiration', async () => {
-      const futureDate = new Date(Date.now() + 60 * 60 * 1000); // 1 hour in future initially
+      const futureDate = new Date(Date.now() + 60 * 60 * 1000);
       
       const giveawayData = giveawayFactory.build({
         guildId: 'guild-123',
@@ -332,18 +323,13 @@ describe('Giveaway Model Integration Tests', () => {
       });
 
       const giveaway = await GiveawayModel.create(giveawayData);
-
-      // Check if giveaway is currently active and not expired
       const currentTime = new Date();
       const isExpired = giveaway.endTime < currentTime;
-      expect(isExpired).toBe(false); // Should not be expired since endTime is 1 hour in future
-
-      // Test the logic for checking expiration without triggering validation
+      expect(isExpired).toBe(false);
       const mockPastDate = new Date(Date.now() - 60 * 60 * 1000);
       const wouldBeExpired = mockPastDate < new Date();
       expect(wouldBeExpired).toBe(true);
 
-      // We can only change the active status, not endTime after creation due to validation
       if (giveaway.active) {
         giveaway.active = false;
         await giveaway.save();
@@ -385,8 +371,6 @@ describe('Giveaway Model Integration Tests', () => {
       });
 
       const giveaway = await GiveawayModel.create(giveawayData);
-
-      // Add role multipliers
       giveaway.roleMultipliers.set('new-role', 4);
       giveaway.roleMultipliers.set('special-role', 10);
       await giveaway.save();
@@ -399,7 +383,6 @@ describe('Giveaway Model Integration Tests', () => {
 
   describe('Queries and Filtering', () => {
     beforeEach(async () => {
-      // Create test giveaways
       const testGiveaways = [
         {
           guildId: 'guild-123',
@@ -426,7 +409,7 @@ describe('Giveaway Model Integration Tests', () => {
           messageId: 'message-3',
           active: false,
           finalized: true,
-          endTime: new Date(Date.now() + 12 * 60 * 60 * 1000), // Still future but finalized
+          endTime: new Date(Date.now() + 12 * 60 * 60 * 1000),
           participants: ['user-2', 'user-3']
         },
         {
@@ -491,10 +474,9 @@ describe('Giveaway Model Integration Tests', () => {
     it('should sort giveaways by end time', async () => {
       const giveaways = await GiveawayModel
         .find({ guildId: 'guild-123' })
-        .sort({ endTime: 1 }); // ascending
+        .sort({ endTime: 1 });
 
       expect(giveaways).toHaveLength(3);
-      // Should be sorted by endTime
       for (let i = 1; i < giveaways.length; i++) {
         expect(giveaways[i].endTime >= giveaways[i - 1].endTime).toBe(true);
       }
@@ -503,7 +485,6 @@ describe('Giveaway Model Integration Tests', () => {
 
   describe('Aggregation and Statistics', () => {
     beforeEach(async () => {
-      // Create test data for statistics
       const testData = [
         {
           guildId: 'guild-123',
@@ -566,7 +547,7 @@ describe('Giveaway Model Integration Tests', () => {
       expect(stats[0].totalGiveaways).toBe(3);
       expect(stats[0].activeGiveaways).toBe(1);
       expect(stats[0].finalizedGiveaways).toBe(2);
-      expect(stats[0].totalParticipants).toBe(10); // 3+4+3
+      expect(stats[0].totalParticipants).toBe(10);
       expect(stats[0].avgParticipants).toBeCloseTo(3.33, 2);
     });
 
@@ -582,16 +563,14 @@ describe('Giveaway Model Integration Tests', () => {
           }
         },
         { $sort: { giveawaysEntered: -1 } },
-        { $limit: 10 } // Increase limit to capture all participants
+        { $limit: 10 }
       ]);
 
-      expect(topParticipants).toHaveLength(6); // 6 unique participants
+      expect(topParticipants).toHaveLength(6);
       
-      // Find users who entered multiple giveaways
       const multipleEntries = topParticipants.filter(p => p.giveawaysEntered > 1);
       expect(multipleEntries.length).toBeGreaterThan(0);
       
-      // user-1 should be in 2 giveaways (Prize 1 and Prize 3)
       const user1 = topParticipants.find(p => p._id === 'user-1');
       expect(user1?.giveawaysEntered).toBe(2);
     });
@@ -613,7 +592,7 @@ describe('Giveaway Model Integration Tests', () => {
 
       expect(trends).toHaveLength(3);
       expect(trends.every(t => typeof t.participantCount === 'number')).toBe(true);
-      expect(trends.filter(t => t.isFinalized)).toHaveLength(2); // 2 finalized giveaways
+      expect(trends.filter(t => t.isFinalized)).toHaveLength(2);
     });
   });
 
@@ -634,9 +613,7 @@ describe('Giveaway Model Integration Tests', () => {
       const createTime = Date.now() - startTime;
 
       expect(giveaway.participants).toHaveLength(1000);
-      expect(createTime).toBeLessThan(500); // Should create quickly
-
-      // Test querying
+      expect(createTime).toBeLessThan(500);
       const queryStart = Date.now();
       const foundGiveaway = await GiveawayModel.findOne({
         guildId: 'guild-large',
@@ -645,7 +622,7 @@ describe('Giveaway Model Integration Tests', () => {
       const queryTime = Date.now() - queryStart;
 
       expect(foundGiveaway).toBeDefined();
-      expect(queryTime).toBeLessThan(100); // Should query quickly
+      expect(queryTime).toBeLessThan(100);
 
       logger.info(`Large giveaway create: ${createTime}ms, query: ${queryTime}ms`);
     });
@@ -667,7 +644,7 @@ describe('Giveaway Model Integration Tests', () => {
       await GiveawayModel.insertMany(giveaways);
       const insertTime = Date.now() - startTime;
 
-      expect(insertTime).toBeLessThan(1000); // Should insert quickly
+      expect(insertTime).toBeLessThan(1000);
 
       const count = await GiveawayModel.countDocuments({ guildId: 'guild-bulk' });
       expect(count).toBe(50);

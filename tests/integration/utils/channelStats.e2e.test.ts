@@ -3,7 +3,6 @@ import { Collection, type Guild, type GuildMember } from 'discord.js';
 import { DbManager } from '../setup/db';
 import { clearTestData } from '../helpers/seeding';
 import { ChannelStatsModel } from '../../../src/models/ChannelStats';
-// Mock logger once for the whole file
 jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
   default: {
@@ -14,7 +13,6 @@ jest.mock('../../../src/utils/logger', () => ({
   },
 }));
 const logger = require('../../../src/utils/logger').default;
-// Import helpers once (single Mongoose context)
 import { updateChannelStats } from '../../../src/utils/channelHelpers';
 
 describe('utils/channelHelpers: updateChannelStats (E2E)', () => {
@@ -83,7 +81,7 @@ describe('utils/channelHelpers: updateChannelStats (E2E)', () => {
       makeMember('2', 'Bob', 2000),
       makeMember('3', 'Botty', 1500, true),
     ];
-    const { guild, channels, bansFetch, membersFetch } = makeGuild(members, members.length + 2); // incomplete -> triggers fetch
+    const { guild, channels, bansFetch, membersFetch } = makeGuild(members, members.length + 2);
 
     await ChannelStatsModel.create({
       guildId: 'g1',
@@ -94,19 +92,16 @@ describe('utils/channelHelpers: updateChannelStats (E2E)', () => {
         lastJoined: { channelId: 'lastChan', template: 'Ostatni: <>' },
       },
     });
-
-    // First call -> should fetch members and bans, update channels and save doc
     await updateChannelStats(guild);
     expect(membersFetch).toHaveBeenCalled();
     expect(bansFetch).toHaveBeenCalled();
 
     const doc1 = await ChannelStatsModel.findOne({ guildId: 'g1' }).lean().exec();
-    expect(doc1?.channels.lastJoined?.member).toBe('2'); // Bob is latest non-bot
+    expect(doc1?.channels.lastJoined?.member).toBe('2');
     expect(channels.usersChan.name).toMatch(/Users:/);
     expect(channels.botsChan.name).toMatch(/Bots:/);
     expect(channels.bansChan.name).toMatch(/Bans:/);
 
-    // Second call within TTL -> should not refetch
     const bansCalls = bansFetch.mock.calls.length;
     const membersCalls = membersFetch.mock.calls.length;
     await updateChannelStats(guild);
@@ -125,15 +120,11 @@ describe('utils/channelHelpers: updateChannelStats (E2E)', () => {
         lastJoined: { channelId: 'lastChan', template: 'Ostatni: <>' },
       },
     });
-
-    // Make bans.fetch fail with permission error first
     bansFetch.mockRejectedValueOnce({ code: 50013 });
     await updateChannelStats(guild);
 
-    // Kontynuujemy mimo 50013: kanały zaktualizowane (bez twardego wymagania loga)
     expect(channels.usersChan.name).toMatch(/Users:/);
 
-    // Now force save error: mock findOne to return a doc whose save throws (single call)
     const spy = jest.spyOn(ChannelStatsModel, 'findOne').mockResolvedValueOnce({
       guildId: 'g1',
       channels: {
@@ -146,8 +137,6 @@ describe('utils/channelHelpers: updateChannelStats (E2E)', () => {
     } as any);
 
     await updateChannelStats(guild);
-
-    // Should log error and not throw
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Błąd przy aktualizacji statystyk'));
 
     spy.mockRestore();

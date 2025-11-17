@@ -1,7 +1,6 @@
 import { prop, getModelForClass, index, DocumentType } from '@typegoose/typegoose';
 
 class Fortune {
-  // Content should be unique to avoid duplicate fortunes in the pool
   @prop({ required: true, unique: true, type: () => String })
   public content!: string;
 

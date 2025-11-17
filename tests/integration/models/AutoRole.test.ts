@@ -43,7 +43,6 @@ describe('AutoRole Model Integration Tests', () => {
     it('should require guildId field', async () => {
       const autoRoleData = {
         roleIds: ['role-1', 'role-2']
-        // Missing guildId
       };
 
       await expect(AutoRoleModel.create(autoRoleData)).rejects.toThrow(/guildId.*required/);
@@ -52,7 +51,6 @@ describe('AutoRole Model Integration Tests', () => {
     it('should create AutoRole with empty role list by default', async () => {
       const autoRoleData = {
         guildId: 'guild-123'
-        // No roleIds provided
       };
 
       const autoRole = await AutoRoleModel.create(autoRoleData);
@@ -93,9 +91,8 @@ describe('AutoRole Model Integration Tests', () => {
 
       await AutoRoleModel.create(autoRole1Data);
 
-      // Try to create another AutoRole for the same guild
       const autoRole2Data = autoRoleFactory.build({
-        guildId: 'guild-unique-test', // same guild
+        guildId: 'guild-unique-test',
         roleIds: ['role-3', 'role-4']
       });
 
@@ -136,7 +133,6 @@ describe('AutoRole Model Integration Tests', () => {
 
       const autoRole = await AutoRoleModel.create(autoRoleData);
 
-      // Update role list
       autoRole.roleIds = ['role-1', 'role-2', 'role-3', 'role-4'];
       await autoRole.save();
 
@@ -151,8 +147,6 @@ describe('AutoRole Model Integration Tests', () => {
         guildId: 'guild-add-role',
         roleIds: ['role-1']
       });
-
-      // Add new role
       autoRole.roleIds.push('role-2');
       await autoRole.save();
 
@@ -167,7 +161,6 @@ describe('AutoRole Model Integration Tests', () => {
         roleIds: ['role-1', 'role-2', 'role-3']
       });
 
-      // Remove middle role
       autoRole.roleIds = autoRole.roleIds.filter(id => id !== 'role-2');
       await autoRole.save();
 
@@ -181,8 +174,6 @@ describe('AutoRole Model Integration Tests', () => {
         guildId: 'guild-clear-roles',
         roleIds: ['role-1', 'role-2', 'role-3']
       });
-
-      // Clear all roles
       autoRole.roleIds = [];
       await autoRole.save();
 
@@ -193,8 +184,6 @@ describe('AutoRole Model Integration Tests', () => {
     it('should handle upsert operations', async () => {
       const guildId = 'guild-upsert';
       const initialRoles = ['role-1', 'role-2'];
-
-      // Create or update AutoRole configuration
       await AutoRoleModel.findOneAndUpdate(
         { guildId },
         { roleIds: initialRoles },
@@ -205,7 +194,6 @@ describe('AutoRole Model Integration Tests', () => {
       expect(autoRole).toBeDefined();
       expect(autoRole!.roleIds).toEqual(initialRoles);
 
-      // Update existing configuration
       const updatedRoles = ['role-1', 'role-2', 'role-3'];
       await AutoRoleModel.findOneAndUpdate(
         { guildId },
@@ -220,12 +208,11 @@ describe('AutoRole Model Integration Tests', () => {
 
   describe('Query Operations', () => {
     beforeEach(async () => {
-      // Create test AutoRole configurations
       const testConfigs = [
         { guildId: 'guild-query-1', roleIds: ['role-a', 'role-b'] },
         { guildId: 'guild-query-2', roleIds: ['role-c', 'role-d', 'role-e'] },
-        { guildId: 'guild-query-3', roleIds: [] }, // No roles
-        { guildId: 'guild-query-4', roleIds: ['role-f'] }, // Single role
+        { guildId: 'guild-query-3', roleIds: [] },
+        { guildId: 'guild-query-4', roleIds: ['role-f'] },
       ];
 
       for (const config of testConfigs) {
@@ -243,10 +230,10 @@ describe('AutoRole Model Integration Tests', () => {
 
     it('should find guilds with configured roles', async () => {
       const configsWithRoles = await AutoRoleModel.find({
-        'roleIds.0': { $exists: true } // Has at least one role
+        'roleIds.0': { $exists: true }
       });
 
-      expect(configsWithRoles).toHaveLength(3); // guild-query-1, 2, 4
+      expect(configsWithRoles).toHaveLength(3);
       expect(configsWithRoles.map(c => c.guildId)).not.toContain('guild-query-3');
     });
 
@@ -280,10 +267,10 @@ describe('AutoRole Model Integration Tests', () => {
 
     it('should find guilds with multiple roles', async () => {
       const multiRoleGuilds = await AutoRoleModel.find({
-        'roleIds.1': { $exists: true } // Has at least 2 roles
+        'roleIds.1': { $exists: true }
       });
 
-      expect(multiRoleGuilds).toHaveLength(2); // guild-query-1 and guild-query-2
+      expect(multiRoleGuilds).toHaveLength(2);
       expect(multiRoleGuilds.map(g => g.guildId)).toEqual(
         expect.arrayContaining(['guild-query-1', 'guild-query-2'])
       );
@@ -292,7 +279,6 @@ describe('AutoRole Model Integration Tests', () => {
 
   describe('Aggregation and Statistics', () => {
     beforeEach(async () => {
-      // Create diverse test data
       const testData = [
         { guildId: 'guild-stat-1', roleIds: ['role-1', 'role-2'] },
         { guildId: 'guild-stat-2', roleIds: ['role-3', 'role-4', 'role-5'] },
@@ -332,7 +318,7 @@ describe('AutoRole Model Integration Tests', () => {
       expect(stats[0].totalGuilds).toBe(5);
       expect(stats[0].guildsWithRoles).toBe(4);
       expect(stats[0].guildsWithoutRoles).toBe(1);
-      expect(stats[0].totalRoles).toBe(10); // 2+3+0+1+4
+      expect(stats[0].totalRoles).toBe(10);
       expect(stats[0].averageRolesPerGuild).toBe(2);
       expect(stats[0].maxRolesPerGuild).toBe(4);
     });
@@ -372,7 +358,6 @@ describe('AutoRole Model Integration Tests', () => {
         { $sort: { _id: 1 } }
       ]);
 
-      // Expect: 0 roles (1 guild), 1 role (1 guild), 2 roles (1 guild), 3 roles (1 guild), 4 roles (1 guild)
       expect(distribution).toHaveLength(5);
       expect(distribution.every(d => d.guildCount === 1)).toBe(true);
     });
@@ -390,8 +375,8 @@ describe('AutoRole Model Integration Tests', () => {
         { $sort: { usageCount: -1 } }
       ]);
 
-      expect(allRoles).toHaveLength(10); // role-1 through role-10
-      expect(allRoles.every(r => r.usageCount === 1)).toBe(true); // Each role used once
+      expect(allRoles).toHaveLength(10);
+      expect(allRoles.every(r => r.usageCount === 1)).toBe(true);
     });
   });
 
@@ -401,7 +386,7 @@ describe('AutoRole Model Integration Tests', () => {
       const guildCount = 100;
       
       for (let i = 0; i < guildCount; i++) {
-        const roleCount = Math.floor(Math.random() * 10) + 1; // 1-10 roles per guild
+        const roleCount = Math.floor(Math.random() * 10) + 1;
         const roleIds = [];
         
         for (let j = 0; j < roleCount; j++) {
@@ -418,23 +403,20 @@ describe('AutoRole Model Integration Tests', () => {
       await AutoRoleModel.insertMany(configs);
       const insertTime = Date.now() - insertStart;
 
-      expect(insertTime).toBeLessThan(2000); // Should insert quickly
-      
-      // Test query performance
+      expect(insertTime).toBeLessThan(2000);
       const queryStart = Date.now();
       const configsWithManyRoles = await AutoRoleModel.find({
-        'roleIds.4': { $exists: true } // At least 5 roles
+        'roleIds.4': { $exists: true }
       });
       const queryTime = Date.now() - queryStart;
 
       expect(configsWithManyRoles.length).toBeGreaterThan(0);
-      expect(queryTime).toBeLessThan(500); // Should query quickly
+      expect(queryTime).toBeLessThan(500);
 
       logger.info(`Performance test: insert ${insertTime}ms, query ${queryTime}ms`);
     });
 
     it('should handle bulk updates efficiently', async () => {
-      // Create initial configurations
       const configs = [];
       for (let i = 0; i < 50; i++) {
         configs.push(autoRoleFactory.build({
@@ -445,7 +427,6 @@ describe('AutoRole Model Integration Tests', () => {
 
       await AutoRoleModel.insertMany(configs);
 
-      // Bulk add role to all configurations
       const updateStart = Date.now();
       await AutoRoleModel.updateMany(
         { guildId: { $regex: /^guild-bulk-/ } },
@@ -453,9 +434,7 @@ describe('AutoRole Model Integration Tests', () => {
       );
       const updateTime = Date.now() - updateStart;
 
-      expect(updateTime).toBeLessThan(1000); // Should update quickly
-
-      // Verify all configurations have the new role
+      expect(updateTime).toBeLessThan(1000);
       const updatedConfigs = await AutoRoleModel.find({ 
         guildId: { $regex: /^guild-bulk-/ } 
       });
@@ -468,14 +447,11 @@ describe('AutoRole Model Integration Tests', () => {
 
     it('should handle concurrent role operations efficiently', async () => {
       const guildId = 'guild-concurrent';
-
-      // Create initial configuration
       await AutoRoleModel.create({
         guildId,
         roleIds: []
       });
 
-      // Simulate concurrent role additions
       const operations = [];
       for (let i = 0; i < 10; i++) {
         operations.push(
@@ -489,11 +465,8 @@ describe('AutoRole Model Integration Tests', () => {
 
       const results = await Promise.all(operations);
       
-      // All operations should succeed
       expect(results).toHaveLength(10);
       expect(results.every(r => r !== null)).toBe(true);
-
-      // Verify final state
       const finalConfig = await AutoRoleModel.findOne({ guildId });
       expect(finalConfig!.roleIds.length).toBeLessThanOrEqual(10);
       expect(finalConfig!.roleIds.length).toBeGreaterThan(0);
@@ -546,7 +519,6 @@ describe('AutoRole Model Integration Tests', () => {
 
       const autoRole = await AutoRoleModel.create(autoRoleData);
       
-      // MongoDB should preserve the array as-is (duplicates included)
       expect(autoRole.roleIds).toEqual(roleIdsWithDuplicates);
       expect(autoRole.roleIds).toHaveLength(5);
     });
@@ -560,10 +532,7 @@ describe('AutoRole Model Integration Tests', () => {
       const autoRole = await AutoRoleModel.create(autoRoleData);
       const autoRoleId = autoRole._id;
 
-      // Delete the configuration
       await AutoRoleModel.findByIdAndDelete(autoRoleId);
-
-      // Verify deletion
       const deletedAutoRole = await AutoRoleModel.findById(autoRoleId);
       expect(deletedAutoRole).toBeNull();
     });

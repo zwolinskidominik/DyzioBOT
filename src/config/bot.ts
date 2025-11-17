@@ -36,6 +36,12 @@ const BOT_ASSETS: Record<string, IBotConfig> = {
         hi: '<:hi:1341059174888509521>',
         bye: '<:bye:1341059186607390770>',
       },
+      monthlyStats: {
+        upvote: '<:upvote:1439073640149946418>',
+        downvote: '<:downvote:1439073641760424027>',
+        whitedash: '<:whitedash:1439073675516051536>',
+        new: '<:52690newred:1439641798187159612>',
+      },
       suggestion: {
         upvote: '<:yes:1341047246120026254>',
         downvote: '<:no:1341047256387682456>',
@@ -47,6 +53,11 @@ const BOT_ASSETS: Record<string, IBotConfig> = {
         lf: '<:5988lbg:1299663872071831622>',
         mf: '<:3451lg:1299663858914295818>',
         rf: '<:3166lb4g:1299663843827650681>',
+      },
+      trophy: {
+        gold: '<:trophy1:1439071783633293322>',
+        silver: '<:trophy2:1439071785172865055>',
+        bronze: '<:trophy3:1439071786594467840>',
       },
       warnPB: {
         le: '<:yleftempty:1366151068144107532>',
@@ -94,6 +105,12 @@ const BOT_ASSETS: Record<string, IBotConfig> = {
         hi: '<:hi:1341053115134382130>',
         bye: '<:bye:1341053105302929488>',
       },
+      monthlyStats: {
+        upvote: '<:upvote:1436123564913725660>',
+        downvote: '<:downvote:1436123566310686850>',
+        whitedash: '<:whitedash:1436123971664875711>',
+        new: '<:52690newred:1439422826636644504>',
+      },
       suggestion: {
         upvote: '<:yes:1341021808375107656>',
         downvote: '<:no:1341021822208184340>',
@@ -105,6 +122,11 @@ const BOT_ASSETS: Record<string, IBotConfig> = {
         lf: '<:5988lbg:1299661179148566581>',
         mf: '<:3451lg:1299661164816629782>',
         rf: '<:3166lb4g:1299661148949446668>',
+      },
+      trophy: {
+        gold: '<:trophy1:1435031695211364413>',
+        silver: '<:trophy2:1435031697149137047>',
+        bronze: '<:trophy3:1435031698621595820>',
       },
       warnPB: {
         le: '<:yleftempty:1364583991000170589>',

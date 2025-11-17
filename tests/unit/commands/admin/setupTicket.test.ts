@@ -19,12 +19,9 @@ jest.mock('../../../../src/models/TicketConfig', () => ({
   __esModule: true,
   TicketConfigModel: TicketCfgModel,
 }));
-
-// Mock AttachmentBuilder to avoid fs usage
 jest.mock('discord.js', () => {
   const actual = jest.requireActual('discord.js');
   class AttachmentBuilder { constructor(public path: string) {} }
-  // Mock TextChannel instanceof and shape
   function MockTextChannel(this: any) {}
   Object.defineProperty(MockTextChannel, Symbol.hasInstance, { value: (obj: any) => !!obj.__isTextChannel });
   return { ...actual, AttachmentBuilder, TextChannel: MockTextChannel };
@@ -64,7 +61,6 @@ describe('admin/setupTicket', () => {
         { categoryId: 'cat1' },
         expect.objectContaining({ upsert: true, new: true })
       );
-      // Sent message includes embed, row and files
       expect(interaction.channel.send).toHaveBeenCalledWith(
         expect.objectContaining({ embeds: [expect.any(Object)], components: [expect.any(Object)], files: [expect.any(Object)] })
       );

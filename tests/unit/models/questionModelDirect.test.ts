@@ -213,13 +213,11 @@ describe('Question Model Direct Unit Tests', () => {
     it('should enforce unique content constraint', async () => {
       const content = 'This is a unique question';
       
-      // First creation should succeed
       await QuestionModel.create({
         authorId: 'user1',
         content
       });
 
-      // Second creation with same content should fail
       await expect(
         QuestionModel.create({
           authorId: 'user2',
@@ -271,15 +269,12 @@ describe('Question Model Direct Unit Tests', () => {
         content: 'First question with custom ID'
       });
 
-      // Note: questionId doesn't have unique constraint in schema, 
-      // but let's test the behavior anyway
       const question2 = await QuestionModel.create({
         questionId,
         authorId: 'user2',
         content: 'Second question with same custom ID'
       });
 
-      // Should succeed as questionId doesn't have unique constraint
       expect(question2.questionId).toBe(questionId);
     });
   });
@@ -307,13 +302,11 @@ describe('Question Model Direct Unit Tests', () => {
         content: 'Original question'
       });
 
-      // Update reactions
       question.reactions.push('👍', '👎');
       const savedQuestion = await question.save();
 
       expect(savedQuestion.reactions).toEqual(['👍', '👎']);
 
-      // Update via findByIdAndUpdate
       const updatedQuestion = await QuestionModel.findByIdAndUpdate(
         question._id,
         { $push: { reactions: '❤️' } },
@@ -334,19 +327,16 @@ describe('Question Model Direct Unit Tests', () => {
         content: 'Question from user 2'
       });
 
-      // Find by authorId
       const user1Questions = await QuestionModel.find({ authorId: 'user1' });
       expect(user1Questions).toHaveLength(1);
       expect(user1Questions[0].content).toBe('Question from user 1');
 
-      // Find by content
       const specificQuestion = await QuestionModel.findOne({ 
         content: 'Question from user 2' 
       });
       expect(specificQuestion).toBeDefined();
       expect(specificQuestion?.authorId).toBe('user2');
 
-      // Find all
       const allQuestions = await QuestionModel.find({});
       expect(allQuestions).toHaveLength(2);
     });
@@ -375,7 +365,6 @@ describe('Question Model Direct Unit Tests', () => {
       const questions = await QuestionModel.insertMany(questionsData);
       expect(questions).toHaveLength(3);
 
-      // Bulk update
       await QuestionModel.updateMany(
         { authorId: { $in: ['user1', 'user2'] } },
         { $push: { reactions: 'bulk-reaction' } }
@@ -413,13 +402,12 @@ describe('Question Model Direct Unit Tests', () => {
         await QuestionModel.create({ authorId: 'user2', content });
         fail('Should have thrown duplicate key error');
       } catch (error: any) {
-        expect(error.code).toBe(11000); // MongoDB duplicate key error code
+        expect(error.code).toBe(11000);
         expect(error.message).toMatch(/duplicate key/i);
       }
     });
 
     it('should handle invalid data types gracefully', async () => {
-      // Test with object types that cannot be converted to strings
       await expect(
         QuestionModel.create({
           authorId: { invalid: 'object' } as any,
@@ -434,7 +422,6 @@ describe('Question Model Direct Unit Tests', () => {
         })
       ).rejects.toThrow();
 
-      // Test with completely invalid document structure
       await expect(
         QuestionModel.create(null as any)
       ).rejects.toThrow();
@@ -495,13 +482,11 @@ describe('Question Model Direct Unit Tests', () => {
 
       const originalQuestionId = question.questionId;
 
-      // Update and verify questionId remains the same
       question.reactions.push('test-reaction');
       await question.save();
 
       expect(question.questionId).toBe(originalQuestionId);
 
-      // Fetch from database and verify
       const fetchedQuestion = await QuestionModel.findById(question._id);
       expect(fetchedQuestion?.questionId).toBe(originalQuestionId);
     });
@@ -514,7 +499,6 @@ describe('Question Model Direct Unit Tests', () => {
         content: 'Question with many reactions'
       });
 
-      // Add many reactions
       const manyReactions = Array.from({ length: 50 }, (_, i) => `reaction-${i}`);
       question.reactions = manyReactions;
 
@@ -534,7 +518,6 @@ describe('Question Model Direct Unit Tests', () => {
         content: 'Integrity test question'
       });
 
-      // Multiple updates
       question.reactions.push('first-reaction');
       await question.save();
 
@@ -577,8 +560,7 @@ describe('Question Model Direct Unit Tests', () => {
         content: 'Concurrent operations test'
       });
 
-      // Simulate concurrent updates
-      const promises = Array.from({ length: 10 }, async (_, i) => {
+      const updatePromises = Array.from({ length: 10 }, async (_, i) => {
         return QuestionModel.findByIdAndUpdate(
           question._id,
           { $push: { reactions: `concurrent-${i}` } },
@@ -586,14 +568,12 @@ describe('Question Model Direct Unit Tests', () => {
         );
       });
 
-      const results = await Promise.all(promises);
+      const results = await Promise.all(updatePromises);
       
-      // Verify all operations completed
       results.forEach(result => {
         expect(result).not.toBeNull();
       });
 
-      // Fetch final state
       const finalQuestion = await QuestionModel.findById(question._id);
       expect(finalQuestion?.reactions).toHaveLength(10);
     });

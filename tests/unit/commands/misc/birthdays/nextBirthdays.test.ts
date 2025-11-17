@@ -86,7 +86,6 @@ describe('misc/birthdays: /birthdays-next', () => {
       await run({ interaction, client: interaction.client });
     const arg = (interaction.editReply as jest.Mock).mock.calls.pop()[0];
   const desc = arg.embeds?.[0]?.description || '';
-  // Ensure the first 10 users are listed
   for (let i = 0; i < 10; i++) {
     expect(desc).toContain(`<@u${i}>`);
   }

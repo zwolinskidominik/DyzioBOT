@@ -40,7 +40,6 @@ describe('Giveaway Model', () => {
   });
 
   it('rejects past endTime', async () => {
-    // Temporarily disable test environment check
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
     
@@ -50,7 +49,7 @@ describe('Giveaway Model', () => {
           ...baseData(),
           giveawayId: 'gPast',
           messageId: 'msgPast',
-          endTime: new Date(Date.now() - 24 * 60 * 60 * 1000), // 24 hours ago
+          endTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
         })
       ).rejects.toThrow();
     } finally {

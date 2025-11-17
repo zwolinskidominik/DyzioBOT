@@ -15,20 +15,17 @@ describe('config/env.schema', () => {
 
   test('multiple missing keys reports all issues with names', () => {
     const env: any = {
-      // TOKEN missing
-      CLIENT_ID: '', // empty -> invalid
-      // GUILD_ID missing
+      CLIENT_ID: '',
       DEV_GUILD_IDS: '',
       DEV_USER_IDS: '',
       DEV_ROLE_IDS: '',
-      MONGODB_URI: 'notaurl', // invalid url
+      MONGODB_URI: 'notaurl',
     };
     try {
       EnvSchema.parse(env);
       throw new Error('should not pass');
     } catch (e: any) {
       const errs = e.errors || e.issues || [];
-      // Expect at least 6 issues: TOKEN, CLIENT_ID, GUILD_ID, DEV_GUILD_IDS, DEV_USER_IDS, DEV_ROLE_IDS, MONGODB_URI
       expect(errs.length).toBeGreaterThanOrEqual(6);
       const joined = JSON.stringify(errs);
       expect(joined).toMatch(/TOKEN|CLIENT_ID|GUILD_ID/);

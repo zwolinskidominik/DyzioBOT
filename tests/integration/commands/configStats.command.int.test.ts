@@ -3,8 +3,6 @@ import { DbManager } from '../setup/db';
 
 jest.mock('../../../src/utils/logger', () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }));
 
-// Mock ChannelStatsModel side effects by letting DB handle inserts; we'll only assert reply succeeded
-
 describe('Integration: admin/config-stats (real commands)', () => {
   let db: DbManager;
   let runner: CommandRunner;

@@ -21,7 +21,7 @@ describe('Warn Model', () => {
       userId: 'user-1',
       guildId: 'guild-1',
       warnings: [
-        { reason: 'spam', moderator: 'mod-1' },
+        { reason: 'spam', moderatorId: 'mod-1', moderatorTag: 'Moderator#0001' },
       ],
     });
 
@@ -29,7 +29,7 @@ describe('Warn Model', () => {
     const date = doc.warnings[0].date as unknown as Date;
     expect(date instanceof Date).toBe(true);
     const diff = Math.abs(date.getTime() - start);
-    expect(diff).toBeLessThan(2000); // within 2 seconds of creation time
+    expect(diff).toBeLessThan(2000);
   });
 
   it('can be sorted to show newest warnings first', async () => {
@@ -41,9 +41,9 @@ describe('Warn Model', () => {
       userId: 'user-2',
       guildId: 'guild-1',
       warnings: [
-        { reason: 'A-old', moderator: 'm', date: older },
-        { reason: 'B-mid', moderator: 'm', date: middle },
-        { reason: 'C-new', moderator: 'm', date: newest },
+        { reason: 'A-old', moderatorId: 'm', date: older },
+        { reason: 'B-mid', moderatorId: 'm', date: middle },
+        { reason: 'C-new', moderatorId: 'm', date: newest },
       ],
     });
 

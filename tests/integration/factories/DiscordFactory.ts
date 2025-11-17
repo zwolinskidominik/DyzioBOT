@@ -1,8 +1,5 @@
 import { BaseFactory } from './BaseFactory';
 
-/**
- * Mock user data for Discord users
- */
 export interface UserFactoryData {
   id: string;
   username: string;
@@ -19,9 +16,6 @@ export interface UserFactoryData {
   publicFlags?: number;
 }
 
-/**
- * Mock guild data for Discord guilds
- */
 export interface GuildFactoryData {
   id: string;
   name: string;
@@ -81,7 +75,7 @@ export class UserFactory extends BaseFactory<UserFactoryData> {
     const defaults: UserFactoryData = {
       id: overrides.id || BaseFactory.randomSnowflake(),
       username,
-      discriminator: overrides.discriminator || '0000', // New username system
+      discriminator: overrides.discriminator || '0000',
       globalName: overrides.globalName || username,
       avatar: overrides.avatar || undefined,
       bot: overrides.bot ?? false,
@@ -98,13 +92,9 @@ export class UserFactory extends BaseFactory<UserFactoryData> {
   }
 
   async create(overrides: Partial<UserFactoryData> = {}): Promise<UserFactoryData> {
-    // For Discord mocks, we don't save to database, just return the data
     return this.build(overrides);
   }
 
-  /**
-   * Create bot user
-   */
   createBot(overrides: Partial<UserFactoryData> = {}): UserFactoryData {
     return this.build({
       ...overrides,
@@ -114,9 +104,6 @@ export class UserFactory extends BaseFactory<UserFactoryData> {
     });
   }
 
-  /**
-   * Create admin user
-   */
   createAdmin(overrides: Partial<UserFactoryData> = {}): UserFactoryData {
     return this.build({
       ...overrides,
@@ -126,14 +113,11 @@ export class UserFactory extends BaseFactory<UserFactoryData> {
     });
   }
 
-  /**
-   * Create premium user
-   */
   createPremium(overrides: Partial<UserFactoryData> = {}): UserFactoryData {
     return this.build({
       ...overrides,
-      premiumType: 2, // Nitro
-      flags: 64, // Premium Early Supporter
+      premiumType: 2,
+      flags: 64,
     });
   }
 }
@@ -172,30 +156,23 @@ export class GuildFactory extends BaseFactory<GuildFactoryData> {
   }
 
   async create(overrides: Partial<GuildFactoryData> = {}): Promise<GuildFactoryData> {
-    // For Discord mocks, we don't save to database, just return the data
     return this.build(overrides);
   }
 
-  /**
-   * Create test server guild
-   */
   createTestServer(overrides: Partial<GuildFactoryData> = {}): GuildFactoryData {
     return this.build({
       ...overrides,
-      id: '1264582308003053570', // Known test server ID
+      id: '1264582308003053570',
       name: 'Test Server',
       features: ['COMMUNITY', 'NEWS'],
       verificationLevel: 2,
     });
   }
 
-  /**
-   * Create main server guild
-   */
   createMainServer(overrides: Partial<GuildFactoryData> = {}): GuildFactoryData {
     return this.build({
       ...overrides,
-      id: '881293681783623680', // Known main server ID
+      id: '881293681783623680',
       name: 'GameZone',
       premiumTier: 2,
       features: ['COMMUNITY', 'NEWS', 'WELCOME_SCREEN_ENABLED'],
@@ -203,9 +180,6 @@ export class GuildFactory extends BaseFactory<GuildFactoryData> {
     });
   }
 
-  /**
-   * Create premium guild with boosts
-   */
   createPremiumGuild(overrides: Partial<GuildFactoryData> = {}): GuildFactoryData {
     return this.build({
       ...overrides,
@@ -217,9 +191,6 @@ export class GuildFactory extends BaseFactory<GuildFactoryData> {
     });
   }
 
-  /**
-   * Create guild with channels and roles setup
-   */
   createWithChannelsAndRoles(overrides: Partial<GuildFactoryData> = {}): GuildFactoryData {
     return this.build({
       ...overrides,
@@ -232,6 +203,5 @@ export class GuildFactory extends BaseFactory<GuildFactoryData> {
   }
 }
 
-// Export singleton instances
 export const userFactory = UserFactory.getInstance();
 export const guildFactory = GuildFactory.getInstance();

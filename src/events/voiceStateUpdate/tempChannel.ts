@@ -28,13 +28,11 @@ export default async function run(oldState: VoiceState, newState: VoiceState): P
       await moveUserToChannel(newState, newChannel);
     }
     
-    // Sprawdź czy użytkownik dołącza do istniejącego tymczasowego kanału
     if (newState.channel && newState.channelId !== oldState.channelId) {
       const tempChannel = await TempChannelModel.findOne({
         channelId: newState.channelId,
       });
       
-      // Jeśli to tymczasowy kanał, daj użytkownikowi uprawnienia do czytania czatu
       if (tempChannel && newState.member && newState.channel instanceof VoiceChannel) {
         await newState.channel.permissionOverwrites.edit(newState.member.id, {
           ReadMessageHistory: true,
@@ -95,18 +93,16 @@ async function createTemporaryChannel(newState: VoiceState): Promise<VoiceChanne
     throw new Error('Guild lub guild.channels jest undefined.');
   }
 
-  // Nazwa kanału: "Kanał - NickUżytkownika"
   const channelName = newState.member 
     ? `Kanał - ${newState.member.displayName}`
     : `Tymczasowy kanał`;
 
-  // Tworzymy kanał z PUSTYMI permission overwrites - nie dziedziczymy z oryginału
   const channelOptions: GuildChannelCreateOptions & { type: GuildChannelTypes } = {
     name: channelName,
     type: ChannelType.GuildVoice,
     parent: parentChannel,
     userLimit: newState.channel?.userLimit,
-    permissionOverwrites: [], // Pusta tablica - zamiast kopiować z oryginalnego kanału
+    permissionOverwrites: [],
   };
 
   const filteredOptions = removeUndefinedFields(channelOptions);
@@ -123,10 +119,6 @@ async function createTemporaryChannel(newState: VoiceState): Promise<VoiceChanne
         throw new Error('Utworzony kanał nie jest kanałem głosowym');
       }
       
-      // NIE ustawiamy explicit permissions - kanał dziedziczy z kategorii
-      // To pozwala zachować wszystkie skonfigurowane role
-      
-      // Tylko właściciel dostaje specjalne uprawnienia
       if (newState.member) {
         await channel.permissionOverwrites.edit(newState.member.id, {
           Connect: true,
@@ -149,9 +141,13 @@ async function saveTemporaryChannel(newState: VoiceState, newChannel: VoiceChann
   const guild = newState.guild;
   const parentChannel = (newState.channel as GuildChannel)?.parent;
 
+  if (!parentChannel) {
+    throw new Error('Kanał rodzica nie istnieje - nie można utworzyć tymczasowego kanału');
+  }
+
   const tempChannel = new TempChannelModel({
     guildId: guild.id,
-    parentId: parentChannel?.id,
+    parentId: parentChannel.id,
     channelId: newChannel.id,
     ownerId: newState.member?.id,
   });
@@ -205,7 +201,6 @@ async function sendControlPanel(channel: VoiceChannel, tempChannelDoc: any): Pro
       components: [buttons, buttons2],
     });
 
-    // Zapisz ID wiadomości kontrolnej
     tempChannelDoc.controlMessageId = message.id;
     await tempChannelDoc.save();
   } catch (error) {
@@ -216,7 +211,6 @@ async function sendControlPanel(channel: VoiceChannel, tempChannelDoc: any): Pro
 async function moveUserToChannel(newState: VoiceState, newChannel: VoiceChannel): Promise<void> {
   if (!newState.member) return;
 
-  // Sprawdź czy użytkownik jest nadal połączony z voice
   if (!newState.channel) {
     logger.warn('Użytkownik opuścił kanał przed przeniesieniem');
     return;
@@ -225,7 +219,6 @@ async function moveUserToChannel(newState: VoiceState, newChannel: VoiceChannel)
   await retryOperation(
     async (): Promise<void> => {
       if (newState.member && newState.channel) {
-        // Przenieś użytkownika z kanału monitora do nowego kanału
         await newState.member.voice.setChannel(newChannel.id);
       }
     },
@@ -235,7 +228,7 @@ async function moveUserToChannel(newState: VoiceState, newChannel: VoiceChannel)
 }
 
 async function cleanupEmptyTempChannel(oldState: VoiceState): Promise<void> {
-  if (!oldState.channel || oldState.channel.members.size > 0) {
+  if (!oldState.channel) {
     return;
   }
 
@@ -243,22 +236,127 @@ async function cleanupEmptyTempChannel(oldState: VoiceState): Promise<void> {
     channelId: oldState.channelId,
   });
 
-  if (!tempChannel || !oldState.channel) {
+  if (!tempChannel) {
     return;
   }
 
-  // Spróbuj usunąć control message przed usunięciem kanału
+  if (oldState.member?.id === tempChannel.ownerId && oldState.channel instanceof VoiceChannel) {
+    const remainingMembers = Array.from(oldState.channel.members.values()).filter(
+      (member) => !member.user.bot
+    );
+
+    if (remainingMembers.length > 0) {
+      const newOwner = remainingMembers[0];
+      tempChannel.ownerId = newOwner.id;
+      await tempChannel.save();
+
+      await oldState.channel.permissionOverwrites.edit(newOwner.id, {
+        ViewChannel: true,
+        Connect: true,
+        Speak: true,
+        Stream: true,
+        MuteMembers: true,
+        DeafenMembers: true,
+        MoveMembers: true,
+      });
+
+      try {
+        if (oldState.member?.id) {
+          await oldState.channel.permissionOverwrites.delete(oldState.member.id);
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        logger.debug(`Nie można usunąć uprawnień starego właściciela: ${errorMsg}`);
+      }
+
+      if (tempChannel.controlMessageId) {
+        try {
+          const controlMessage = await oldState.channel.messages.fetch(tempChannel.controlMessageId);
+          
+          const embed = createBaseEmbed({
+            title: '🎛️ Panel Zarządzania Kanałem',
+            description:
+              `<@${newOwner.id}> - Witaj w swoim tymczasowym kanale!\n\n` +
+              `Użyj przycisków poniżej, aby zarządzać tym kanałem głosowym.`,
+            timestamp: false,
+          });
+
+          const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setCustomId('voice_limit')
+              .setLabel('Limit')
+              .setEmoji('🔢')
+              .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId('voice_name')
+              .setLabel('Nazwa')
+              .setEmoji('✏️')
+              .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId('voice_lock')
+              .setLabel('Lock')
+              .setEmoji('🔒')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId('voice_kick')
+              .setLabel('Kick')
+              .setEmoji('⚡')
+              .setStyle(ButtonStyle.Danger)
+          );
+
+          const buttons2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setCustomId('voice_transfer')
+              .setLabel('Transfer')
+              .setEmoji('👑')
+              .setStyle(ButtonStyle.Success)
+          );
+
+          await controlMessage.edit({
+            content: `<@${newOwner.id}>`,
+            embeds: [embed],
+            components: [buttons, buttons2],
+          });
+        } catch (error) {
+          logger.debug(`Nie można zaktualizować panelu kontrolnego: ${error}`);
+        }
+      }
+
+      await oldState.channel.send({
+        content: `👑 Poprzedni właściciel opuścił kanał. Własność przekazana użytkownikowi <@${newOwner.id}>`,
+      });
+
+      logger.info(`Przekazano własność kanału ${oldState.channel.name} od ${oldState.member.id} do ${newOwner.id}`);
+      return;
+    }
+  }
+
+  if (oldState.channel.members.size > 0) {
+    return;
+  }
+
   if (tempChannel.controlMessageId) {
     try {
       const controlMessage = await oldState.channel.messages.fetch(tempChannel.controlMessageId);
       await controlMessage.delete();
     } catch (error) {
-      // Wiadomość może już nie istnieć lub nie można jej usunąć - to nie problem
       logger.debug(`Nie można usunąć control message: ${error}`);
     }
   }
 
-  await retryOperation<GuildChannel>(() => oldState.channel!.delete(), 3, 1000);
+  if (!oldState.channel) {
+    logger.warn(`Kanał został już usunięty przed cleanup`);
+    await TempChannelModel.findOneAndDelete({
+      channelId: oldState.channelId,
+    });
+    return;
+  }
+
+  try {
+    await retryOperation<GuildChannel>(() => oldState.channel!.delete(), 3, 1000);
+  } catch (error) {
+    logger.warn(`Nie udało się usunąć kanału ${oldState.channel.id}: ${error}`);
+  }
 
   await TempChannelModel.findOneAndDelete({
     channelId: oldState.channelId,

@@ -2,7 +2,6 @@ import { index, prop, getModelForClass, DocumentType, pre } from '@typegoose/typ
 
 @index({ guildId: 1 })
 @pre<Giveaway>('validate', function(next) {
-  // Skip validation in test environment
   if (process.env.NODE_ENV === 'test') {
     return next();
   }
@@ -21,7 +20,6 @@ class Giveaway {
   @prop({ required: true, type: () => String })
   public channelId!: string;
 
-  // messageId should be unique in case multiple giveaways tracked by message reference
   @prop({ required: true, unique: true, type: () => String })
   public messageId!: string;
 

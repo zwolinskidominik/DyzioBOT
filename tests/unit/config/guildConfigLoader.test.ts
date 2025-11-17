@@ -16,8 +16,8 @@ describe('config/guild config loader', () => {
 
     const cfg = getGuildConfig('test-partial');
     expect(cfg.roles.owner).toBe('r-owner');
-    expect(cfg.roles.admin).toBe(''); // from defaults
+    expect(cfg.roles.admin).toBe('');
     expect(cfg.channels.boosterList).toBe('c-booster');
-    expect(cfg.channels.tournamentRules).toBe(''); // from defaults
+    expect(cfg.channels.tournamentRules).toBe('');
   });
 });

@@ -1,8 +1,6 @@
-// Simple test for index.ts that tests only what can be easily tested
 describe('Discord Bot Main Application (index.ts) - Simple Tests', () => {
   describe('Module Structure', () => {
     it('should have valid TypeScript syntax (no execution)', () => {
-      // Avoid executing index.ts (which would start real clients/db in tests)
       const fs = require('fs');
       const path = require('path');
       const indexPath = path.join(__dirname, '../../src/index.ts');
@@ -32,8 +30,6 @@ describe('Discord Bot Main Application (index.ts) - Simple Tests', () => {
       
       const indexPath = path.join(__dirname, '../../src/index.ts');
       const content = fs.readFileSync(indexPath, 'utf8');
-      
-      // Check for client configuration patterns
       expect(content).toContain('new Client({');
       expect(content).toContain('intents:');
       expect(content).toContain('partials:');

@@ -18,7 +18,7 @@ function makeGuild() {
       me: { permissions: { has: jest.fn(() => true) } }
     },
     roles: { cache: new Map() },
-    iconURL: () => 'http://icon-url' // zapewnij dostępne guild.iconURL() dla embedów
+    iconURL: () => 'http://icon-url'
   };
   return { guild, createdChannels };
 }
@@ -30,7 +30,6 @@ function makeButtonInteraction(guild: any, customId: string, channel: any = null
     send: jest.fn(async () => {}),
     permissionsFor: jest.fn(() => ({ has: jest.fn(() => true) }))
   };
-  // przygotuj komponenty wiadomości dla aktualizacji przycisku
   const message = {
     components: [
       { components: [ { type: 2, customId: 'zajmij-zgloszenie', label: 'Zajmij zgłoszenie', style: 1 } ] }
@@ -111,7 +110,6 @@ describe('interactionCreate: ticketSystem (E2E)', () => {
 
   it('setup + select menu -> creates channel', async () => {
     const { guild, createdChannels } = makeGuild();
-    // dodaj kategorię do cache
     (guild.channels.cache as Map<string, any>).set('tickets-category', { id: 'tickets-category', type: 4, children: { create: guild.channels.create } });
 
     await jest.isolateModulesAsync(async () => {
@@ -119,7 +117,6 @@ describe('interactionCreate: ticketSystem (E2E)', () => {
       jest.doMock('../../../../src/utils/logger', () => ({ __esModule: true, default: localLogger }));
       mockedLogger = localLogger;
 
-      // modele
       const TicketStateModel = { create: jest.fn(async () => ({})), updateOne: jest.fn(async () => ({})), findOne: jest.fn(async () => null), findOneAndUpdate: jest.fn(async () => ({})) };
       const TicketStatsModel = { updateOne: jest.fn(async () => ({})), findOneAndUpdate: jest.fn(async () => ({})) };
       jest.doMock('../../../../src/models/TicketState', () => ({ __esModule: true, TicketStateModel }));
@@ -142,12 +139,9 @@ describe('interactionCreate: ticketSystem (E2E)', () => {
         (typeof mod === 'function' ? (mod as any) : undefined);
       client.on('interactionCreate', (i: any) => handler?.(i as any));
 
-      // opcjonalnie setup command
       const setup = makeSetupCommandInteraction(guild);
       client.emit('interactionCreate', setup);
       await new Promise((r) => setTimeout(r, 30));
-
-      // select menu -> utworzenie kanału
       const select = makeSelectMenuInteraction(guild, 'help');
       client.emit('interactionCreate', select);
       await new Promise((r) => setTimeout(r, 200));
@@ -190,14 +184,13 @@ describe('interactionCreate: ticketSystem (E2E)', () => {
 
       expect(TicketStateModel.findOneAndUpdate).toHaveBeenCalled();
       expect(TicketStatsModel.findOneAndUpdate).toHaveBeenCalled();
-      expect(btn.message.edit).toHaveBeenCalled(); // przycisk zaktualizowany na disabled
+      expect(btn.message.edit).toHaveBeenCalled();
     });
   });
 
   it('missing permissions when creating channel -> logs error and replies with failure', async () => {
     const { guild } = makeGuild();
     (guild.channels.cache as Map<string, any>).set('tickets-category', { id: 'tickets-category', type: 4, children: { create: guild.channels.create } });
-    // rzuć błąd podczas tworzenia
     (guild.channels.create as jest.Mock).mockImplementationOnce(async () => { throw new Error('Missing Permissions'); });
 
     await jest.isolateModulesAsync(async () => {
@@ -237,7 +230,6 @@ describe('interactionCreate: ticketSystem (E2E)', () => {
 
   it('logs when ticket category is missing', async () => {
     const { guild } = makeGuild();
-    // brak kategorii w cache
 
     await jest.isolateModulesAsync(async () => {
       const localLogger: any = { error: jest.fn(() => localLogger), warn: jest.fn(() => localLogger), info: jest.fn(() => localLogger) };
@@ -264,7 +256,6 @@ describe('interactionCreate: ticketSystem (E2E)', () => {
       client.emit('interactionCreate', select);
       await new Promise((r) => setTimeout(r, 150));
 
-      // brak kategorii -> komunikat błędu (logger może nie logować, ale użytkownik dostaje info)
       const editArg = (select.editReply as jest.Mock).mock.calls.find(c => (c[0]?.content || '').includes('Nie znaleziono kategorii'));
       expect(editArg).toBeTruthy();
     });

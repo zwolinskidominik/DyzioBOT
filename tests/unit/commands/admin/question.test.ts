@@ -1,6 +1,5 @@
 export {};
 
-// Mocks
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
@@ -22,8 +21,6 @@ jest.mock('../../../../src/config/bot', () => ({
   __esModule: true,
   getBotConfig: jest.fn(() => ({ emojis: { next: '➡️', previous: '⬅️' } })),
 }));
-
-// Mock QuestionModel: constructor and static methods used
 const qCtor = jest.fn((payload: any) => ({ ...payload, save: jest.fn().mockResolvedValue(undefined) }));
 (qCtor as any).find = jest.fn();
 (qCtor as any).findByIdAndDelete = jest.fn();
@@ -73,7 +70,7 @@ describe('admin/question command', () => {
         const interaction = buildInteraction();
         interaction.options.getSubcommand.mockReturnValue('add');
         interaction.options.getString.mockImplementation((name: string) => {
-          if (name === 'tresc') return 'abcd'; // 4 chars
+          if (name === 'tresc') return 'abcd';
           if (name === 'reakcje') return '👍 👎';
           return null;
         });
@@ -91,7 +88,7 @@ describe('admin/question command', () => {
         interaction.options.getSubcommand.mockReturnValue('add');
         interaction.options.getString.mockImplementation((name: string) => {
           if (name === 'tresc') return 'Valid question content';
-          if (name === 'reakcje') return '👍'; // only 1 reaction
+          if (name === 'reakcje') return '👍';
           return null;
         });
         const { run } = await import('../../../../src/commands/admin/question');
@@ -100,7 +97,6 @@ describe('admin/question command', () => {
           expect.objectContaining({ embeds: [expect.objectContaining({ __embed: true })] })
         );
 
-        // too many reactions (6)
         interaction.editReply.mockClear();
         interaction.options.getString.mockImplementation((name: string) => {
           if (name === 'tresc') return 'Valid question content';
@@ -120,7 +116,7 @@ describe('admin/question command', () => {
         interaction.options.getSubcommand.mockReturnValue('add');
         interaction.options.getString.mockImplementation((name: string) => {
           if (name === 'tresc') return 'Another valid question';
-          if (name === 'reakcje') return 'ok !!'; // "!!" invalid
+          if (name === 'reakcje') return 'ok !!';
           return null;
         });
         const { run } = await import('../../../../src/commands/admin/question');
@@ -133,7 +129,6 @@ describe('admin/question command', () => {
 
     test('happy path saves and replies success', async () => {
       jest.isolateModules(async () => {
-        // default ctor save resolves
         const interaction = buildInteraction();
         interaction.options.getSubcommand.mockReturnValue('add');
         interaction.options.getString.mockImplementation((name: string) => {
@@ -143,7 +138,6 @@ describe('admin/question command', () => {
         });
         const { run } = await import('../../../../src/commands/admin/question');
         await run({ interaction, client: {} as any });
-        // ctor used
   expect(qCtor.mock.calls[0][0]).toEqual(
           expect.objectContaining({ authorId: 'req', content: expect.any(String), reactions: ['👍', '👎'] })
         );
@@ -162,7 +156,6 @@ describe('admin/question command', () => {
   (qCtor as any).find.mockReturnValue({ sort: () => ({ lean: () => [] }) });
         const interaction = buildInteraction();
         interaction.options.getSubcommand.mockReturnValue('list');
-        // Simulate Discord reply with collector
         const collector = { on: jest.fn() };
         const replyHost = { id: 'm1', createMessageComponentCollector: jest.fn(() => collector) };
         interaction.editReply = jest.fn().mockResolvedValue(replyHost);
@@ -172,13 +165,11 @@ describe('admin/question command', () => {
         expect(interaction.editReply).toHaveBeenCalledWith(
           expect.objectContaining({ embeds: [expect.any(Object)], components: [expect.any(Object)] })
         );
-        // no collector triggers here
       });
     });
 
     test('pagination next and prev updates embed', async () => {
       jest.isolateModules(async () => {
-        // Create 12 questions -> 3 pages (pageSize 5)
         const mockQuestions = Array.from({ length: 12 }).map((_, i) => ({
           content: `Q${i + 1}`,
           reactions: ['👍', '👎'],
@@ -188,7 +179,6 @@ describe('admin/question command', () => {
         const interaction = buildInteraction({ channel: { messages: { fetch: jest.fn().mockResolvedValue({ edit: jest.fn() }) } } });
         interaction.options.getSubcommand.mockReturnValue('list');
 
-        // Host message with collector and components
         const handlers: Record<string, Function[]> = { collect: [], end: [] } as any;
         const collector = { on: jest.fn((evt: string, cb: any) => { handlers[evt].push(cb); }) };
         const replyHost: any = { id: 'msg1', components: [{}, {}], createMessageComponentCollector: jest.fn(() => collector), edit: jest.fn() };
@@ -197,7 +187,6 @@ describe('admin/question command', () => {
         const { run } = await import('../../../../src/commands/admin/question');
         await run({ interaction, client: {} as any });
 
-        // simulate next -> page 2, then next -> page 3, then prev -> page 2
         const mkBtn = (id: string) => ({
           customId: id,
           user: { id: interaction.user.id },
@@ -208,10 +197,7 @@ describe('admin/question command', () => {
         await handlers.collect[0](mkBtn('next'));
         await handlers.collect[0](mkBtn('prev'));
 
-        // editReply should be called on each button interaction
-        expect((mkBtn('x') as any).editReply).not.toBeCalled(); // sanity for fresh mock
-        // We can't capture the same instance, so just ensure some editReply calls occurred on any of the button mocks
-        // by checking that collector is registered and host edit wasn't used for content refresh
+        expect((mkBtn('x') as any).editReply).not.toBeCalled();
         expect(replyHost.edit).not.toHaveBeenCalled();
       });
     });
@@ -230,7 +216,6 @@ describe('admin/question command', () => {
           expect.objectContaining({ flags: expect.any(Number), embeds: [expect.any(Object)] })
         );
 
-        // now > count
         interaction.reply.mockClear();
         interaction.options.getInteger.mockImplementation((name: string) => (name === 'numer' ? 4 : null));
         await run({ interaction, client: {} as any });
@@ -241,7 +226,7 @@ describe('admin/question command', () => {
     test('within range but not found in fetched list', async () => {
       jest.isolateModules(async () => {
   (qCtor as any).countDocuments.mockResolvedValue(5);
-  (qCtor as any).find.mockReturnValue({ sort: () => [] }); // shorter array
+  (qCtor as any).find.mockReturnValue({ sort: () => [] });
         const interaction = buildInteraction();
         interaction.options.getSubcommand.mockReturnValue('remove');
         interaction.options.getInteger.mockImplementation((name: string) => (name === 'numer' ? 5 : null));

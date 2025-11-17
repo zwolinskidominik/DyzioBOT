@@ -5,7 +5,6 @@ jest.mock('node-cron', () => ({ schedule: (_e:string, cb:Function)=> { scheduled
 
 const info = jest.fn(); const error = jest.fn();
 jest.mock('../../../../src/utils/logger', () => ({ __esModule: true, default: { info: (...a:any)=>info(a.join? a.join(' '): a), error: (...a:any)=>error(a.join? a.join(' '): a) } }));
-// Mock environment variable
 process.env.GUILD_ID = 'guild1';
 
 const findWarns = jest.fn();
@@ -48,7 +47,7 @@ describe('ready/warnSystemMaintenance', () => {
   });
 
   test('save failure on one document logs error and stops processing others', async () => {
-    const expiredMs = 100*24*3600*1000; // force removal
+    const expiredMs = 100*24*3600*1000;
     const freshMs = 5*24*3600*1000;
     const failing:any = makeWarnDoc(expiredMs, freshMs);
     failing.save = jest.fn(async()=> { throw new Error('savefail'); });

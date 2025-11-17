@@ -8,7 +8,7 @@ class StreamConfiguration {
   @prop({
     required: true,
     type: () => String,
-    match: /^\d+$/, // expect a numeric Discord channel snowflake
+    match: /^\d+$/,
   })
   public channelId!: string;
 }

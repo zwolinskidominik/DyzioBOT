@@ -4,7 +4,8 @@ import { WarnModel, WarnDocument } from '../../../src/models/Warn';
 export interface WarnEntryData {
   reason: string;
   date: Date;
-  moderator: string;
+  moderatorId: string;
+  moderatorTag?: string;
 }
 
 export interface WarnFactoryData {
@@ -23,9 +24,6 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     return WarnFactory.instance;
   }
 
-  /**
-   * Build Warn object without saving to database
-   */
   build(overrides: Partial<WarnFactoryData> = {}): WarnDocument {
     const defaults: WarnFactoryData = {
       userId: overrides.userId || BaseFactory.pick(BaseFactory.SAMPLE_USER_IDS),
@@ -37,17 +35,11 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     return new WarnModel(data) as WarnDocument;
   }
 
-  /**
-   * Create and save Warn to database
-   */
   async create(overrides: Partial<WarnFactoryData> = {}): Promise<WarnDocument> {
     const warnDoc = this.build(overrides);
     return await warnDoc.save();
   }
 
-  /**
-   * Create user with no warnings (empty record)
-   */
   async createClean(userId: string, guildId: string): Promise<WarnDocument> {
     return this.create({
       userId,
@@ -56,9 +48,6 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     });
   }
 
-  /**
-   * Create user with single warning
-   */
   async createSingleWarn(
     userId: string, 
     guildId: string, 
@@ -72,9 +61,6 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     });
   }
 
-  /**
-   * Create user with multiple warnings
-   */
   async createMultipleWarns(
     userId: string,
     guildId: string,
@@ -83,8 +69,8 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     const warnings = Array.from({ length: count }, (_, i) => 
       this.createWarnEntry(
         this.generateRandomReason(),
-        BaseFactory.pick(BaseFactory.SAMPLE_USER_IDS), // Random moderator
-        BaseFactory.pastDate(30 - i * 7) // Spread warnings over time
+        BaseFactory.pick(BaseFactory.SAMPLE_USER_IDS),
+        BaseFactory.pastDate(30 - i * 7)
       )
     );
 
@@ -95,14 +81,11 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     });
   }
 
-  /**
-   * Create warning records for multiple users in same guild
-   */
   async createForGuild(guildId: string, userCount = 5): Promise<WarnDocument[]> {
     const users = BaseFactory.SAMPLE_USER_IDS.slice(0, userCount);
     return Promise.all(
       users.map(userId => {
-        const warnCount = Math.floor(Math.random() * 4); // 0-3 warnings
+        const warnCount = Math.floor(Math.random() * 4);
         if (warnCount === 0) {
           return this.createClean(userId, guildId);
         }
@@ -111,9 +94,6 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     );
   }
 
-  /**
-   * Create progressive warning scenario (warnings spread over time)
-   */
   async createProgressiveWarns(
     userId: string,
     guildId: string,
@@ -132,15 +112,12 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     return this.create({ userId, guildId, warnings });
   }
 
-  /**
-   * Create warning with custom entry data
-   */
   async createWithEntry(
     userId: string,
     guildId: string,
     entry: Partial<WarnEntryData>
   ): Promise<WarnDocument> {
-    const warning = this.createWarnEntry(entry.reason, entry.moderator, entry.date);
+    const warning = this.createWarnEntry(entry.reason, entry.moderatorId, entry.date);
     return this.create({
       userId,
       guildId,
@@ -148,9 +125,6 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     });
   }
 
-  /**
-   * Add warning to existing record
-   */
   async addWarnToUser(
     userId: string,
     guildId: string,
@@ -166,24 +140,18 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     }
   }
 
-  /**
-   * Create a single warning entry
-   */
   private createWarnEntry(
     reason?: string,
-    moderator?: string,
+    moderatorId?: string,
     date?: Date
   ): WarnEntryData {
     return {
       reason: reason || this.generateRandomReason(),
-      moderator: moderator || BaseFactory.pick(BaseFactory.SAMPLE_USER_IDS),
+      moderatorId: moderatorId || BaseFactory.pick(BaseFactory.SAMPLE_USER_IDS),
       date: date || BaseFactory.pastDate(30),
     };
   }
 
-  /**
-   * Generate random warning reason
-   */
   private generateRandomReason(): string {
     const reasons = [
       'Spam w kanałach tekstowych',
@@ -200,9 +168,6 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
     return BaseFactory.pick(reasons);
   }
 
-  /**
-   * Generate progressive warning reasons (escalating severity)
-   */
   private generateProgressiveReason(warnNumber: number): string {
     const progressiveReasons = [
       'Pierwsze ostrzeżenie - spam na kanałach',
@@ -217,5 +182,4 @@ export class WarnFactory extends BaseFactory<WarnDocument> {
   }
 }
 
-// Export singleton instance
 export const warnFactory = WarnFactory.getInstance();

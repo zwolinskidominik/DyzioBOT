@@ -2,11 +2,7 @@ import { Client } from 'discord.js';
 import { GiveawayModel } from '../../../src/models/Giveaway';
 import { dbManager } from '../setup/db';
 import { GuildFactory } from '../factories';
-
-// Ensure real discord.js is used in this integration test
 jest.unmock('discord.js');
-
-// Mock node-cron
 jest.mock('node-cron', () => ({
   schedule: jest.fn((cronExpression, callback, options) => {
     (callback as any).__cronCallback = callback;
@@ -19,13 +15,9 @@ jest.mock('node-cron', () => ({
     };
   }),
 }));
-
-// Mock giveaway helpers
 jest.mock('../../../src/utils/giveawayHelpers', () => ({
   pickWinners: jest.fn(),
 }));
-
-// Mock embed helpers
 jest.mock('../../../src/utils/embedHelpers', () => ({
   createBaseEmbed: jest.fn((options) => ({
     description: options.description,
@@ -33,8 +25,6 @@ jest.mock('../../../src/utils/embedHelpers', () => ({
     color: options.color,
   })),
 }));
-
-// Mock logger
 jest.mock('../../../src/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
@@ -67,10 +57,8 @@ describe('Giveaway Scheduler Integration Tests', () => {
     await dbManager.clearCollections();
     jest.clearAllMocks();
 
-    // Setup mocks
     mockPickWinners = require('../../../src/utils/giveawayHelpers').pickWinners;
     
-    // Setup Discord mocks
     const guildFactory = new GuildFactory();
     
     mockMessage = {
@@ -80,7 +68,7 @@ describe('Giveaway Scheduler Integration Tests', () => {
 
     mockChannel = {
       id: 'test-channel-123',
-      type: 0, // TEXT_CHANNEL
+      type: 0,
       messages: {
         fetch: jest.fn().mockResolvedValue(mockMessage),
       },
@@ -104,11 +92,8 @@ describe('Giveaway Scheduler Integration Tests', () => {
       },
     } as any;
 
-    // Import and execute scheduler
   const giveawayScheduler = require('../../../src/events/ready/giveawayScheduler');
   await giveawayScheduler.default(mockClient);
-    
-    // Get the registered cron callback
     const cronModule = require('node-cron');
     const scheduleCall = cronModule.schedule.mock.calls[cronModule.schedule.mock.calls.length - 1];
     schedulerFunction = scheduleCall[1];
@@ -119,8 +104,8 @@ describe('Giveaway Scheduler Integration Tests', () => {
       const cronModule = require('node-cron');
       const lastCall = cronModule.schedule.mock.calls[cronModule.schedule.mock.calls.length - 1];
       
-      expect(lastCall[0]).toBe('* * * * *'); // Every minute
-      expect(lastCall[2]).toEqual({ timezone: 'Europe/Warsaw' }); // Has timezone option
+      expect(lastCall[0]).toBe('* * * * *');
+      expect(lastCall[2]).toEqual({ timezone: 'Europe/Warsaw' });
     });
 
     it('should register a function as callback', () => {
@@ -133,8 +118,7 @@ describe('Giveaway Scheduler Integration Tests', () => {
 
   describe('Giveaway Scanning', () => {
     it('should not process anything when no expired giveaways exist', async () => {
-      // Create active giveaway that hasn't ended
-      const futureDate = new Date(Date.now() + 86400000); // 24 hours from now
+      const futureDate = new Date(Date.now() + 86400000);
       await GiveawayModel.create({
         giveawayId: 'test-giveaway-1',
         guildId: 'test-guild-123',
@@ -157,8 +141,7 @@ describe('Giveaway Scheduler Integration Tests', () => {
     });
 
     it('should scan and process expired giveaways', async () => {
-      // Create expired giveaway
-      const pastDate = new Date(Date.now() - 3600000); // 1 hour ago
+      const pastDate = new Date(Date.now() - 3600000);
       await GiveawayModel.create({
         giveawayId: 'test-giveaway-1',
         guildId: 'test-guild-123',
@@ -183,8 +166,8 @@ describe('Giveaway Scheduler Integration Tests', () => {
     });
 
     it('should process multiple expired giveaways in order', async () => {
-      const pastDate1 = new Date(Date.now() - 7200000); // 2 hours ago
-      const pastDate2 = new Date(Date.now() - 3600000); // 1 hour ago
+      const pastDate1 = new Date(Date.now() - 7200000);
+      const pastDate2 = new Date(Date.now() - 3600000);
 
       await GiveawayModel.create([
         {
@@ -223,8 +206,6 @@ describe('Giveaway Scheduler Integration Tests', () => {
         .mockResolvedValueOnce({ id: 'message-newer', edit: jest.fn() });
 
       await schedulerFunction();
-
-      // Should process older giveaway first
       expect(mockChannel.messages.fetch).toHaveBeenCalledTimes(2);
       expect(mockChannel.messages.fetch).toHaveBeenNthCalledWith(1, 'message-older');
       expect(mockChannel.messages.fetch).toHaveBeenNthCalledWith(2, 'message-newer');
@@ -359,7 +340,7 @@ describe('Giveaway Scheduler Integration Tests', () => {
         finalized: false,
       });
 
-      mockPickWinners.mockResolvedValue([]); // No winners despite participants
+      mockPickWinners.mockResolvedValue([]);
 
       await schedulerFunction();
 
@@ -435,7 +416,6 @@ describe('Giveaway Scheduler Integration Tests', () => {
 
   describe('Error Handling', () => {
     it('should continue processing when guild not found', async () => {
-      // Mock client cache to return undefined for non-existent guild
       mockClient.guilds.cache.get = jest.fn().mockReturnValue(undefined);
 
       const pastDate = new Date(Date.now() - 3600000);
@@ -462,7 +442,6 @@ describe('Giveaway Scheduler Integration Tests', () => {
     });
 
     it('should continue processing when channel not found', async () => {
-      // Mock guild cache to return undefined for non-existent channel
       mockGuild.channels.cache.get = jest.fn().mockReturnValue(undefined);
 
       const pastDate = new Date(Date.now() - 3600000);
@@ -545,8 +524,6 @@ describe('Giveaway Scheduler Integration Tests', () => {
   describe('Database Integration', () => {
     it('should work with concurrent scheduler executions', async () => {
       const pastDate = new Date(Date.now() - 3600000);
-      
-      // Create multiple expired giveaways
       await GiveawayModel.create([
         {
           giveawayId: 'giveaway-1',
@@ -580,14 +557,11 @@ describe('Giveaway Scheduler Integration Tests', () => {
 
       mockPickWinners.mockResolvedValue([]);
       mockChannel.messages.fetch.mockResolvedValue(mockMessage);
-
-      // Execute scheduler multiple times concurrently
       await Promise.all([
         schedulerFunction(),
         schedulerFunction(),
       ]);
 
-      // All giveaways should be processed
       const finalizedCount = await GiveawayModel.countDocuments({ finalized: true });
       expect(finalizedCount).toBe(2);
     });
@@ -614,8 +588,6 @@ describe('Giveaway Scheduler Integration Tests', () => {
       await schedulerFunction();
 
       const updatedGiveaway = await GiveawayModel.findById(originalGiveaway._id);
-      
-      // Should only update specific fields
       expect(updatedGiveaway?.giveawayId).toBe('test-giveaway-1');
       expect(updatedGiveaway?.prize).toBe('Original Prize');
       expect(updatedGiveaway?.participants).toEqual(['user1', 'user2', 'user3']);

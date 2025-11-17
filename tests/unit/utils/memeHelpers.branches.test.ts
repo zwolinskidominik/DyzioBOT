@@ -32,14 +32,11 @@ describe('memeHelpers branch nits', () => {
   });
 
   test('demotywatory title null for image with empty h2', async () => {
-    // First manual redirect response with location
     fetchQueue.push({ ok:false, status:302, statusText:'Found', headers:{ get: () => 'https://demotywatory.pl/xx' }, text: async () => ''});
-    // Second fetch returns image but empty title -> should fallback to default
     const html = `<div class="demotivator"><h2>   </h2></div><img class="demot" src="https://img/d.png" />`;
     fetchQueue.push(makeHtmlResponse(html));
     const { parseDemotywatoryRandom } = require('../../../src/utils/memeHelpers');
   const meme = await parseDemotywatoryRandom();
-  // Implementation returns null for image titles when h2 is empty
   expect(meme.title).toBeNull();
     expect(meme.isVideo).toBe(false);
   });

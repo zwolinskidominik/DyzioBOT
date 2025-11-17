@@ -17,7 +17,6 @@ class Birthday {
   @prop({ default: true, type: () => Boolean })
   public active!: boolean;
 
-  // Virtual properties for day and month
   public get day(): number {
     return this.date.getDate();
   }

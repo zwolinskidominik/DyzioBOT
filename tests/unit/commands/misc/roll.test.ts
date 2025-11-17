@@ -26,7 +26,7 @@ describe('misc/roll command', () => {
 
   test('happy: stub Math.random and check format', async () => {
     jest.isolateModules(async () => {
-      jest.spyOn(Math, 'random').mockReturnValue(0.5); // middle
+      jest.spyOn(Math, 'random').mockReturnValue(0.5);
       const interaction = buildInteraction({ options: { getInteger: jest.fn(() => 6) } });
       const { run } = await import('../../../../src/commands/misc/roll');
       await run({ interaction, client: {} as any });

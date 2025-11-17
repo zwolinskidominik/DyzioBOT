@@ -11,7 +11,6 @@ describe('utils/logger module init', () => {
     });
     expect(() => {
       jest.isolateModules(() => {
-        // Importing should not throw despite mkdirSync throwing
         const lg = require('../../../src/utils/logger').default;
         expect(lg).toBeDefined();
       });

@@ -175,3 +175,19 @@ export interface IReactionRole {
   title?: string;
   reactions: IReactionRoleMapping[];
 }
+
+export interface IMonthlyStats {
+  guildId: string;
+  userId: string;
+  month: string;
+  messageCount: number;
+  voiceMinutes: number;
+  updatedAt: Date;
+}
+
+export interface IMonthlyStatsConfig {
+  guildId: string;
+  channelId?: string;
+  enabled: boolean;
+  topCount: number;
+}

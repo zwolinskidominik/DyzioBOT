@@ -1,6 +1,5 @@
 import logger from '../../../../src/utils/logger';
 
-// Mock logger
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: {
@@ -11,19 +10,16 @@ jest.mock('../../../../src/utils/logger', () => ({
   },
 }));
 
-// Mock debounce
 const mockDebounce = jest.fn();
 jest.mock('../../../../src/utils/cooldownHelpers', () => ({
   debounce: mockDebounce,
 }));
 
-// Mock updateChannelStats
 const mockUpdateChannelStats = jest.fn();
 jest.mock('../../../../src/utils/channelHelpers', () => ({
   updateChannelStats: mockUpdateChannelStats,
 }));
 
-// Use fake timers for debounce testing
 jest.useFakeTimers();
 
 let run: any;
@@ -106,7 +102,6 @@ describe('guildMemberRemove/updateRemoveMemberStats', () => {
   });
 
   test('debounced function should call updateChannelStats with guild', async () => {
-    // Mock debounce to immediately execute the function
     mockDebounce.mockImplementation((key: string, fn: Function) => {
       return fn();
     });
@@ -121,7 +116,6 @@ describe('guildMemberRemove/updateRemoveMemberStats', () => {
     const testError = new Error('Test database connection error');
     mockUpdateChannelStats.mockRejectedValue(testError);
 
-    // Mock debounce to immediately execute the function
     mockDebounce.mockImplementation((key: string, fn: Function) => {
       return fn();
     });
@@ -137,7 +131,6 @@ describe('guildMemberRemove/updateRemoveMemberStats', () => {
   test('debounced function should handle updateChannelStats success without logging', async () => {
     mockUpdateChannelStats.mockResolvedValue(undefined);
 
-    // Mock debounce to immediately execute the function
     mockDebounce.mockImplementation((key: string, fn: Function) => {
       return fn();
     });
@@ -180,7 +173,6 @@ describe('guildMemberRemove/updateRemoveMemberStats', () => {
       throw debounceError;
     });
 
-    // The function will throw since debounce throws
     await expect(run(mockMember)).rejects.toThrow('Debounce error');
   });
 
@@ -188,7 +180,6 @@ describe('guildMemberRemove/updateRemoveMemberStats', () => {
     const stringError = 'String error message';
     mockUpdateChannelStats.mockRejectedValue(stringError);
 
-    // Mock debounce to immediately execute the function
     mockDebounce.mockImplementation((key: string, fn: Function) => {
       return fn();
     });
@@ -204,7 +195,6 @@ describe('guildMemberRemove/updateRemoveMemberStats', () => {
   test('debounced function should handle null/undefined errors', async () => {
     mockUpdateChannelStats.mockRejectedValue(null);
 
-    // Mock debounce to immediately execute the function
     mockDebounce.mockImplementation((key: string, fn: Function) => {
       return fn();
     });

@@ -10,7 +10,6 @@ jest.mock('../../../src/utils/logger', () => ({
 
 import logger from '../../../src/utils/logger';
 
-// Prosty wrapper imitujący wywołanie handlera z zabezpieczeniem przed crashami
 async function safeInvoke(handler: (...args: any[]) => any, ...args: any[]) {
   try {
     await handler(...args);

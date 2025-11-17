@@ -11,7 +11,6 @@ export default async function run(): Promise<void> {
         const expiryDate = new Date(now);
         expiryDate.setMonth(expiryDate.getMonth() - 3);
 
-        // Process only main guild
         const warnings = (await WarnModel.find({ guildId: process.env.GUILD_ID }).exec()) as WarnDocument[];
         for (const warn of warnings) {
           const before = warn.warnings.length;

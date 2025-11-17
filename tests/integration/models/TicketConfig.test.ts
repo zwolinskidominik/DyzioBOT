@@ -77,9 +77,8 @@ describe('TicketConfig Model Integration Tests', () => {
 
       await TicketConfigModel.create(config1Data);
 
-      // Try to create another config for same guild
       const config2Data = ticketConfigFactory.build({
-        guildId: 'guild-123', // same guildId
+        guildId: 'guild-123',
         categoryId: 'category-456'
       });
 
@@ -114,7 +113,7 @@ describe('TicketConfig Model Integration Tests', () => {
 
       const config2Data = ticketConfigFactory.build({
         guildId: 'guild-456',
-        categoryId: 'category-shared' // same categoryId, different guild
+        categoryId: 'category-shared'
       });
 
       const config1 = await TicketConfigModel.create(config1Data);
@@ -136,13 +135,12 @@ describe('TicketConfig Model Integration Tests', () => {
 
       const config = await TicketConfigModel.create(configData);
 
-      // Update category
       config.categoryId = 'new-category-456';
       await config.save();
 
       const updatedConfig = await TicketConfigModel.findById(config._id);
       expect(updatedConfig!.categoryId).toBe('new-category-456');
-      expect(updatedConfig!.guildId).toBe('guild-123'); // Should remain unchanged
+      expect(updatedConfig!.guildId).toBe('guild-123');
     });
 
     it('should handle partial updates using findOneAndUpdate', async () => {
@@ -153,7 +151,6 @@ describe('TicketConfig Model Integration Tests', () => {
 
       const config = await TicketConfigModel.create(configData);
 
-      // Update only categoryId
       const updatedConfig = await TicketConfigModel.findOneAndUpdate(
         { guildId: 'guild-123' },
         { categoryId: 'updated-category' },
@@ -168,7 +165,6 @@ describe('TicketConfig Model Integration Tests', () => {
 
   describe('Query Operations', () => {
     beforeEach(async () => {
-      // Create test configurations
       const testConfigs = [
         {
           guildId: 'guild-active-1',
@@ -233,7 +229,6 @@ describe('TicketConfig Model Integration Tests', () => {
 
   describe('Aggregation and Statistics', () => {
     beforeEach(async () => {
-      // Create diverse test data for aggregation
       const testData = [
         { guildId: 'guild-1', categoryId: 'category-tickets' },
         { guildId: 'guild-2', categoryId: 'category-support' },
@@ -261,7 +256,7 @@ describe('TicketConfig Model Integration Tests', () => {
 
       expect(stats).toHaveLength(1);
       expect(stats[0].totalConfigs).toBe(5);
-      expect(stats[0].uniqueCategories).toHaveLength(3); // tickets, support, help
+      expect(stats[0].uniqueCategories).toHaveLength(3);
       expect(stats[0].uniqueGuilds).toHaveLength(5);
     });
 
@@ -274,12 +269,11 @@ describe('TicketConfig Model Integration Tests', () => {
             guilds: { $push: '$guildId' }
           }
         },
-        { $sort: { count: -1 } } // Most popular categories first
+        { $sort: { count: -1 } }
       ]);
 
       expect(groupedStats).toHaveLength(3);
       
-      // Find the most popular category
       const mostPopular = groupedStats[0];
       expect(['category-tickets', 'category-support']).toContain(mostPopular._id);
       expect(mostPopular.count).toBe(2);
@@ -301,8 +295,8 @@ describe('TicketConfig Model Integration Tests', () => {
         }
       ]);
 
-      expect(categoryStats).toHaveLength(2); // tickets and support
-      expect(categoryStats.reduce((sum, cat) => sum + cat.count, 0)).toBe(4); // total configs
+      expect(categoryStats).toHaveLength(2);
+      expect(categoryStats.reduce((sum, cat) => sum + cat.count, 0)).toBe(4);
     });
 
     it('should count unique category types', async () => {
@@ -324,7 +318,6 @@ describe('TicketConfig Model Integration Tests', () => {
 
       const config = await TicketConfigModel.create(configData);
 
-      // Simulate concurrent updates to categoryId
       const updates = [];
       for (let i = 0; i < 10; i++) {
         updates.push(
@@ -338,11 +331,8 @@ describe('TicketConfig Model Integration Tests', () => {
 
       const results = await Promise.all(updates);
       
-      // All updates should succeed
       expect(results).toHaveLength(10);
       expect(results.every(r => r !== null)).toBe(true);
-
-      // Final state should be consistent
       const finalConfig = await TicketConfigModel.findById(config._id);
       expect(finalConfig!.categoryId).toMatch(/^category-update-\d+$/);
 
@@ -350,7 +340,7 @@ describe('TicketConfig Model Integration Tests', () => {
     });
 
     it('should handle very long snowflake IDs', async () => {
-      const longSnowflake = '1234567890123456789'; // 19 digit snowflake
+      const longSnowflake = '1234567890123456789';
       
       const configData = ticketConfigFactory.build({
         guildId: longSnowflake,
@@ -369,7 +359,7 @@ describe('TicketConfig Model Integration Tests', () => {
       for (let i = 0; i < 100; i++) {
         configs.push(ticketConfigFactory.build({
           guildId: `guild-bulk-${i}`,
-          categoryId: `category-${i % 5}` // 5 different categories
+          categoryId: `category-${i % 5}`
         }));
       }
 
@@ -377,14 +367,12 @@ describe('TicketConfig Model Integration Tests', () => {
       await TicketConfigModel.insertMany(configs);
       const insertTime = Date.now() - startTime;
 
-      expect(insertTime).toBeLessThan(1000); // Should insert quickly
+      expect(insertTime).toBeLessThan(1000);
 
       const count = await TicketConfigModel.countDocuments({
         guildId: { $regex: /^guild-bulk-/ }
       });
       expect(count).toBe(100);
-
-      // Test bulk update
       const updateStart = Date.now();
       await TicketConfigModel.updateMany(
         { guildId: { $regex: /^guild-bulk-/ } },
@@ -392,9 +380,7 @@ describe('TicketConfig Model Integration Tests', () => {
       );
       const updateTime = Date.now() - updateStart;
 
-      expect(updateTime).toBeLessThan(500); // Should update quickly
-
-      // Verify update
+      expect(updateTime).toBeLessThan(500);
       const updatedCount = await TicketConfigModel.countDocuments({
         categoryId: 'bulk-updated-category'
       });
@@ -405,8 +391,6 @@ describe('TicketConfig Model Integration Tests', () => {
 
     it('should maintain data consistency with upsert operations', async () => {
       const guildId = 'guild-upsert-test';
-      
-      // First upsert - should create
       const result1 = await TicketConfigModel.findOneAndUpdate(
         { guildId },
         {
@@ -419,7 +403,6 @@ describe('TicketConfig Model Integration Tests', () => {
       expect(result1.guildId).toBe(guildId);
       expect(result1.categoryId).toBe('category-upsert');
 
-      // Second upsert - should update
       const result2 = await TicketConfigModel.findOneAndUpdate(
         { guildId },
         {
@@ -429,9 +412,9 @@ describe('TicketConfig Model Integration Tests', () => {
       );
 
       expect(result2).toBeDefined();
-      expect(result2._id.toString()).toBe(result1._id.toString()); // Same document
+      expect(result2._id.toString()).toBe(result1._id.toString());
       expect(result2.categoryId).toBe('category-updated');
-      expect(result2.guildId).toBe(guildId); // Should preserve guildId
+      expect(result2.guildId).toBe(guildId);
     });
 
     it('should handle special characters in IDs', async () => {
@@ -447,8 +430,6 @@ describe('TicketConfig Model Integration Tests', () => {
       
       expect(config.guildId).toBe(specialGuildId);
       expect(config.categoryId).toBe(specialCategoryId);
-
-      // Test querying with special characters
       const foundConfig = await TicketConfigModel.findOne({ guildId: specialGuildId });
       expect(foundConfig).toBeDefined();
       expect(foundConfig!.categoryId).toBe(specialCategoryId);
@@ -463,14 +444,9 @@ describe('TicketConfig Model Integration Tests', () => {
       const config = await TicketConfigModel.create(configData);
       const configId = config._id;
 
-      // Delete the configuration
       await TicketConfigModel.findByIdAndDelete(configId);
-
-      // Verify deletion
       const deletedConfig = await TicketConfigModel.findById(configId);
       expect(deletedConfig).toBeNull();
-
-      // Verify by guildId query
       const configByGuild = await TicketConfigModel.findOne({ guildId: 'guild-to-delete' });
       expect(configByGuild).toBeNull();
     });

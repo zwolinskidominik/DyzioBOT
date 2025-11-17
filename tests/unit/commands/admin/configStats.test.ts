@@ -36,7 +36,6 @@ const buildGuild = (over?: Partial<any>) => {
       create: jest.fn(async ({ name, type, permissionOverwrites }: any) => ({ id: 'vc1', name, type, permissionOverwrites })),
     },
   } as any;
-  // sample members
   membersCache.set('1', { id: '1', user: { bot: false, username: 'user1' }, joinedTimestamp: 1000 });
   membersCache.set('2', { id: '2', user: { bot: true, username: 'bot2' }, joinedTimestamp: 2000 });
   membersCache.set('3', { id: '3', user: { bot: false, username: 'user3' }, joinedTimestamp: 3000 });
@@ -78,11 +77,9 @@ describe('admin/configStats', () => {
       const interaction = buildInteraction({ guild });
       (ChannelStatsModelMock.findOne as jest.Mock).mockReturnValue({ lean: () => ({ exec: () => Promise.resolve(null) }) });
       (ChannelStatsModelMock.updateOne as jest.Mock).mockResolvedValue({ acknowledged: true });
-      // users
       interaction.options.getString = jest.fn((n: string) => (n === 'rodzaj' ? 'users' : '<> users'));
       await run({ interaction, client: {} as any });
       expect(guild.channels.create).toHaveBeenCalledWith(expect.objectContaining({ name: expect.stringMatching(/^\d+ users$/), type: ChannelType.GuildVoice }));
-      // bots
       interaction.options.getString = jest.fn((n: string) => (n === 'rodzaj' ? 'bots' : '<> bots'));
       await run({ interaction, client: {} as any });
       expect(guild.channels.create).toHaveBeenCalledWith(expect.objectContaining({ name: expect.stringMatching(/^\d+ bots$/), type: ChannelType.GuildVoice }));
@@ -102,11 +99,9 @@ describe('admin/configStats', () => {
       const interaction = buildInteraction({ guild });
       (ChannelStatsModelMock.findOne as jest.Mock).mockReturnValue({ lean: () => ({ exec: () => Promise.resolve(null) }) });
       (ChannelStatsModelMock.updateOne as jest.Mock).mockResolvedValue({ acknowledged: true });
-      // ok
       interaction.options.getString = jest.fn((n: string) => (n === 'rodzaj' ? 'bans' : 'bany: <>'));
       await run({ interaction, client: {} as any });
       expect(guild.channels.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'bany: 5' }));
-      // error
       guild.bans.fetch.mockRejectedValue(new Error('boom'));
       await run({ interaction, client: {} as any });
       expect(guild.channels.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'bany: 0' }));
@@ -123,7 +118,6 @@ describe('admin/configStats', () => {
       interaction.options.getString = jest.fn((n: string) => (n === 'rodzaj' ? 'lastJoined' : 'ostatni: <>'));
       await run({ interaction, client: {} as any });
       expect(guild.channels.create).toHaveBeenCalledWith(expect.objectContaining({ name: expect.stringMatching(/^ostatni: .+/) }));
-      // ensure updateOne with lastJoined member id stored
       const updateArg = (ChannelStatsModelMock.updateOne as jest.Mock).mock.calls.pop()?.[1];
       expect(JSON.stringify(updateArg)).toEqual(expect.stringMatching(/"lastJoined"/));
     });

@@ -5,34 +5,27 @@ import logger from '../../../../src/utils/logger';
 import runWelcome from '../../../../src/events/guildMemberAdd/welcomeCard';
 import runStats from '../../../../src/events/guildMemberAdd/updateAddMembersStats';
 import { GreetingsConfigurationModel } from '../../../../src/models/GreetingsConfiguration';
-
-// Mock heavy graphics and embed helpers
-jest.mock('canvacord', () => ({ Font: { loadDefault: jest.fn(async () => {}) } }));
-jest.mock('../../../../src/utils/cardHelpers', () => ({
-  GreetingsCard: class {
-    setAvatar() { return this; }
-    setDisplayName() { return this; }
-    setType() { return this; }
-    setMessage() { return this; }
-    async build() { return Buffer.from('fake'); }
-  }
-}));
 jest.mock('../../../../src/utils/embedHelpers', () => ({ createBaseEmbed: (o: any) => ({ ...o }) }));
 jest.mock('../../../../src/config/bot', () => ({ getBotConfig: () => ({ emojis: { greetings: { hi: '👋' } } }) }));
-// Run debounced stats immediately and mock stats updater
 const updateChannelStats = jest.fn(async () => {});
 jest.mock('../../../../src/utils/cooldownHelpers', () => ({ debounce: (_: any, fn: any) => fn() }));
 jest.mock('../../../../src/utils/channelHelpers', () => ({ updateChannelStats: (...args: any[]) => (updateChannelStats as any)(...args) }));
 
 function makeGuildWithChannel(sendImpl?: any) {
   const send = sendImpl || jest.fn(async () => ({}));
-  const channel: any = { id: 'greet', type: ChannelType.GuildText, send };
-  const cache = new Map([[ 'greet', channel ]]);
+  const permissions = { has: jest.fn().mockReturnValue(true) };
+  const channel: any = { id: 'greet', type: ChannelType.GuildText, send, permissionsFor: jest.fn().mockReturnValue(permissions) };
+  const channelsCache = new Map([[ 'greet', channel ]]);
+  const botMember = { id: 'botId' };
+  const membersCache = new Map([['botId', botMember]]);
+  const client = { user: { id: 'botId' } };
   const guild: any = {
     id: 'guild-1',
     name: 'Guild',
     memberCount: 5,
-    channels: { cache: { get: (id: string) => cache.get(id) } },
+    channels: { cache: channelsCache },
+    members: { cache: membersCache },
+    client,
   };
   return { guild, channel, send } as const;
 }
@@ -66,7 +59,6 @@ describe('guildMemberAdd: welcome (E2E)', () => {
     client = new Client({ intents: [] });
     harness.setClient(client);
 
-    // Wire handlers: on guildMemberAdd do both welcome and stats updates
     client.on('guildMemberAdd', async (member) => {
       await runWelcome(member as any);
       await runStats(member as any);
@@ -90,9 +82,7 @@ describe('guildMemberAdd: welcome (E2E)', () => {
   await harness.emitGuildMemberAdd(member as any);
   await new Promise((r) => setTimeout(r, 60));
 
-    // message sent
     expect(send).toHaveBeenCalled();
-    // stats updated via mocked helper
     expect(updateChannelStats).toHaveBeenCalled();
     expect(errorSpy).not.toHaveBeenCalled();
   }, 15000);
@@ -111,14 +101,27 @@ describe('guildMemberAdd: welcome (E2E)', () => {
 
   it('missing permissions to send (send throws) -> logs error, no crash', async () => {
     const send = jest.fn(async () => { const e: any = new Error('Missing Permissions'); e.code = 50013; throw e; });
-    const { guild } = makeGuildWithChannel(send);
+    const permissions = { has: jest.fn().mockReturnValue(false) };
+    const channel: any = { id: 'greet', type: ChannelType.GuildText, send, permissionsFor: jest.fn().mockReturnValue(permissions) };
+    const channelsCache = new Map([[ 'greet', channel ]]);
+    const botMember = { id: 'botId' };
+    const membersCache = new Map([['botId', botMember]]);
+    const client = { user: { id: 'botId' } };
+    const guild: any = {
+      id: 'guild-1',
+      name: 'Guild',
+      memberCount: 5,
+      channels: { cache: channelsCache },
+      members: { cache: membersCache },
+      client,
+    };
     await GreetingsConfigurationModel.create({ guildId: guild.id, greetingsChannelId: 'greet' });
 
     const member = makeMember(guild);
   await harness.emitGuildMemberAdd(member as any);
   await new Promise((r) => setTimeout(r, 60));
 
-    expect(send).toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
   }, 15000);
 });

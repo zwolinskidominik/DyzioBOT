@@ -47,10 +47,8 @@ describe('utils/logger logOncePerInterval', () => {
   });
 
   test('changing interval per call: second call with shorter interval logs after 201ms', () => {
-    // First call with long interval should log
     logOncePerInterval('info', 'rekey', 'first', 1000);
     expect(spyInfo).toHaveBeenCalledTimes(1);
-    // Second call with shorter interval should still be suppressed until the shorter interval elapses
     logOncePerInterval('info', 'rekey', 'second', 200);
     expect(spyInfo).toHaveBeenCalledTimes(1);
     jest.advanceTimersByTime(201);
@@ -80,7 +78,6 @@ describe('utils/logger env and format branches', () => {
   });
 
   test('format.printf uses stack branch when error object provided', () => {
-    // Call logger.error with an Error to exercise the stack formatting path
     const err = new Error('boom-stack');
     ;(logger as any).error(err);
   });

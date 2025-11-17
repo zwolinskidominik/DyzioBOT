@@ -6,7 +6,6 @@ import createSuggestions from '../../../../src/events/messageCreate/createSugges
 import { SuggestionConfigurationModel } from '../../../../src/models/SuggestionConfiguration';
 import { SuggestionModel } from '../../../../src/models/Suggestion';
 
-// Helpers to build minimal message/channel mocks
 function createMockTextChannel(id: string) {
   const sent: any[] = [];
   const channel: any = {
@@ -55,7 +54,7 @@ function createMockMessage(opts: {
       username: 'Tester',
       displayAvatarURL: () => 'https://example.com/avatar.png',
     },
-    client: { user: { id: '1248419676740915310' } }, // test bot id used by getBotConfig fallback
+    client: { user: { id: '1248419676740915310' } },
     delete: jest.fn().mockResolvedValue(undefined),
   };
   return msg as any;
@@ -80,12 +79,10 @@ describe('messageCreate: suggestions (E2E)', () => {
     client = new Client({ intents: [] });
     harness.setClient(client);
 
-    // Wire up our specific event handler under test
     client.on('messageCreate', async (message) => {
       await createSuggestions(message as any);
     });
 
-  // Winston's leveled methods return Logger; make mocks return the logger instance to satisfy types
   jest.spyOn(logger, 'warn').mockImplementation(((..._args: unknown[]) => logger) as any);
   jest.spyOn(logger, 'error').mockImplementation(((..._args: unknown[]) => logger) as any);
   jest.spyOn(logger, 'info').mockImplementation(((..._args: unknown[]) => logger) as any);
@@ -105,12 +102,11 @@ describe('messageCreate: suggestions (E2E)', () => {
       .mockResolvedValueOnce(null as any);
 
     await harness.emitMessageCreate(message as any);
-    await new Promise((r) => setTimeout(r, 25));
+    await new Promise((r) => setTimeout(r, 100));
 
-    // Nie powinno być żadnego ostrzeżenia - po prostu cicho ignoruj
     expect(logger.warn).not.toHaveBeenCalled();
-    // No suggestion created
-    expect(await SuggestionModel.countDocuments()).toBe(0);
+    const count = await SuggestionModel.countDocuments({});
+    expect(count).toBe(0);
 
     findSpy.mockRestore();
   });
@@ -121,18 +117,14 @@ describe('messageCreate: suggestions (E2E)', () => {
 
     const message = createMockMessage({ guildId: 'guild-1', channel, content: 'To jest super pomysł' });
 
-  await harness.emitMessageCreate(message as any);
-  await new Promise((r) => setTimeout(r, 25));
-
-    // Original message deleted
+    await harness.emitMessageCreate(message as any);
+    await new Promise((r) => setTimeout(r, 100));
     expect((message as any).delete).toHaveBeenCalled();
 
-    // A confirmation/edit flow happened
     expect(sent.length).toBe(1);
     const createdMsg = sent[0];
     expect(createdMsg.edit).toHaveBeenCalled();
 
-    // DB record created
     const suggestions = await SuggestionModel.find();
     expect(suggestions).toHaveLength(1);
     expect(suggestions[0].content).toBe('To jest super pomysł');
@@ -144,10 +136,11 @@ describe('messageCreate: suggestions (E2E)', () => {
 
     const message = createMockMessage({ guildId: 'guild-1', channel, authorBot: true });
 
-  await harness.emitMessageCreate(message as any);
-  await new Promise((r) => setTimeout(r, 25));
+    await harness.emitMessageCreate(message as any);
+    await new Promise((r) => setTimeout(r, 100));
 
-    expect(await SuggestionModel.countDocuments()).toBe(0);
+    const count = await SuggestionModel.countDocuments({});
+    expect(count).toBe(0);
   });
 
   it('exception przy insert → log error, brak crasha', async () => {
@@ -156,15 +149,14 @@ describe('messageCreate: suggestions (E2E)', () => {
 
     const message = createMockMessage({ guildId: 'guild-1', channel, content: 'Zepsuj insert' });
 
-    // Force create() to throw
     const createSpy = jest.spyOn(SuggestionModel, 'create').mockRejectedValueOnce(new Error('DB down'));
 
-  await harness.emitMessageCreate(message as any);
-  await new Promise((r) => setTimeout(r, 25));
+    await harness.emitMessageCreate(message as any);
+    await new Promise((r) => setTimeout(r, 100));
 
     expect(createSpy).toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Błąd podczas tworzenia sugestii'));
-    // Ensure no unhandled crash and no record persisted
-    expect(await SuggestionModel.countDocuments()).toBe(0);
+    const count = await SuggestionModel.countDocuments({});
+    expect(count).toBe(0);
   });
 });

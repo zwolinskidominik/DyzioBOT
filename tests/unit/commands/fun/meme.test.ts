@@ -1,6 +1,5 @@
 export {};
 
-// Mocks
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
@@ -60,7 +59,6 @@ describe('fun/meme command', () => {
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({ embeds: [expect.objectContaining({ __embed: true })] })
       );
-      // title and footer propagated to embed factory
       expect(embedMockFactory).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Funny', footerText: expect.stringContaining('Źródło: reddit') })
       );
@@ -104,19 +102,15 @@ describe('fun/meme command', () => {
   test('primary source error -> alternative success', async () => {
     jest.isolateModules(async () => {
       const logger = (await import('../../../../src/utils/logger')).default;
-      // First call (random site) throws, next call (fallback loop) succeeds
       fetchMeme
         .mockRejectedValueOnce(new Error('down'))
         .mockResolvedValueOnce({ title: 'Alt', url: 'u', source: 'some', isVideo: false });
-
-      // Make Math.random deterministic to pick first site (not required but stable)
       jest.spyOn(Math, 'random').mockReturnValue(0);
 
       const interaction = buildInteraction();
       const { run } = await import('../../../../src/commands/fun/meme');
       await run({ interaction, client: {} as any });
       expect(logger.error).toHaveBeenCalled();
-      // Alternative succeeded -> editReply with embed
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({ embeds: [expect.any(Object)] })
       );
@@ -132,7 +126,6 @@ describe('fun/meme command', () => {
       const interaction = buildInteraction();
       const { run } = await import('../../../../src/commands/fun/meme');
       await run({ interaction, client: {} as any });
-      // Logs from primary and try of alternatives
       expect(logger.error).toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalled();
       expect(interaction.editReply).toHaveBeenCalledWith(

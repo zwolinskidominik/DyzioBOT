@@ -1,7 +1,5 @@
 export {};
-// Comprehensive tests for channelHelpers
-// Note: use module isolation to control internal caches and timers reliably
-// Logger mock used across test cases
+
 jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
   default: { warn: jest.fn(), error: jest.fn() },
@@ -9,8 +7,6 @@ jest.mock('../../../src/utils/logger', () => ({
 const logger = require('../../../src/utils/logger').default;
 import type { Guild, TextChannel, GuildMember, Collection as DiscordCollection } from 'discord.js';
 import { Collection } from 'discord.js';
-
-// re-exported above
 
 function loadHelpers() {
   jest.isolateModules(() => {
@@ -151,30 +147,25 @@ describe('safeSetChannelName', () => {
     const { safeSetChannelName } = loadHelpers();
     const chan = textChannel('c1', 'Start');
 
-    // setName behavior: for 'First' first attempt 429 then succeed; for 'Last' immediately succeed
     const originalImpl = chan.setName.getMockImplementation();
     const callCounts: Record<string, number> = { First: 0, Last: 0 };
     chan.setName.mockImplementation(async function (this: any, newName: string) {
       callCounts[newName] = (callCounts[newName] || 0) + 1;
       if (newName === 'First' && callCounts[newName] === 1) {
-        // first attempt rate-limited
         throw { httpStatus: 429 };
       }
       (this as any).name = newName;
       return this;
     });
 
-    const p1 = safeSetChannelName(chan as any, 'First', 1, 1); // allow exactly 1 retry, quick backoff
+    const p1 = safeSetChannelName(chan as any, 'First', 1, 1);
     const p2 = safeSetChannelName(chan as any, 'Last');
     await Promise.all([p1, p2]);
 
     expect(chan.name).toBe('Last');
-    // First: one retry (2 calls total), Last: one call; no extra retries
-  // First may be retried once or cancelled due to last-write-wins; ensure no extra retries
   expect(callCounts.First).toBeLessThanOrEqual(2);
     expect(callCounts.Last).toBe(1);
 
-    // restore any original impl if needed
     if (originalImpl) chan.setName.mockImplementation(originalImpl);
   });
 
@@ -186,7 +177,6 @@ describe('safeSetChannelName', () => {
     chan.setName.mockImplementation(async function (this: any, newName: string) {
       calls.push(newName);
       if (newName === 'First') {
-        // trigger rate limit to schedule retry
         throw { httpStatus: 429 };
       }
       (this as any).name = newName;
@@ -194,14 +184,11 @@ describe('safeSetChannelName', () => {
     });
 
     const p1 = safeSetChannelName(chan as any, 'First', 1, 50);
-    // schedule retry, but before it runs, submit a new rename which should set a newer token
     const p2 = Promise.resolve().then(() => safeSetChannelName(chan as any, 'Second'));
-    // advance time to fire the retry timer
     await Promise.resolve();
     jest.advanceTimersByTime(60);
     await Promise.allSettled([p1, p2]);
 
-    // Ensure the retry did NOT call setName again for 'First' due to top-of-attempt guard
     const countFirst = calls.filter((c) => c === 'First').length;
     expect(countFirst).toBe(1);
     expect(chan.name).toBe('Second');
@@ -211,7 +198,6 @@ describe('safeSetChannelName', () => {
   test('throws unknown error and channel without id exercises nullish branch', async () => {
     const { safeSetChannelName } = loadHelpers();
     const chan = textChannel('cX', 'Old') as any;
-    // Remove id to hit chanId ?? '' branch
     delete chan.id;
     chan.setName.mockRejectedValueOnce(new Error('weird'));
     await expect(safeSetChannelName(chan, 'New')).rejects.toThrow('weird');
@@ -237,7 +223,6 @@ describe('updateChannelName', () => {
     const { updateChannelName } = loadHelpers();
     const { guild, channels } = makeGuild([]);
     await updateChannelName(guild, undefined as any, 123);
-    // Ensure function exits gracefully without changes
     expect(channels.usersChan.name).toBe('Users: 0');
 
     await updateChannelName(guild, { channelId: 'usersChan' } as any, 'Raw');
@@ -278,7 +263,6 @@ describe('updateChannelStats', () => {
     await updateChannelStats(guild);
 
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Błąd przy pobieraniu banów'));
-    // users/bots/lastJoined should still be updated
     expect(channels.usersChan.name).toMatch(/Users:/);
     expect(channels.lastChan.name).toMatch(/Ostatni:/);
     expect(currentDoc.save).toHaveBeenCalled();
@@ -324,7 +308,7 @@ describe('updateChannelStats', () => {
   test('ensureFreshMembers fetch error logs warn and continues stats update', async () => {
     const { updateChannelStats } = loadHelpers();
     const members = [makeMember('1', 'RealUser', 1000)];
-    const { guild, channels, bansFetch, membersFetch } = makeGuild(members, members.length + 5); // memberCount > cache -> incomplete
+    const { guild, channels, bansFetch, membersFetch } = makeGuild(members, members.length + 5);
     (guild.members.fetch as any) = jest.fn(async () => { throw new Error('fetch fail'); });
     await updateChannelStats(guild);
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Nie udało się pobrać pełnej listy'));
@@ -344,14 +328,12 @@ describe('updateChannelStats', () => {
   test('ensureFreshMembers TTL prevents refetch when incomplete but within TTL', async () => {
     const { updateChannelStats } = loadHelpers();
     const members = [makeMember('1', 'A', 1000)];
-    const { guild, channels, membersFetch } = makeGuild(members, members.length + 5); // incomplete
-    // First run triggers fetch, record time 0
+    const { guild, channels, membersFetch } = makeGuild(members, members.length + 5);
     let now = 0;
     const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => now);
   await updateChannelStats(guild);
   expect(membersFetch).toHaveBeenCalledTimes(0);
-    // Within TTL -> no second fetch
-    now += 60 * 1000; // 1 min
+    now += 60 * 1000;
   await updateChannelStats(guild);
   expect(membersFetch).toHaveBeenCalledTimes(0);
     expect(channels.usersChan.name).toMatch(/Users:/);
@@ -362,15 +344,12 @@ describe('updateChannelStats', () => {
     const { updateChannelStats } = loadHelpers();
     const members = [makeMember('1', 'A', 1000), makeMember('2', 'B', 2000)];
     const { guild, channels, bansFetch } = makeGuild(members, members.length + 3);
-    // Simulate missing perms (50013) for users channel only
     (channels.usersChan.setName as any).mockRejectedValueOnce({ code: 50013 });
 
     await updateChannelStats(guild);
 
-    // Warn logged for missing perms, but other channels updated and bans fetched
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Brak uprawnień'));
     expect(bansFetch).toHaveBeenCalled();
-    // Bots/Last should still be updated
     expect(channels.botsChan.name).toMatch(/Bots:/);
     expect(channels.lastChan.name).toMatch(/Ostatni:/);
     expect(currentDoc.save).toHaveBeenCalled();
@@ -379,7 +358,7 @@ describe('updateChannelStats', () => {
   test('members cache complete -> no fetch, still updates stats', async () => {
     const { updateChannelStats } = loadHelpers();
     const members = [makeMember('1', 'A', 1000), makeMember('2', 'B', 2000)];
-    const { guild, channels, membersFetch } = makeGuild(members, members.length); // complete cache
+    const { guild, channels, membersFetch } = makeGuild(members, members.length);
 
     await updateChannelStats(guild);
 
@@ -389,7 +368,6 @@ describe('updateChannelStats', () => {
   });
 
   test('outer catch: logs error when update process throws unexpectedly', async () => {
-    // Re-mock ChannelStats findOne to return a doc whose save throws
     const models = require('../../../src/models/ChannelStats');
     const badDoc = { ...mockDocBase(), save: jest.fn(() => { throw new Error('save fail'); }) };
     currentDoc = badDoc as any;

@@ -25,7 +25,6 @@ describe('roleHelpers.canModerate & checkRole', () => {
   });
 
   test('bot lower than requester but higher than target -> allowed', () => {
-    // requester pos 50, bot pos 40, target pos 30 => target < bot and target < requester
     expect(checkRole(makeMember('t', 30), makeMember('r', 50), makeMember('b', 40))).toBe(true);
   });
 });

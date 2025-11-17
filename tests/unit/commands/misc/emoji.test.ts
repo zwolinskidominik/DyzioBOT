@@ -10,7 +10,6 @@ jest.mock('../../../../src/utils/embedHelpers', () => ({
   createBaseEmbed: jest.fn((args?: any) => ({ ...args, setTimestamp: jest.fn().mockReturnThis() })),
 }));
 
-// Mock only ButtonBuilder + ActionRowBuilder to inspect disabled buttons; keep rest real
 jest.mock('discord.js', () => {
   const actual = jest.requireActual('discord.js');
   class ButtonBuilder {
@@ -80,11 +79,9 @@ describe('misc/emoji', () => {
 
       await run({ interaction, client: interaction.client });
 
-      // Initial reply includes components
       const first = (interaction.reply as jest.Mock).mock.calls[0]?.[0];
       expect(first.components?.[0]?.components?.length).toBe(2);
 
-      // Simulate next, next, next (wrap), previous (wrap)
       const mkBtn = (id: string) => ({ customId: id, update: jest.fn().mockResolvedValue(undefined) });
       await collectorHandlers['collect'](mkBtn('next'));
       await collectorHandlers['collect'](mkBtn('next'));
@@ -92,11 +89,8 @@ describe('misc/emoji', () => {
       await collectorHandlers['collect'](mkBtn('previous'));
 
       const updates = ((mk: any) => mk.mock.calls.map((c: any[]) => c[0]))((({}) as any).mock || (mkBtn('x').update));
-      // However, we created new mkBtn each call, capture from last created
-      // Easier: Assert interaction.reply embed footer shows total 23; and ensure collector called
       expect(message.createMessageComponentCollector).toHaveBeenCalled();
 
-      // End: disabled buttons
       await collectorHandlers['end']();
       const editArg = (message.edit as jest.Mock).mock.calls[0]?.[0];
       expect(editArg.components?.[0]?.components?.every((b: any) => b.disabled === true)).toBe(true);

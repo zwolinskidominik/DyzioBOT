@@ -37,11 +37,6 @@ export interface CommandRunnerOptions {
   realCommands?: boolean;
 }
 
-/**
- * Enhanced helper class for running real Discord commands in integration tests
- * Loads actual command files and executes them with mocked interactions
- * Supports cooldowns, validations, permission checking, and detailed logging
- */
 export class CommandRunner {
   private static instance: CommandRunner;
   private commands: Map<string, ICommand> = new Map();
@@ -62,9 +57,6 @@ export class CommandRunner {
     };
   }
 
-  /**
-   * Get singleton instance
-   */
   public static getInstance(options?: CommandRunnerOptions): CommandRunner {
     if (!CommandRunner.instance) {
       CommandRunner.instance = new CommandRunner(options);
@@ -72,22 +64,15 @@ export class CommandRunner {
     return CommandRunner.instance;
   }
 
-  /**
-   * Reset singleton instance (useful for tests)
-   */
   public static reset(): void {
     CommandRunner.instance = undefined as any;
   }
 
-  /**
-   * Load all commands from the src/commands directory
-   */
   private loadCommands(): void {
     if (this.commandsLoaded) return;
     if (this.options.realCommands) {
       this.loadRealCommands();
     } else {
-      // Fallback: small internal mock set
       this.createMockCommands();
     }
     
@@ -95,11 +80,7 @@ export class CommandRunner {
     this.log(`Loaded ${this.commands.size} commands`);
   }
 
-  /**
-   * Recursively load real command modules from src/commands
-   */
   private loadRealCommands(): void {
-    // Ensure we can require .ts files dynamically when running under Jest
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const tsnode = require('ts-node');
@@ -140,7 +121,6 @@ export class CommandRunner {
           if (st.isDirectory()) {
             walk(full);
           } else if (entry.endsWith('.ts') || entry.endsWith('.js')) {
-            // Clear cache for fresh imports in tests
             try { delete require.cache[require.resolve(full)]; } catch {}
             const mod = require(full);
             const exported = mod?.default && mod.default.data && mod.default.run
@@ -150,7 +130,6 @@ export class CommandRunner {
             const run = exported.run;
             if (!data || !run) continue;
 
-            // Try to infer command name
             let name: string | undefined = (data as any).name;
             if (!name && typeof data.toJSON === 'function') {
               try { name = data.toJSON().name; } catch {}
@@ -173,9 +152,6 @@ export class CommandRunner {
     walk(root);
   }
 
-  /**
-   * Create mock commands for testing
-   */
   private createMockCommands(): void {
     const mockCommands = [
       {
@@ -208,7 +184,6 @@ export class CommandRunner {
     ];
 
     mockCommands.forEach(mockCmd => {
-      // Create a mock SlashCommandBuilder
       const mockData = {
         name: mockCmd.name,
         description: mockCmd.description,
@@ -231,9 +206,6 @@ export class CommandRunner {
     this.log(`Loading commands from: test-mock-commands`);
   }
 
-  /**
-   * Load all validations from the src/validations directory
-   */
   private loadValidations(): void {
     if (this.validationsLoaded || !this.options.enableValidations) return;
 
@@ -247,11 +219,9 @@ export class CommandRunner {
         const fullPath = join(validationsPath, entry);
         
         try {
-          // Clear require cache for fresh imports
           delete require.cache[require.resolve(fullPath)];
           const validationModule = require(fullPath);
 
-          // Most validation modules export a default function
           if (typeof validationModule.default === 'function') {
             this.validations.push(validationModule.default);
             this.log(`Loaded validation: ${entry}`);
@@ -271,18 +241,12 @@ export class CommandRunner {
     this.log(`Loaded ${this.validations.length} validations`);
   }
 
-  /**
-   * Add log entry
-   */
   private log(message: string): void {
     if (this.options.enableLogging) {
       this.logs.push(`[${new Date().toISOString()}] ${message}`);
     }
   }
 
-  /**
-   * Check cooldowns for a user/command combination
-   */
   private checkCooldown(userId: string, commandName: string, cooldownMs: number): string | null {
     if (!this.options.enableCooldowns) return null;
 
@@ -299,9 +263,6 @@ export class CommandRunner {
     return null;
   }
 
-  /**
-   * Run validations against the interaction and command
-   */
   private async runValidations(interaction: any, command: ICommand): Promise<string | null> {
     if (!this.options.enableValidations) return null;
 
@@ -321,9 +282,6 @@ export class CommandRunner {
     return null;
   }
 
-  /**
-   * Create a mocked Discord interaction for testing
-   */
   private createMockInteraction(options: MockInteractionOptions, client: Client): ChatInputCommandInteraction {
     const mockUser = {
       id: '123456789',
@@ -338,7 +296,7 @@ export class CommandRunner {
     const mockChannel = {
       id: '987654321',
       name: 'test-channel',
-      type: 0, // GuildText
+      type: 0,
       guild: null,
       ...options.channel,
     } as Channel;
@@ -360,7 +318,6 @@ export class CommandRunner {
       ...options.member,
     } as GuildMember;
 
-    // Mock permissions
     if (this.options.mockPermissions && options.memberPermissions) {
       const permissionsBigInt = options.memberPermissions.reduce((acc, perm) => acc | perm, 0n);
       (mockMember as any).permissions = {
@@ -370,11 +327,9 @@ export class CommandRunner {
       };
     }
 
-    // options storage not required as we provide getters below
-
     const mockInteraction = {
       id: 'interaction-' + Date.now(),
-      type: 2, // ApplicationCommand
+      type: 2,
       commandName: options.commandName,
       user: mockUser,
       member: mockMember,
@@ -454,7 +409,7 @@ export class CommandRunner {
       deleteReply: jest.fn(async () => {}),
       fetchReply: jest.fn(async () => ({ 
         id: 'fetched-reply', 
-        createdTimestamp: Date.now() + 10 // Simulate slight delay for ping calculation
+        createdTimestamp: Date.now() + 10
       } as any)),
       createdTimestamp: Date.now(),
       createdAt: new Date(),
@@ -463,9 +418,6 @@ export class CommandRunner {
     return mockInteraction;
   }
 
-  /**
-   * Create a basic mocked Discord client
-   */
   private createMockClient(): Client {
     const mockClient = {
       user: {
@@ -482,16 +434,13 @@ export class CommandRunner {
       readyTimestamp: Date.now() - 60000,
       readyAt: new Date(Date.now() - 60000),
       ws: {
-        ping: 42, // Mock websocket ping
+        ping: 42,
       },
     } as unknown as Client;
 
     return mockClient;
   }
 
-  /**
-   * Run a command with the given options
-   */
   public async runCommand(
     commandName: string,
     interactionOptions: Omit<MockInteractionOptions, 'commandName'> = {},
@@ -499,11 +448,9 @@ export class CommandRunner {
   ): Promise<CommandResult> {
   const startTime = Date.now();
     
-    // Load commands and validations if not already loaded
     this.loadCommands();
     this.loadValidations();
 
-    // Find the command
     const command = this.commands.get(commandName);
     if (!command) {
       return {
@@ -514,10 +461,8 @@ export class CommandRunner {
       };
     }
 
-    // Create mock client if not provided
     const mockClient = client || this.createMockClient();
 
-    // Create mock interaction
     const mockInteraction = this.createMockInteraction(
       { ...interactionOptions, commandName },
       mockClient
@@ -526,9 +471,8 @@ export class CommandRunner {
     this.log(`Running command: ${commandName}`);
 
     try {
-      // Check cooldowns
-      const cooldownSeconds = command.options?.cooldown || 2.5; // Default 2.5s like production
-      const cooldownMs = cooldownSeconds * 1000; // Convert seconds to milliseconds
+      const cooldownSeconds = command.options?.cooldown || 2.5;
+      const cooldownMs = cooldownSeconds * 1000;
       const cooldownError = this.checkCooldown(
         mockInteraction.user.id,
         commandName,
@@ -546,7 +490,6 @@ export class CommandRunner {
         };
       }
 
-      // Run validations
       const validationError = await this.runValidations(mockInteraction, command);
       if (validationError) {
         this.log(`Validation failed for ${commandName}: ${validationError}`);
@@ -559,7 +502,6 @@ export class CommandRunner {
         };
       }
 
-      // Execute the command
       await command.run({
         interaction: mockInteraction,
         client: mockClient,
@@ -590,68 +532,41 @@ export class CommandRunner {
     }
   }
 
-  /**
-   * Add a temporary command for testing (replaces existing if exists)
-   */
   public addTestCommand(name: string, command: ICommand): void {
     this.commands.set(name, command);
   }
 
-  /**
-   * Remove a command
-   */
   public removeCommand(name: string): void {
     this.commands.delete(name);
   }
 
-  /**
-   * Get all loaded commands
-   */
   public getCommands(): Map<string, ICommand> {
     this.loadCommands();
     return new Map(this.commands);
   }
 
-  /**
-   * Get all loaded validations
-   */
   public getValidations(): Array<(interaction: any, command: ICommand) => Promise<string | null>> {
     this.loadValidations();
     return [...this.validations];
   }
 
-  /**
-   * Get execution logs
-   */
   public getLogs(): string[] {
     return [...this.logs];
   }
 
-  /**
-   * Clear execution logs
-   */
   public clearLogs(): void {
     this.logs = [];
   }
 
-  /**
-   * Clear cooldowns (useful for testing)
-   */
   public clearCooldowns(): void {
     this.cooldowns.clear();
   }
 
-  /**
-   * Get command by name
-   */
   public getCommand(name: string): ICommand | undefined {
     this.loadCommands();
     return this.commands.get(name);
   }
 
-  /**
-   * Check if command exists
-   */
   public hasCommand(name: string): boolean {
     this.loadCommands();
     return this.commands.has(name);

@@ -19,9 +19,6 @@ export class DbManager {
     DbManager.instance = this;
   }
 
-  /**
-   * Start MongoDB memory server and establish connection
-   */
   async startDb(version = '7.0.14'): Promise<string> {
     try {
       if (this.mongoServer && this.isConnected) {
@@ -29,19 +26,17 @@ export class DbManager {
         return this.mongoServer.getUri();
       }
 
-      // Check if external TEST_MONGO_URI is provided
       const testUri = process.env.TEST_MONGO_URI;
       if (testUri) {
         await this.connectToTestDb(testUri);
         return testUri;
       }
 
-      // Start in-memory MongoDB
       this.mongoServer = await MongoMemoryServer.create({
         binary: { version },
         instance: { 
           dbName: 'dyziobot-test',
-          launchTimeout: 60000 // Increase timeout for Windows/CI
+          launchTimeout: 60000
         }
       });
 
@@ -56,9 +51,6 @@ export class DbManager {
     }
   }
 
-  /**
-   * Connect to test database
-   */
   async connectToTestDb(uri?: string): Promise<void> {
     try {
       if (this.isConnected) {
@@ -71,7 +63,6 @@ export class DbManager {
       }
 
       await mongoose.connect(connectionUri, {
-        // Optimize for test environment
         maxPoolSize: 5,
         serverSelectionTimeoutMS: 10000,
         socketTimeoutMS: 45000,
@@ -85,9 +76,6 @@ export class DbManager {
     }
   }
 
-  /**
-   * Clear all collections in test database
-   */
   async clearCollections(): Promise<void> {
     try {
       if (!this.isConnected || !mongoose.connection.db) {
@@ -110,9 +98,6 @@ export class DbManager {
     }
   }
 
-  /**
-   * Drop all collections (more thorough than clear)
-   */
   async dropCollections(): Promise<void> {
     try {
       if (!this.isConnected || !mongoose.connection.db) {
@@ -135,9 +120,6 @@ export class DbManager {
     }
   }
 
-  /**
-   * Stop MongoDB server and close connection
-   */
   async stopDb(): Promise<void> {
     try {
       if (mongoose.connection.readyState !== 0) {
@@ -157,55 +139,33 @@ export class DbManager {
     }
   }
 
-  /**
-   * Get connection status
-   */
   get connected(): boolean {
     return this.isConnected && mongoose.connection.readyState === 1;
   }
 
-  /**
-   * Get MongoDB URI (if available)
-   */
   get uri(): string | undefined {
     return this.mongoServer?.getUri() || process.env.TEST_MONGO_URI;
   }
 
-  /**
-   * Reset database to clean state
-   */
   async reset(): Promise<void> {
     await this.clearCollections();
   }
 }
 
-// Export singleton instance
 export const dbManager = new DbManager();
 
-/**
- * Jest setup helper for beforeAll hook
- */
 export const setupDatabase = async (): Promise<void> => {
   await dbManager.startDb();
 };
 
-/**
- * Jest teardown helper for afterAll hook  
- */
 export const teardownDatabase = async (): Promise<void> => {
   await dbManager.stopDb();
 };
 
-/**
- * Jest cleanup helper for beforeEach/afterEach hooks
- */
 export const cleanDatabase = async (): Promise<void> => {
   await dbManager.clearCollections();
 };
 
-/**
- * Connect to existing test database (for tests that need manual setup)
- */
 export const connectTestDb = async (uri?: string): Promise<void> => {
   await dbManager.connectToTestDb(uri);
 };

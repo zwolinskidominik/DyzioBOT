@@ -13,7 +13,6 @@ export default async function run(member: GuildMember): Promise<void> {
 
     await reactivateEntry(
       BirthdayModel as ReturnModelType<typeof BirthdayModel, BirthdayDocument>,
-      'birthday',
       {
         guildId,
         userId,
@@ -21,7 +20,6 @@ export default async function run(member: GuildMember): Promise<void> {
     );
     await reactivateEntry(
       TwitchStreamerModel as ReturnModelType<typeof TwitchStreamerModel, TwitchStreamerDocument>,
-      'twitch',
       {
         guildId,
         userId,
@@ -36,7 +34,6 @@ export default async function run(member: GuildMember): Promise<void> {
 
 async function reactivateEntry<TDoc extends { active?: boolean }>(
   model: ReturnModelType<any, DocumentType<TDoc>>,
-  modelName: string,
   filter: FilterQuery<DocumentType<TDoc>>
 ): Promise<void> {
   const entry = await model.findOne(filter).exec();
@@ -44,6 +41,5 @@ async function reactivateEntry<TDoc extends { active?: boolean }>(
   if (entry && entry.active === false) {
     const update: UpdateQuery<DocumentType<TDoc>> = { $set: { active: true } };
     await model.findOneAndUpdate(filter, update).exec();
-    logger.debug(`Reaktywowano wpis ${modelName} dla userId=${filter['userId']}`);
   }
 }

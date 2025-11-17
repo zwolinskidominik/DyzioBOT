@@ -19,6 +19,12 @@ export interface IBotConfig {
       hi: string;
       bye: string;
     };
+    monthlyStats: {
+      upvote: string;
+      downvote: string;
+      whitedash: string;
+      new: string;
+    };
     next: string;
     previous: string;
     suggestion: {
@@ -26,6 +32,11 @@ export interface IBotConfig {
       downvote: string;
     };
     suggestionPB: IProgressBarSet;
+    trophy: {
+      gold: string;
+      silver: string;
+      bronze: string;
+    };
     warnPB: IProgressBarSet;
   };
 }

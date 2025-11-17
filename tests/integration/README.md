@@ -106,9 +106,11 @@ describe('Level Model Integration', () => {
 ### ⏰ `schedulers/`
 **Przeznaczenie:** Testy zadań cron i schedulers
 - `birthdayScheduler.test.ts` - Codzienne sprawdzanie urodzin
-- `twitchScheduler.test.ts` - Monitoring streamów Twitch
 - `giveawayScheduler.test.ts` - Automatyczne rozliczanie konkursów
+- `questionScheduler.test.ts` - System pytań dnia
 - `warnSystemMaintenance.test.ts` - Czyszczenie przeterminowanych ostrzeżeń
+
+> **Uwaga:** `twitchScheduler.test.ts` został usunięty (zależność od MSW)
 
 **Użycie fake timers:**
 ```typescript
@@ -122,19 +124,17 @@ it('should trigger birthday check at midnight', () => {
 });
 ```
 
-### 🌐 `http/`
-**Przeznaczenie:** Testy integracji z zewnętrznymi API
-- `animalApi.test.ts` - Mock'owanie API zwierząt
-- `memeApi.test.ts` - Mock'owanie API mem
-- `twitchIntegration.test.ts` - API Twitch (auth, streams, users)
-- `httpMocks.ts` - Konfiguracja nock interceptors
+### 🛠️ `utils/`
+**Przeznaczenie:** Testy funkcji pomocniczych
+- Testy integracyjne dla utilities (canvas, helpers, itp.)
 
-**Scenariusze:**
-- Pomyślne odpowiedzi API
-- Obsługa rate limitów
-- Timeouty sieci
-- Malformed responses
-- Retry logic
+### 📜 `scripts/`
+**Przeznaczenie:** Testy skryptów pomocniczych
+- `importFortunes.test.ts` - Import danych fortunek do bazy
+
+### 🎮 `commands/`
+**Przeznaczenie:** Testy integracyjne komend Discord
+- Testy end-to-end dla poszczególnych komend
 
 ## Uruchamianie Testów
 
@@ -167,8 +167,7 @@ LOG_LEVEL=error
 1. **Izolacja testów** - każdy test powinien być niezależny
 2. **Deterministic data** - używaj fabryk z kontrolowanymi danymi
 3. **Cleanup** - zawsze czyść stan po testach
-4. **Mock external APIs** - nie rób realnych połączeń HTTP
-5. **Fast feedback** - testy powinny być szybkie (< 30s wszystkie)
+4. **Fast feedback** - testy powinny być szybkie (< 30s wszystkie)
 
 ## Debugowanie
 

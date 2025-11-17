@@ -24,7 +24,6 @@ import {
   StringSelectMenuBuilder,
 } from 'discord.js';
 
-// Mock Discord.js structures for E2E testing
 export class MockDiscordClient {
   public guilds: Collection<string, Guild>;
   public user: User | null;
@@ -36,7 +35,6 @@ export class MockDiscordClient {
     this.eventListeners = new Map();
   }
 
-  // Mock methods
   public on(event: string, listener: Function) {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, []);
@@ -53,7 +51,6 @@ export class MockDiscordClient {
     return Promise.resolve('mock-token');
   }
 
-  // Setup helper
   public setupMockBot(botUser: Partial<User> = {}) {
     this.user = this.createMockUser({
       id: '123456789012345678',
@@ -64,7 +61,6 @@ export class MockDiscordClient {
     });
   }
 
-  // Factory methods
   public createMockGuild(options: Partial<Guild> & { id: string; name: string }): Guild {
     const guild = {
       id: options.id,
@@ -72,12 +68,10 @@ export class MockDiscordClient {
       ownerId: options.ownerId || '987654321012345678',
       memberCount: options.memberCount || 100,
       
-      // Collections
       members: new Collection<string, GuildMember>(),
       channels: new Collection<string, TextChannel | VoiceChannel>(),
       roles: new Collection<string, Role>(),
       
-      // Managers
       members: {
         cache: new Collection<string, GuildMember>(),
         fetch: jest.fn().mockResolvedValue(null),
@@ -105,7 +99,6 @@ export class MockDiscordClient {
         create: jest.fn().mockResolvedValue(null),
       } as any,
 
-      // Methods
       iconURL: jest.fn().mockReturnValue('https://cdn.discordapp.com/icons/guild.png'),
       
       ...options,
@@ -123,7 +116,6 @@ export class MockDiscordClient {
       bot: options.bot || false,
       avatar: options.avatar || null,
       
-      // Methods
       displayAvatarURL: jest.fn().mockReturnValue('https://cdn.discordapp.com/avatars/user.png'),
       toString: jest.fn().mockReturnValue(`<@${options.id}>`),
       
@@ -146,13 +138,11 @@ export class MockDiscordClient {
       permissions: options.permissions || new PermissionsBitField(),
       joinedAt: options.joinedAt || new Date(),
       
-      // Voice state
       voice: {
         channel: null,
         setChannel: jest.fn().mockResolvedValue(null),
       },
       
-      // Methods
       displayName: options.nickname || user.username,
       toString: jest.fn().mockReturnValue(`<@${user.id}>`),
       kick: jest.fn().mockResolvedValue(null),
@@ -171,13 +161,12 @@ export class MockDiscordClient {
       id: options.id,
       name: options.name,
       guild: guild,
-      type: 0, // TEXT_CHANNEL
+      type: 0,
       messages: {
         cache: new Collection<string, Message>(),
         fetch: jest.fn().mockResolvedValue(null),
       },
       
-      // Methods
       send: jest.fn().mockResolvedValue(this.createMockMessage(options.id)),
       bulkDelete: jest.fn().mockResolvedValue(new Collection()),
       setName: jest.fn().mockResolvedValue(null),
@@ -195,10 +184,9 @@ export class MockDiscordClient {
       id: options.id,
       name: options.name,
       guild: guild,
-      type: 2, // VOICE_CHANNEL
+      type: 2,
       members: new Collection<string, GuildMember>(),
       
-      // Methods
       setName: jest.fn().mockResolvedValue(null),
       setUserLimit: jest.fn().mockResolvedValue(null),
       delete: jest.fn().mockResolvedValue(null),
@@ -221,7 +209,6 @@ export class MockDiscordClient {
       permissions: options.permissions || new PermissionsBitField(),
       mentionable: options.mentionable || true,
       
-      // Methods
       toString: jest.fn().mockReturnValue(`<@&${options.id}>`),
       delete: jest.fn().mockResolvedValue(null),
       edit: jest.fn().mockResolvedValue(null),
@@ -248,7 +235,6 @@ export class MockDiscordClient {
         cache: new Collection(),
       },
       
-      // Methods
       delete: jest.fn(),
       edit: jest.fn(),
       reply: jest.fn(),
@@ -284,7 +270,6 @@ export class MockDiscordClient {
       channel: options.channel,
       client: this as any,
       
-      // Response methods
       deferred: false,
       replied: false,
       reply: jest.fn().mockImplementation(async (response) => {
@@ -348,7 +333,6 @@ export class MockDiscordClient {
   }
 }
 
-// Scenario builder for common test setups
 export class E2ETestScenario {
   public client: MockDiscordClient;
   public guild: Guild;
@@ -365,13 +349,11 @@ export class E2ETestScenario {
     this.client = new MockDiscordClient();
     this.client.setupMockBot();
 
-    // Create guild
     this.guild = this.client.createMockGuild({
       id: '123456789012345678',
       name: guildName,
     } as any);
 
-    // Create channels
     this.textChannel = this.client.createMockTextChannel(this.guild, {
       id: '111111111111111111',
       name: 'general',
@@ -382,7 +364,6 @@ export class E2ETestScenario {
       name: 'General Voice',
     } as any);
 
-    // Create roles
     this.adminRole = this.client.createMockRole(this.guild, {
       id: '333333333333333333',
       name: 'Admin',
@@ -395,7 +376,6 @@ export class E2ETestScenario {
       permissions: new PermissionsBitField(['ViewChannel', 'SendMessages']),
     } as any);
 
-    // Create users
     this.adminUser = this.client.createMockUser({
       id: '555555555555555555',
       username: 'AdminUser',
@@ -406,7 +386,6 @@ export class E2ETestScenario {
       username: 'RegularUser',
     } as any);
 
-    // Create members
     this.adminMember = this.client.createMockMember(this.guild, this.adminUser, {
       permissions: new PermissionsBitField(['Administrator']),
     } as any);
@@ -418,7 +397,6 @@ export class E2ETestScenario {
     this.regularMember.roles.cache.set(this.memberRole.id, this.memberRole);
   }
 
-  // Helper methods for creating interactions
   public createAdminSlashCommand(commandName: string, options: any[] = []) {
     return this.client.createMockInteraction('chatInput', {
       user: this.adminUser,
@@ -458,7 +436,6 @@ export class E2ETestScenario {
     });
   }
 
-  // Event simulation helpers
   public simulateMemberJoin(user?: User): GuildMember {
     const newUser = user || this.client.createMockUser({
       id: `${Date.now()}`,
@@ -480,7 +457,7 @@ export class E2ETestScenario {
       content,
       author,
       guild: this.guild,
-      channel: this.textChannel, // Pass the actual channel object
+      channel: this.textChannel,
     });
     
     this.client.emit('messageCreate', message);
@@ -505,7 +482,6 @@ export class E2ETestScenario {
     this.client.emit('voiceStateUpdate', oldState, newState);
   }
 
-  // Assertion helpers
   public expectChannelMessage(channel: TextChannel, content?: string) {
     expect(channel.send).toHaveBeenCalled();
     if (content) {
@@ -554,7 +530,6 @@ export class E2ETestScenario {
   }
 }
 
-// Global setup for E2E tests
 export const setupE2ETest = () => {
   beforeEach(() => {
     jest.clearAllMocks();

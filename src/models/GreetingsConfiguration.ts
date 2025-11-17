@@ -16,7 +16,6 @@ class GreetingsConfiguration {
   @prop({ type: () => String })
   public chatChannelId?: string;
 
-  // Feature toggles with sensible defaults
   @prop({ type: () => Boolean, default: true })
   public welcomeEnabled!: boolean;
 

@@ -1,10 +1,8 @@
-// Cover recursion branches in loadCommands and loadValidations when encountering subdirectories
 jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
 }));
 
-// Mock fs to expose a subdirectory in both commands and validations trees
 jest.mock('fs', () => {
   const real = jest.requireActual('fs');
   const readdirSync = (dir: string) => {
@@ -31,7 +29,6 @@ describe('CommandHandler directory recursion loading', () => {
     const { CommandHandler } = require('../../../src/handlers/CommandHandler');
     const client = new FakeClient();
     const handler = new CommandHandler(client, {});
-    // With only subdirectories and no files, the map remains empty but recursion paths were executed
     const map = (handler as any).commands as Map<string, any>;
     expect(map.size).toBeGreaterThanOrEqual(0);
   });

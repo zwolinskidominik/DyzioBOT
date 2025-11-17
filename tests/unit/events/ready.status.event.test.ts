@@ -4,7 +4,6 @@ describe('event: ready/status', () => {
   it('returns early when client.user is missing', async () => {
     const client: any = { user: undefined };
     await runStatus(client);
-    // No error should be thrown; nothing to assert beyond that
   });
 
   it('sets presence when client.user exists', async () => {

@@ -9,8 +9,6 @@ jest.mock('../../../../src/utils/embedHelpers', () => ({
   __esModule: true,
   createBaseEmbed: jest.fn((args?: any) => ({ __embed: true, ...args })),
 }));
-
-// Mock TextChannel to control instanceof checks
 jest.mock('discord.js', () => {
   const actual = jest.requireActual('discord.js');
   function MockTextChannel(this: any) {}

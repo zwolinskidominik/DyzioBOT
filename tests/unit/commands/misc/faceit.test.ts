@@ -126,7 +126,6 @@ describe('misc/faceit command', () => {
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({ embeds: [expect.objectContaining({ __embed: true })], components: [expect.any(Object)] })
       );
-      // Level emoji from config mapping
       expect(embedFactory).toHaveBeenCalledWith(expect.objectContaining({ color: expect.any(String) }));
     });
   });

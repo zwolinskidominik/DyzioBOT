@@ -46,7 +46,6 @@ jest.mock('../../../src/events/messageCreate/ok2.ts', () => handlers['ok2.ts'], 
 jest.mock('../../../src/events/messageCreate/breaker.ts', () => handlers['breaker.ts'], { virtual: true });
 jest.mock('../../../src/events/messageCreate/invalid.ts', () => handlers['invalid.ts'], { virtual: true });
 jest.mock('../../../src/events/messageCreate/err.ts', () => handlers['err.ts'], { virtual: true });
-// Note: Do not mock missing.ts to simulate module not found
 
 function flushPromises(){ return new Promise(r=>setImmediate(r)); }
 
@@ -84,7 +83,6 @@ describe('EventHandler extra', () => {
   test('unknown event module (missing.ts) -> no crash, logger.warn called', async () => {
     const client: any = new MiniClient();
     new EventHandler(client as unknown as Client);
-    // Trigger registration; handler loading runs on construction
     client.emit('messageCreate', { content: 'hi' });
     await flushPromises();
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Błąd ładowania eventu missing.ts'));
@@ -106,7 +104,6 @@ describe('EventHandler extra', () => {
       const { EventHandler } = require('../../../src/handlers/EventHandler');
       const client = new MiniClient() as any;
       new EventHandler(client);
-      // No throw and no events registered for 'emptyEvent'
       expect(true).toBe(true);
     });
   });

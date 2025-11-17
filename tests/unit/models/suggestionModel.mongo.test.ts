@@ -36,7 +36,6 @@ describe('Suggestion Model (real Mongo CRUD)', () => {
     expect(updated?.upvotes).toEqual(['u1']);
     expect(updated?.upvoteUsernames).toEqual(['User One']);
 
-    // unique index on messageId should reject duplicates
     await expect(
       SuggestionModel.create({
         authorId: 'author2',

@@ -1,4 +1,4 @@
-import globalCooldown from '../../../src/validations/globalCooldown';
+import globalCooldown, { clearCooldowns } from '../../../src/validations/globalCooldown';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import type { ICommand } from '../../../src/interfaces/Command';
 
@@ -7,6 +7,9 @@ describe('validations/globalCooldown', () => {
   let now = 1_000_000;
   beforeAll(() => {
     jest.spyOn(Date, 'now').mockImplementation(() => now);
+  });
+  beforeEach(() => {
+    clearCooldowns();
   });
   afterAll(() => {
     (Date.now as any).mockRestore?.();
@@ -21,7 +24,7 @@ describe('validations/globalCooldown', () => {
     const command: ICommand = {
       data: { name: 'x' } as any,
       run: async () => {},
-      options: { cooldown: 0.5 }, // 0.5 seconds instead of 500ms
+      options: { cooldown: 0.5 },
     };
 
     let res = await globalCooldown(interaction, command);
@@ -51,9 +54,9 @@ describe('validations/globalCooldown', () => {
     res = await globalCooldown(interaction, command);
     expect(res).toMatch(/Odczekaj/);
 
-    now += 2_499;
+    now += 1_999;
     res = await globalCooldown(interaction, command);
-    expect(res).toBeTruthy();
+    expect(res).not.toBeNull();
 
     now += 2;
     res = await globalCooldown(interaction, command);
@@ -62,7 +65,7 @@ describe('validations/globalCooldown', () => {
 
   test('purge logic after >200 checks allows reuse of earliest user', async () => {
     now = 3_000_000;
-    const command: ICommand = { data: { name: 'z' } as any, run: async () => {}, options: { cooldown: 1 } }; // 1 second instead of 1000ms
+    const command: ICommand = { data: { name: 'z' } as any, run: async () => {}, options: { cooldown: 1 } };
     for (let i = 0; i < 200; i++) {
       await globalCooldown(mockInteraction('u' + i), command);
     }

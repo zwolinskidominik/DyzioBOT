@@ -4,15 +4,12 @@ describe('Config Index Module', () => {
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
-    // Save original environment
     originalEnv = { ...process.env };
     
-    // Clear module cache to test fresh imports
     jest.resetModules();
   });
 
   afterEach(() => {
-    // Restore original environment
     process.env = originalEnv;
   });
 
@@ -23,7 +20,6 @@ describe('Config Index Module', () => {
     });
 
     it('should return parsed environment variables', () => {
-      // Set up test environment variables
       process.env.TOKEN = 'test-discord-token';
       process.env.CLIENT_ID = 'test-client-id';
       process.env.GUILD_ID = 'test-guild-id';
@@ -46,7 +42,6 @@ describe('Config Index Module', () => {
     });
 
     it('should cache the result on subsequent calls', () => {
-      // Set up test environment variables
       process.env.TOKEN = 'test-discord-token';
       process.env.CLIENT_ID = 'test-client-id';
       process.env.GUILD_ID = 'test-guild-id';
@@ -60,7 +55,6 @@ describe('Config Index Module', () => {
       const config1 = env();
       const config2 = env();
 
-      // Should return the same object reference (cached)
       expect(config1).toBe(config2);
     });
 
@@ -145,7 +139,6 @@ describe('Config Index Module', () => {
 
   describe('Error handling', () => {
     it('should handle optional environment variables', () => {
-      // Set up all required variables plus optional ones
       process.env.TOKEN = 'test-token';
       process.env.CLIENT_ID = 'test-client-id';
       process.env.GUILD_ID = 'test-guild-id';
@@ -168,7 +161,7 @@ describe('Config Index Module', () => {
     });
 
     it('should throw validation error for empty required string fields', () => {
-      process.env.TOKEN = ''; // Empty token should be invalid
+      process.env.TOKEN = '';
       process.env.CLIENT_ID = 'test-client-id';
       process.env.GUILD_ID = 'test-guild-id';
       process.env.MONGODB_URI = 'mongodb://test';
@@ -185,7 +178,7 @@ describe('Config Index Module', () => {
       process.env.TOKEN = 'valid-token';
       process.env.CLIENT_ID = 'test-client-id';
       process.env.GUILD_ID = 'test-guild-id';
-      process.env.MONGODB_URI = 'invalid-uri'; // Invalid URL format
+      process.env.MONGODB_URI = 'invalid-uri';
       process.env.DEV_GUILD_IDS = 'guild1';
       process.env.DEV_USER_IDS = 'user1';
       process.env.DEV_ROLE_IDS = 'role1';
@@ -200,7 +193,7 @@ describe('Config Index Module', () => {
       process.env.CLIENT_ID = 'test-client-id';
       process.env.GUILD_ID = 'test-guild-id';
       process.env.MONGODB_URI = 'mongodb://test';
-      process.env.DEV_GUILD_IDS = ''; // Empty string should be invalid
+      process.env.DEV_GUILD_IDS = '';
       process.env.DEV_USER_IDS = 'user1';
       process.env.DEV_ROLE_IDS = 'role1';
 

@@ -1,6 +1,5 @@
 export {};
 
-// Mocks
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
@@ -91,7 +90,6 @@ describe('admin/config-questions command', () => {
 
       await run({ interaction, client: {} as any });
 
-      // simulate channel select
       const selectChannel: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => true,
@@ -103,7 +101,6 @@ describe('admin/config-questions command', () => {
       };
       await collector.handlers.collect!(selectChannel);
 
-      // simulate role select
       const selectRole: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => false,
@@ -115,7 +112,6 @@ describe('admin/config-questions command', () => {
       };
       await collector.handlers.collect!(selectRole);
 
-      // confirm
       const confirm: any = {
         user: { id: interaction.user.id },
         isChannelSelectMenu: () => false,

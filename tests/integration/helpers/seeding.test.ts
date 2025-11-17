@@ -94,7 +94,7 @@ describe('Seeding Utility Tests', () => {
         2
       );
 
-      expect(warnings).toHaveLength(3); // 3 users with warnings
+      expect(warnings).toHaveLength(3);
       expect(warnings[0].guildId).toBe(guild.id);
       expect(warnings[0].warnings).toHaveLength(2);
       expect(warnings[0].warnings[0].reason).toMatch(/Test warning \d+/);
@@ -152,19 +152,15 @@ describe('Seeding Utility Tests', () => {
       expect(environment.guild.name).toBe('Full Feature Server');
       expect(environment.users).toHaveLength(25);
       
-      // Level system
       expect(environment.levels).toBeDefined();
-      expect(environment.levels!.length).toBe(15); // First 15 users get levels
+      expect(environment.levels!.length).toBe(15);
       
-      // Giveaways
       expect(environment.giveaways).toBeDefined();
       expect(environment.giveaways!).toHaveLength(5);
       
-      // Warnings
       expect(environment.warnings).toBeDefined();
       expect(environment.warnings!.length).toBeGreaterThan(0);
       
-      // Tickets
       expect(environment.tickets).toBeDefined();
       expect(environment.tickets!.config).toBeDefined();
       expect(environment.tickets!.states).toHaveLength(5);
@@ -183,20 +179,14 @@ describe('Seeding Utility Tests', () => {
         suggestions: true,
         twitchStreamers: 5
       });
-
-      // Verify realistic data distribution
       expect(environment.users).toHaveLength(50);
       expect(environment.levels!.length).toBe(15);
-      
-      // Check level distribution is realistic
       const levelValues = environment.levels!.map(l => l.level);
       const maxLevel = Math.max(...levelValues);
       const minLevel = Math.min(...levelValues);
       
       expect(maxLevel).toBeLessThanOrEqual(50);
       expect(minLevel).toBeGreaterThanOrEqual(1);
-      
-      // Check giveaways have realistic properties
       expect(environment.giveaways![0].endTime).toBeInstanceOf(Date);
       expect(environment.giveaways![0].winnersCount).toBeGreaterThanOrEqual(1);
       expect(environment.giveaways![0].winnersCount).toBeLessThanOrEqual(4);
@@ -213,26 +203,18 @@ describe('Seeding Utility Tests', () => {
 
   describe('Data Cleanup', () => {
     test('should clear all test data', async () => {
-      // Create some test data first
       await createTestEnvironment({
         userCount: 10,
         levelSystem: true,
         giveaways: 2,
         tickets: true
       });
-
-      // Clear all data
       await clearTestData();
-
-      // Verify data is cleared (you could check specific collections here)
-      // This test mainly verifies that clearTestData doesn't throw errors
       expect(true).toBe(true);
     });
 
     test('should handle clearing empty database gracefully', async () => {
       await clearTestData();
-      
-      // Should not throw error when clearing already empty database
       await expect(clearTestData()).resolves.not.toThrow();
     });
   });
@@ -248,10 +230,8 @@ describe('Seeding Utility Tests', () => {
         tickets: false
       });
 
-      // Perfect setup for testing level-related commands
       expect(environment.levels!.length).toBe(15);
       
-      // You can now test level commands with realistic data
       const lowLevelUsers = environment.levels!.filter(l => l.level < 10);
       const highLevelUsers = environment.levels!.filter(l => l.level >= 10);
       
@@ -267,11 +247,8 @@ describe('Seeding Utility Tests', () => {
         tickets: true
       });
 
-      // Perfect setup for testing moderation commands
       expect(environment.warnings!.length).toBeGreaterThan(0);
       expect(environment.tickets!.config).toBeDefined();
-      
-      // Test data includes users with existing warnings
       const usersWithWarnings = environment.warnings!.map(w => w.userId);
       expect(usersWithWarnings.length).toBeGreaterThan(0);
     });
@@ -284,15 +261,12 @@ describe('Seeding Utility Tests', () => {
         levelSystem: false
       });
 
-      // Perfect setup for testing giveaway commands
       expect(environment.giveaways!).toHaveLength(5);
       
       const activeGiveaways = environment.giveaways!.filter(g => g.active);
       const inactiveGiveaways = environment.giveaways!.filter(g => !g.active);
       
       expect(activeGiveaways.length + inactiveGiveaways.length).toBe(5);
-      
-      // Test various giveaway states
       console.log(`Active giveaways: ${activeGiveaways.length}`);
       console.log(`Inactive giveaways: ${inactiveGiveaways.length}`);
     });

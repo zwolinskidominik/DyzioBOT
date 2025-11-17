@@ -309,15 +309,30 @@ export class CommandHandler {
     };
     const opts = (cmd as any).options || [];
     if (opts.length) {
-      base.options = opts.map((o: any) => ({
-        name: o.name,
-        type: o.type,
-        description: o.description || '',
-        required: !!o.required,
-        choices: o.choices?.map((c: any) => ({ name: c.name, value: c.value })) || undefined,
-      }));
+      base.options = opts.map((o: any) => {
+        const opt: any = {
+          name: o.name,
+          type: o.type,
+          description: o.description || '',
+          required: !!o.required,
+        };
+        if (o.choices?.length) {
+          opt.choices = o.choices.map((c: any) => ({ name: c.name, value: c.value }));
+        }
+        return opt;
+      });
     }
-    return JSON.stringify(base);
+    return JSON.stringify(base, (_key, value) => {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        return Object.keys(value)
+          .sort()
+          .reduce((sorted: any, k) => {
+            sorted[k] = value[k];
+            return sorted;
+          }, {});
+      }
+      return value;
+    });
   }
 
   private async respond(interaction: CommandInteraction, payload: InteractionReplyOptions) {

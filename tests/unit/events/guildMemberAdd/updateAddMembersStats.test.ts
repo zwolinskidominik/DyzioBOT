@@ -1,6 +1,5 @@
 import logger from '../../../../src/utils/logger';
 
-// Mock logger
 jest.mock('../../../../src/utils/logger', () => ({
   __esModule: true,
   default: {
@@ -11,19 +10,16 @@ jest.mock('../../../../src/utils/logger', () => ({
   },
 }));
 
-// Mock debounce
 const mockDebounce = jest.fn();
 jest.mock('../../../../src/utils/cooldownHelpers', () => ({
   debounce: mockDebounce,
 }));
 
-// Mock updateChannelStats
 const mockUpdateChannelStats = jest.fn();
 jest.mock('../../../../src/utils/channelHelpers', () => ({
   updateChannelStats: mockUpdateChannelStats,
 }));
 
-// Use fake timers for debounce testing
 jest.useFakeTimers();
 
 let run: any;
@@ -80,7 +76,6 @@ describe('guildMemberAdd/updateAddMembersStats', () => {
   });
 
   test('debounced function should call updateChannelStats with guild', async () => {
-    // Mock debounce to immediately execute the function
     mockDebounce.mockImplementation((key: string, fn: Function) => {
       return fn();
     });
@@ -95,7 +90,6 @@ describe('guildMemberAdd/updateAddMembersStats', () => {
     const testError = new Error('Test error');
     mockUpdateChannelStats.mockRejectedValue(testError);
 
-    // Mock debounce to immediately execute the function
     mockDebounce.mockImplementation((key: string, fn: Function) => {
       return fn();
     });
@@ -111,7 +105,6 @@ describe('guildMemberAdd/updateAddMembersStats', () => {
   test('debounced function should handle updateChannelStats success', async () => {
     mockUpdateChannelStats.mockResolvedValue(undefined);
 
-    // Mock debounce to immediately execute the function
     mockDebounce.mockImplementation((key: string, fn: Function) => {
       return fn();
     });
