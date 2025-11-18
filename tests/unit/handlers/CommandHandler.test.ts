@@ -208,7 +208,7 @@ describe('CommandHandler', () => {
     const devSet = jest.fn(async () => []);
     client.guilds.fetch.mockResolvedValue({ commands: { set: devSet }, name: 'DevGuild' });
     const handler = new CommandHandlerClass(client, { bulkRegister: true, devGuildIds: ['g1'] });
-    (client as any).emit('ready');
+    (client as any).emit('clientReady');
     await new Promise(r => setImmediate(r));
   const globalArgs: any[] = (appSet as any).mock.lastCall || [];
   const globalLen = (globalArgs[0] || []).length;
@@ -238,7 +238,7 @@ describe('CommandHandler', () => {
     const appSet = jest.fn(async () => []);
     client.application.commands.set = appSet;
     const handler = new CommandHandlerClass(client, { bulkRegister: true });
-    (client as any).emit('ready');
+    (client as any).emit('clientReady');
     await new Promise((r) => setImmediate(r));
     expect(client.guilds.fetch).not.toHaveBeenCalled();
   });
@@ -248,7 +248,7 @@ describe('CommandHandler', () => {
     client.application.commands.set = appSet;
     client.guilds.fetch.mockResolvedValue(null);
     const handler = new CommandHandlerClass(client, { bulkRegister: true, devGuildIds: ['gX'] });
-    (client as any).emit('ready');
+    (client as any).emit('clientReady');
     await new Promise((r) => setImmediate(r));
     const warned = consoleWarns.find((w) => String(w[0] || '').includes('Nie udało się pobrać gildii'));
     expect(warned).toBeTruthy();
@@ -267,7 +267,7 @@ describe('CommandHandler', () => {
     const appSet = jest.fn(async () => { throw new Error('set failure'); });
     client.application.commands.set = appSet;
     const handler = new CommandHandlerClass(client, { bulkRegister: true });
-    (client as any).emit('ready');
+    (client as any).emit('clientReady');
     await new Promise((r) => setImmediate(r));
     expect(logger.error).toHaveBeenCalled();
   });

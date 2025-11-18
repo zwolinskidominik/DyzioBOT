@@ -1,4 +1,4 @@
-import run from '../../../../src/events/ready/sendTournamentRules';
+import run from '../../../../src/events/clientReady/sendTournamentRules';
 
 let scheduled: Function[] = [];
 jest.mock('node-cron', () => ({ schedule: (_e:string, cb:Function)=> { scheduled.push(cb); return {}; } }));
@@ -22,7 +22,7 @@ function makeClient(sendImpl?: (arg:any)=>any, reactImpl?: ()=>any){
   return { client, send, react };
 }
 
-describe('ready/sendTournamentRules', () => {
+describe('clientReady/sendTournamentRules', () => {
   beforeEach(()=> { scheduled=[]; warn.mockReset(); error.mockReset(); });
 
   test('cron registration + success sends rules and reacts', async () => {
@@ -60,7 +60,7 @@ describe('ready/sendTournamentRules', () => {
       env: () => ({}) 
     }));
     
-    const mod = await import('../../../../src/events/ready/sendTournamentRules');
+    const mod = await import('../../../../src/events/clientReady/sendTournamentRules');
     const runLocal = (mod as any).default;
     
     await runLocal({ channels: { cache: { get: () => null } } });

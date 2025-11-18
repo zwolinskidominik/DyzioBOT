@@ -2,7 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, AttachmentBuilder, Me
 import { xpForLevel } from '../../utils/levelMath';
 import { LevelModel } from '../../models/Level';
 import { CanvasLeaderboardCard } from '../../utils/canvasLeaderboardCard';
-import flushXp from '../../events/ready/xpFlush';
+import flushXp from '../../events/clientReady/xpFlush';
 
 export const data = new SlashCommandBuilder()
   .setName('toplvl')

@@ -21,7 +21,7 @@ new CommandHandler(client, {
   bulkRegister: true,
 });
 
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   console.log('✅ Bot zalogowany, synchronizuję komendy...');
   
   await new Promise(resolve => setTimeout(resolve, 5000));

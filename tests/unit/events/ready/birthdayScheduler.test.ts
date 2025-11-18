@@ -1,4 +1,4 @@
-import birthdayScheduler from '../../../../src/events/ready/birthdayScheduler';
+import birthdayScheduler from '../../../../src/events/clientReady/birthdayScheduler';
 import { ChannelType } from 'discord.js';
 
 const warn = jest.fn();
@@ -31,7 +31,7 @@ function makeClient(){
   } as any;
 }
 
-describe('ready/birthdayScheduler', () => {
+describe('clientReady/birthdayScheduler', () => {
   beforeEach(()=> { scheduled = []; warn.mockReset(); error.mockReset(); findBirthdayCfgs.mockReset(); findBirthdays.mockReset(); });
   afterEach(() => { jest.clearAllMocks(); });
 

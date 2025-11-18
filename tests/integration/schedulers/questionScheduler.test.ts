@@ -85,7 +85,7 @@ describe('Question Scheduler Integration Tests', () => {
       },
     } as any;
 
-    const questionScheduler = require('../../../src/events/ready/questionScheduler');
+    const questionScheduler = require('../../../src/events/clientReady/questionScheduler');
     await questionScheduler.default(mockClient);
     const cronModule = require('node-cron');
     const scheduleCall = cronModule.schedule.mock.calls[cronModule.schedule.mock.calls.length - 1];

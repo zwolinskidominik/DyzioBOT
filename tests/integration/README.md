@@ -101,7 +101,7 @@ describe('Level Model Integration', () => {
 - `messageCreate.test.ts` - Leveling, auto-moderation, triggers
 - `guildMemberAdd.test.ts` - Auto-role, welcome messages
 - `voiceStateUpdate.test.ts` - Temporary channels, voice stats
-- `ready.test.ts` - Inicjalizacja schedulers, status update
+- `clientReady.test.ts` - Inicjalizacja schedulers, status update
 
 ### ⏰ `schedulers/`
 **Przeznaczenie:** Testy zadań cron i schedulers

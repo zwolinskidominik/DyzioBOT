@@ -34,7 +34,7 @@ jest.mock('../../../../src/cache/xpCache', () => ({
   default: mockXpCache,
 }));
 
-jest.mock('../../../../src/events/ready/xpFlush', () => ({
+jest.mock('../../../../src/events/clientReady/xpFlush', () => ({
   __esModule: true,
   default: mockFlushXp,
 }));

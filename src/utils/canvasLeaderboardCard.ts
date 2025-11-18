@@ -193,7 +193,13 @@ export class CanvasLeaderboardCard {
     }
 
     try {
-      const avatarImage = await loadImage(entry.avatarURL);
+      // Timeout wrapper dla loadImage (max 5 sekund)
+      const avatarImagePromise = loadImage(entry.avatarURL);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Avatar load timeout')), 5000)
+      );
+      
+      const avatarImage = await Promise.race([avatarImagePromise, timeoutPromise]) as any;
       const avatarSize = 45;
       const avatarX = x + 70;
       const avatarY_pos = y + (height - avatarSize) / 2;
@@ -216,6 +222,33 @@ export class CanvasLeaderboardCard {
       this.ctx.restore();
     } catch (error) {
       console.warn('[CANVAS] Error loading avatar for leaderboard:', error);
+      
+      // Rysuj domyślny placeholder awatara
+      const avatarSize = 45;
+      const avatarX = x + 70;
+      const avatarY_pos = y + (height - avatarSize) / 2;
+      
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.arc(
+        avatarX + avatarSize / 2,
+        avatarY_pos + avatarSize / 2,
+        avatarSize / 2,
+        0,
+        Math.PI * 2
+      );
+      this.ctx.closePath();
+      this.ctx.fillStyle = this.colors.secondary;
+      this.ctx.fill();
+      
+      // Rysuj inicjał użytkownika
+      this.ctx.fillStyle = this.colors.textPrimary;
+      this.ctx.font = 'bold 20px Inter, "Segoe UI", Arial, sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      const initial = entry.username.charAt(0).toUpperCase();
+      this.ctx.fillText(initial, avatarX + avatarSize / 2, avatarY_pos + avatarSize / 2);
+      this.ctx.restore();
     }
 
     this.ctx.fillStyle = this.colors.textPrimary;

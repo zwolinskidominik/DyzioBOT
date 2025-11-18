@@ -34,8 +34,8 @@ function makeClient(){
   return { guilds, user: { username: 'Bot', displayAvatarURL: ()=> 'url' } } as any;
 }
 
-describe('ready/twitchScheduler', () => {
-  beforeEach(async ()=> { scheduled=[]; error.mockReset(); warn.mockReset(); info.mockReset(); getUserByName.mockReset(); getStreamByUserId.mockReset(); streamers=[]; streamCfg=[]; fsOps.readdir.mockReset(); fsOps.unlink.mockReset(); fsOps.stat.mockReset().mockImplementation(async()=> ({ mtime: new Date() })); if(!run){ run = (await import('../../../../src/events/ready/twitchScheduler')).default; } });
+describe('clientReady/twitchScheduler', () => {
+  beforeEach(async ()=> { scheduled=[]; error.mockReset(); warn.mockReset(); info.mockReset(); getUserByName.mockReset(); getStreamByUserId.mockReset(); streamers=[]; streamCfg=[]; fsOps.readdir.mockReset(); fsOps.unlink.mockReset(); fsOps.stat.mockReset().mockImplementation(async()=> ({ mtime: new Date() })); if(!run){ run = (await import('../../../../src/events/clientReady/twitchScheduler')).default; } });
 
   test('registers two crons and processes live streamer (success path)', async () => {
     const client = makeClient();

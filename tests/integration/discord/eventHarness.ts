@@ -127,7 +127,7 @@ export class EventHarness extends EventEmitter {
       throw new Error('Client nie został ustawiony');
     }
 
-    await this.emitEvent('ready', targetClient);
+    await this.emitEvent('clientReady', targetClient);
   }
 
   public async emitGuildMemberAdd(member: GuildMember): Promise<void> {

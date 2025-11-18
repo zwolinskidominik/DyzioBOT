@@ -40,7 +40,7 @@ describe('Warn System Maintenance Scheduler Integration Tests', () => {
     jest.clearAllMocks();
     process.env.GUILD_ID = 'test-guild-123';
 
-    const warnSystemMaintenance = require('../../../src/events/ready/warnSystemMaintenance').default;
+    const warnSystemMaintenance = require('../../../src/events/clientReady/warnSystemMaintenance').default;
     await warnSystemMaintenance();
 
     const cronModule = require('node-cron');

@@ -25,7 +25,7 @@ jest.mock('../../../../src/models/ActivityBucket', () => ({
   ActivityBucketModel: mockActivityBucketModel,
 }));
 
-import flushXp from '../../../../src/events/ready/xpFlush';
+import flushXp from '../../../../src/events/clientReady/xpFlush';
 
 describe('xpFlush', () => {
   beforeEach(() => {

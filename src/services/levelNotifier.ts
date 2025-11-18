@@ -5,12 +5,10 @@ import logger from '../utils/logger';
 
 export async function notifyLevelUp(c: Client, gid: string, uid: string, lvl: number) {
   const cfg = await LevelConfigModel.findOne({ guildId: gid }).lean();
-  if (!cfg?.notifyChannelId || !cfg?.enableLevelUpMessages) return;
+  if (!cfg?.notifyChannelId) return;
 
   const g = c.guilds.cache.get(gid);
   if (!g) return;
-  const ch = g.channels.cache.get(cfg.notifyChannelId) as TextChannel | undefined;
-  if (!ch?.send) return;
 
   let m = g.members.cache.get(uid);
   if (!m) {
@@ -18,19 +16,28 @@ export async function notifyLevelUp(c: Client, gid: string, uid: string, lvl: nu
   }
   if (!m) return;
 
-  const { gained } = await syncRewardRoles(m, lvl, cfg.roleRewards);
+  // Zawsze synchronizuj role nagrody
+  await syncRewardRoles(m, lvl, cfg.roleRewards);
+
+  // Sprawdź czy ten poziom ma przypisaną nagrodę
+  const rewardForLevel = cfg.roleRewards?.find(r => r.level === lvl);
+  
+  // Wysyłaj powiadomienie tylko gdy poziom ma nagrodę (niezależnie czy użytkownik już miał rolę)
+  if (!rewardForLevel) return;
+
+  const ch = g.channels.cache.get(cfg.notifyChannelId) as TextChannel | undefined;
+  if (!ch?.send) return;
+
   const am: MessageMentionOptions = { users: [uid as Snowflake], roles: [] };
 
-  const tpl = gained
-    ? (cfg.rewardMessage?.trim() ?? '🎉 {user} zdobył nową rolę {roleId} za poziom **{level}**!')
-    : (cfg.levelUpMessage?.trim() ?? '🎉 {user} osiągnął poziom **{level}**!');
+  const tpl = cfg.rewardMessage?.trim() ?? '🎉 {user} zdobył nową rolę {roleId} za poziom **{level}**!';
 
   await ch
     .send({
       content: tpl
         .replace(/{user}/g, `<@${uid}>`)
         .replace(/{level}/g, `${lvl}`)
-        .replace(/{roleId}/g, gained ? `<@&${gained}>` : ''),
+        .replace(/{roleId}/g, `<@&${rewardForLevel.roleId}>`),
       allowedMentions: am,
     })
     .catch(logger.error);

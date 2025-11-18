@@ -1,6 +1,6 @@
-import runStatus from '../../../src/events/ready/status';
+import runStatus from '../../../src/events/clientReady/status';
 
-describe('event: ready/status', () => {
+describe('event: clientReady/status', () => {
   it('returns early when client.user is missing', async () => {
     const client: any = { user: undefined };
     await runStatus(client);

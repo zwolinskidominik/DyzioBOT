@@ -45,11 +45,9 @@ export class MockClient extends EventEmitter {
     this.readyAt = new Date();
     this.uptime = 0;
     
-    setImmediate(() => {
-      this.emit('ready', this);
-    });
-    
-    return Promise.resolve('mock-token');
+      setImmediate(() => {
+        this.emit('clientReady', this);
+      });    return Promise.resolve('mock-token');
   }
 
   destroy(): Promise<void> {

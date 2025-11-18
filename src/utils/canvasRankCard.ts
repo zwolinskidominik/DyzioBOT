@@ -189,7 +189,13 @@ export class CanvasRankCard {
 
   private async drawAvatar() {
     try {
-      const avatarImage = await loadImage(this.options.avatarURL);
+      // Timeout wrapper dla loadImage (max 5 sekund)
+      const avatarImagePromise = loadImage(this.options.avatarURL);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Avatar load timeout')), 5000)
+      );
+      
+      const avatarImage = await Promise.race([avatarImagePromise, timeoutPromise]) as any;
       const avatarSize = 150;
       const avatarX = 30;
       const avatarY = 50;

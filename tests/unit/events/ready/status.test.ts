@@ -1,6 +1,6 @@
-import run from '../../../../src/events/ready/status';
+import run from '../../../../src/events/clientReady/status';
 
-describe('ready/status event', () => {
+describe('clientReady/status event', () => {
   test('sets presence when client.user exists', async () => {
     const setPresence = jest.fn().mockResolvedValue(undefined);
     const client: any = { user: { setPresence } };

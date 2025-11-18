@@ -92,7 +92,7 @@ describe('Giveaway Scheduler Integration Tests', () => {
       },
     } as any;
 
-  const giveawayScheduler = require('../../../src/events/ready/giveawayScheduler');
+  const giveawayScheduler = require('../../../src/events/clientReady/giveawayScheduler');
   await giveawayScheduler.default(mockClient);
     const cronModule = require('node-cron');
     const scheduleCall = cronModule.schedule.mock.calls[cronModule.schedule.mock.calls.length - 1];

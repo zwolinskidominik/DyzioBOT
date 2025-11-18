@@ -80,14 +80,14 @@ describe('EventHarness Integration Tests', () => {
   describe('Basic Event Emission', () => {
     it('should emit and track ready event', async () => {
       let readyEmitted = false;
-      client.on('ready', () => {
+      client.on('clientReady', () => {
         readyEmitted = true;
       });
 
       await harness.emitReady(client);
 
       expect(readyEmitted).toBe(true);
-      expect(harness.getEventCount('ready')).toBe(1);
+      expect(harness.getEventCount('clientReady')).toBe(1);
     });
 
     it('should track multiple events', async () => {
@@ -377,7 +377,7 @@ describe('EventHarness Integration Tests', () => {
       newHarness.setClient(null as any);
 
       await expect(
-        newHarness.emitEvent('ready')
+        newHarness.emitEvent('clientReady')
       ).rejects.toThrow('Client nie został ustawiony');
     });
 

@@ -1,8 +1,8 @@
 import { Client, Partials, GatewayIntentBits } from 'discord.js';
 import { CommandHandler } from './handlers/CommandHandler';
 import { EventHandler } from './handlers/EventHandler';
-import flushXp, { startXpFlushScheduler } from './events/ready/xpFlush';
-import { startMonthlyStatsFlushScheduler } from './events/ready/monthlyStatsFlush';
+import flushXp, { startXpFlushScheduler } from './events/clientReady/xpFlush';
+import { startMonthlyStatsFlushScheduler } from './events/clientReady/monthlyStatsFlush';
 import xpCache from './cache/xpCache';
 import { flushMonthlyStats } from './cache/monthlyStatsCache';
 import logger from './utils/logger';

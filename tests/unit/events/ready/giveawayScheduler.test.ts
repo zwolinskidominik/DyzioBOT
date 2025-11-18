@@ -82,7 +82,7 @@ function makeClient(options: any = {}) {
   return { client, edit, reply, send, messagesFetch, channel };
 }
 
-import giveawayScheduler from '../../../../src/events/ready/giveawayScheduler';
+import giveawayScheduler from '../../../../src/events/clientReady/giveawayScheduler';
 
 function resetState() {
   scheduled = [];
@@ -97,7 +97,7 @@ async function runSchedulerCallback() {
   await Promise.resolve();
 }
 
-describe('ready/giveawayScheduler', () => {
+describe('clientReady/giveawayScheduler', () => {
   beforeEach(resetState);
 
   test('single giveaway processed updates embed', async () => {

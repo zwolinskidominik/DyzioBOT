@@ -1,5 +1,5 @@
-import questionScheduler from '../../../../src/events/ready/questionScheduler';
-import birthdayScheduler from '../../../../src/events/ready/birthdayScheduler';
+import questionScheduler from '../../../../src/events/clientReady/questionScheduler';
+import birthdayScheduler from '../../../../src/events/clientReady/birthdayScheduler';
 
 let scheduled: { expr: string, cb: Function }[] = [];
 jest.mock('node-cron', () => ({ schedule: (expr:string, cb:Function)=> { scheduled.push({ expr, cb }); return {}; } }));
@@ -31,7 +31,7 @@ function makeClient(){
   return { channels, guilds, users: { fetch: jest.fn(async (id:string)=> ({ id })) }, _internals: { send } } as any;
 }
 
-describe('ready/schedulers isolation', () => {
+describe('clientReady/schedulers isolation', () => {
   beforeEach(() => { scheduled = []; warn.mockReset(); error.mockReset(); info.mockReset(); findOneQCfg.mockReset(); qFind.mockReset(); qDelete.mockReset(); findBirthdayCfgs.mockReset(); findBirthdays.mockReset(); });
   afterEach(() => { jest.clearAllMocks(); });
 

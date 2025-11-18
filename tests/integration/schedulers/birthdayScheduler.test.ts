@@ -109,7 +109,7 @@ describe('Birthday Scheduler Integration Tests', () => {
         fetch: jest.fn().mockResolvedValue({ id: 'user-123', username: 'TestUser' }),
       },
     } as any;
-    const birthdayScheduler = require('../../../src/events/ready/birthdayScheduler');
+    const birthdayScheduler = require('../../../src/events/clientReady/birthdayScheduler');
     await birthdayScheduler.default(mockClient);
     const cronModule = require('node-cron');
     const scheduleCall = cronModule.schedule.mock.calls[cronModule.schedule.mock.calls.length - 1];

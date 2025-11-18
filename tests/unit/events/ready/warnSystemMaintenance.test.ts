@@ -1,4 +1,4 @@
-import run from '../../../../src/events/ready/warnSystemMaintenance';
+import run from '../../../../src/events/clientReady/warnSystemMaintenance';
 
 let scheduled: Function[] = [];
 jest.mock('node-cron', () => ({ schedule: (_e:string, cb:Function)=> { scheduled.push(cb); return {}; } }));
@@ -14,7 +14,7 @@ function makeWarnDoc(oldCount:number, newCount:number){
   return { userId: 'u1', warnings: [ { date: new Date(Date.now() - oldCount) }, { date: new Date(Date.now() - newCount) } ], save: jest.fn(async()=>{}) } as any;
 }
 
-describe('ready/warnSystemMaintenance', () => {
+describe('clientReady/warnSystemMaintenance', () => {
   beforeEach(()=> { scheduled=[]; info.mockReset(); error.mockReset(); findWarns.mockReset(); });
 
   test('cron registration + success removes expired and logs info', async () => {

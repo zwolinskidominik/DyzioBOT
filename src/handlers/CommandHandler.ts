@@ -37,7 +37,7 @@ export class CommandHandler {
     this.loadValidations(join(__dirname, '..', 'validations'));
 
     this.client.on('interactionCreate', this.handleInteraction.bind(this));
-    this.client.once('ready', async () => {
+    this.client.once('clientReady', async () => {
       if (this.config.bulkRegister) {
         await this.clearCommands()
           .then(() => console.log('✅ Wyczyszczono wszystkie komendy.'))
@@ -265,11 +265,17 @@ export class CommandHandler {
         client: this.client,
       });
     } catch (error) {
-  logger.error(`❌ Błąd podczas wykonywania komendy "${interaction.commandName}": ${error}`);
-      await this.respond(interaction, {
-        content: 'Wystąpił błąd podczas wykonywania komendy.',
-        flags: MessageFlags.Ephemeral,
-      });
+      logger.error(`❌ Błąd podczas wykonywania komendy "${interaction.commandName}": ${error}`);
+      
+      // Sprawdź czy można jeszcze odpowiedzieć
+      try {
+        await this.respond(interaction, {
+          content: 'Wystąpił błąd podczas wykonywania komendy.',
+          flags: MessageFlags.Ephemeral,
+        });
+      } catch (replyError) {
+        logger.error(`❌ Nie udało się wysłać komunikatu o błędzie: ${replyError}`);
+      }
     }
   }
 

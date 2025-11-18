@@ -4,7 +4,7 @@ import { LevelModel } from '../../models/Level';
 import { notifyLevelUp } from '../../services/levelNotifier';
 import { computeLevelProgress } from '../../utils/levelMath';
 import xpCache from '../../cache/xpCache';
-import flushXp from '../../events/ready/xpFlush';
+import flushXp from '../../events/clientReady/xpFlush';
 
 export const data = new SlashCommandBuilder()
   .setName('xp')
@@ -94,6 +94,9 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
 
       xpCache.invalidateUser(gid, user.id);
       await flushXp();
+
+      // Wywołaj notifyLevelUp aby zsynchronizować role nagrody
+      await notifyLevelUp(interaction.client, gid, user.id, calculatedLevel).catch(() => null);
 
       return interaction.editReply({
         content: `🔧 Ustawiono **${numericValue}** punktów XP użytkownikowi <@${user.id}>`,

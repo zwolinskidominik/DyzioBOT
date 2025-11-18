@@ -42,7 +42,7 @@ export default async function run(oldState: VoiceState, newState: VoiceState): P
       }
     }
 
-    await cleanupEmptyTempChannel(oldState);
+    await cleanupEmptyTempChannel(oldState, newState);
   } catch (error: unknown) {
     const msg = error instanceof Error ? (error.stack ?? error.message) : String(error);
     logger.error(`Błąd podczas obsługi voiceStateUpdate: ${msg}`);
@@ -227,7 +227,7 @@ async function moveUserToChannel(newState: VoiceState, newChannel: VoiceChannel)
   );
 }
 
-async function cleanupEmptyTempChannel(oldState: VoiceState): Promise<void> {
+async function cleanupEmptyTempChannel(oldState: VoiceState, newState: VoiceState): Promise<void> {
   if (!oldState.channel) {
     return;
   }
@@ -240,7 +240,10 @@ async function cleanupEmptyTempChannel(oldState: VoiceState): Promise<void> {
     return;
   }
 
-  if (oldState.member?.id === tempChannel.ownerId && oldState.channel instanceof VoiceChannel) {
+  const ownerLeftChannel = oldState.member?.id === tempChannel.ownerId 
+    && oldState.channelId !== newState.channelId;
+
+  if (ownerLeftChannel && oldState.channel instanceof VoiceChannel) {
     const remainingMembers = Array.from(oldState.channel.members.values()).filter(
       (member) => !member.user.bot
     );
@@ -326,9 +329,17 @@ async function cleanupEmptyTempChannel(oldState: VoiceState): Promise<void> {
         content: `👑 Poprzedni właściciel opuścił kanał. Własność przekazana użytkownikowi <@${newOwner.id}>`,
       });
 
-      logger.info(`Przekazano własność kanału ${oldState.channel.name} od ${oldState.member.id} do ${newOwner.id}`);
+      logger.debug(`Przekazano własność kanału ${oldState.channel.name} od ${oldState.member.id} do ${newOwner.id}`);
       return;
     }
+  }
+
+  if (!oldState.channel) {
+    logger.warn(`Kanał został już usunięty przed cleanup`);
+    await TempChannelModel.findOneAndDelete({
+      channelId: oldState.channelId,
+    });
+    return;
   }
 
   if (oldState.channel.members.size > 0) {

@@ -56,16 +56,16 @@ describe('EventHandler integration (filesystem + multi handlers)', () => {
 
   test('loads handlers, filters files, preserves order, breaks on true', async () => {
     const structure = {
-      ready: ['a.ts', 'b.ts', 'c.ts'],
+      clientReady: ['a.ts', 'b.ts', 'c.ts'],
       messageCreate: ['ignored.txt', 'handler.js', 'bad.d.ts', 'map.js.map', 'nofunc.ts'],
       emptyDir: [],
     };
     const { eventsDir } = mockFs(structure);
 
     const executed: string[] = [];
-    mockEventModule(path.join(eventsDir, 'ready', 'a.ts'), { default: () => { executed.push('a'); } });
-    mockEventModule(path.join(eventsDir, 'ready', 'b.ts'), { default: () => { executed.push('b'); return true; } });
-    mockEventModule(path.join(eventsDir, 'ready', 'c.ts'), { default: () => { executed.push('c'); } });
+    mockEventModule(path.join(eventsDir, 'clientReady', 'a.ts'), { default: () => { executed.push('a'); } });
+    mockEventModule(path.join(eventsDir, 'clientReady', 'b.ts'), { default: () => { executed.push('b'); return true; } });
+    mockEventModule(path.join(eventsDir, 'clientReady', 'c.ts'), { default: () => { executed.push('c'); } });
 
     mockEventModule(path.join(eventsDir, 'messageCreate', 'handler.js'), { default: () => { executed.push('mc'); } });
     mockEventModule(path.join(eventsDir, 'messageCreate', 'nofunc.ts'), { something: 123 });
@@ -75,11 +75,11 @@ describe('EventHandler integration (filesystem + multi handlers)', () => {
   new EventHandler(client);
   const mockLogger = require('../../../src/utils/logger').default as { warn: jest.Mock; error: jest.Mock };
 
-    expect(Object.keys(handlers).sort()).toEqual(['messageCreate', 'ready']);
-    expect(handlers.ready).toHaveLength(1);
+    expect(Object.keys(handlers).sort()).toEqual(['clientReady', 'messageCreate']);
+    expect(handlers.clientReady).toHaveLength(1);
     expect(handlers.messageCreate).toHaveLength(1);
 
-    await handlers.ready[0]();
+    await handlers.clientReady[0]();
     expect(executed).toEqual(['a', 'b']);
 
     await handlers.messageCreate[0]({} as any);
@@ -97,20 +97,20 @@ describe('EventHandler error resilience (continues after handler throws)', () =>
   });
 
   test('continues executing remaining handlers when one throws', async () => {
-    const structure = { ready: ['one.ts', 'two.ts'] };
+    const structure = { clientReady: ['one.ts', 'two.ts'] };
     const { eventsDir } = mockFs(structure);
     const executed: string[] = [];
 
-    mockEventModule(path.join(eventsDir, 'ready', 'one.ts'), { default: () => { executed.push('one'); throw new Error('fail'); } });
-    mockEventModule(path.join(eventsDir, 'ready', 'two.ts'), { default: () => { executed.push('two'); } });
+    mockEventModule(path.join(eventsDir, 'clientReady', 'one.ts'), { default: () => { executed.push('one'); throw new Error('fail'); } });
+    mockEventModule(path.join(eventsDir, 'clientReady', 'two.ts'), { default: () => { executed.push('two'); } });
 
   const { client, handlers } = makeClient();
   const { EventHandler } = require('../../../src/handlers/EventHandler');
   new EventHandler(client);
   const mockLogger = require('../../../src/utils/logger').default as { warn: jest.Mock; error: jest.Mock };
 
-    expect(handlers.ready).toHaveLength(1);
-    await handlers.ready[0]();
+    expect(handlers.clientReady).toHaveLength(1);
+    await handlers.clientReady[0]();
     expect(executed).toEqual(['one', 'two']);
   expect(mockLogger.error).toHaveBeenCalled();
   });

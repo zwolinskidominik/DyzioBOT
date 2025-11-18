@@ -171,7 +171,7 @@ DyzioBOT/
        misc/              # Miscellaneous commands
        moderation/        # Moderation commands
     events/               # Discord event handlers
-       ready/             # Bot ready events
+       clientReady/       # Bot ready events
        messageCreate/     # Message events
        interactionCreate/ # Button/select menu interactions
        guildMemberAdd/    # Member join events

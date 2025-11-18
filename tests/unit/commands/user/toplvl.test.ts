@@ -14,7 +14,7 @@ jest.mock('../../../../src/models/Level', () => ({
   LevelModel: mockLevelModel,
 }));
 
-jest.mock('../../../../src/events/ready/xpFlush', () => ({
+jest.mock('../../../../src/events/clientReady/xpFlush', () => ({
   __esModule: true,
   default: mockFlushXp,
 }));

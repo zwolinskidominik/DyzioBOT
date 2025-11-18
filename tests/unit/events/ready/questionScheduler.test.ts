@@ -1,4 +1,4 @@
-import run from '../../../../src/events/ready/questionScheduler';
+import run from '../../../../src/events/clientReady/questionScheduler';
 
 let scheduled: Function[] = [];
 jest.mock('node-cron', () => ({ schedule: (_expr:string, cb:Function)=> { scheduled.push(cb); return {}; } }));
@@ -26,7 +26,7 @@ function makeClient(){
 
 async function runSched(){ await scheduled[0](); }
 
-describe('ready/questionScheduler', () => {
+describe('clientReady/questionScheduler', () => {
   beforeEach(()=> { scheduled=[]; warn.mockReset(); error.mockReset(); info.mockReset(); findOneCfg.mockReset(); questionFind.mockReset(); findByIdAndDelete.mockReset(); });
 
   test('registers cron and success path posts question & reactions', async () => {

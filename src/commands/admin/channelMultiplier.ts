@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { LevelConfigModel } from '../../models/LevelConfig';
 
 export const data = new SlashCommandBuilder()
@@ -64,7 +64,7 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
 
     return interaction.reply({
       content: `✅ Ustawiono mnożnik **${multiplier}x** dla kanału ${channel}`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -80,7 +80,7 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
 
     return interaction.reply({
       content: `✅ Usunięto mnożnik XP dla kanału ${channel}`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
@@ -90,7 +90,7 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
     if (!config || !config.channelMultipliers || config.channelMultipliers.length === 0) {
       return interaction.reply({
         content: '📊 Brak ustawionych mnożników XP dla kanałów',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -100,12 +100,12 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
 
     return interaction.reply({
       content: `📊 **Mnożniki XP dla kanałów:**\n${list}`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   return interaction.reply({
     content: '❌ Nieznana podkomenda',
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
