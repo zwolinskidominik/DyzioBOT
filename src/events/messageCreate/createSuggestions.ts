@@ -6,6 +6,7 @@ import {
   ActionRowBuilder,
   TextChannel,
   ThreadAutoArchiveDuration,
+  ChannelType as ChannelTypeEnum,
 } from 'discord.js';
 import { SuggestionConfigurationModel } from '../../models/SuggestionConfiguration';
 import { SuggestionModel } from '../../models/Suggestion';
@@ -17,7 +18,9 @@ import logger from '../../utils/logger';
 
 export default async function run(message: Message): Promise<void> {
   try {
-    if (!shouldProcessMessage(message)) return;
+    if (!shouldProcessMessage(message)) {
+      return;
+    }
 
     const guildId = message.guild!.id;
     const botId = message.client.user!.id;
@@ -52,8 +55,6 @@ export default async function run(message: Message): Promise<void> {
       suggestionText
     );
 
-    await createDiscussionThread(message.channel as TextChannel, suggestionMessage, suggestionText);
-
     const suggestionEmbed = createSuggestionEmbed(botId, message, suggestionText);
     const components = createVotingButtons(botId, newSuggestion.suggestionId);
 
@@ -62,6 +63,8 @@ export default async function run(message: Message): Promise<void> {
       embeds: [suggestionEmbed],
       components: [components],
     });
+
+    await createDiscussionThread(message.channel as TextChannel, suggestionMessage, suggestionText);
   } catch (error) {
     logger.error(`Błąd podczas tworzenia sugestii: ${error}`);
     try {
@@ -75,7 +78,11 @@ export default async function run(message: Message): Promise<void> {
 }
 
 function shouldProcessMessage(message: Message): boolean {
+  // Skip bot messages (including self)
   if (message.author.bot) return false;
+  
+  // Skip if author is the client itself (double check)
+  if (message.author.id === message.client.user?.id) return false;
 
   if (message.channel.type === ChannelType.DM || message.channel.type === ChannelType.GroupDM) {
     return false;
@@ -113,8 +120,8 @@ async function createDiscussionThread(
     await channel.threads.create({
       name: threadName,
       autoArchiveDuration: ThreadAutoArchiveDuration.OneDay,
-      startMessage,
       reason: 'Wątek dyskusyjny dla sugestii',
+      type: ChannelType.PublicThread,
     });
   } catch (error) {
     logger.error(`Nie można utworzyć wątku dyskusyjnego: ${error}`);

@@ -18,7 +18,6 @@ export const data = new SlashCommandBuilder()
 export const options = {
   userPermissions: [PermissionFlagsBits.MuteMembers],
   botPermissions: [PermissionFlagsBits.MuteMembers],
-  deleted: true,
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {

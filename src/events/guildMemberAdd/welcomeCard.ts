@@ -56,19 +56,32 @@ export default async function run(member: GuildMember): Promise<void> {
     const avatar = member.user.displayAvatarURL({ extension: 'png', size: 256 });
 
     const rulesChannelId = config.rulesChannelId || 'CHANNEL_ID_REGULAMIN';
+    const rolesChannelId = config.rolesChannelId || 'CHANNEL_ID_ROLE';
     const chatChannelId = config.chatChannelId || 'CHANNEL_ID_CHAT';
+
+    const defaultMessage = 
+      `### Witaj {user} na {server}\n\n` +
+      `**Witamy na pokładzie!**\n` +
+      `Gratulacje, właśnie wbiłeś/aś do miejsca, w którym gry są poważniejsze niż życie… prawie.\n\n` +
+      `➔ Przeczytaj {rulesChannel}\n` +
+      `➔ Wybierz role {rolesChannel}\n` +
+      `➔ Przywitaj się z nami {chatChannel}\n\n` +
+      `**Rozgość się i znajdź ekipę do grania.**`;
+
+    let message = (config.welcomeMessage && config.welcomeMessage.trim()) || defaultMessage;
+    
+    message = message
+      .replace(/{user}/g, `<@${member.user.id}>`)
+      .replace(/{server}/g, member.guild.name)
+      .replace(/{memberCount}/g, member.guild.memberCount.toString())
+      .replace(/{username}/g, member.user.username)
+      .replace(/{rulesChannel}/g, `<#${rulesChannelId}>`)
+      .replace(/{rolesChannel}/g, `<#${rolesChannelId}>`)
+      .replace(/{chatChannel}/g, `<#${chatChannelId}>`);
 
     const embed = new EmbedBuilder()
       .setColor(COLORS.JOIN)
-      .setDescription(
-        `### Witaj <@${member.user.id}> na ${member.guild.name}\n\n` +
-        `**Witamy na pokładzie!**\n` +
-        `Gratulacje, właśnie wbiłeś/aś do miejsca, w którym gry są poważniejsze niż życie… prawie.\n\n` +
-        `➔ Przeczytaj <#${rulesChannelId}>\n` +
-        `➔ Spersonalizuj swój profil <id:customize>\n` +
-        `➔ Przywitaj się z nami <#${chatChannelId}>\n\n` +
-        `**Rozgość się i znajdź ekipę do grania.**`
-      )
+      .setDescription(message)
       .setThumbnail(avatar);
 
     if (gifData) {
@@ -80,6 +93,27 @@ export default async function run(member: GuildMember): Promise<void> {
       });
     } else {
       await channel.send({ content: `<@${member.user.id}>`, embeds: [embed] });
+    }
+
+    if (config.dmEnabled && message) {
+      try {
+        const dmMessage = message
+          .replace(/{user}/g, member.user.username)
+          .replace(/### /g, '**')
+          .replace(/<@\d+>/g, member.user.username);
+        
+        await member.send({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(COLORS.JOIN)
+              .setTitle(`Witaj na ${member.guild.name}!`)
+              .setDescription(dmMessage)
+              .setThumbnail(member.guild.iconURL({ size: 256 }) || '')
+          ]
+        });
+      } catch (dmError) {
+        logger.debug(`Nie można wysłać DM do ${member.user.tag}: ${dmError}`);
+      }
     }
   } catch (error) {
     logger.error(`Błąd w welcomeCard.ts przy userId=${member?.user?.id}: ${error}`);

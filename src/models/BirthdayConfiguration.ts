@@ -13,6 +13,9 @@ class BirthdayConfiguration {
 
   @prop({ type: () => String })
   public message?: string;
+
+  @prop({ type: () => Boolean, default: true })
+  public enabled?: boolean;
 }
 
 export const BirthdayConfigurationModel = getModelForClass(BirthdayConfiguration);

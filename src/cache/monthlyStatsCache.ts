@@ -1,6 +1,6 @@
 import { MonthlyStatsModel } from '../models/MonthlyStats';
 
-type Key = `${string}:${string}:${string}`; // guildId:userId:month
+type Key = `${string}:${string}:${string}`;
 
 interface CacheEntry {
   guildId: string;

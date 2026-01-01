@@ -5,8 +5,17 @@ class TicketConfig {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
+  @prop({ type: () => Boolean, default: true })
+  public enabled!: boolean;
+
   @prop({ required: true, type: () => String })
   public categoryId!: string;
+
+  @prop({ type: () => String })
+  public panelChannelId?: string;
+
+  @prop({ type: () => String })
+  public panelMessageId?: string;
 }
 
 export const TicketConfigModel = getModelForClass(TicketConfig);

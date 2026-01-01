@@ -12,7 +12,7 @@ export class EventHandler {
 
   public constructor(client: Client) {
     this.client = client;
-  this.loadEvents().catch((err) => logger.error(`❌ Error loading events: ${err}`));
+    this.loadEvents().catch((err) => logger.error(`❌ Error loading events: ${err}`));
   }
 
   private async loadEvents(): Promise<void> {

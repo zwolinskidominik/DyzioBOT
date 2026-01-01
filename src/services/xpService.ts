@@ -24,7 +24,6 @@ export async function modifyXp(client: Client, gid: string, uid: string, delta: 
     lvl++;
   }
 
-  // Sprawdź czy warto powiadomić (tylko jeśli poziom się zmienił)
   if (lvl !== doc.level) {
     await notifyLevelUp(client, gid, uid, lvl);
   }

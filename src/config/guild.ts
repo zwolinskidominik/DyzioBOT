@@ -60,7 +60,6 @@ export function getGuildConfig(guildId: string): IGuildConfig {
   };
 }
 
-// Test-only helper: allow tests to inspect/mutate assets for partial config scenarios
 export function __getGuildAssetsUnsafeForTests(): Record<string, IGuildConfig> {
   return GUILD_ASSETS as any;
 }

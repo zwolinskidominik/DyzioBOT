@@ -131,7 +131,6 @@ async function cleanupOldThumbnails(): Promise<void> {
 }
 
 function createStreamNotificationEmbed(
-  client: Client,
   stream: HelixStream,
   user: HelixUser,
   twitchChannel: string
@@ -140,8 +139,6 @@ function createStreamNotificationEmbed(
     color: COLORS.TWITCH,
     title: stream.title,
     description: `**Streamuje:** ${stream.gameName || 'Nieznana gra'}`,
-    footerText: client.user?.username || '',
-    footerIcon: client.user?.displayAvatarURL() || '',
     authorName: `${user.displayName} jest teraz live na Twitch! 🔴`,
     authorUrl: `https://www.twitch.tv/${twitchChannel}`,
     authorIcon: user.profilePictureUrl,
@@ -175,7 +172,7 @@ async function sendStreamNotification(
 
   const localThumbnailPath = await downloadThumbnail(thumbnailUrl, twitchChannel, stream.id);
 
-  const embed = createStreamNotificationEmbed(client, stream, user, twitchChannel);
+  const embed = createStreamNotificationEmbed(stream, user, twitchChannel);
 
   try {
     if (localThumbnailPath) {

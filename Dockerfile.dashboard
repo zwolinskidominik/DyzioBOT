@@ -1,0 +1,35 @@
+# Builder stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY dashboard-nextjs/package*.json ./
+COPY dashboard-nextjs/tsconfig.json ./
+COPY dashboard-nextjs/next.config.ts ./
+COPY dashboard-nextjs/tailwind.config.ts ./
+COPY dashboard-nextjs/postcss.config.mjs ./
+
+RUN npm ci
+
+COPY dashboard-nextjs/public ./public
+COPY dashboard-nextjs/src ./src
+
+RUN npm run build
+
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY dashboard-nextjs/package*.json ./
+
+# Instaluj TYLKO production dependencies
+RUN npm ci --only=production
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY dashboard-nextjs/next.config.ts ./next.config.ts
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

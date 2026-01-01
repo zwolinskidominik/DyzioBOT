@@ -15,9 +15,12 @@ export default async function run(member: GuildMember): Promise<void> {
       return;
     }
 
+    const botRoleId = autoRoleConfig.roleIds[0];
+    const userRoleIds = autoRoleConfig.roleIds.slice(1);
+
     const roleIdsToAssign = user.bot
-      ? [autoRoleConfig.roleIds[0]]
-      : autoRoleConfig.roleIds.slice(1);
+      ? (botRoleId && botRoleId.trim() ? [botRoleId] : [])
+      : userRoleIds;
 
     if (!roleIdsToAssign.length) {
       return;

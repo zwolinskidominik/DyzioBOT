@@ -22,6 +22,10 @@ export default async function run(client: Client): Promise<void> {
 
         for (const birthdayConfig of birthdayConfigs) {
           try {
+            if (birthdayConfig.enabled === false) {
+              continue;
+            }
+
             const guild = client.guilds.cache.get(birthdayConfig.guildId);
             if (!guild) {
               logger.warn(`Serwer nie został znaleziony: ${birthdayConfig.guildId}`);

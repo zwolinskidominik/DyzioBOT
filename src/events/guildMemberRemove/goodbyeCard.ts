@@ -25,12 +25,20 @@ export default async function run(member: GuildMember): Promise<void> {
 
     const avatar = member.user.displayAvatarURL({ size: 128 });
 
+    const defaultMessage = `Dziękujemy za wspólnie spędzony czas. Do zobaczenia! 👋`;
+
+    let message = (config.goodbyeMessage && config.goodbyeMessage.trim()) || defaultMessage;
+    
+    message = message
+      .replace(/{user}/g, member.user.tag)
+      .replace(/{server}/g, member.guild.name)
+      .replace(/{memberCount}/g, member.guild.memberCount.toString())
+      .replace(/{username}/g, member.user.username);
+
     const embed = new EmbedBuilder()
       .setColor(COLORS.LEAVE)
-      .setAuthor({ name: `${member.user.tag} opuścił/a serwer. `, iconURL: avatar })
-      .setDescription(
-        `Dziękujemy za wspólnie spędzony czas. Do zobaczenia! 👋`
-      );
+      .setAuthor({ name: `${member.user.tag} opuścił/a serwer.`, iconURL: avatar })
+      .setDescription(message);
 
     await channel.send({ embeds: [embed] });
   } catch (error) {

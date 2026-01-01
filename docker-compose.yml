@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: dyziobot
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - dyziobot-network
+    volumes:
+      - ./logs:/app/logs
+
+  dashboard:
+    build:
+      context: ./dashboard-nextjs
+      dockerfile: ../Dockerfile.dashboard
+    container_name: dyziobot-dashboard
+    restart: unless-stopped
+    env_file:
+      - dashboard-nextjs/.env.local
+    networks:
+      - dyziobot-network
+    ports:
+      - "127.0.0.1:3000:3000"
+
+networks:
+  dyziobot-network:
+    driver: bridge

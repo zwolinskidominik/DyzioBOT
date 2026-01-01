@@ -8,7 +8,7 @@ export class MonthlyStats {
   @prop({ required: true, type: () => String })
   public userId!: string;
 
-  @prop({ required: true, type: () => String }) // Format: "2025-09" (YYYY-MM)
+  @prop({ required: true, type: () => String })
   public month!: string;
 
   @prop({ default: 0, type: () => Number })

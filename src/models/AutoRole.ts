@@ -7,6 +7,9 @@ class AutoRole {
 
   @prop({ type: () => [String], default: [] })
   public roleIds!: string[];
+
+  @prop({ type: () => Boolean, default: true })
+  public enabled!: boolean;
 }
 
 export const AutoRoleModel = getModelForClass(AutoRole);

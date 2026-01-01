@@ -325,16 +325,23 @@ async function cleanupEmptyTempChannel(oldState: VoiceState, newState: VoiceStat
         }
       }
 
-      await oldState.channel.send({
-        content: `👑 Poprzedni właściciel opuścił kanał. Własność przekazana użytkownikowi <@${newOwner.id}>`,
-      });
+      try {
+        await oldState.channel.send({
+          content: `👑 Poprzedni właściciel opuścił kanał. Własność przekazana użytkownikowi <@${newOwner.id}>`,
+        });
+      } catch (error) {
+        logger.debug(`Nie można wysłać wiadomości o przekazaniu własności: ${error}`);
+      }
 
-      logger.debug(`Przekazano własność kanału ${oldState.channel.name} od ${oldState.member.id} do ${newOwner.id}`);
+      logger.debug(`Przekazano własność kanału ${oldState.channel?.name || oldState.channelId} od ${oldState.member?.id} do ${newOwner.id}`);
       return;
     }
   }
 
-  if (!oldState.channel) {
+  
+  const channelStillExists = oldState.guild.channels.cache.has(oldState.channelId!);
+  
+  if (!channelStillExists) {
     logger.warn(`Kanał został już usunięty przed cleanup`);
     await TempChannelModel.findOneAndDelete({
       channelId: oldState.channelId,
@@ -346,7 +353,7 @@ async function cleanupEmptyTempChannel(oldState: VoiceState, newState: VoiceStat
     return;
   }
 
-  if (tempChannel.controlMessageId) {
+  if (tempChannel.controlMessageId && oldState.channel) {
     try {
       const controlMessage = await oldState.channel.messages.fetch(tempChannel.controlMessageId);
       await controlMessage.delete();
@@ -355,18 +362,13 @@ async function cleanupEmptyTempChannel(oldState: VoiceState, newState: VoiceStat
     }
   }
 
-  if (!oldState.channel) {
-    logger.warn(`Kanał został już usunięty przed cleanup`);
-    await TempChannelModel.findOneAndDelete({
-      channelId: oldState.channelId,
-    });
-    return;
-  }
-
   try {
-    await retryOperation<GuildChannel>(() => oldState.channel!.delete(), 3, 1000);
+    const channel = oldState.guild.channels.cache.get(oldState.channelId!);
+    if (channel) {
+      await retryOperation(async () => await channel.delete(), 3, 1000);
+    }
   } catch (error) {
-    logger.warn(`Nie udało się usunąć kanału ${oldState.channel.id}: ${error}`);
+    logger.warn(`Nie udało się usunąć kanału ${oldState.channelId}: ${error}`);
   }
 
   await TempChannelModel.findOneAndDelete({

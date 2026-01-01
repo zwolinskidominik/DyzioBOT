@@ -26,7 +26,7 @@ const CUSTOM_ID = {
   CANCEL: 'RR_CANCEL',
 };
 
-const COLLECTION_TIMEOUT = 300_000; // 5 min
+const COLLECTION_TIMEOUT = 1_800_000; // 15 min
 const MAX_REACTIONS = 20;
 
 export const data = new SlashCommandBuilder()

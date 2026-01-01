@@ -152,7 +152,7 @@ export interface IWarnEntry {
   date: Date;
   moderatorId: string;
   moderatorTag?: string;
-  moderator?: string; // Dla wstecznej kompatybilności ze starymi ostrzeżeniami
+  moderator?: string;
 }
 
 export interface IWarnDocument {

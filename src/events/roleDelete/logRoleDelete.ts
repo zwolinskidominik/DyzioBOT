@@ -1,0 +1,25 @@
+import { Role, Client, AuditLogEvent } from 'discord.js';
+import { sendLog } from '../../utils/logHelpers';
+import { getModerator } from '../../utils/auditLogHelpers';
+
+export default async function run(role: Role, client: Client): Promise<void> {
+  try {
+    const moderator = await getModerator(role.guild, AuditLogEvent.RoleDelete, role.id);
+
+    await sendLog(client, role.guild.id, 'roleDelete', {
+      title: null,
+      description: `**🗑️ Usunięto rolę \`${role.name}\`${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
+      fields: [
+        {
+          name: '🎨 Kolor',
+          value: role.hexColor,
+          inline: true,
+        },
+      ],
+      footer: `Role ID: ${role.id}`,
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    console.error('[logRoleDelete] Error:', error);
+  }
+}

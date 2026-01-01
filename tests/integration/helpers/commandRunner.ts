@@ -82,7 +82,6 @@ export class CommandRunner {
 
   private loadRealCommands(): void {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const tsnode = require('ts-node');
       if (tsnode && typeof tsnode.register === 'function') {
         tsnode.register({

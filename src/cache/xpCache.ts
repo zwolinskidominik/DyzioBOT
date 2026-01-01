@@ -107,7 +107,6 @@ export class XpCache {
       );
     }
     
-    // Sprawdź powiadomienie raz po wszystkich level-upach
     if (levelChanged && this.client) {
       await notifyLevelUp(this.client, g, u, currentLevel).catch(() => null);
     }

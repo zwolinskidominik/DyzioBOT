@@ -4,6 +4,9 @@ class QuestionConfiguration {
   @prop({ required: true, unique: true, type: () => String })
   public guildId!: string;
 
+  @prop({ type: () => Boolean, default: true })
+  public enabled!: boolean;
+
   @prop({ required: true, type: () => String })
   public questionChannelId!: string;
 

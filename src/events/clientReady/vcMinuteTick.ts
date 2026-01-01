@@ -7,7 +7,7 @@ import monthlyStatsCache from '../../cache/monthlyStatsCache';
 
 export default function run(client: Client) {
   cron.schedule('*/30 * * * * *', async () => {
-    const currentMonth = new Date().toISOString().slice(0, 7); // "2025-11"
+    const currentMonth = new Date().toISOString().slice(0, 7);
     
     for (const guild of client.guilds.cache.values()) {
       const cfg = await LevelConfigModel.findOne({ guildId: guild.id }).lean();

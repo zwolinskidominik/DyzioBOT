@@ -3,13 +3,11 @@ import { CanvasRankCard } from '../../../src/utils/canvasRankCard';
 import { CanvasLeaderboardCard } from '../../../src/utils/canvasLeaderboardCard';
 import { createCanvas } from 'canvas';
 
-// Mock loadImage to avoid network calls and timeouts
 jest.mock('canvas', () => {
   const actual = jest.requireActual('canvas');
   return {
     ...actual,
     loadImage: jest.fn(async () => {
-      // Return a simple 1x1 canvas as mock image
       const mockCanvas = actual.createCanvas(1, 1);
       return mockCanvas;
     }),

@@ -1,12 +1,39 @@
+# Dependencies
 node_modules
-src/utils/formatResults.js
-assets/*.*
-assets/thumbnails/*
-!assets/lobby/
-assets/lobby/*.gif
-assets/lobby/*.md
-.env
+dashboard-nextjs/node_modules
+
+# Build
 dist
+.next
+dashboard-nextjs/.next
+
+# Environment Vars
+.env
+/.env
+.env.local
+dashboard-nextjs/.env.local
+*.env.local
+*.env
+
+# Logs
+/logs/
+*.log
+
+# Coverage
 coverage
-logs
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Typescript
+*.tsbuildinfo
+dashboard-nextjs/*.tsbuildinfo
+
+# Next.js generated
+next-env.d.ts
+dashboard-nextjs/next-env.d.ts
+
+# IDE
 .vscode
+.idea

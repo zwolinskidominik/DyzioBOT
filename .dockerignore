@@ -1,0 +1,62 @@
+# Dependencies
+node_modules
+dashboard-nextjs/node_modules
+
+# Build outputs
+dist
+.next
+dashboard-nextjs/.next
+*.tsbuildinfo
+dashboard-nextjs/*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+dashboard-nextjs/.env.*
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+tests
+coverage
+jest.config.js
+stryker.conf.json
+
+# Documentation
+*.md
+README.md
+LICENSE
+
+# IDE & Editors
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Config files (not needed in container)
+.prettierignore
+.prettierrc
+.eslintrc*
+settings.json
+
+# Dashboard (exclude for bot build)
+dashboard-nextjs
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore

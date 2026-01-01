@@ -267,7 +267,6 @@ export class CommandHandler {
     } catch (error) {
       logger.error(`❌ Błąd podczas wykonywania komendy "${interaction.commandName}": ${error}`);
       
-      // Sprawdź czy można jeszcze odpowiedzieć
       try {
         await this.respond(interaction, {
           content: 'Wystąpił błąd podczas wykonywania komendy.',

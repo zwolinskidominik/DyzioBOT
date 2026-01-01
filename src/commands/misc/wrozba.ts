@@ -73,6 +73,8 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     usage.lastUsed = now;
     await usage.save();
 
+    await FortuneModel.deleteOne({ content: random.content }).exec();
+
     const fortuneEmbed: EmbedBuilder = createBaseEmbed({
       color: COLORS.FORTUNE,
       title: '🔮 Twoja Wróżba',

@@ -16,13 +16,10 @@ export async function notifyLevelUp(c: Client, gid: string, uid: string, lvl: nu
   }
   if (!m) return;
 
-  // Zawsze synchronizuj role nagrody
   await syncRewardRoles(m, lvl, cfg.roleRewards);
 
-  // Sprawdź czy ten poziom ma przypisaną nagrodę
   const rewardForLevel = cfg.roleRewards?.find(r => r.level === lvl);
   
-  // Wysyłaj powiadomienie tylko gdy poziom ma nagrodę (niezależnie czy użytkownik już miał rolę)
   if (!rewardForLevel) return;
 
   const ch = g.channels.cache.get(cfg.notifyChannelId) as TextChannel | undefined;
@@ -30,7 +27,8 @@ export async function notifyLevelUp(c: Client, gid: string, uid: string, lvl: nu
 
   const am: MessageMentionOptions = { users: [uid as Snowflake], roles: [] };
 
-  const tpl = cfg.rewardMessage?.trim() ?? '🎉 {user} zdobył nową rolę {roleId} za poziom **{level}**!';
+  // Use individual reward message if set, otherwise use global rewardMessage
+  const tpl = rewardForLevel.rewardMessage?.trim() || cfg.rewardMessage?.trim() || '🎉 {user} zdobył nową rolę {roleId} za poziom **{level}**!';
 
   await ch
     .send({

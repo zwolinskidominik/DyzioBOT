@@ -119,7 +119,6 @@ beforeEach(() => {
 });
 
 it('should trigger birthday check at midnight', () => {
-  // Advance time and verify scheduler execution
   jest.advanceTimersByTime(24 * 60 * 60 * 1000);
 });
 ```

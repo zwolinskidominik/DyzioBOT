@@ -95,7 +95,6 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
       xpCache.invalidateUser(gid, user.id);
       await flushXp();
 
-      // Wywołaj notifyLevelUp aby zsynchronizować role nagrody
       await notifyLevelUp(interaction.client, gid, user.id, calculatedLevel).catch(() => null);
 
       return interaction.editReply({

@@ -14,7 +14,6 @@ async function waitFor(predicate: () => boolean, { timeoutMs = 5000, intervalMs 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (predicate()) return;
-    // eslint-disable-next-line no-await-in-loop
     await sleep(intervalMs);
   }
   throw new Error('waitFor: condition not met in time');
