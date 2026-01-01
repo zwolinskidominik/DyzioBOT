@@ -6,6 +6,7 @@ WORKDIR /app
 # Instaluj build dependencies dla canvas
 RUN apk add --no-cache \
     python3 \
+    py3-setuptools \
     make \
     g++ \
     cairo-dev \
