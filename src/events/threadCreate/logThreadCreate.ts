@@ -2,7 +2,7 @@ import { ThreadChannel, Client, AuditLogEvent } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 
-export default async function run(thread: ThreadChannel, newlyCreated: boolean, client: Client): Promise<void> {
+export default async function run(thread: ThreadChannel, _newlyCreated: boolean, client: Client): Promise<void> {
   try {
     if (!thread.guild) {
       console.warn('[logThreadCreate] Thread guild is undefined');

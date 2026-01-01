@@ -6,7 +6,6 @@ import {
   ActionRowBuilder,
   TextChannel,
   ThreadAutoArchiveDuration,
-  ChannelType as ChannelTypeEnum,
 } from 'discord.js';
 import { SuggestionConfigurationModel } from '../../models/SuggestionConfiguration';
 import { SuggestionModel } from '../../models/Suggestion';
@@ -110,7 +109,7 @@ async function createSuggestionRecord(
 
 async function createDiscussionThread(
   channel: TextChannel,
-  startMessage: Message,
+  _startMessage: Message,
   suggestionText: string
 ): Promise<void> {
   const threadName =
