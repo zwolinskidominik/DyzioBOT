@@ -19,10 +19,19 @@ export default async function run(): Promise<void> {
           const removed = before - afterCount;
           
           if (removed > 0) {
-            await warn.save();
-            logger.info(
-              `🍂 Wygasły ${removed} ostrzeżeń dla userId=${warn.userId}, pozostało ${afterCount}`
-            );
+            try {
+              await warn.save();
+              logger.info(
+                `🍂 Wygasły ${removed} ostrzeżeń dla userId=${warn.userId}, pozostało ${afterCount}`
+              );
+            } catch (saveError) {
+              logger.error(`Błąd zapisu dla userId=${warn.userId}: ${saveError}`, saveError);
+              // Jeśli błąd walidacji, usuń cały dokument z błędnymi danymi
+              if (saveError instanceof Error && saveError.message.includes('validation failed')) {
+                await WarnModel.deleteOne({ _id: warn._id });
+                logger.warn(`Usunięto uszkodzony dokument ostrzeżeń dla userId=${warn.userId}`);
+              }
+            }
           }
         }
       } catch (error) {
