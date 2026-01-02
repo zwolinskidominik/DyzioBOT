@@ -23,8 +23,8 @@ WORKDIR /app
 
 COPY package*.json ./
 
-# Instaluj TYLKO production dependencies
-RUN npm ci --only=production
+# Instaluj production dependencies + typescript (needed for next.config.ts)
+RUN npm ci --only=production && npm install typescript
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
