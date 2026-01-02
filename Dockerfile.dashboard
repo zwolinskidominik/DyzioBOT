@@ -7,17 +7,16 @@ WORKDIR /app
 ARG NEXT_PUBLIC_DISCORD_CLIENT_ID
 ENV NEXT_PUBLIC_DISCORD_CLIENT_ID=${NEXT_PUBLIC_DISCORD_CLIENT_ID}
 
-# Copy dashboard files
-COPY dashboard-nextjs/package*.json ./
-COPY dashboard-nextjs/tsconfig.json ./
-COPY dashboard-nextjs/next.config.ts ./
-COPY dashboard-nextjs/tailwind.config.ts ./
-COPY dashboard-nextjs/postcss.config.mjs ./
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY next.config.ts ./
+COPY tailwind.config.ts ./
+COPY postcss.config.mjs ./
 
 RUN npm ci
 
-COPY dashboard-nextjs/public ./public
-COPY dashboard-nextjs/src ./src
+COPY public ./public
+COPY src ./src
 
 RUN npm run build
 
@@ -26,18 +25,16 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy dashboard package files
-COPY dashboard-nextjs/package*.json ./
+COPY package*.json ./
 
 # Instaluj production dependencies + typescript (needed for next.config.ts)
 RUN npm ci --only=production && npm install typescript
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY dashboard-nextjs/next.config.ts ./next.config.ts
+COPY next.config.ts ./next.config.ts
 
-# Copy assets directory for GIFs (from root of project)
-COPY assets /assets
+# Assets będą montowane jako volume, nie kopiujemy ich podczas buildu
 
 EXPOSE 3000
 

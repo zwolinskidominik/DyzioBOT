@@ -14,8 +14,8 @@ services:
 
   dashboard:
     build:
-      context: .
-      dockerfile: Dockerfile.dashboard
+      context: ./dashboard-nextjs
+      dockerfile: ../Dockerfile.dashboard
     container_name: dyziobot-dashboard
     restart: unless-stopped
     env_file:
@@ -24,6 +24,8 @@ services:
       - dyziobot-network
     ports:
       - "127.0.0.1:3000:3000"
+    volumes:
+      - ./assets:/assets:ro
 
 networks:
   dyziobot-network:
