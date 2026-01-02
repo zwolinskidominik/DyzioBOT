@@ -14,8 +14,8 @@ services:
 
   dashboard:
     build:
-      context: ./dashboard-nextjs
-      dockerfile: ../Dockerfile.dashboard
+      context: .
+      dockerfile: Dockerfile.dashboard
     container_name: dyziobot-dashboard
     restart: unless-stopped
     env_file:
