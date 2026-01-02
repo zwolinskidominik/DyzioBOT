@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, ArrowLeft, Hash, Lightbulb, ThumbsUp, ThumbsDown, Trash2 } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Hash, Lightbulb, ThumbsUp, ThumbsDown, Trash2, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -525,14 +525,32 @@ export default function SuggestionsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm break-words whitespace-pre-wrap">{suggestion.content}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteSuggestion(suggestion.suggestionId)}
-                        className="shrink-0 h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="h-8 w-8 p-0 hover:bg-bot-primary/10 hover:text-bot-primary"
+                          title="Skocz do wiadomości"
+                        >
+                          <a
+                            href={`https://discord.com/channels/${guildId}/${config?.suggestionChannelId}/${suggestion.messageId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteSuggestion(suggestion.suggestionId)}
+                          className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                          title="Usuń sugestię"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                     </div>
                     
