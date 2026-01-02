@@ -3,6 +3,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build-time argument dla NEXT_PUBLIC_
+ARG NEXT_PUBLIC_DISCORD_CLIENT_ID
+ENV NEXT_PUBLIC_DISCORD_CLIENT_ID=${NEXT_PUBLIC_DISCORD_CLIENT_ID}
+
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY next.config.ts ./
