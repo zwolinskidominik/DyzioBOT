@@ -166,7 +166,7 @@ export default function Sidebar() {
                 <button
                   onClick={() => {
                     setGuildOpen(false);
-                    window.open(`https://discord.com/api/oauth2/authorize?client_id=1248419676740915310&permissions=8&scope=bot%20applications.commands`, "_blank");
+                    window.open(`https://discord.com/api/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1248419676740915310"}&permissions=8&scope=bot%20applications.commands`, "_blank");
                   }}
                   className="w-full flex items-center gap-3 p-3 hover:bg-accent transition-colors text-bot-light"
                 >
