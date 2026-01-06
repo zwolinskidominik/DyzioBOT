@@ -26,13 +26,11 @@ interface EmojiPickerProps {
   buttonText?: string;
 }
 
-// Emoji with their Discord names for searching
 interface EmojiWithName {
   emoji: string;
   names: string[];
 }
 
-// Common Unicode emojis grouped by category with searchable names
 const unicodeEmojis: Record<string, EmojiWithName[]> = {
   "Emocje": [
     { emoji: "😀", names: ["grinning", "smile"] },
@@ -1029,7 +1027,6 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
     if (typeof emoji === "string") {
       onEmojiSelect(emoji);
     } else {
-      // For custom emojis, use Discord format: <:name:id> or <a:name:id> for animated
       const format = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
       onEmojiSelect(format);
     }
@@ -1044,7 +1041,6 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
     const filtered = emojiList.filter((item) => {
       if (search === "") return true;
       const searchLower = search.toLowerCase();
-      // Search in emoji names
       return item.names.some(name => name.includes(searchLower));
     });
     if (filtered.length > 0) {

@@ -5,7 +5,7 @@ import { getFromCache, setInCache } from "@/lib/serverCache";
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes - prevents Discord rate limits
+const CACHE_TTL = 5 * 60 * 1000;
 
 export async function GET(
   request: Request,

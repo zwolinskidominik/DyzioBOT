@@ -81,8 +81,8 @@ function isVoiceChannel(channel: GuildChannel): channel is VoiceChannel {
 }
 
 async function getMonitoredChannels(guildId: string): Promise<string[]> {
-  const monitoredChannels = await TempChannelConfigurationModel.find({ guildId });
-  return monitoredChannels.map((config) => config.channelId);
+  const config = await TempChannelConfigurationModel.findOne({ guildId });
+  return config?.channelIds || [];
 }
 
 async function createTemporaryChannel(newState: VoiceState): Promise<VoiceChannel> {

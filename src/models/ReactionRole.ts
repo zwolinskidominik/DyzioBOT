@@ -5,6 +5,9 @@ class ReactionRole {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
+  @prop({ default: false, type: () => Boolean })
+  public enabled!: boolean;
+
   @prop({ required: true, type: () => String })
   public channelId!: string;
 

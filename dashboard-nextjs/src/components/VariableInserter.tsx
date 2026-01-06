@@ -3,9 +3,9 @@
 import { useRef, useEffect, useState } from "react";
 
 interface Variable {
-  name: string;        // User-friendly name for button
-  display: string;     // User-friendly display in editor
-  value: string;       // Backend format (e.g., {user})
+  name: string;
+  display: string;
+  value: string;
   description: string;
 }
 
@@ -91,7 +91,6 @@ export default function VariableInserter({
       currentOffset += nodeLength;
     }
     
-    // If offset is beyond content, place at end
     const range = document.createRange();
     const selection = window.getSelection();
     range.selectNodeContents(root);
@@ -120,7 +119,6 @@ export default function VariableInserter({
     const temp = document.createElement('div');
     temp.innerHTML = html;
     
-    // Replace <br> tags with newline character before processing
     const brs = temp.querySelectorAll('br');
     brs.forEach((br) => {
       const textNode = document.createTextNode('\n');

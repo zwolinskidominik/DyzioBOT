@@ -67,18 +67,15 @@ export async function POST(
 
     await connectDB();
     
-    // Check if streamer already exists for this user
     const existing = await TwitchStreamer.findOne({ guildId, userId });
     
     if (existing) {
-      // Update existing streamer
       existing.twitchChannel = twitchChannel.toLowerCase().trim();
       existing.active = true;
       await existing.save();
       return NextResponse.json(existing.toObject());
     }
     
-    // Create new streamer
     const streamer = await TwitchStreamer.create({
       guildId,
       twitchChannel: twitchChannel.toLowerCase().trim(),

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth.config";
 import mongoose from 'mongoose';
+import { createAuditLog } from "@/lib/auditLog";
 
 export const dynamic = 'force-dynamic';
 
@@ -84,6 +87,11 @@ export async function POST(
   { params }: { params: Promise<{ guildId: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { guildId } = await params;
     const body = await request.json();
     await connectDB();
@@ -93,6 +101,21 @@ export async function POST(
       { ...body, guildId },
       { upsert: true, new: true }
     );
+
+    await createAuditLog({
+      guildId,
+      userId: session.user.id || session.user.name || 'unknown',
+      username: session.user.name || session.user.email || 'Unknown User',
+      action: 'levels.update',
+      module: 'levels',
+      description: 'Zaktualizowano konfigurację systemu poziomów',
+      metadata: {
+        xpPerMsg: body.xpPerMsg,
+        xpPerMinVc: body.xpPerMinVc,
+        enableLevelUpMessages: body.enableLevelUpMessages,
+        roleRewards: body.roleRewards?.length || 0,
+      },
+    });
 
     return NextResponse.json({ success: true, result });
   } catch (error) {

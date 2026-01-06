@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 const autoRoleSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
   roleIds: { type: [String], default: [] },
-  enabled: { type: Boolean, default: true },
+  enabled: { type: Boolean, default: false },
 }, {
   collection: 'autoroles'
 });

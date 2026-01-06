@@ -77,10 +77,8 @@ export default async function run(message: Message): Promise<void> {
 }
 
 function shouldProcessMessage(message: Message): boolean {
-  // Skip bot messages (including self)
   if (message.author.bot) return false;
   
-  // Skip if author is the client itself (double check)
   if (message.author.id === message.client.user?.id) return false;
 
   if (message.channel.type === ChannelType.DM || message.channel.type === ChannelType.GroupDM) {
@@ -109,18 +107,17 @@ async function createSuggestionRecord(
 
 async function createDiscussionThread(
   channel: TextChannel,
-  _startMessage: Message,
+  startMessage: Message,
   suggestionText: string
 ): Promise<void> {
   const threadName =
     suggestionText.length > 97 ? `${suggestionText.slice(0, 97)}…` : suggestionText;
 
   try {
-    await channel.threads.create({
+    await startMessage.startThread({
       name: threadName,
       autoArchiveDuration: ThreadAutoArchiveDuration.OneDay,
       reason: 'Wątek dyskusyjny dla sugestii',
-      type: ChannelType.PublicThread,
     });
   } catch (error) {
     logger.error(`Nie można utworzyć wątku dyskusyjnego: ${error}`);

@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 
 const greetingsConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
-  enabled: { type: Boolean, default: true },
+  enabled: { type: Boolean, default: false },
   greetingsChannelId: { type: String, required: true },
   rulesChannelId: { type: String },
   rolesChannelId: { type: String },

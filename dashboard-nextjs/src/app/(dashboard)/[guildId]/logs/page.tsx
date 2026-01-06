@@ -32,6 +32,7 @@ interface LogEventConfig {
 
 interface LogConfig {
   guildId: string;
+  enabled?: boolean;
   logChannels: Record<string, string>;
   enabledEvents: Record<string, boolean>;
   colorOverrides: Record<string, string>;
@@ -106,6 +107,7 @@ export default function LogsPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [config, setConfig] = useState<LogConfig>({
     guildId,
+    enabled: true,
     logChannels: {},
     enabledEvents: {},
     colorOverrides: {},
@@ -132,6 +134,7 @@ export default function LogsPage() {
         setConfig({
           ...configData,
           guildId,
+          enabled: configData.enabled ?? true,
           logChannels: configData.logChannels || {},
           enabledEvents: configData.enabledEvents || {},
           colorOverrides: configData.colorOverrides || {},
@@ -340,12 +343,22 @@ export default function LogsPage() {
           }}
         >
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <FileText className="w-6 h-6 text-bot-primary" />
-              System Logów
-            </CardTitle>
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <FileText className="w-6 h-6 text-bot-primary" />
+                <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                  System Logów
+                </span>
+              </CardTitle>
+              <Switch
+                checked={config.enabled ?? true}
+                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, enabled: checked }))}
+                className="data-[state=checked]:bg-bot-primary"
+                style={{ transform: 'scale(1.5)' }}
+              />
+            </div>
             <CardDescription>
-              Konfiguruj logowanie wydarzeń na serwerze z możliwością dostosowania kolorów embedów
+              Konfiguruj automatyczne logowanie wydarzeń na serwerze
             </CardDescription>
           </CardHeader>
         </Card>

@@ -7,7 +7,6 @@ export async function GET(
   { params }: { params: Promise<{ guildId: string }> }
 ) {
   try {
-    // Quick auth check with caching
     const auth = await quickAuthCheck(request);
     if (!auth.authorized) {
       return auth.response!;
@@ -15,7 +14,6 @@ export async function GET(
 
     const { guildId } = await params;
 
-    // Check server-side cache first
     const cached = getFromCache<any>('channels', guildId);
     if (cached) {
       return NextResponse.json(cached, {
@@ -26,9 +24,8 @@ export async function GET(
       });
     }
 
-    // Fetch from Discord with timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
       const response = await fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, {
@@ -52,7 +49,6 @@ export async function GET(
 
       const channels = await response.json();
       
-      // Cache the result
       setInCache('channels', guildId, channels);
       
       return NextResponse.json(channels, {

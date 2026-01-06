@@ -14,7 +14,6 @@ export async function GET(
 
     const { guildId } = await params;
 
-    // Fetch channels from Discord API
     const response = await fetch(
       `https://discord.com/api/v10/guilds/${guildId}/channels`,
       {
@@ -34,7 +33,6 @@ export async function GET(
 
     const channels = await response.json();
     
-    // Return all channels with their basic info
     return NextResponse.json(channels);
   } catch (error) {
     console.error("Error fetching channels:", error);

@@ -4,7 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Home, Cake, Hand, TrendingUp, UserPlus, Lightbulb, Ticket, HelpCircle, MessagesSquare, Smile } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Home, Cake, Hand, TrendingUp, UserPlus, Lightbulb, Ticket, HelpCircle, MessagesSquare, Smile, BarChart3, Activity, Radio } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,10 +20,17 @@ interface GuildInfo {
   botPresent: boolean;
 }
 
+interface ModulesStatus {
+  [key: string]: boolean;
+}
+
 const modules = [
   { id: "birthdays", name: "Urodziny", icon: Cake, description: "System życzeń urodzinowych", color: "bg-pink-500" },
   { id: "greetings", name: "Powitania", icon: Hand, description: "Wiadomości powitalne i pożegnalne", color: "bg-green-500" },
   { id: "levels", name: "System Poziomów", icon: TrendingUp, description: "System XP i poziomów", color: "bg-purple-500" },
+  { id: "monthly-stats", name: "Statystyki Miesięczne", icon: BarChart3, description: "Miesięczne podsumowania aktywności", color: "bg-indigo-500" },
+  { id: "channel-stats", name: "Statystyki Kanałów", icon: Activity, description: "Dynamiczne statystyki na kanałach głosowych", color: "bg-teal-500" },
+  { id: "temp-channels", name: "Tymczasowe Kanały", icon: Radio, description: "Automatyczne tworzenie prywatnych kanałów głosowych", color: "bg-pink-500" },
   { id: "autoroles", name: "Auto-role", icon: UserPlus, description: "Automatyczne role przy dołączeniu", color: "bg-blue-500" },
   { id: "qotd", name: "Pytanie Dnia", icon: HelpCircle, description: "Codzienne pytania dla społeczności", color: "bg-cyan-500" },
   { id: "suggestions", name: "Sugestie", icon: Lightbulb, description: "System zgłaszania propozycji", color: "bg-yellow-500" },
@@ -42,6 +50,7 @@ export default function GuildDashboard() {
   const guildId = params.guildId as string;
   const [loading, setLoading] = useState(true);
   const [guild, setGuild] = useState<GuildInfo | null>(null);
+  const [modulesStatus, setModulesStatus] = useState<ModulesStatus>({});
   const [clickedModule, setClickedModule] = useState<string | null>(null);
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -78,7 +87,20 @@ export default function GuildDashboard() {
       }
     };
 
+    const fetchModulesStatus = async () => {
+      try {
+        const response = await fetch(`/api/guild/${guildId}/modules-status`);
+        if (response.ok) {
+          const data = await response.json();
+          setModulesStatus(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch modules status:", error);
+      }
+    };
+
     fetchGuildInfo();
+    fetchModulesStatus();
   }, [guildId]);
 
   const handleModuleHover = (moduleId: string) => {
@@ -208,7 +230,7 @@ export default function GuildDashboard() {
               )}
               <div>
                 <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
-                  Dashboard - {guild.name}
+                  Panel główny - {guild.name}
                 </h1>
                 <p className="text-muted-foreground">Zarządzaj modułami bota na swoim serwerze</p>
               </div>
@@ -245,8 +267,21 @@ export default function GuildDashboard() {
                           <module.icon className="w-6 h-6 text-white" />
                         )}
                       </div>
-                      <div>
-                        <CardTitle className="text-lg">{module.name}</CardTitle>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <CardTitle className="text-lg">{module.name}</CardTitle>
+                          {modulesStatus[module.id] !== undefined && (
+                            <Badge 
+                              variant={modulesStatus[module.id] ? "default" : "secondary"}
+                              className={modulesStatus[module.id] 
+                                ? "bg-green-500 hover:bg-green-600 text-white" 
+                                : "bg-gray-400 hover:bg-gray-500 text-white"
+                              }
+                            >
+                              {modulesStatus[module.id] ? "Włączony" : "Wyłączony"}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardHeader>

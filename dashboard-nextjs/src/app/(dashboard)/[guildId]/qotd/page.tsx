@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, Hash, HelpCircle, Loader2, Save, ArrowLeft, Calendar, Pencil } from "lucide-react";
+import { Trash2, Plus, Hash, HelpCircle, Loader2, Save, ArrowLeft, Calendar, Pencil, Search } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import EmojiPicker from "@/components/EmojiPicker";
@@ -85,6 +85,7 @@ export default function QOTDPage() {
   
   const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const {
     register,
@@ -658,10 +659,15 @@ export default function QOTDPage() {
             </div>
 
             {/* Questions list */}
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-lg">
-                  Aktualne pytania ({questions.length})
+                  Aktualne pytania ({
+                    searchQuery.trim() 
+                      ? questions.filter(q => q.content.toLowerCase().includes(searchQuery.toLowerCase())).length 
+                      : questions.length
+                  })
+                  {searchQuery.trim() && <span className="text-sm font-normal text-muted-foreground ml-2">(wyniki dla: "{searchQuery}")</span>}
                 </h3>
                 {questions.length > 0 && (
                   <div className="flex items-center gap-2">
@@ -692,6 +698,21 @@ export default function QOTDPage() {
                   </div>
                 )}
               </div>
+              
+              {questions.length > 0 && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Szukaj w pytaniach..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 w-full"
+                  />
+                </div>
+              )}
+              
+              <div className="space-y-2">
               {questions.length === 0 ? (
                 <div className="text-center py-12 px-4">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4">
@@ -704,7 +725,28 @@ export default function QOTDPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {questions.map((question, index) => (
+                  {(() => {
+                    const filtered = questions.filter((question) => {
+                      if (!searchQuery.trim()) return true;
+                      const query = searchQuery.toLowerCase();
+                      return question.content.toLowerCase().includes(query);
+                    });
+
+                    if (filtered.length === 0 && searchQuery.trim()) {
+                      return (
+                        <div className="text-center py-12 px-4">
+                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4">
+                            <Search className="w-8 h-8 text-muted-foreground" />
+                          </div>
+                          <h3 className="font-semibold mb-2">Brak wyników</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Nie znaleziono pytań pasujących do "{searchQuery}"
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((question, index) => (
                     <SlideIn key={question.questionId} direction="up" delay={index * 50}>
                     <div
                       className="p-3 rounded-lg bg-background/50 border border-transparent hover:bg-background/70 hover:shadow-lg hover:shadow-bot-primary/15 hover:border-bot-primary/30 transition-all duration-300"
@@ -848,9 +890,10 @@ export default function QOTDPage() {
                       )}
                     </div>
                     </SlideIn>
-                  ))}
+                  ))})()}
                 </div>
               )}
+              </div>
             </div>
           </CardContent>
         </Card>

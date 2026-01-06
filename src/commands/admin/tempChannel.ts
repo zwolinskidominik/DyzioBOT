@@ -90,12 +90,9 @@ async function handleAddSubcommand(
   const channel = interaction.options.getChannel('kanal') as VoiceChannel;
 
   try {
-    const existingConfig = await TempChannelConfigurationModel.findOne({
-      guildId,
-      channelId: channel.id,
-    }).exec();
+    let config = await TempChannelConfigurationModel.findOne({ guildId }).exec();
 
-    if (existingConfig) {
+    if (config && config.channelIds.includes(channel.id)) {
       await interaction.reply({
         content: 'Ten kanał jest już dodany do nasłuchiwania.',
         flags: MessageFlags.Ephemeral,
@@ -103,11 +100,15 @@ async function handleAddSubcommand(
       return;
     }
 
-    const newConfig = new TempChannelConfigurationModel({
-      guildId,
-      channelId: channel.id,
-    });
-    await newConfig.save();
+    if (!config) {
+      config = new TempChannelConfigurationModel({
+        guildId,
+        channelIds: [channel.id],
+      });
+    } else {
+      config.channelIds.push(channel.id);
+    }
+    await config.save();
 
     await interaction.reply({
       content: `Kanał ${channel.name} został dodany do nasłuchiwania.`,
@@ -127,13 +128,11 @@ async function handleListSubcommand(
   guildId: string
 ): Promise<void> {
   try {
-    const configs = (await TempChannelConfigurationModel.find({
-      guildId,
-    })
+    const config = await TempChannelConfigurationModel.findOne({ guildId })
       .lean()
-      .exec()) as ITempChannelConfiguration[];
+      .exec() as ITempChannelConfiguration | null;
 
-    if (configs.length === 0) {
+    if (!config || config.channelIds.length === 0) {
       await interaction.reply({
         content: 'Brak monitorowanych kanałów.',
         flags: MessageFlags.Ephemeral,
@@ -146,13 +145,13 @@ async function handleListSubcommand(
       description: 'Lista kanałów, które są używane do tworzenia kanałów tymczasowych:',
     });
 
-    configs.forEach((config, index) => {
-      const channel = interaction.guild?.channels.cache.get(config.channelId);
+    config.channelIds.forEach((channelId, index) => {
+      const channel = interaction.guild?.channels.cache.get(channelId);
       embed.addFields({
         name: `Kanał #${index + 1}`,
         value: channel
           ? `${channel.name} (${channel.id})`
-          : `ID: ${config.channelId} (niedostępny)`,
+          : `ID: ${channelId} (niedostępny)`,
         inline: true,
       });
     });
@@ -174,18 +173,18 @@ async function handleRemoveSubcommand(
   const channel = interaction.options.getChannel('kanal') as VoiceChannel;
 
   try {
-    const existingConfig = await TempChannelConfigurationModel.findOneAndDelete({
-      guildId,
-      channelId: channel.id,
-    }).exec();
+    const config = await TempChannelConfigurationModel.findOne({ guildId }).exec();
 
-    if (!existingConfig) {
+    if (!config || !config.channelIds.includes(channel.id)) {
       await interaction.reply({
         content: 'Ten kanał nie był monitorowany.',
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
+
+    config.channelIds = config.channelIds.filter(id => id !== channel.id);
+    await config.save();
 
     await interaction.reply({
       content: `Kanał ${channel.name} został usunięty z nasłuchiwania.`,

@@ -29,13 +29,10 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // After successful login, redirect to guilds page
       if (url === baseUrl || url === `${baseUrl}/`) {
         return `${baseUrl}/guilds`;
       }
-      // If the url is relative, make it absolute
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // If the url is on the same domain, allow it
       if (new URL(url).origin === baseUrl) return url;
       return baseUrl;
     },

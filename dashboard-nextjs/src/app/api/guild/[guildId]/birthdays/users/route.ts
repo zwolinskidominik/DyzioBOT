@@ -13,7 +13,6 @@ const birthdaySchema = new mongoose.Schema({
   collection: 'birthdays'
 });
 
-// Delete cached model to ensure we use the correct collection name
 if (mongoose.models.Birthday) {
   delete mongoose.models.Birthday;
 }
@@ -40,7 +39,6 @@ export async function GET(
 
     const birthdays = await Birthday.find({ guildId: String(guildId) }).lean();
     
-    // Fetch user info from Discord API for each birthday
     const birthdaysWithUsers = await Promise.all(
       birthdays.map(async (birthday) => {
         try {
@@ -62,9 +60,7 @@ export async function GET(
               avatar: user.avatar,
             };
           }
-        } catch (error) {
-          // If user fetch fails, return birthday without user info
-        }
+        } catch (error) {}
         return birthday;
       })
     );

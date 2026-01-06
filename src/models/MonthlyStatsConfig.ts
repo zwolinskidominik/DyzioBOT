@@ -8,7 +8,7 @@ export class MonthlyStatsConfig {
   @prop({ type: () => String })
   public channelId?: string;
 
-  @prop({ default: true, type: () => Boolean })
+  @prop({ default: false, type: () => Boolean })
   public enabled!: boolean;
 
   @prop({ default: 10, type: () => Number, min: 1, max: 25 })

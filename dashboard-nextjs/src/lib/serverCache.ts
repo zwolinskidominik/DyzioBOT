@@ -6,10 +6,10 @@ interface CacheEntry<T> {
 const serverCache = new Map<string, CacheEntry<any>>();
 
 const CACHE_TTL = {
-  channels: 5 * 60 * 1000, // 5 minutes - prevents rate limits
-  roles: 5 * 60 * 1000, // 5 minutes - prevents rate limits
-  members: 5 * 60 * 1000, // 5 minutes - prevents rate limits
-  guild: 5 * 60 * 1000, // 5 minutes - prevents rate limits
+  channels: 5 * 60 * 1000,
+  roles: 5 * 60 * 1000,
+  members: 5 * 60 * 1000,
+  guild: 5 * 60 * 1000,
 };
 
 export function getCacheKey(type: string, guildId: string): string {

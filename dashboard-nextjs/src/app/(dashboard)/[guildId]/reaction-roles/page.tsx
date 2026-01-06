@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Send, ArrowLeft, Plus, Trash2, Hash, Smile } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -61,6 +62,7 @@ export default function ReactionRolesPage() {
   const [currentEmoji, setCurrentEmoji] = useState("");
   const [currentRoleId, setCurrentRoleId] = useState("");
   const [currentDescription, setCurrentDescription] = useState("");
+  const [enabled, setEnabled] = useState(true);
 
   useEffect(() => {
     if (guildId) {
@@ -122,7 +124,6 @@ export default function ReactionRolesPage() {
       return;
     }
 
-    // Validate emoji - should be max 1 emoji
     const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
     const emojiMatches = currentEmoji.match(emojiRegex);
     
@@ -356,10 +357,20 @@ export default function ReactionRolesPage() {
             }}
           >
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <Plus className="w-6 h-6 text-bot-primary" />
-                Role za reakcje
-              </CardTitle>
+              <div className="flex items-center justify-between mb-2">
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <Plus className="w-6 h-6" />
+                  <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                    Role za reakcje
+                  </span>
+                </CardTitle>
+                <Switch
+                  checked={enabled}
+                  onCheckedChange={setEnabled}
+                  className="data-[state=checked]:bg-bot-primary"
+                  style={{ transform: 'scale(1.5)' }}
+                />
+              </div>
               <CardDescription>
                 Dodaj wiadomość z reakcjami, które przypisują role użytkownikom
               </CardDescription>

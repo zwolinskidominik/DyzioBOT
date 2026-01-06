@@ -8,13 +8,12 @@ const birthdayConfigSchema = new mongoose.Schema({
   birthdayChannelId: { type: String, required: true },
   roleId: { type: String },
   message: { type: String, required: true },
-  enabled: { type: Boolean, default: true },
+  enabled: { type: Boolean, default: false },
   updatedAt: { type: Date, default: Date.now },
 }, {
   collection: 'birthdayconfigurations'
 });
 
-// Delete cached model to ensure we use the correct collection name
 if (mongoose.models.BirthdayConfig) {
   delete mongoose.models.BirthdayConfig;
 }
@@ -44,7 +43,6 @@ export async function GET(
     const config = await BirthdayConfig.findOne({ guildId: String(guildId) });
     
     if (!config) {
-      // Try to find if there's a document with guildId as number
       const configAsNumber = await BirthdayConfig.findOne({ guildId: Number(guildId) });
       return NextResponse.json(configAsNumber ? configAsNumber.toObject() : null);
     }

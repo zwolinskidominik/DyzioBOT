@@ -49,7 +49,15 @@ export interface SimpleChannelConfig {
 
 function buildChannelName(template: string | undefined, value: string | number): string {
   if (!template) return String(value);
-  return template.replace(/<>|{value}/g, String(value)).slice(0, 100);
+  return template
+    .replace(/{count}/g, String(value))
+    .replace(/<count>/g, String(value))
+    .replace(/{value}/g, String(value))
+    .replace(/<value>/g, String(value))
+    .replace(/{member}/g, String(value))
+    .replace(/<member>/g, String(value))
+    .replace(/<>/g, String(value))
+    .slice(0, 100);
 }
 
 export async function updateChannelName(
@@ -92,13 +100,12 @@ async function ensureFreshMembers(guild: Guild): Promise<void> {
   }
 }
 
-function computeNewestNonBotMember(
+function computeNewestMember(
   members: Collection<string, GuildMember>
 ): GuildMember | undefined {
   let newest: GuildMember | undefined;
   let newestTs = -1;
   for (const m of members.values()) {
-    if (m.user.bot) continue;
     const ts = m.joinedTimestamp ?? 0;
     if (ts > newestTs) {
       newestTs = ts;
@@ -137,7 +144,7 @@ export async function updateChannelStats(guild: Guild): Promise<void> {
     const userCount = nonBotMembers.size;
     const botCount = botMembers.size;
 
-    const newestMember = computeNewestNonBotMember(nonBotMembers);
+    const newestMember = computeNewestMember(membersCache);
     const newestValue = newestMember?.user.username ?? 'Brak';
 
     const banCount = await getBanCount(guild);

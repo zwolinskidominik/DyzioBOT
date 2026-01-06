@@ -7,7 +7,7 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes - prevents Discord rate limits
+const CACHE_TTL = 5 * 60 * 1000;
 
 class GuildDataCache {
   private cache: Map<string, CacheEntry<any>> = new Map();
@@ -70,10 +70,8 @@ export async function fetchGuildData<T>(
     return cached;
   }
 
-  // Always use bulk endpoint for channels and roles (single request!)
   if (type === 'channels' || type === 'roles') {
     try {
-      // Fetch both channels AND roles in one go
       const bulkResponse = await fetchWithAuth(
         `/api/discord/guild/${guildId}/bulk?include=channels,roles`,
         { next: { revalidate: 300 } }
@@ -82,7 +80,6 @@ export async function fetchGuildData<T>(
       if (bulkResponse.ok) {
         const bulkData = await bulkResponse.json();
         
-        // Cache both immediately
         if (bulkData.channels) {
           guildCache.set(guildId, 'channels', bulkData.channels);
         }
@@ -97,10 +94,9 @@ export async function fetchGuildData<T>(
     }
   }
 
-  // For members or fallback, use individual endpoint
   const response = await fetchWithAuth(apiPath, { 
     next: { revalidate: 300 },
-    signal: AbortSignal.timeout(5000) // 5s timeout
+    signal: AbortSignal.timeout(5000)
   });
   
   if (!response.ok) {
@@ -120,7 +116,7 @@ export async function prefetchGuildData(
   const uncachedTypes = types.filter(type => !guildCache.get(guildId, type));
   
   if (uncachedTypes.length === 0) {
-    return; // Everything already cached!
+    return;
   }
 
   const bulkTypes = uncachedTypes.filter(t => t === 'channels' || t === 'roles');
@@ -128,7 +124,6 @@ export async function prefetchGuildData(
 
   const promises: Promise<any>[] = [];
 
-  // Single bulk request for channels + roles
   if (bulkTypes.length > 0) {
     promises.push(
       fetchWithAuth(`/api/discord/guild/${guildId}/bulk?include=channels,roles`, {
@@ -143,7 +138,6 @@ export async function prefetchGuildData(
     );
   }
 
-  // Separate request for members (can be large)
   if (memberType) {
     promises.push(
       fetchWithAuth(`/api/discord/guild/${guildId}/members`, {

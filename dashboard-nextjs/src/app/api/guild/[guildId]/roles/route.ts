@@ -14,7 +14,6 @@ export async function GET(
 
     const { guildId } = await params;
 
-    // Fetch roles from Discord API
     const response = await fetch(
       `https://discord.com/api/v10/guilds/${guildId}/roles`,
       {
@@ -34,7 +33,6 @@ export async function GET(
 
     const roles = await response.json();
     
-    // Filter out @everyone role and sort by position
     const filteredRoles = roles
       .filter((role: any) => role.name !== "@everyone")
       .sort((a: any, b: any) => b.position - a.position);

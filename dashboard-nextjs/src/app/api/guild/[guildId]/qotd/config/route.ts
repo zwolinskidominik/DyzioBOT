@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 
 const questionConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
-  enabled: { type: Boolean, default: true },
+  enabled: { type: Boolean, default: false },
   questionChannelId: { type: String, required: true },
   pingRoleId: { type: String },
 }, {
@@ -67,7 +67,7 @@ export async function POST(
       { guildId },
       { 
         guildId,
-        enabled: enabled !== undefined ? enabled : true,
+        enabled: enabled !== undefined ? enabled : false,
         questionChannelId,
         pingRoleId: pingRoleId || undefined
       },

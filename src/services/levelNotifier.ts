@@ -27,7 +27,6 @@ export async function notifyLevelUp(c: Client, gid: string, uid: string, lvl: nu
 
   const am: MessageMentionOptions = { users: [uid as Snowflake], roles: [] };
 
-  // Use individual reward message if set, otherwise use global rewardMessage
   const tpl = rewardForLevel.rewardMessage?.trim() || cfg.rewardMessage?.trim() || '🎉 {user} zdobył nową rolę {roleId} za poziom **{level}**!';
 
   await ch

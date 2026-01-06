@@ -1,0 +1,12 @@
+import mongoose from 'mongoose';
+
+const TournamentConfigSchema = new mongoose.Schema({
+  guildId: { type: String, required: true, unique: true },
+  enabled: { type: Boolean, default: false },
+  messageTemplate: { type: String, required: true },
+  cronSchedule: { type: String, default: '25 20 * * 1' },
+  reactionEmoji: { type: String, default: '🎮' },
+});
+
+export default mongoose.models.TournamentConfig || 
+  mongoose.model('TournamentConfig', TournamentConfigSchema);

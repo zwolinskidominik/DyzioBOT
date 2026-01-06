@@ -82,6 +82,12 @@ export interface IQuestion {
   reactions: string[];
 }
 
+export interface IUsedQuestion {
+  guildId: string;
+  questionId: string;
+  usedAt: Date;
+}
+
 export interface IQuestionConfiguration {
   guildId: string;
   questionChannelId: string;
@@ -120,7 +126,7 @@ export interface ITempChannel {
 
 export interface ITempChannelConfiguration {
   guildId: string;
-  channelId: string;
+  channelIds: string[];
 }
 
 export interface ITicketConfig {
@@ -190,4 +196,12 @@ export interface IMonthlyStatsConfig {
   channelId?: string;
   enabled: boolean;
   topCount: number;
+}
+
+export interface ITournamentConfig {
+  guildId: string;
+  enabled: boolean;
+  messageTemplate: string;
+  cronSchedule: string;
+  reactionEmoji: string;
 }

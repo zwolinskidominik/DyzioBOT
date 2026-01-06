@@ -9,10 +9,10 @@ import logger from '../../utils/logger';
 const WARN_LIMIT = 4;
 
 const WARN_PUNISHMENTS = {
-  1: { duration: 15 * 60 * 1000, label: '15 minut' },      // 15 min
-  2: { duration: 3 * 60 * 60 * 1000, label: '3 godziny' }, // 3h
-  3: { duration: 24 * 60 * 60 * 1000, label: '1 dzień' },  // 24h
-  4: { duration: 0, label: 'BAN' },                        // Auto-ban
+  1: { duration: 15 * 60 * 1000, label: '15 minut' },
+  2: { duration: 3 * 60 * 60 * 1000, label: '3 godziny' },
+  3: { duration: 24 * 60 * 60 * 1000, label: '1 dzień' },
+  4: { duration: 0, label: 'BAN' },
 } as const;
 
 export const data = new SlashCommandBuilder()

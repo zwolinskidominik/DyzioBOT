@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import mongoose from 'mongoose';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 
 const ticketConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
-  enabled: { type: Boolean, default: true },
+  enabled: { type: Boolean, default: false },
   categoryId: { type: String, required: true },
   panelChannelId: { type: String },
   panelMessageId: { type: String },
@@ -41,7 +43,7 @@ export async function GET(
     
     const config = await TicketConfig.findOne({ guildId });
     
-    return NextResponse.json(config ? config.toObject() : { guildId, enabled: true, categoryId: '', panelChannelId: '', panelMessageId: '' });
+    return NextResponse.json(config ? config.toObject() : { guildId, enabled: false, categoryId: '', panelChannelId: '', panelMessageId: '' });
   } catch (error) {
     console.error('Error fetching ticket config:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -64,10 +66,8 @@ export async function POST(
 
     await connectDB();
     
-    // Get existing config to check for previous panel message
     const existingConfig = await TicketConfig.findOne({ guildId });
     
-    // Delete previous panel message if it exists
     if (existingConfig?.panelMessageId && existingConfig?.panelChannelId) {
       try {
         const deleteResponse = await fetch(
@@ -88,15 +88,33 @@ export async function POST(
       }
     }
 
-    // Send new panel message to Discord
     let newMessageId: string | undefined;
     if (panelChannelId && enabled) {
       try {
+        const guildResponse = await fetch(
+          `https://discord.com/api/v10/guilds/${guildId}`,
+          {
+            headers: {
+              'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+            },
+          }
+        );
+
+        let guildIconUrl: string | undefined;
+        if (guildResponse.ok) {
+          const guildData = await guildResponse.json();
+          if (guildData.icon) {
+            guildIconUrl = `https://cdn.discordapp.com/icons/${guildId}/${guildData.icon}.png`;
+          }
+        }
+
         const ticketEmbed = {
-          title: 'Kontakt z Administracj\u0105',
-          description: 'Aby skontaktowa\u0107 si\u0119 z wybranym dzia\u0142em administracji, wybierz odpowiedni\u0105 kategori\u0119 poni\u017cej:',
+          title: 'Kontakt z Administracją',
+          description: 'Aby skontaktować się z wybranym działem administracji, wybierz odpowiednią kategorię poniżej:',
           color: 0x5865F2,
           timestamp: new Date().toISOString(),
+          thumbnail: guildIconUrl ? { url: guildIconUrl } : undefined,
+          image: { url: 'attachment://ticketBanner.png' },
         };
 
         const selectMenu = {
@@ -115,18 +133,25 @@ export async function POST(
           }],
         };
 
+        const imagePath = join(process.cwd(), '..', 'assets', 'tickets', 'ticketBanner.png');
+        const imageBuffer = await readFile(imagePath);
+
+        const formData = new FormData();
+        const payload = {
+          embeds: [ticketEmbed],
+          components: [selectMenu],
+        };
+        formData.append('payload_json', JSON.stringify(payload));
+        formData.append('files[0]', new Blob([imageBuffer], { type: 'image/png' }), 'ticketBanner.png');
+
         const messageResponse = await fetch(
           `https://discord.com/api/v10/channels/${panelChannelId}/messages`,
           {
             method: 'POST',
             headers: {
               'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-              'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              embeds: [ticketEmbed],
-              components: [selectMenu],
-            }),
+            body: formData,
           }
         );
 
@@ -145,7 +170,7 @@ export async function POST(
       { guildId },
       { 
         guildId,
-        enabled: enabled !== undefined ? enabled : true,
+        enabled: enabled !== undefined ? enabled : false,
         categoryId,
         panelChannelId,
         panelMessageId: newMessageId,

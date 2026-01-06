@@ -150,9 +150,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     try {
       await fs.access(imagePath);
       attachment = new AttachmentBuilder(imagePath, { name: `day${today}.jpg` });
-    } catch {
-      // Image doesn't exist, continue without it
-    }
+    } catch {}
 
     const timeUntil = getTimeUntilMidnight();
 

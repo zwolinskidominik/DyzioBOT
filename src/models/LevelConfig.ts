@@ -32,6 +32,9 @@ export class LevelConfig {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
+  @prop({ default: false, type: () => Boolean })
+  public enabled!: boolean;
+
   @prop({ default: 5, type: () => Number, min: 0 })
   public xpPerMsg!: number;
 

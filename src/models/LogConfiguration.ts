@@ -14,6 +14,9 @@ export class LogConfiguration {
   @prop({ required: true, unique: true, type: String })
   public guildId!: string;
 
+  @prop({ type: Boolean, default: false })
+  public enabled!: boolean;
+
   @prop({ type: () => Object, default: {} })
   public logChannels!: Partial<Record<LogEventType, string>>;
 

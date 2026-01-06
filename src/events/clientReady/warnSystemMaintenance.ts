@@ -26,7 +26,6 @@ export default async function run(): Promise<void> {
               );
             } catch (saveError) {
               logger.error(`Błąd zapisu dla userId=${warn.userId}: ${saveError}`, saveError);
-              // Jeśli błąd walidacji, usuń cały dokument z błędnymi danymi
               if (saveError instanceof Error && saveError.message.includes('validation failed')) {
                 await WarnModel.deleteOne({ _id: warn._id });
                 logger.warn(`Usunięto uszkodzony dokument ostrzeżeń dla userId=${warn.userId}`);

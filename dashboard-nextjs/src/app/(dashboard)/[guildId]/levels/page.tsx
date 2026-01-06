@@ -37,8 +37,19 @@ interface RoleReward {
   rewardMessage?: string;
 }
 
+interface ChannelMultiplier {
+  channelId: string;
+  multiplier: number;
+}
+
+interface RoleMultiplier {
+  roleId: string;
+  multiplier: number;
+}
+
 interface LevelConfig {
   guildId: string;
+  enabled?: boolean;
   xpPerMsg: number;
   xpPerMinVc: number;
   cooldownSec: number;
@@ -47,6 +58,7 @@ interface LevelConfig {
   levelUpMessage: string;
   rewardMessage: string;
   roleRewards: RoleReward[];
+  roleMultipliers: RoleMultiplier[];
   ignoredChannels: string[];
   ignoredRoles: string[];
 }
@@ -78,6 +90,7 @@ export default function LevelsPage() {
   
   const [config, setConfig] = useState<LevelConfig>({
     guildId,
+    enabled: true,
     xpPerMsg: 5,
     xpPerMinVc: 10,
     cooldownSec: 0,
@@ -85,6 +98,7 @@ export default function LevelsPage() {
     levelUpMessage: '{user} jesteś kozakiem! Wbiłeś/aś: **{level}** level. 👏',
     rewardMessage: '{user}! Zdobyto nową rolę na serwerze: {roleId}! Dziękujemy za aktywność!',
     roleRewards: [],
+    roleMultipliers: [],
     ignoredChannels: [],
     ignoredRoles: [],
   });
@@ -92,23 +106,33 @@ export default function LevelsPage() {
   const [newRewardLevel, setNewRewardLevel] = useState('');
   const [newRewardRoleId, setNewRewardRoleId] = useState('');
   const [newRewardMessage, setNewRewardMessage] = useState('');
+  
+  const [channelMultipliers, setChannelMultipliers] = useState<ChannelMultiplier[]>([]);
+  const [newMultiplierChannelId, setNewMultiplierChannelId] = useState('');
+  const [newMultiplierValue, setNewMultiplierValue] = useState('1.5');
+  
+  const [roleMultipliers, setRoleMultipliers] = useState<RoleMultiplier[]>([]);
+  const [newRoleMultiplierRoleId, setNewRoleMultiplierRoleId] = useState('');
+  const [newRoleMultiplierValue, setNewRoleMultiplierValue] = useState('1.5');
+  
+  const [selectedIgnoredChannel, setSelectedIgnoredChannel] = useState('');
+  const [selectedIgnoredRole, setSelectedIgnoredRole] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Priority 1: Fast data - channels, roles, config, leaderboard (all in parallel)
-        const [channelsData, rolesData, configRes, leaderboardRes] = await Promise.all([
+        const [channelsData, rolesData, configRes, leaderboardRes, multipliersRes] = await Promise.all([
           fetchGuildData<Channel[]>(guildId, 'channels', `/api/discord/guild/${guildId}/channels`),
           fetchGuildData<Role[]>(guildId, 'roles', `/api/discord/guild/${guildId}/roles`),
           fetchWithAuth(`/api/guild/${guildId}/levels/config`, { next: { revalidate: 600 } }),
           fetchWithAuth(`/api/guild/${guildId}/levels/leaderboard?limit=10`, { next: { revalidate: 300 } }),
+          fetchWithAuth(`/api/guild/${guildId}/levels/channel-multipliers`, { next: { revalidate: 600 } }),
         ]);
 
         if (channelsData) {
-          const textChannels = channelsData.filter((ch: Channel) => ch.type === 0);
-          setChannels(textChannels);
+          setChannels(channelsData);
         }
 
         if (rolesData) {
@@ -118,6 +142,9 @@ export default function LevelsPage() {
         if (configRes.ok) {
           const configData = await configRes.json();
           setConfig(configData);
+          if (configData.roleMultipliers) {
+            setRoleMultipliers(configData.roleMultipliers);
+          }
         }
 
         if (leaderboardRes.ok) {
@@ -125,9 +152,13 @@ export default function LevelsPage() {
           setLeaderboard(leaderboardData.users || []);
         }
         
+        if (multipliersRes.ok) {
+          const multipliersData = await multipliersRes.json();
+          setChannelMultipliers(multipliersData);
+        }
+        
         setLoading(false);
 
-        // Priority 2: Load members in background (can be slow)
         fetchGuildData<GuildMember[]>(guildId, 'members', `/api/discord/guild/${guildId}/members`)
           .then(membersData => {
             if (membersData) {
@@ -214,6 +245,146 @@ export default function LevelsPage() {
       roleRewards: config.roleRewards.filter(r => r.level !== level),
     });
     toast.success("Usunięto nagrodę!");
+  };
+
+  const handleAddMultiplier = async () => {
+    if (!newMultiplierChannelId) {
+      toast.error("Wybierz kanał");
+      return;
+    }
+
+    const multiplierValue = parseFloat(newMultiplierValue);
+    if (isNaN(multiplierValue) || multiplierValue < 0.1 || multiplierValue > 10) {
+      toast.error("Mnożnik musi być liczbą między 0.1 a 10");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const response = await fetch(`/api/guild/${guildId}/levels/channel-multipliers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelId: newMultiplierChannelId, multiplier: multiplierValue }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add multiplier");
+      }
+
+      const existingIndex = channelMultipliers.findIndex(m => m.channelId === newMultiplierChannelId);
+      if (existingIndex >= 0) {
+        const updated = [...channelMultipliers];
+        updated[existingIndex].multiplier = multiplierValue;
+        setChannelMultipliers(updated);
+      } else {
+        setChannelMultipliers([...channelMultipliers, { channelId: newMultiplierChannelId, multiplier: multiplierValue }]);
+      }
+
+      setNewMultiplierChannelId("");
+      setNewMultiplierValue("1.5");
+      toast.success("Mnożnik został dodany!");
+    } catch (error) {
+      console.error("Error adding multiplier:", error);
+      toast.error("Nie udało się dodać mnożnika");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteMultiplier = async (channelId: string) => {
+    try {
+      const response = await fetch(`/api/guild/${guildId}/levels/channel-multipliers?channelId=${channelId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete multiplier");
+      }
+
+      setChannelMultipliers(channelMultipliers.filter(m => m.channelId !== channelId));
+      toast.success("Mnożnik został usunięty!");
+    } catch (error) {
+      console.error("Error deleting multiplier:", error);
+      toast.error("Nie udało się usunąć mnożnika");
+    }
+  };
+
+  const handleAddRoleMultiplier = () => {
+    if (!newRoleMultiplierRoleId) {
+      toast.error("Wybierz rolę");
+      return;
+    }
+
+    const multiplierValue = parseFloat(newRoleMultiplierValue);
+    if (isNaN(multiplierValue) || multiplierValue < 0.1 || multiplierValue > 10) {
+      toast.error("Mnożnik musi być liczbą między 0.1 a 10");
+      return;
+    }
+
+    const existingIndex = roleMultipliers.findIndex(m => m.roleId === newRoleMultiplierRoleId);
+    if (existingIndex >= 0) {
+      const updated = [...roleMultipliers];
+      updated[existingIndex].multiplier = multiplierValue;
+      setRoleMultipliers(updated);
+      setConfig({ ...config, roleMultipliers: updated });
+    } else {
+      const updated = [...roleMultipliers, { roleId: newRoleMultiplierRoleId, multiplier: multiplierValue }];
+      setRoleMultipliers(updated);
+      setConfig({ ...config, roleMultipliers: updated });
+    }
+
+    setNewRoleMultiplierRoleId("");
+    setNewRoleMultiplierValue("1.5");
+    toast.success("Mnożnik roli został dodany!");
+  };
+
+  const handleDeleteRoleMultiplier = (roleId: string) => {
+    const updated = roleMultipliers.filter(m => m.roleId !== roleId);
+    setRoleMultipliers(updated);
+    setConfig({ ...config, roleMultipliers: updated });
+    toast.success("Mnożnik roli został usunięty!");
+  };
+
+  const handleAddIgnoredChannel = () => {
+    if (!selectedIgnoredChannel) {
+      toast.error("Wybierz kanał");
+      return;
+    }
+    if (config.ignoredChannels.includes(selectedIgnoredChannel)) {
+      toast.error("Ten kanał jest już ignorowany");
+      return;
+    }
+    setConfig({ ...config, ignoredChannels: [...config.ignoredChannels, selectedIgnoredChannel] });
+    setSelectedIgnoredChannel('');
+    toast.success("Kanał został dodany do listy ignorowanych!");
+  };
+
+  const handleRemoveIgnoredChannel = (channelId: string) => {
+    setConfig({ ...config, ignoredChannels: config.ignoredChannels.filter(id => id !== channelId) });
+    toast.success("Kanał został usunięty z listy ignorowanych!");
+  };
+
+  const handleAddIgnoredRole = () => {
+    if (!selectedIgnoredRole) {
+      toast.error("Wybierz rolę");
+      return;
+    }
+    if (config.ignoredRoles.includes(selectedIgnoredRole)) {
+      toast.error("Ta rola jest już ignorowana");
+      return;
+    }
+    setConfig({ ...config, ignoredRoles: [...config.ignoredRoles, selectedIgnoredRole] });
+    setSelectedIgnoredRole('');
+    toast.success("Rola została dodana do listy ignorowanych!");
+  };
+
+  const handleRemoveIgnoredRole = (roleId: string) => {
+    setConfig({ ...config, ignoredRoles: config.ignoredRoles.filter(id => id !== roleId) });
+    toast.success("Rola została usunięta z listy ignorowanych!");
+  };
+
+  const getChannelName = (channelId: string) => {
+    return channels.find(c => c.id === channelId)?.name || 'Nieznany kanał';
   };
 
   const getRoleName = (roleId: string) => {
@@ -316,10 +487,20 @@ export default function LevelsPage() {
                 border: '1px solid transparent'
               }}>
                 <CardHeader>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <TrendingUp className="w-6 h-6 text-bot-primary" />
-                    Konfiguracja Systemu Poziomów
-                  </CardTitle>
+                  <div className="flex items-center justify-between mb-2">
+                    <CardTitle className="text-2xl flex items-center gap-2">
+                      <TrendingUp className="w-6 h-6 text-bot-primary" />
+                      <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                        Konfiguracja Systemu Poziomów
+                      </span>
+                    </CardTitle>
+                    <Switch
+                      checked={config.enabled ?? true}
+                      onCheckedChange={(checked) => setConfig({ ...config, enabled: checked })}
+                      className="data-[state=checked]:bg-bot-primary"
+                      style={{ transform: 'scale(1.5)' }}
+                    />
+                  </div>
                   <CardDescription>
                     Ustaw nagrody za XP i poziomy dla aktywnych członków
                   </CardDescription>
@@ -583,6 +764,407 @@ export default function LevelsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => removeRoleReward(reward.level)}
+                              className="flex-shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </SlideIn>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </SlideIn>
+
+            {/* Channel Multipliers Card */}
+            <SlideIn direction="up" delay={300}>
+              <Card className="backdrop-blur" style={{
+                backgroundColor: 'rgba(189, 189, 189, .05)',
+                boxShadow: '0 0 10px #00000026',
+                border: '1px solid transparent'
+              }}>
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Hash className="w-5 h-5 text-bot-primary" />
+                    Mnożniki XP dla Kanałów
+                  </CardTitle>
+                  <CardDescription>
+                    Ustaw niestandardowe mnożniki XP dla wybranych kanałów (0.1x - 10x)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Add new multiplier */}
+                  <div className="p-4 rounded-lg bg-background/50 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="newMultiplierChannel">Kanał</Label>
+                        <Select value={newMultiplierChannelId} onValueChange={setNewMultiplierChannelId}>
+                          <SelectTrigger id="newMultiplierChannel">
+                            <SelectValue placeholder="Wybierz kanał..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {channels
+                              .filter(ch => ch.type === 0)
+                              .map((channel) => (
+                                <SelectItem key={channel.id} value={channel.id}>
+                                  # {channel.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="newMultiplierValue">Mnożnik</Label>
+                        <Input
+                          id="newMultiplierValue"
+                          type="number"
+                          min="0.1"
+                          max="10"
+                          step="0.1"
+                          placeholder="1.5"
+                          value={newMultiplierValue}
+                          onChange={(e) => setNewMultiplierValue(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={handleAddMultiplier}
+                      variant="outline"
+                      className="w-full"
+                      disabled={saving}
+                    >
+                      <Plus className="mr-2 w-4 h-4" />
+                      Dodaj mnożnik
+                    </Button>
+                  </div>
+
+                  {/* Existing multipliers */}
+                  {channelMultipliers.length === 0 ? (
+                    <div className="text-center py-12 px-4">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4">
+                        <Hash className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="font-semibold mb-2">Brak mnożników</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Dodaj mnożniki XP dla kanałów, aby dostosować zdobywanie doświadczenia
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {channelMultipliers.map((multiplier, index) => (
+                        <SlideIn key={multiplier.channelId} direction="up" delay={index * 50}>
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border hover:bg-background/70 hover:shadow-lg hover:shadow-bot-primary/15 hover:scale-[1.02] hover:border-bot-primary/30 transition-all duration-300">
+                            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-bot-primary/10 text-bot-primary font-bold text-sm">
+                              {multiplier.multiplier}x
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Hash className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <span className="font-medium truncate">{getChannelName(multiplier.channelId)}</span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteMultiplier(multiplier.channelId)}
+                              className="flex-shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </SlideIn>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </SlideIn>
+
+            {/* Role Multipliers Card */}
+            <SlideIn direction="up" delay={350}>
+              <Card className="backdrop-blur" style={{
+                backgroundColor: 'rgba(189, 189, 189, .05)',
+                boxShadow: '0 0 10px #00000026',
+                border: '1px solid transparent'
+              }}>
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Users className="w-5 h-5 text-bot-primary" />
+                    Mnożniki XP dla Ról
+                  </CardTitle>
+                  <CardDescription>
+                    Ustaw niestandardowe mnożniki XP dla wybranych ról (0.1x - 10x). Użytkownik otrzymuje najwyższy mnożnik z posiadanych ról.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Add new role multiplier */}
+                  <div className="p-4 rounded-lg bg-background/50 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="newRoleMultiplierRole">Rola</Label>
+                        <Select value={newRoleMultiplierRoleId} onValueChange={setNewRoleMultiplierRoleId}>
+                          <SelectTrigger id="newRoleMultiplierRole">
+                            <SelectValue placeholder="Wybierz rolę..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: getRoleColor(role.color) }}
+                                  />
+                                  {role.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="newRoleMultiplierValue">Mnożnik</Label>
+                        <Input
+                          id="newRoleMultiplierValue"
+                          type="number"
+                          min="0.1"
+                          max="10"
+                          step="0.1"
+                          placeholder="1.5"
+                          value={newRoleMultiplierValue}
+                          onChange={(e) => setNewRoleMultiplierValue(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={handleAddRoleMultiplier}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Plus className="mr-2 w-4 h-4" />
+                      Dodaj mnożnik roli
+                    </Button>
+                  </div>
+
+                  {/* Existing role multipliers */}
+                  {roleMultipliers.length === 0 ? (
+                    <div className="text-center py-12 px-4">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4">
+                        <Users className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="font-semibold mb-2">Brak mnożników dla ról</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Dodaj mnożniki XP dla ról, aby nagrodzić szczególne role większym doświadczeniem
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {roleMultipliers.map((multiplier, index) => (
+                        <SlideIn key={multiplier.roleId} direction="up" delay={index * 50}>
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border hover:bg-background/70 hover:shadow-lg hover:shadow-bot-primary/15 hover:scale-[1.02] hover:border-bot-primary/30 transition-all duration-300">
+                            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-bot-primary/10 text-bot-primary font-bold text-sm">
+                              {multiplier.multiplier}x
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full flex-shrink-0" 
+                                  style={{ 
+                                    backgroundColor: getRoleColor(
+                                      roles.find(r => r.id === multiplier.roleId)?.color || 0
+                                    ) 
+                                  }}
+                                />
+                                <span className="font-medium truncate">{getRoleName(multiplier.roleId)}</span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteRoleMultiplier(multiplier.roleId)}
+                              className="flex-shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </SlideIn>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </SlideIn>
+
+            {/* Ignored Channels Card */}
+            <SlideIn direction="up" delay={400}>
+              <Card className="backdrop-blur" style={{
+                backgroundColor: 'rgba(189, 189, 189, .05)',
+                boxShadow: '0 0 10px #00000026',
+                border: '1px solid transparent'
+              }}>
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Hash className="w-5 h-5 text-red-500" />
+                    Ignorowane Kanały
+                  </CardTitle>
+                  <CardDescription>
+                    Użytkownicy nie będą zdobywać XP za wiadomości na tych kanałach
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Add ignored channel */}
+                  <div className="p-4 rounded-lg bg-background/50 space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="selectIgnoredChannel">Wybierz kanał</Label>
+                      <Select value={selectedIgnoredChannel} onValueChange={setSelectedIgnoredChannel}>
+                        <SelectTrigger id="selectIgnoredChannel">
+                          <SelectValue placeholder="Wybierz kanał..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {channels
+                            .filter(ch => ch.type === 0 && !config.ignoredChannels.includes(ch.id))
+                            .map((channel) => (
+                              <SelectItem key={channel.id} value={channel.id}>
+                                # {channel.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button 
+                      onClick={handleAddIgnoredChannel}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Plus className="mr-2 w-4 h-4" />
+                      Dodaj kanał do ignorowanych
+                    </Button>
+                  </div>
+
+                  {/* List of ignored channels */}
+                  {config.ignoredChannels.length === 0 ? (
+                    <div className="text-center py-8 px-4">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted/50 mb-3">
+                        <Hash className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Brak ignorowanych kanałów
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {config.ignoredChannels.map((channelId, index) => (
+                        <SlideIn key={channelId} direction="up" delay={index * 50}>
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border hover:bg-background/70 hover:shadow-lg hover:shadow-red-500/15 hover:scale-[1.02] hover:border-red-500/30 transition-all duration-300">
+                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                              <Hash className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              <span className="font-medium truncate">{getChannelName(channelId)}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveIgnoredChannel(channelId)}
+                              className="flex-shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </SlideIn>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </SlideIn>
+
+            {/* Ignored Roles Card */}
+            <SlideIn direction="up" delay={450}>
+              <Card className="backdrop-blur" style={{
+                backgroundColor: 'rgba(189, 189, 189, .05)',
+                boxShadow: '0 0 10px #00000026',
+                border: '1px solid transparent'
+              }}>
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Users className="w-5 h-5 text-red-500" />
+                    Ignorowane Role
+                  </CardTitle>
+                  <CardDescription>
+                    Użytkownicy z tymi rolami nie będą zdobywać XP
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Add ignored role */}
+                  <div className="p-4 rounded-lg bg-background/50 space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="selectIgnoredRole">Wybierz rolę</Label>
+                      <Select value={selectedIgnoredRole} onValueChange={setSelectedIgnoredRole}>
+                        <SelectTrigger id="selectIgnoredRole">
+                          <SelectValue placeholder="Wybierz rolę..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles
+                            .filter(role => !config.ignoredRoles.includes(role.id))
+                            .map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: getRoleColor(role.color) }}
+                                  />
+                                  {role.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button 
+                      onClick={handleAddIgnoredRole}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Plus className="mr-2 w-4 h-4" />
+                      Dodaj rolę do ignorowanych
+                    </Button>
+                  </div>
+
+                  {/* List of ignored roles */}
+                  {config.ignoredRoles.length === 0 ? (
+                    <div className="text-center py-8 px-4">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted/50 mb-3">
+                        <Users className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Brak ignorowanych ról
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {config.ignoredRoles.map((roleId, index) => (
+                        <SlideIn key={roleId} direction="up" delay={index * 50}>
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border hover:bg-background/70 hover:shadow-lg hover:shadow-red-500/15 hover:scale-[1.02] hover:border-red-500/30 transition-all duration-300">
+                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full flex-shrink-0" 
+                                style={{ 
+                                  backgroundColor: getRoleColor(
+                                    roles.find(r => r.id === roleId)?.color || 0
+                                  ) 
+                                }}
+                              />
+                              <span className="font-medium truncate">{getRoleName(roleId)}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveIgnoredRole(roleId)}
                               className="flex-shrink-0 hover:bg-destructive/10 hover:text-destructive"
                             >
                               <Trash2 className="w-4 h-4" />

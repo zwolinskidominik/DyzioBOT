@@ -4,10 +4,11 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, ArrowLeft, Hash, Lightbulb, ThumbsUp, ThumbsDown, Trash2, ExternalLink } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Hash, Lightbulb, ThumbsUp, ThumbsDown, Trash2, ExternalLink, Search } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,13 +53,14 @@ export default function SuggestionsPage() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("upvotes");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Check cache for channels (1 min TTL)
         const cacheKey = `channels_${guildId}`;
         const cached = localStorage.getItem(cacheKey);
         let channelsPromise;
@@ -243,7 +245,6 @@ export default function SuggestionsPage() {
   const handleRetry = () => {
     setError(null);
     setLoading(true);
-    // Trigger re-fetch by updating a dependency (or call fetchData directly)
     window.location.reload();
   };
 
@@ -447,43 +448,74 @@ export default function SuggestionsPage() {
           }}
         >
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
-                    Wszystkie Sugestie ({suggestions.length})
-                  </span>
-                </CardTitle>
-                <CardDescription>
-                  Lista wszystkich sugestii zg\u0142oszonych przez u\u017cytkownik\u00f3w
-                </CardDescription>
-              </div>
-              {suggestions.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleSelectAll}
-                  >
-                    {selectedSuggestions.size === suggestions.length ? "Odznacz wszystkie" : "Zaznacz wszystkie"}
-                  </Button>
-                  {selectedSuggestions.size > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                      Wszystkie Sugestie ({
+                        searchQuery.trim() 
+                          ? suggestions.filter(s => s.content.toLowerCase().includes(searchQuery.toLowerCase())).length 
+                          : suggestions.length
+                      })
+                    </span>
+                  </CardTitle>
+                  <CardDescription>
+                    Lista wszystkich sugestii zgłoszonych przez użytkowników
+                    {searchQuery.trim() && ` (wyniki dla: "${searchQuery}")`}
+                  </CardDescription>
+                </div>
+                {suggestions.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Sortuj..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="upvotes">Najwięcej upvote'ów</SelectItem>
+                        <SelectItem value="downvotes">Najwięcej downvote'ów</SelectItem>
+                        <SelectItem value="total">Najwięcej głosów</SelectItem>
+                        <SelectItem value="newest">Najnowsze</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Button
                       type="button"
-                      variant="destructive"
+                      variant="outline"
                       size="sm"
-                      onClick={handleBulkDelete}
-                      disabled={isDeleting}
+                      onClick={toggleSelectAll}
                     >
-                      {isDeleting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="mr-2 h-4 w-4" />
-                      )}
-                      Usuń zaznaczone ({selectedSuggestions.size})
+                      {selectedSuggestions.size === suggestions.length ? "Odznacz wszystkie" : "Zaznacz wszystkie"}
                     </Button>
-                  )}
+                    {selectedSuggestions.size > 0 && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        disabled={isDeleting}
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-2 h-4 w-4" />
+                        )}
+                        Usuń zaznaczone ({selectedSuggestions.size})
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {suggestions.length > 0 && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Szukaj w sugestiach..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 w-full"
+                  />
                 </div>
               )}
             </div>
@@ -501,7 +533,43 @@ export default function SuggestionsPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {suggestions.map((suggestion, index) => (
+                {(() => {
+                  const filtered = [...suggestions].filter((suggestion) => {
+                    if (!searchQuery.trim()) return true;
+                    const query = searchQuery.toLowerCase();
+                    return suggestion.content.toLowerCase().includes(query);
+                  });
+
+                  if (filtered.length === 0 && searchQuery.trim()) {
+                    return (
+                      <div className="text-center py-16 px-4">
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted/50 mb-4">
+                          <Search className="w-10 h-10 text-muted-foreground" />
+                        </div>
+                        <h3 className="font-semibold text-lg mb-2">Brak wyników</h3>
+                        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                          Nie znaleziono sugestii pasujących do "{searchQuery}"
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return filtered
+                  .sort((a, b) => {
+                    switch (sortBy) {
+                      case "upvotes":
+                        return b.upvotes.length - a.upvotes.length;
+                      case "downvotes":
+                        return b.downvotes.length - a.downvotes.length;
+                      case "total":
+                        return (b.upvotes.length + b.downvotes.length) - (a.upvotes.length + a.downvotes.length);
+                      case "newest":
+                        return parseInt(b.suggestionId) - parseInt(a.suggestionId);
+                      default:
+                        return 0;
+                    }
+                  })
+                  .map((suggestion, index) => (
                   <SlideIn key={suggestion.suggestionId} direction="up" delay={index * 50}>
                     <div
                       className="p-4 rounded-lg bg-background/50 border border-transparent hover:bg-background/70 hover:shadow-lg hover:shadow-bot-primary/15 hover:border-bot-primary/30 transition-all duration-300"
@@ -569,7 +637,7 @@ export default function SuggestionsPage() {
                     </div>
                   </div>
                   </SlideIn>
-                ))}
+                ))})()}
               </div>
             )}
           </CardContent>

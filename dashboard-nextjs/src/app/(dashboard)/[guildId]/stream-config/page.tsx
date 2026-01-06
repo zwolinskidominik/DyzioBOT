@@ -65,7 +65,6 @@ export default function StreamConfigPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
-  // Streamers management
   const [streamers, setStreamers] = useState<Streamer[]>([]);
   const [members, setMembers] = useState<GuildMember[]>([]);
   const [newTwitchChannel, setNewTwitchChannel] = useState('');
@@ -98,7 +97,6 @@ export default function StreamConfigPage() {
           setEnabled(configData.enabled !== undefined ? configData.enabled : true);
         }
 
-        // Filter text channels (type 0) and announcement channels (type 5)
         const textChannels = channelsData.filter((ch: Channel) => ch.type === 0 || ch.type === 5);
         setChannels(textChannels);
 

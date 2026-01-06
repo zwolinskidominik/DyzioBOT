@@ -95,7 +95,6 @@ export default function GreetingsPage() {
       try {
         setLoading(true);
 
-        // Fetch data in parallel
         const [channelsData, gifsRes, configRes] = await Promise.all([
           fetchGuildData<Channel[]>(guildId, 'channels', `/api/guild/${guildId}/channels`),
           fetch(`/api/guild/${guildId}/greetings/gifs`),
@@ -126,12 +125,10 @@ export default function GreetingsPage() {
             setValue("welcomeMessage", config.welcomeMessage || DEFAULT_WELCOME_MESSAGE);
             setValue("goodbyeMessage", config.goodbyeMessage || DEFAULT_GOODBYE_MESSAGE);
           } else {
-            // No config exists, set defaults
             setValue("welcomeMessage", DEFAULT_WELCOME_MESSAGE);
             setValue("goodbyeMessage", DEFAULT_GOODBYE_MESSAGE);
           }
         } else {
-          // API error, set defaults
           setValue("welcomeMessage", DEFAULT_WELCOME_MESSAGE);
           setValue("goodbyeMessage", DEFAULT_GOODBYE_MESSAGE);
         }

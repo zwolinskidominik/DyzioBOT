@@ -5,8 +5,8 @@ class TempChannelConfiguration {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
-  @prop({ required: true, type: () => String })
-  public channelId!: string;
+  @prop({ required: true, type: () => [String], default: [] })
+  public channelIds!: string[];
 }
 
 export const TempChannelConfigurationModel = getModelForClass(TempChannelConfiguration);

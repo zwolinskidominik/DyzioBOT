@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 
 const streamConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
-  enabled: { type: Boolean, default: true },
+  enabled: { type: Boolean, default: false },
   channelId: { type: String, required: true },
 }, {
   collection: 'streamconfigurations'
@@ -39,7 +39,7 @@ export async function GET(
     await connectDB();
     const config = await StreamConfiguration.findOne({ guildId }).lean();
 
-    return NextResponse.json(config || { guildId, enabled: true, channelId: null });
+    return NextResponse.json(config || { guildId, enabled: false, channelId: null });
   } catch (error) {
     console.error('Error fetching stream config:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -66,7 +66,7 @@ export async function POST(
     await connectDB();
     const config = await StreamConfiguration.findOneAndUpdate(
       { guildId },
-      { guildId, enabled: enabled !== undefined ? enabled : true, channelId },
+      { guildId, enabled: enabled !== undefined ? enabled : false, channelId },
       { upsert: true, new: true }
     ).lean();
 

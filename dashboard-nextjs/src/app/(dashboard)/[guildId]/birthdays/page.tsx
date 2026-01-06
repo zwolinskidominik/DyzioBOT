@@ -20,6 +20,11 @@ import { SlideIn } from "@/components/ui/animated";
 import { fetchGuildData } from "@/lib/cache";
 import VariableInserter from "@/components/VariableInserter";
 
+const MONTH_NAMES = [
+  "Stycznia", "Lutego", "Marca", "Kwietnia", "Maja", "Czerwca",
+  "Lipca", "Sierpnia", "Września", "Października", "Listopada", "Grudnia"
+];
+
 const MONTHS = [
   { value: "1", label: "Styczeń" },
   { value: "2", label: "Luty" },
@@ -78,6 +83,7 @@ export default function BirthdaysPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [birthdays, setBirthdays] = useState<UserBirthday[]>([]);
+  const [upcomingBirthdays, setUpcomingBirthdays] = useState<any[]>([]);
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDay, setEditDay] = useState("");
@@ -102,7 +108,6 @@ export default function BirthdaysPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch data in parallel with caching
         const [channelsData, rolesData, birthdaysRes, configRes] = await Promise.all([
           fetchGuildData<Channel[]>(guildId, 'channels', `/api/discord/guild/${guildId}/channels`),
           fetchGuildData<Role[]>(guildId, 'roles', `/api/discord/guild/${guildId}/roles`),
@@ -110,7 +115,7 @@ export default function BirthdaysPage() {
           fetch(`/api/guild/${guildId}/birthdays`)
         ]);
 
-        setChannels(channelsData.filter((ch: Channel) => ch.type === 0)); // Text channels only
+        setChannels(channelsData.filter((ch: Channel) => ch.type === 0));
         setRoles(rolesData);
 
         if (birthdaysRes.ok) {
@@ -129,6 +134,11 @@ export default function BirthdaysPage() {
             });
           }
         }
+
+        fetch(`/api/guild/${guildId}/birthdays/upcoming`)
+          .then(res => res.ok ? res.json() : [])
+          .then(data => setUpcomingBirthdays(data))
+          .catch(err => console.error('Failed to load upcoming birthdays:', err));
       } catch (error) {
         console.error('Error loading birthdays data:', error);
         setError("Nie udało się załadować danych urodzin. Sprawdź połączenie z internetem i spróbuj ponownie.");
@@ -259,7 +269,7 @@ export default function BirthdaysPage() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
           <Button asChild variant="outline" className="mb-6">
             <Link href={`/${guildId}`}>
               <ArrowLeft className="mr-2 w-4 h-4" />
@@ -279,7 +289,7 @@ export default function BirthdaysPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
           <Skeleton className="h-10 w-40 mb-6" />
           
           <Card
@@ -352,7 +362,7 @@ export default function BirthdaysPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+      <div className="container mx-auto p-4 md:p-8 max-w-6xl">
         <SlideIn direction="left">
           <Button asChild variant="outline" className="mb-6">
             <Link href={`/${guildId}`}>
@@ -362,8 +372,11 @@ export default function BirthdaysPage() {
           </Button>
         </SlideIn>
 
-        {/* Configuration */}
-        <SlideIn direction="up" delay={100}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Configuration */}
+            <SlideIn direction="up" delay={100}>
           <Card 
             className="backdrop-blur mb-6"
             style={{
@@ -680,6 +693,70 @@ export default function BirthdaysPage() {
           </CardContent>
         </Card>
         </SlideIn>
+        </div>
+
+        {/* Sidebar - Upcoming Birthdays */}
+        <div>
+          <SlideIn direction="up" delay={300}>
+            <Card className="backdrop-blur sticky top-4" style={{
+              backgroundColor: 'rgba(189, 189, 189, .05)',
+              boxShadow: '0 0 10px #00000026',
+              border: '1px solid transparent'
+            }}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Cake className="w-5 h-5 text-pink-500" />
+                  Nadchodzące Urodziny
+                </CardTitle>
+                <CardDescription>10 najbliższych urodzin</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {upcomingBirthdays.length === 0 ? (
+                  <div className="text-center py-8 px-4">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted/50 mb-3">
+                      <Cake className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Brak nadchodzących urodzin
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 overflow-hidden">
+                    {upcomingBirthdays.map((birthday, index) => (
+                      <SlideIn key={birthday.userId} direction="up" delay={index * 30}>
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-transparent hover:bg-background/70 hover:shadow-lg hover:shadow-pink-500/15 transition-all duration-300">
+                          <img
+                            src={birthday.avatar 
+                              ? `https://cdn.discordapp.com/avatars/${birthday.userId}/${birthday.avatar}.png`
+                              : `https://cdn.discordapp.com/embed/avatars/${parseInt(birthday.userId) % 5}.png`
+                            }
+                            alt={birthday.username || "User"}
+                            className="w-10 h-10 rounded-full"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {birthday.username || `ID: ${birthday.userId.slice(0, 8)}`}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{birthday.day} {MONTH_NAMES[birthday.month - 1]}</span>
+                              <span>•</span>
+                              <span className={birthday.daysUntil === 0 ? "text-pink-500 font-semibold" : ""}>
+                                {birthday.daysUntil === 0 ? "Dzisiaj! 🎉" : 
+                                 birthday.daysUntil === 1 ? "Jutro" : 
+                                 `Za ${birthday.daysUntil} dni`}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </SlideIn>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </SlideIn>
+        </div>
+        </div>
       </div>
     </div>
   );

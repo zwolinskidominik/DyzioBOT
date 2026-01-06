@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 
-/**
- * Lightweight auth check with caching
- */
 const sessionCache = new Map<string, { session: any; timestamp: number }>();
-const SESSION_CACHE_TTL = 30 * 1000; // 30 seconds
+const SESSION_CACHE_TTL = 30 * 1000;
 
 export async function quickAuthCheck(request: Request): Promise<{ 
   authorized: boolean; 
@@ -14,7 +11,6 @@ export async function quickAuthCheck(request: Request): Promise<{
   response?: NextResponse;
 }> {
   try {
-    // Try to get cached session first
     const authHeader = request.headers.get('cookie');
     if (authHeader) {
       const cached = sessionCache.get(authHeader);
@@ -33,7 +29,6 @@ export async function quickAuthCheck(request: Request): Promise<{
       };
     }
 
-    // Cache the session
     if (authHeader) {
       sessionCache.set(authHeader, { session, timestamp: Date.now() });
     }
@@ -49,7 +44,6 @@ export async function quickAuthCheck(request: Request): Promise<{
   }
 }
 
-// Clean up old sessions every minute
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now();

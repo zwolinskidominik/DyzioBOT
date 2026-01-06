@@ -5,7 +5,7 @@ class SuggestionConfiguration {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
-  @prop({ type: () => Boolean, default: true })
+  @prop({ type: () => Boolean, default: false })
   public enabled!: boolean;
 
   @prop({ required: true, type: () => String })

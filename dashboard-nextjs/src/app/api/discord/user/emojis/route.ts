@@ -9,7 +9,6 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch all guilds user is in
     const guildsResponse = await fetch("https://discord.com/api/v10/users/@me/guilds", {
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
@@ -24,7 +23,6 @@ export async function GET() {
     console.log(`Fetching emojis from ${guilds.length} guilds`);
     const allEmojis: any[] = [];
 
-    // Fetch emojis from each guild using bot token
     for (const guild of guilds) {
       try {
         const emojisResponse = await fetch(

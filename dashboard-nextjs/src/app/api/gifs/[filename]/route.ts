@@ -11,7 +11,6 @@ export async function GET(
   try {
     const { filename } = await params;
     
-    // Security: prevent path traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
       return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
     }

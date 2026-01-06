@@ -57,7 +57,6 @@ export default function AutoRolePage() {
       try {
         setLoading(true);
 
-        // Check cache for roles (1 min TTL)
         const cacheKey = `roles_${guildId}`;
         const cached = localStorage.getItem(cacheKey);
         let rolesPromise;
@@ -65,7 +64,7 @@ export default function AutoRolePage() {
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
           const age = Date.now() - timestamp;
-          if (age < 60 * 1000) { // 1 minute
+          if (age < 60 * 1000) {
             rolesPromise = Promise.resolve({ ok: true, json: () => Promise.resolve(data) });
           } else {
             rolesPromise = fetch(`/api/guild/${guildId}/roles`);
@@ -74,7 +73,6 @@ export default function AutoRolePage() {
           rolesPromise = fetch(`/api/guild/${guildId}/roles`);
         }
 
-        // Fetch data in parallel
         const [rolesRes, configRes] = await Promise.all([
           rolesPromise,
           fetch(`/api/guild/${guildId}/autoroles`)
@@ -113,8 +111,6 @@ export default function AutoRolePage() {
   const onSubmit = async () => {
     setSaving(true);
     try {
-      // Always put bot role first (or empty string if none selected)
-      // Then user roles
       const roleIds = [
         selectedBotRole || "",
         ...selectedUserRoles

@@ -298,9 +298,6 @@ async function sendTicketMessages(
   await channel.send({
     embeds: [welcomeEmbed],
     files: [ticketImage],
-  });
-
-  await channel.send({
     components: [createTicketButtons()],
   });
 }

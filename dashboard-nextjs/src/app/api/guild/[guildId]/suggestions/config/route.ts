@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 
 const suggestionConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
-  enabled: { type: Boolean, default: true },
+  enabled: { type: Boolean, default: false },
   suggestionChannelId: { type: String, required: true },
 }, {
   collection: 'suggestionconfigurations'
@@ -39,7 +39,7 @@ export async function GET(
     
     const config = await SuggestionConfig.findOne({ guildId });
     
-    return NextResponse.json(config ? config.toObject() : { guildId, enabled: true, suggestionChannelId: '' });
+    return NextResponse.json(config ? config.toObject() : { guildId, enabled: false, suggestionChannelId: '' });
   } catch (error) {
     console.error('Error fetching suggestions config:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -66,7 +66,7 @@ export async function POST(
       { guildId },
       { 
         guildId,
-        enabled: enabled !== undefined ? enabled : true,
+        enabled: enabled !== undefined ? enabled : false,
         suggestionChannelId
       },
       { upsert: true, new: true }
