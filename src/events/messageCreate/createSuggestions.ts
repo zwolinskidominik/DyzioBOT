@@ -63,7 +63,7 @@ export default async function run(message: Message): Promise<void> {
       components: [components],
     });
 
-    await createDiscussionThread(message.channel as TextChannel, suggestionMessage, suggestionText);
+    await createDiscussionThread(suggestionMessage, suggestionText);
   } catch (error) {
     logger.error(`Błąd podczas tworzenia sugestii: ${error}`);
     try {
@@ -106,7 +106,6 @@ async function createSuggestionRecord(
 }
 
 async function createDiscussionThread(
-  channel: TextChannel,
   startMessage: Message,
   suggestionText: string
 ): Promise<void> {
