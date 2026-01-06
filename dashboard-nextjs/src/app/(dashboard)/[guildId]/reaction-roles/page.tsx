@@ -89,7 +89,7 @@ export default function ReactionRolesPage() {
   const fetchChannels = async () => {
     try {
       const data = await fetchGuildData<Channel[]>(guildId, 'channels', `/api/discord/guild/${guildId}/channels`);
-      setChannels(data.filter((ch: Channel) => ch.type === 0));
+      setChannels(data.filter((ch: Channel) => ch.type === 0 || ch.type === 5));
     } catch (error) {
       console.error("Error fetching channels:", error);
       toast.error("Nie udało się pobrać kanałów");

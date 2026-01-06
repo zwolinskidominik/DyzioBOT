@@ -127,7 +127,7 @@ export default function LogsPage() {
         fetchWithAuth(`/api/guild/${guildId}/logs/config`)
       ]);
 
-      setChannels(channelsData.filter((ch: Channel) => ch.type === 0));
+      setChannels(channelsData.filter((ch: Channel) => ch.type === 0 || ch.type === 5));
 
       if (configRes.ok) {
         const configData = await configRes.json();
@@ -151,7 +151,7 @@ export default function LogsPage() {
   const fetchChannels = async () => {
     try {
       const data = await fetchGuildData<Channel[]>(guildId, 'channels', `/api/discord/guild/${guildId}/channels`);
-      setChannels(data.filter((ch: Channel) => ch.type === 0));
+      setChannels(data.filter((ch: Channel) => ch.type === 0 || ch.type === 5));
     } catch (error) {
       console.error("Error fetching channels:", error);
       toast.error("Nie udało się pobrać kanałów");

@@ -46,22 +46,27 @@ export async function GET(
 
     const stats = await MonthlyStats
       .find({ guildId, month: currentMonth })
-      .sort({ messageCount: -1, voiceMinutes: -1 })
-      .limit(limit)
       .lean();
 
-    const enrichedStats = stats.map((stat, index) => ({
-      userId: stat.userId,
-      messageCount: stat.messageCount,
-      voiceMinutes: stat.voiceMinutes,
-      totalActivity: stat.messageCount + Math.floor(stat.voiceMinutes / 10),
-      rank: index + 1,
-    }));
+    // Calculate totalActivity and sort by it
+    const enrichedStats = stats
+      .map((stat) => ({
+        userId: stat.userId,
+        messageCount: stat.messageCount,
+        voiceMinutes: stat.voiceMinutes,
+        totalActivity: stat.messageCount + Math.floor(stat.voiceMinutes / 10),
+      }))
+      .sort((a, b) => b.totalActivity - a.totalActivity)
+      .slice(0, limit)
+      .map((stat, index) => ({
+        ...stat,
+        rank: index + 1,
+      }));
 
     return NextResponse.json({
       month: currentMonth,
       stats: enrichedStats,
-      total: stats.length,
+      total: enrichedStats.length,
     });
   } catch (error) {
     console.error('Error fetching current monthly stats:', error);

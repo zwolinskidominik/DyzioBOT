@@ -74,7 +74,7 @@ export default function MonthlyStatsPage() {
         ]);
 
         if (channelsData) {
-          const textChannels = channelsData.filter((ch: Channel) => ch.type === 0);
+          const textChannels = channelsData.filter((ch: Channel) => ch.type === 0 || ch.type === 5);
           setChannels(textChannels);
         }
 

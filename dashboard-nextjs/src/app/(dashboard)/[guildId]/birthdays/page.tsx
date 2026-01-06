@@ -117,7 +117,7 @@ export default function BirthdaysPage() {
           fetch(`/api/guild/${guildId}/birthdays`)
         ]);
 
-        setChannels(channelsData.filter((ch: Channel) => ch.type === 0));
+        setChannels(channelsData.filter((ch: Channel) => ch.type === 0 || ch.type === 5));
         setRoles(rolesData);
 
         if (birthdaysRes.ok) {

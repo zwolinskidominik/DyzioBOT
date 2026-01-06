@@ -805,7 +805,7 @@ export default function LevelsPage() {
                           </SelectTrigger>
                           <SelectContent>
                             {channels
-                              .filter(ch => ch.type === 0)
+                              .filter(ch => ch.type === 0 || ch.type === 5)
                               .map((channel) => (
                                 <SelectItem key={channel.id} value={channel.id}>
                                   # {channel.name}
@@ -1026,7 +1026,7 @@ export default function LevelsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {channels
-                            .filter(ch => ch.type === 0 && !config.ignoredChannels.includes(ch.id))
+                            .filter(ch => (ch.type === 0 || ch.type === 5) && !config.ignoredChannels.includes(ch.id))
                             .map((channel) => (
                               <SelectItem key={channel.id} value={channel.id}>
                                 # {channel.name}
