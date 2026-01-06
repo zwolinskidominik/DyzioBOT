@@ -44,7 +44,7 @@ const birthdaySchema = z.object({
   birthdayChannelId: z.string().min(1, "Wybierz kanał urodzinowy"),
   roleId: z.string().optional(),
   message: z.string().min(1, "Wpisz wiadomość urodzinową"),
-  enabled: z.boolean().default(true),
+  enabled: z.boolean().default(false),
 });
 
 type BirthdayFormData = z.infer<typeof birthdaySchema>;
@@ -102,7 +102,9 @@ export default function BirthdaysPage() {
     defaultValues: {
       birthdayChannelId: "",
       roleId: "",
-      message: "🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂",      enabled: true,    },
+      message: "🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂",
+      enabled: false,
+    },
   });
 
   useEffect(() => {
@@ -130,7 +132,7 @@ export default function BirthdaysPage() {
               birthdayChannelId: config.birthdayChannelId,
               roleId: config.roleId || "",
               message: config.message || "🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂",
-              enabled: config.enabled !== undefined ? config.enabled : true,
+              enabled: config.enabled !== undefined ? config.enabled : false,
             });
           }
         }

@@ -97,7 +97,7 @@ export default function QOTDPage() {
   } = useForm<QOTDFormData>({
     resolver: zodResolver(qotdSchema),
     defaultValues: {
-      enabled: true,
+      enabled: false,
       questionChannelId: "",
       pingRoleId: "",
     },
@@ -125,7 +125,7 @@ export default function QOTDPage() {
         if (configRes.ok) {
           const config = await configRes.json();
           reset({
-            enabled: config.enabled !== undefined ? config.enabled : true,
+            enabled: config.enabled !== undefined ? config.enabled : false,
             questionChannelId: config.questionChannelId || "",
             pingRoleId: config.pingRoleId || "",
           });

@@ -75,7 +75,7 @@ export default function GreetingsPage() {
   const form = useForm<GreetingsFormData>({
     resolver: zodResolver(greetingsSchema),
     defaultValues: {
-      enabled: true,
+      enabled: false,
       greetingsChannelId: "",
       rulesChannelId: "",
       rolesChannelId: "",
@@ -114,7 +114,7 @@ export default function GreetingsPage() {
         if (configRes.ok) {
           const config = await configRes.json();
           if (config) {
-            setValue("enabled", config.enabled !== undefined ? config.enabled : true);
+            setValue("enabled", config.enabled !== undefined ? config.enabled : false);
             setValue("greetingsChannelId", config.greetingsChannelId || "");
             setValue("rulesChannelId", config.rulesChannelId || "");
             setValue("rolesChannelId", config.rolesChannelId || "");

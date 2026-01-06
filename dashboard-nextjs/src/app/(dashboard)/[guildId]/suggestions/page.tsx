@@ -48,7 +48,7 @@ export default function SuggestionsPage() {
   const [saving, setSaving] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [config, setConfig] = useState<SuggestionConfig | null>(null);
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
@@ -99,7 +99,7 @@ export default function SuggestionsPage() {
         if (configRes.ok) {
           const configData = await configRes.json();
           setConfig(configData);
-          setEnabled(configData.enabled !== undefined ? configData.enabled : true);
+          setEnabled(configData.enabled !== undefined ? configData.enabled : false);
           setSelectedChannelId(configData.suggestionChannelId || "");
         }
 

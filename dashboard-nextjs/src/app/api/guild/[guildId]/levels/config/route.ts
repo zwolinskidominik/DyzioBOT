@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 
 const levelConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
+  enabled: { type: Boolean, default: false },
   xpPerMsg: { type: Number, default: 5 },
   xpPerMinVc: { type: Number, default: 10 },
   cooldownSec: { type: Number, default: 0 },
@@ -58,6 +59,7 @@ export async function GET(
     if (!config) {
       return NextResponse.json({
         guildId,
+        enabled: false,
         xpPerMsg: 5,
         xpPerMinVc: 10,
         cooldownSec: 0,

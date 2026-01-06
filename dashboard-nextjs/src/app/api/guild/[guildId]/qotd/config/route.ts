@@ -40,7 +40,7 @@ export async function GET(
     
     const config = await QuestionConfig.findOne({ guildId });
     
-    return NextResponse.json(config ? config.toObject() : { guildId, enabled: true, questionChannelId: '', pingRoleId: '' });
+    return NextResponse.json(config ? config.toObject() : { guildId, enabled: false, questionChannelId: '', pingRoleId: '' });
   } catch (error) {
     console.error('Error fetching QOTD config:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

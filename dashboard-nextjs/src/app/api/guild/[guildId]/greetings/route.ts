@@ -49,7 +49,19 @@ export async function GET(
     const config = await GreetingsConfig.findOne({ guildId: String(guildId) });
     
     if (!config) {
-      return NextResponse.json(null);
+      return NextResponse.json({
+        guildId,
+        enabled: false,
+        greetingsChannelId: '',
+        rulesChannelId: '',
+        rolesChannelId: '',
+        chatChannelId: '',
+        welcomeEnabled: true,
+        goodbyeEnabled: true,
+        dmEnabled: false,
+        welcomeMessage: '',
+        goodbyeMessage: ''
+      });
     }
     
     return NextResponse.json(config.toObject());

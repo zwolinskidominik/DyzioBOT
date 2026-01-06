@@ -44,7 +44,16 @@ export async function GET(
     
     if (!config) {
       const configAsNumber = await BirthdayConfig.findOne({ guildId: Number(guildId) });
-      return NextResponse.json(configAsNumber ? configAsNumber.toObject() : null);
+      if (configAsNumber) {
+        return NextResponse.json(configAsNumber.toObject());
+      }
+      return NextResponse.json({
+        guildId,
+        birthdayChannelId: '',
+        roleId: '',
+        message: '🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂',
+        enabled: false
+      });
     }
     
     return NextResponse.json(config.toObject());
@@ -76,6 +85,7 @@ export async function POST(
         birthdayChannelId: data.birthdayChannelId,
         roleId: data.roleId,
         message: data.message,
+        enabled: data.enabled !== undefined ? data.enabled : false,
         updatedAt: new Date(),
       },
       { upsert: true, new: true }

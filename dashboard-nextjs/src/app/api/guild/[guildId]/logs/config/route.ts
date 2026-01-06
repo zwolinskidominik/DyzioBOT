@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 
 const logConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
+  enabled: { type: Boolean, default: false },
   logChannels: { type: Object, default: {} },
   enabledEvents: { type: Object, default: {} },
   ignoredChannels: { type: [String], default: [] },
@@ -46,6 +47,7 @@ export async function GET(
     
     return NextResponse.json(config ? config.toObject() : {
       guildId,
+      enabled: false,
       logChannels: {},
       enabledEvents: {},
       ignoredChannels: [],

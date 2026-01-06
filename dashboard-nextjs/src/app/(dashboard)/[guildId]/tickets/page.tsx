@@ -58,7 +58,7 @@ export default function TicketsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [config, setConfig] = useState<TicketConfig | null>(null);
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedPanelChannelId, setSelectedPanelChannelId] = useState("");
   const [stats, setStats] = useState<TicketStat[]>([]);
@@ -87,7 +87,7 @@ export default function TicketsPage() {
         if (configRes.ok) {
           const configData = await configRes.json();
           setConfig(configData);
-          setEnabled(configData.enabled !== undefined ? configData.enabled : true);
+          setEnabled(configData.enabled !== undefined ? configData.enabled : false);
           setSelectedCategoryId(configData.categoryId || "");
           setSelectedPanelChannelId(configData.panelChannelId || "");
         }

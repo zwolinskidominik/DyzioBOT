@@ -90,7 +90,7 @@ export default function LevelsPage() {
   
   const [config, setConfig] = useState<LevelConfig>({
     guildId,
-    enabled: true,
+    enabled: false,
     xpPerMsg: 5,
     xpPerMinVc: 10,
     cooldownSec: 0,
@@ -495,7 +495,7 @@ export default function LevelsPage() {
                       </span>
                     </CardTitle>
                     <Switch
-                      checked={config.enabled ?? true}
+                      checked={config.enabled ?? false}
                       onCheckedChange={(checked) => setConfig({ ...config, enabled: checked })}
                       className="data-[state=checked]:bg-bot-primary"
                       style={{ transform: 'scale(1.5)' }}
