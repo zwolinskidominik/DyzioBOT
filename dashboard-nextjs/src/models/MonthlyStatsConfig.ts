@@ -14,7 +14,10 @@ const MonthlyStatsConfigSchema = new mongoose.Schema<IMonthlyStatsConfig>(
     enabled: { type: Boolean, default: false },
     topCount: { type: Number, default: 10, min: 1, max: 25 },
   },
-  { timestamps: true }
+  { 
+    collection: 'monthlystatsconfigs',
+    timestamps: true 
+  }
 );
 
 const MonthlyStatsConfigModel =

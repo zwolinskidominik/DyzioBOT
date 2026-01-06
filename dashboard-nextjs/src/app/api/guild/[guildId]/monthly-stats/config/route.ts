@@ -75,7 +75,7 @@ export async function POST(
       {
         guildId,
         channelId: channelId || undefined,
-        enabled: enabled ?? true,
+        enabled: enabled !== undefined ? enabled : false,
         topCount: topCount ?? 10,
       },
       { upsert: true, new: true }

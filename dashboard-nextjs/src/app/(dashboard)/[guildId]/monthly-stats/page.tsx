@@ -132,6 +132,8 @@ export default function MonthlyStatsPage() {
         throw new Error("Failed to save configuration");
       }
 
+      const savedConfig = await response.json();
+      setConfig(savedConfig);
       toast.success("Konfiguracja została zapisana!");
     } catch (error) {
       console.error("Error saving config:", error);
