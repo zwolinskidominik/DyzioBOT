@@ -58,7 +58,7 @@ export default function MonthlyStatsPage() {
   const [config, setConfig] = useState<MonthlyStatsConfig>({
     guildId,
     channelId: undefined,
-    enabled: true,
+    enabled: false,
     topCount: 10,
   });
 
@@ -263,14 +263,7 @@ export default function MonthlyStatsPage() {
                       disabled={!config.enabled}
                     >
                       <SelectTrigger id="channel">
-                        <SelectValue placeholder="Wybierz kanał...">
-                          {config.channelId && (
-                            <div className="flex items-center gap-2">
-                              <Hash className="w-4 h-4" />
-                              {getChannelName(config.channelId)}
-                            </div>
-                          )}
-                        </SelectValue>
+                        <SelectValue placeholder="Wybierz kanał..." />
                       </SelectTrigger>
                       <SelectContent>
                         {channels.map((channel) => (

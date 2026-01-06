@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import mongoose from "mongoose";
-import MonthlyStatsConfigModel from "@/models/MonthlyStatsConfig";
+import MonthlyStatsConfigModel, { IMonthlyStatsConfig } from "@/models/MonthlyStatsConfig";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -24,13 +24,19 @@ export async function GET(
     await connectDB();
     const { guildId } = await params;
 
-    let config = await MonthlyStatsConfigModel.findOne({ guildId });
+    let config = await MonthlyStatsConfigModel.findOne({ guildId }).lean<IMonthlyStatsConfig>();
 
     if (!config) {
-      config = await MonthlyStatsConfigModel.create({
+      const newConfig = await MonthlyStatsConfigModel.create({
         guildId,
         enabled: false,
         topCount: 10,
+      });
+      return NextResponse.json({
+        guildId: newConfig.guildId,
+        channelId: newConfig.channelId,
+        enabled: newConfig.enabled,
+        topCount: newConfig.topCount,
       });
     }
 
