@@ -4,7 +4,6 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
-  TextChannel,
   ThreadAutoArchiveDuration,
 } from 'discord.js';
 import { SuggestionConfigurationModel } from '../../models/SuggestionConfiguration';
