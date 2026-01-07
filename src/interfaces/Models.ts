@@ -63,7 +63,7 @@ export interface IGiveaway {
   participants: string[];
   hostId: string;
   createdAt: Date;
-  roleMultipliers: Record<string, number>;
+  roleMultipliers?: Record<string, number>;
   finalized: boolean;
 }
 

@@ -9,6 +9,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { GiveawayModel, GiveawayDocument } from '../../models/Giveaway';
+import { GiveawayConfigModel } from '../../models/GiveawayConfig';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import { getBotConfig } from '../../config/bot';
@@ -123,20 +124,40 @@ async function handleJoinGiveaway(
     return false;
   }
 
+  // Merge mnożników: globalne + nadpisanie per-giveaway
   let multiplier = 1;
-  if (giveaway.roleMultipliers && Object.keys(giveaway.roleMultipliers).length > 0) {
-    const member = interaction.member as GuildMember;
-    const memberRoles = member.roles.cache;
+  const member = interaction.member as GuildMember;
+  const memberRoles = member.roles.cache;
 
-    if (memberRoles) {
-      for (const [roleId, mult] of Object.entries(giveaway.roleMultipliers)) {
-        if (memberRoles.has(roleId)) {
-          multiplier = Math.max(multiplier, Number(mult));
-        }
+  const finalMultipliers: Record<string, number> = {};
+
+  // 1. Zacznij od globalnych mnożników z GiveawayConfig
+  try {
+    const config = await GiveawayConfigModel.findOne({ guildId: interaction.guild!.id });
+    if (config?.enabled && config.roleMultipliers?.length > 0) {
+      for (const rm of config.roleMultipliers) {
+        finalMultipliers[rm.roleId] = rm.multiplier;
       }
+    }
+  } catch (error) {
+    logger.debug(`Nie udało się pobrać konfiguracji giveaway: ${error}`);
+  }
+
+  // 2. Nadpisz/dodaj per-giveaway mnożniki
+  if (giveaway.roleMultipliers && Object.keys(giveaway.roleMultipliers).length > 0) {
+    for (const [roleId, mult] of Object.entries(giveaway.roleMultipliers)) {
+      finalMultipliers[roleId] = mult;
     }
   }
 
+  // 3. Sprawdź który mnożnik użytkownik ma (najwyższy)
+  for (const [roleId, mult] of Object.entries(finalMultipliers)) {
+    if (memberRoles.has(roleId) && mult > multiplier) {
+      multiplier = mult;
+    }
+  }
+
+  // Dodaj użytkownika wielokrotnie według mnożnika
   for (let i = 0; i < multiplier; i++) {
     giveaway.participants.push(interaction.user.id);
   }

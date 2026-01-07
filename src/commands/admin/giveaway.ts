@@ -10,6 +10,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { GiveawayModel } from '../../models/Giveaway';
+import { GiveawayConfigModel } from '../../models/GiveawayConfig';
 import type { ICommandOptions } from '../../interfaces/Command';
 import type { IGiveaway } from '../../interfaces/Models';
 import type { IWinnerUser } from '../../interfaces/Giveaway';
@@ -49,13 +50,15 @@ export const data = new SlashCommandBuilder()
       .addRoleOption((option) =>
         option
           .setName('mnoznik_roli')
-          .setDescription('Rola, dla której wejścia będą zwiększone (opcjonalnie)')
+          .setDescription('Rola z mnożnikiem TYLKO dla tego giveawaya (opcjonalnie)')
           .setRequired(false)
       )
       .addIntegerOption((option) =>
         option
           .setName('mnoznik')
-          .setDescription('Ilość wejść dla powyższej roli (domyślnie 1)')
+          .setDescription('Mnożnik dla powyższej roli (domyślnie 2)')
+          .setMinValue(2)
+          .setMaxValue(10)
           .setRequired(false)
       )
   )
@@ -208,7 +211,7 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
   const durationStr = interaction.options.getString('czas_trwania', true);
   const pingRole = interaction.options.getRole('ping');
   const multiplierRole = interaction.options.getRole('mnoznik_roli');
-  const multiplier = interaction.options.getInteger('mnoznik') || 1;
+  const multiplier = interaction.options.getInteger('mnoznik') || 2;
 
   const durationMs = parseDuration(durationStr);
   if (isNaN(durationMs) || durationMs <= 0) {
@@ -222,8 +225,19 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
   const timestamp = getTimestamp(endTime);
   const giveawayId = randomUUID();
 
+  // Pobierz dodatkową notatkę z konfiguracji
+  let additionalNote = '';
+  try {
+    const config = await GiveawayConfigModel.findOne({ guildId: interaction.guild!.id });
+    if (config?.enabled && config.additionalNote) {
+      additionalNote = `\n\n${config.additionalNote}`;
+    }
+  } catch (error) {
+    logger.debug(`Nie udało się pobrać konfiguracji giveaway: ${error}`);
+  }
+
   const embed = createBaseEmbed({
-    description: `### ${prize}\n${description}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
+    description: `### ${prize}\n${description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
     footerText: `Giveaway ID: ${giveawayId}`,
     color: COLORS.GIVEAWAY,
   });
@@ -255,9 +269,9 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
   const channel = interaction.channel as TextChannel;
   const giveawayMessage = await channel.send({ content, embeds: [embed], components: [row] });
 
-  let roleMultipliers: Record<string, number> = {};
+  let roleMultipliers: Record<string, number> | undefined;
   if (multiplierRole && multiplier > 1) {
-    roleMultipliers[multiplierRole.id] = multiplier;
+    roleMultipliers = { [multiplierRole.id]: multiplier };
   }
 
   const giveawayData: IGiveaway = {
@@ -346,9 +360,20 @@ async function handleEditGiveaway(interaction: ChatInputCommandInteraction): Pro
     logger.warn(`Nie udało się pobrać wiadomości giveaway: ${err}`);
   }
 
+  // Pobierz dodatkową notatkę z konfiguracji
+  let additionalNote = '';
+  try {
+    const config = await GiveawayConfigModel.findOne({ guildId: interaction.guild!.id });
+    if (config?.enabled && config.additionalNote) {
+      additionalNote = `\n\n${config.additionalNote}`;
+    }
+  } catch (error) {
+    logger.debug(`Nie udało się pobrać konfiguracji giveaway: ${error}`);
+  }
+
   const timestamp = getTimestamp(giveaway.endTime);
   const updatedEmbed = createBaseEmbed({
-    description: `### ${giveaway.prize}\n${giveaway.description}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${giveaway.hostId}>\n**Zwycięzcy:** ${giveaway.winnersCount}`,
+    description: `### ${giveaway.prize}\n${giveaway.description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${giveaway.hostId}>\n**Zwycięzcy:** ${giveaway.winnersCount}`,
     footerText: `Giveaway ID: ${giveaway.giveawayId}`,
     color: COLORS.GIVEAWAY,
   });
@@ -456,7 +481,8 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
   const winners = await pickWinners(
     giveaway.participants,
     giveaway.winnersCount,
-    interaction.guild!
+    interaction.guild!,
+    giveaway.roleMultipliers as Record<string, number> | undefined
   );
   const winnersText = winners.length
     ? winners.map((user: IWinnerUser) => `<@${user.id}>`).join(', ')
@@ -591,7 +617,12 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction): P
     return;
   }
 
-  const winners = await pickWinners(participantArray, giveaway.winnersCount, interaction.guild!);
+  const winners = await pickWinners(
+    participantArray, 
+    giveaway.winnersCount, 
+    interaction.guild!,
+    giveaway.roleMultipliers as Record<string, number> | undefined
+  );
   const winnersText = winners.length
     ? winners.map((user: IWinnerUser) => `<@${user.id}>`).join(', ')
     : 'Brak zwycięzców';

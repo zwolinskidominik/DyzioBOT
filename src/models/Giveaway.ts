@@ -51,8 +51,8 @@ class Giveaway {
   @prop({ default: Date.now, type: () => Date })
   public createdAt!: Date;
 
-  @prop({ type: () => Map, default: new Map<string, number>() })
-  public roleMultipliers!: Map<string, number>;
+  @prop({ type: () => Map })
+  public roleMultipliers?: Map<string, number>;
 
   @prop({ default: false, type: () => Boolean })
   public finalized!: boolean;

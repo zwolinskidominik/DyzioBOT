@@ -1,10 +1,17 @@
 import { Guild, User } from 'discord.js';
 import logger from '../utils/logger';
+import { GiveawayConfigModel } from '../models/GiveawayConfig';
+
+interface RoleMultiplier {
+  roleId: string;
+  multiplier: number;
+}
 
 export async function pickWinners(
   participants: string[],
   winnersCount: number,
-  guild: Guild
+  guild: Guild,
+  perGiveawayMultipliers?: Record<string, number>
 ): Promise<User[]> {
   if (!participants || participants.length === 0) {
     return [];
@@ -14,7 +21,56 @@ export async function pickWinners(
     winnersCount = 1;
   }
 
-  const tickets = [...participants];
+  // Merge mnożników: globalne + nadpisanie per-giveaway
+  const finalMultipliers: Record<string, number> = {};
+  
+  // 1. Zacznij od globalnych z GiveawayConfig
+  try {
+    const config = await GiveawayConfigModel.findOne({ guildId: guild.id });
+    if (config?.enabled && config.roleMultipliers?.length > 0) {
+      for (const rm of config.roleMultipliers) {
+        finalMultipliers[rm.roleId] = rm.multiplier;
+      }
+    }
+  } catch (error) {
+    logger.debug(`Nie udało się pobrać konfiguracji giveaway: ${error}`);
+  }
+
+  // 2. Nadpisz/dodaj per-giveaway mnożniki
+  if (perGiveawayMultipliers && Object.keys(perGiveawayMultipliers).length > 0) {
+    for (const [roleId, multiplier] of Object.entries(perGiveawayMultipliers)) {
+      finalMultipliers[roleId] = multiplier;
+    }
+  }
+
+  // Konwertuj do tablicy RoleMultiplier
+  const roleMultipliers: RoleMultiplier[] = Object.entries(finalMultipliers).map(([roleId, multiplier]) => ({
+    roleId,
+    multiplier
+  }));
+
+  // Zastosuj mnożniki - dodaj użytkowników wielokrotnie
+  const tickets: string[] = [];
+  for (const userId of participants) {
+    let multiplier = 1;
+    
+    if (roleMultipliers.length > 0) {
+      const member = guild.members.cache.get(userId);
+      if (member) {
+        for (const rm of roleMultipliers) {
+          if (member.roles.cache.has(rm.roleId) && rm.multiplier > multiplier) {
+            multiplier = rm.multiplier;
+          }
+        }
+      }
+    }
+    
+    // Dodaj userId wielokrotnie według mnożnika
+    for (let i = 0; i < multiplier; i++) {
+      tickets.push(userId);
+    }
+  }
+
   const maxShuffle = Math.min(tickets.length, winnersCount * 5);
   for (let i = 0; i < maxShuffle; i++) {
     const j = i + Math.floor(Math.random() * (tickets.length - i));
