@@ -1,11 +1,8 @@
 import { Client, TextChannel, ChannelType } from 'discord.js';
 import logger from '../../utils/logger';
-import { env } from '../../config';
 import { getGuildConfig } from '../../config/guild';
 import { schedule, ScheduledTask } from 'node-cron';
 import { TournamentConfigModel } from '../../models/TournamentConfig';
-
-const { TOURNAMENT_CHANNEL_ID } = env();
 
 let scheduledTask: ScheduledTask | null = null;
 
@@ -26,9 +23,9 @@ export default async function run(client: Client): Promise<void> {
         tournamentConfig.cronSchedule || '25 20 * * 1',
         async () => {
           try {
-            const channelId = TOURNAMENT_CHANNEL_ID;
+            const channelId = tournamentConfig.channelId;
             if (!channelId) {
-              logger.warn('Brak zmiennej środowiskowej TOURNAMENT_CHANNEL_ID.');
+              logger.warn('Brak skonfigurowanego kanału dla turnieju.');
               return;
             }
 
@@ -88,6 +85,4 @@ export default async function run(client: Client): Promise<void> {
   };
 
   await setupSchedule();
-
-  setInterval(setupSchedule, 60 * 60 * 1000);
 }

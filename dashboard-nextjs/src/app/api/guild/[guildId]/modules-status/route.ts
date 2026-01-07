@@ -94,6 +94,12 @@ const TournamentConfigSchema = new mongoose.Schema({
 }, { collection: 'tournamentconfigs' });
 const TournamentConfig = mongoose.models.TournamentConfig || mongoose.model('TournamentConfig', TournamentConfigSchema);
 
+const GiveawayConfigSchema = new mongoose.Schema({
+  guildId: String,
+  enabled: Boolean,
+}, { collection: 'giveawayconfigs' });
+const GiveawayConfig = mongoose.models.GiveawayConfig || mongoose.model('GiveawayConfig', GiveawayConfigSchema);
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -122,6 +128,7 @@ export async function GET(
       reactionRoles,
       logs,
       tournament,
+      giveaway,
     ] = await Promise.all([
       BirthdayConfig.findOne({ guildId }).lean(),
       GreetingsConfig.findOne({ guildId }).lean(),
@@ -137,6 +144,7 @@ export async function GET(
       ReactionRole.findOne({ guildId }).lean(),
       LogConfiguration.findOne({ guildId }).lean(),
       TournamentConfig.findOne({ guildId }).lean(),
+      GiveawayConfig.findOne({ guildId }).lean(),
     ]);
 
     const status = {
@@ -154,6 +162,7 @@ export async function GET(
       "stream-config": (stream as any)?.enabled === true,
       "reaction-roles": (reactionRoles as any)?.enabled === true,
       tournament: (tournament as any)?.enabled === true,
+      giveaway: (giveaway as any)?.enabled === true,
     };
 
     return NextResponse.json(status);

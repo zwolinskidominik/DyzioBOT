@@ -13,11 +13,8 @@ export default async function run(client: Client): Promise<void> {
         const questionConfigs = await QuestionConfigurationModel.find();
         
         if (questionConfigs.length === 0) {
-          logger.info('Brak skonfigurowanych gildii z pytaniami dnia');
           return;
         }
-
-        logger.info(`Wysyłanie pytań dnia dla ${questionConfigs.length} gildii...`);
 
         for (const questionConfig of questionConfigs) {
           try {
@@ -68,14 +65,10 @@ export default async function run(client: Client): Promise<void> {
               questionId: randomQuestion.questionId,
               usedAt: new Date(),
             });
-            
-            logger.info(`[${questionConfig.guildId}] Wysłano pytanie dnia: ${randomQuestion.content.slice(0, 50)}... (ID: ${randomQuestion.questionId})`);
           } catch (error) {
             logger.error(`[${questionConfig.guildId}] Błąd wysyłania pytania dnia: ${error}`);
           }
         }
-        
-        logger.info('Zakończono wysyłanie pytań dnia dla wszystkich gildii');
       } catch (error) {
         logger.error(`Błąd w schedulerze pytań dnia: ${error}`);
       }

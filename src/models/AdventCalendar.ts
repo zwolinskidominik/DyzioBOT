@@ -1,4 +1,4 @@
-import { prop, getModelForClass, DocumentType, index } from '@typegoose/typegoose';
+import { prop, getModelForClass, DocumentType, index, modelOptions, Severity } from '@typegoose/typegoose';
 
 interface DayReward {
   day: number;
@@ -7,6 +7,7 @@ interface DayReward {
 }
 
 @index({ guildId: 1, userId: 1 }, { unique: true })
+@modelOptions({ options: { allowMixed: Severity.ALLOW } })
 class AdventCalendar {
   @prop({ required: true, type: () => String })
   public guildId!: string;

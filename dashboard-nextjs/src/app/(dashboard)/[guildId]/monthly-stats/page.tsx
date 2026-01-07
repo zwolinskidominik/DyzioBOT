@@ -254,6 +254,17 @@ export default function MonthlyStatsPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
 
+                  {/* Current Channel Display */}
+                  {config.channelId && (
+                    <div className="p-4 rounded-lg bg-bot-primary/10 border border-bot-primary/20">
+                      <p className="text-sm text-muted-foreground mb-2">Aktualnie skonfigurowany kanał:</p>
+                      <div className="flex items-center gap-2 font-medium">
+                        <Hash className="w-4 h-4 text-bot-primary" />
+                        <span className="text-bot-primary">{getChannelName(config.channelId)}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Channel Selection */}
                   <div className="space-y-2">
                     <Label htmlFor="channel">Kanał do wysyłania statystyk</Label>

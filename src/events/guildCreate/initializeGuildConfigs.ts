@@ -10,6 +10,7 @@ import { StreamConfigurationModel } from '../../models/StreamConfiguration';
 import { ReactionRoleModel } from '../../models/ReactionRole';
 import { LogConfigurationModel } from '../../models/LogConfiguration';
 import { TournamentConfigModel } from '../../models/TournamentConfig';
+import { GiveawayConfigModel } from '../../models/GiveawayConfig';
 import { AutoRoleModel } from '../../models/AutoRole';
 import logger from '../../utils/logger';
 
@@ -80,6 +81,12 @@ export default async (_client: Client, guild: Guild) => {
       ),
 
       TournamentConfigModel.findOneAndUpdate(
+        { guildId },
+        { guildId, enabled: false },
+        { upsert: true, setDefaultsOnInsert: true }
+      ),
+
+      GiveawayConfigModel.findOneAndUpdate(
         { guildId },
         { guildId, enabled: false },
         { upsert: true, setDefaultsOnInsert: true }

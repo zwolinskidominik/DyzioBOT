@@ -212,7 +212,16 @@ async function moveUserToChannel(newState: VoiceState, newChannel: VoiceChannel)
   if (!newState.member) return;
 
   if (!newState.channel) {
-    logger.warn('Użytkownik opuścił kanał przed przeniesieniem');
+    // Użytkownik opuścił kanał przed przeniesieniem - usuń pusty tymczasowy kanał
+    try {
+      const tempChannel = await TempChannelModel.findOne({ channelId: newChannel.id });
+      if (tempChannel && newChannel.members.size === 0) {
+        await newChannel.delete();
+        await TempChannelModel.findOneAndDelete({ channelId: newChannel.id });
+      }
+    } catch (error) {
+      logger.debug(`Nie można usunąć pustego kanału: ${error}`);
+    }
     return;
   }
 

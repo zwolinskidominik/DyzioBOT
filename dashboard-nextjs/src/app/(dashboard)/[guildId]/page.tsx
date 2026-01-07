@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Home, Cake, Hand, TrendingUp, UserPlus, Lightbulb, Ticket, HelpCircle, MessagesSquare, Smile, BarChart3, Activity, Radio } from "lucide-react";
+import { Loader2, Home, Cake, Hand, TrendingUp, UserPlus, Lightbulb, Ticket, HelpCircle, MessagesSquare, Smile, BarChart3, Activity, Radio, Gift } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,6 +35,7 @@ const modules = [
   { id: "qotd", name: "Pytanie Dnia", icon: HelpCircle, description: "Codzienne pytania dla społeczności", color: "bg-cyan-500" },
   { id: "suggestions", name: "Sugestie", icon: Lightbulb, description: "System zgłaszania propozycji", color: "bg-yellow-500" },
   { id: "tickets", name: "Tickety", icon: Ticket, description: "System zgłoszeń wsparcia", color: "bg-red-500" },
+  { id: "giveaway", name: "Giveaway", icon: Gift, description: "Konfiguracja giveawayów", color: "bg-pink-600" },
   { id: "stream-config", name: "Twitch", icon: MessagesSquare, description: "Powiadomienia o streamach", color: "bg-purple-600" },
   { id: "reaction-roles", name: "Role za reakcje", icon: Smile, description: "Role przypisywane przez reakcje", color: "bg-orange-500" },
 ];

@@ -8,6 +8,9 @@ export class TournamentConfig {
   @prop({ type: () => Boolean, default: false })
   public enabled!: boolean;
 
+  @prop({ type: () => String })
+  public channelId?: string;
+
   @prop({ 
     type: () => String, 
     default: `# Zasady co poniedziałkowych mixów 5vs5 {roleMention}

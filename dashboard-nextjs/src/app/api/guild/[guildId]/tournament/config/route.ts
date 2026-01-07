@@ -40,6 +40,7 @@ export async function GET(
     return NextResponse.json({
       guildId,
       enabled: (config as any)?.enabled ?? false,
+      channelId: (config as any)?.channelId || null,
       messageTemplate: (config as any)?.messageTemplate || defaultTemplate,
       cronSchedule: (config as any)?.cronSchedule || '25 20 * * 1',
       reactionEmoji: (config as any)?.reactionEmoji || '🎮',

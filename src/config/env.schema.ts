@@ -20,8 +20,6 @@ export const EnvSchema = z.object({
   DEV_USER_IDS: csv('DEV_USER_IDS'),
   DEV_ROLE_IDS: csv('DEV_ROLE_IDS'),
 
-  TOURNAMENT_CHANNEL_ID: z.string().optional(),
-
   MONGODB_URI: z.string().url('MONGODB_URI musi być poprawnym URL-em'),
 
   TWITCH_CLIENT_ID: z.string().optional(),

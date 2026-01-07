@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, ArrowLeft, Gamepad2 } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Gamepad2, Hash } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +20,7 @@ import VariableInserter from "@/components/VariableInserter";
 interface TournamentConfig {
   guildId: string;
   enabled: boolean;
+  channelId?: string | null;
   messageTemplate: string;
   cronSchedule: string;
   reactionEmoji: string;
@@ -32,10 +33,12 @@ export default function TournamentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [channels, setChannels] = useState<any[]>([]);
   
   const [config, setConfig] = useState<TournamentConfig>({
     guildId,
     enabled: false,
+    channelId: null,
     messageTemplate: '',
     cronSchedule: '25 20 * * 1',
     reactionEmoji: '🎮',
@@ -63,12 +66,21 @@ export default function TournamentPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetchWithAuth(`/api/guild/${guildId}/tournament/config`);
         
-        if (response.ok) {
-          const data = await response.json();
+        const [configResponse, channelsResponse] = await Promise.all([
+          fetchWithAuth(`/api/guild/${guildId}/tournament/config`),
+          fetchWithAuth(`/api/guild/${guildId}/channels`)
+        ]);
+        
+        if (configResponse.ok) {
+          const data = await configResponse.json();
           setConfig(data);
           parseCronSchedule(data.cronSchedule);
+        }
+
+        if (channelsResponse.ok) {
+          const channelsData = await channelsResponse.json();
+          setChannels(channelsData.filter((ch: any) => ch.type === 0 || ch.type === 5));
         }
         
         setLoading(false);
@@ -98,6 +110,8 @@ export default function TournamentPage() {
         throw new Error('Failed to save tournament config');
       }
 
+      const savedConfig = await response.json();
+      setConfig(savedConfig);
       toast.success('Konfiguracja turnieju została zapisana!');
     } catch (error) {
       console.error('Error saving tournament config:', error);
@@ -218,6 +232,44 @@ export default function TournamentPage() {
                 </p>
               </div>
 
+              {/* Channel Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="channelId">
+                  Kanał docelowy <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={config.channelId || ""}
+                  onValueChange={(value) => setConfig({ ...config, channelId: value })}
+                >
+                  <SelectTrigger id="channelId">
+                    <SelectValue placeholder="Wybierz kanał do wysyłki wiadomości" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {channels.map((channel) => (
+                      <SelectItem key={channel.id} value={channel.id}>
+                        # {channel.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Kanał na którym będą wysyłane wiadomości turnieju
+                </p>
+              </div>
+
+              {/* Current Channel Display */}
+              {config.channelId && (
+                <div className="rounded-lg border bg-muted/50 p-4">
+                  <div className="flex items-center gap-2">
+                    <Hash className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Aktualnie skonfigurowany kanał:</span>
+                    <span className="text-sm text-muted-foreground">
+                      {channels.find(ch => ch.id === config.channelId)?.name || 'Nieznany kanał'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Schedule */}
               <div className="space-y-4">
                 <Label>Harmonogram wysyłki <span className="text-destructive">*</span></Label>
@@ -316,7 +368,7 @@ export default function TournamentPage() {
               {/* Save Button */}
               <Button 
                 onClick={handleSave} 
-                disabled={saving || !config.messageTemplate} 
+                disabled={saving || !config.messageTemplate || !config.channelId} 
                 className="btn-gradient hover:scale-105 w-full"
               >
                 {saving ? (
