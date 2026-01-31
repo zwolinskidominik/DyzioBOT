@@ -9,6 +9,7 @@ const questionSchema = new mongoose.Schema({
   authorId: { type: String, required: true },
   content: { type: String, required: true, unique: true },
   reactions: { type: [String], default: [] },
+  disabled: { type: Boolean, default: false },
 }, {
   collection: 'questions'
 });
@@ -38,7 +39,7 @@ export async function GET(
 
     await connectDB();
     
-    const questions = await Question.find({});
+    const questions = await Question.find({ disabled: { $ne: true } });
     
     return NextResponse.json(questions);
   } catch (error) {

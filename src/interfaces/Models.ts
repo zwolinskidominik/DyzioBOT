@@ -80,6 +80,7 @@ export interface IQuestion {
   authorId: string;
   content: string;
   reactions: string[];
+  disabled: boolean;
 }
 
 export interface IUsedQuestion {

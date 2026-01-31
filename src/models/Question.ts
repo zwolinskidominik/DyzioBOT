@@ -14,6 +14,9 @@ class Question {
 
   @prop({ type: () => [String], default: [] })
   public reactions!: string[];
+
+  @prop({ type: () => Boolean, default: false })
+  public disabled!: boolean;
 }
 
 export const QuestionModel = getModelForClass(Question);

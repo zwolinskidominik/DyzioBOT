@@ -1,7 +1,6 @@
 import { Client, ChannelType, TextChannel } from 'discord.js';
 import { QuestionConfigurationModel } from '../../models/QuestionConfiguration';
 import { QuestionModel } from '../../models/Question';
-import { UsedQuestionModel } from '../../models/UsedQuestion';
 import logger from '../../utils/logger';
 import { schedule } from 'node-cron';
 
@@ -25,16 +24,15 @@ export default async function run(client: Client): Promise<void> {
             }
             const questionChannel = channel as TextChannel;
 
-            const usedQuestionIds = await UsedQuestionModel.find({ guildId: questionConfig.guildId }).distinct('questionId');
-            const questions = await QuestionModel.find({ questionId: { $nin: usedQuestionIds } });
+            const availableQuestions = await QuestionModel.find({ disabled: { $ne: true } });
             
-            if (questions.length === 0) {
+            if (availableQuestions.length === 0) {
               logger.info(`[${questionConfig.guildId}] Brak dostępnych pytań (wszystkie zostały już użyte)`);
               await questionChannel.send('Brak dostępnych pytań - wszystkie pytania zostały już zadane! Poproś administratora o dodanie nowych pytań.');
               continue;
             }
 
-            const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+            const randomQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
 
             let threadName = randomQuestion.content.slice(0, 97);
             if (randomQuestion.content.length > 97) threadName += '...';
@@ -60,11 +58,10 @@ export default async function run(client: Client): Promise<void> {
               }
             }
 
-            await UsedQuestionModel.create({
-              guildId: questionConfig.guildId,
-              questionId: randomQuestion.questionId,
-              usedAt: new Date(),
-            });
+            await QuestionModel.findOneAndUpdate(
+              { questionId: randomQuestion.questionId },
+              { disabled: true }
+            );
           } catch (error) {
             logger.error(`[${questionConfig.guildId}] Błąd wysyłania pytania dnia: ${error}`);
           }

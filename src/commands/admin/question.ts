@@ -44,9 +44,9 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName('remove')
-      .setDescription('Usuń pytanie o danym numerze')
-      .addIntegerOption((option) =>
-        option.setName('numer').setDescription('Numer pytania do usunięcia').setRequired(true)
+      .setDescription('Usuń pytanie po jego ID')
+      .addStringOption((option) =>
+        option.setName('questionid').setDescription('ID pytania do usunięcia (z listy)').setRequired(true)
       )
   );
 
@@ -78,7 +78,7 @@ async function handleListSubcommand(interaction: ChatInputCommandInteraction): P
     const pageSize = 5;
     let currentPage = 1;
 
-    const allQuestions = await QuestionModel.find().sort({ _id: 1 }).lean<IQuestion[]>();
+    const allQuestions = await QuestionModel.find({ disabled: { $ne: true } }).sort({ _id: 1 }).lean<IQuestion[]>();
     const totalQuestions = allQuestions.length;
     const pages = chunk(allQuestions, pageSize);
     const totalPages = pages.length || 1;
@@ -88,7 +88,7 @@ async function handleListSubcommand(interaction: ChatInputCommandInteraction): P
       const desc = questions
         .map((q, i: number) => {
           const question = q as IQuestion;
-          return `${(page - 1) * pageSize + i + 1}. ${question.content}\nReakcje: ${question.reactions.join(' ')}`;
+          return `**${(page - 1) * pageSize + i + 1}.** ${question.content}\nReakcje: ${question.reactions.join(' ')}\nID: \`${question.questionId}\``;
         })
         .join('\n\n');
       const embed = createBaseEmbed({
@@ -234,35 +234,33 @@ async function handleAddSubcommand(interaction: ChatInputCommandInteraction): Pr
 }
 
 async function handleRemoveSubcommand(interaction: ChatInputCommandInteraction): Promise<void> {
-  const questionNumber = interaction.options.getInteger('numer', true);
-  const totalQuestions = await QuestionModel.countDocuments();
-
-  if (questionNumber < 1 || questionNumber > totalQuestions) {
-    const invalidEmbed = createBaseEmbed({
-      isError: true,
-      description: `Nieprawidłowy numer pytania. Wprowadź numer od 1 do ${totalQuestions}.`,
-    });
-    await interaction.reply({ embeds: [invalidEmbed], flags: MessageFlags.Ephemeral });
-    return;
-  }
+  const questionId = interaction.options.getString('questionid', true);
 
   try {
-    const questions = await QuestionModel.find().sort({ _id: 1 });
-    const questionToDelete = questions[questionNumber - 1];
+    const questionToDelete = await QuestionModel.findOne({ questionId });
 
     if (!questionToDelete) {
       const notFoundEmbed = createBaseEmbed({
         isError: true,
-        description: `Nie znaleziono pytania o podanym numerze.`,
+        description: `Nie znaleziono pytania o podanym ID. Użyj /question list aby zobaczyć dostępne pytania.`,
       });
       await interaction.reply({ embeds: [notFoundEmbed], flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (questionToDelete.disabled) {
+      const disabledEmbed = createBaseEmbed({
+        isError: true,
+        description: `Nie możesz usunąć tego pytania, ponieważ zostało już użyte.\n\n**Treść:** ${questionToDelete.content}\n\n💡 Możesz je usunąć tylko przez dashboard.`,
+      });
+      await interaction.reply({ embeds: [disabledEmbed], flags: MessageFlags.Ephemeral });
       return;
     }
 
     await QuestionModel.findByIdAndDelete(questionToDelete._id);
 
     const successEmbed = createBaseEmbed({
-      description: `Pytanie nr ${questionNumber} zostało pomyślnie usunięte.`,
+      description: `Pytanie zostało pomyślnie usunięte.\n\n**Treść:** ${questionToDelete.content}`,
     });
 
     await interaction.reply({ embeds: [successEmbed], flags: MessageFlags.Ephemeral });

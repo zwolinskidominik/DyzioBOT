@@ -60,6 +60,7 @@ interface Question {
   authorId: string;
   content: string;
   reactions: string[];
+  disabled?: boolean;
 }
 
 export default function QOTDPage() {
