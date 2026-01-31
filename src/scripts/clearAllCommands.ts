@@ -17,12 +17,12 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 async function clearAll() {
   try {
     console.log('🧹 Czyszczę globalne komendy...');
-    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: [] });
+    await rest.put(Routes.applicationCommands(CLIENT_ID!), { body: [] });
     console.log('✅ Usunięto wszystkie globalne komendy');
 
     if (GUILD_ID) {
       console.log(`🧹 Czyszczę komendy na serwerze ${GUILD_ID}...`);
-      await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: [] });
+      await rest.put(Routes.applicationGuildCommands(CLIENT_ID!, GUILD_ID), { body: [] });
       console.log('✅ Usunięto wszystkie komendy z serwera');
     }
 
