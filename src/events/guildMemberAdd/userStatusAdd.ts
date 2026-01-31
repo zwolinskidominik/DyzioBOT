@@ -3,7 +3,7 @@ import { BirthdayModel, BirthdayDocument } from '../../models/Birthday';
 import { TwitchStreamerModel, TwitchStreamerDocument } from '../../models/TwitchStreamer';
 import logger from '../../utils/logger';
 import type { ReturnModelType, DocumentType } from '@typegoose/typegoose';
-import type { FilterQuery, UpdateQuery } from 'mongoose';
+import type { UpdateQuery } from 'mongoose';
 
 export default async function run(member: GuildMember): Promise<void> {
   try {
@@ -34,7 +34,7 @@ export default async function run(member: GuildMember): Promise<void> {
 
 async function reactivateEntry<TDoc extends { active?: boolean }>(
   model: ReturnModelType<any, DocumentType<TDoc>>,
-  filter: FilterQuery<DocumentType<TDoc>>
+  filter: Record<string, any>
 ): Promise<void> {
   const entry = await model.findOne(filter).exec();
 

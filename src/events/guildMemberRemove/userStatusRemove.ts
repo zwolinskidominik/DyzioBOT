@@ -4,7 +4,7 @@ import { TwitchStreamerModel, TwitchStreamerDocument } from '../../models/Twitch
 import { LevelModel } from '../../models/Level';
 import logger from '../../utils/logger';
 import type { ReturnModelType, DocumentType } from '@typegoose/typegoose';
-import type { FilterQuery, UpdateQuery } from 'mongoose';
+import type { UpdateQuery } from 'mongoose';
 
 export default async function run(member: GuildMember): Promise<void> {
   if (!member.guild) return;
@@ -29,7 +29,7 @@ export default async function run(member: GuildMember): Promise<void> {
 
 async function deactivateEntry<TDoc extends { active?: boolean }>(
   model: ReturnModelType<any, DocumentType<TDoc>>,
-  filter: FilterQuery<DocumentType<TDoc>>
+  filter: Record<string, any>
 ): Promise<void> {
   const entry = await model.findOne(filter).exec();
 

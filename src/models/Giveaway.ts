@@ -1,15 +1,11 @@
-import { index, prop, getModelForClass, DocumentType, pre, modelOptions, Severity } from '@typegoose/typegoose';
+import { index, prop, getModelForClass, DocumentType, modelOptions, Severity } from '@typegoose/typegoose';
 
 @index({ guildId: 1 })
-@modelOptions({ options: { allowMixed: Severity.ALLOW } })
-@pre<Giveaway>('validate', function(next) {
-  if (process.env.NODE_ENV === 'test') {
-    return next();
+@modelOptions({ 
+  options: { allowMixed: Severity.ALLOW },
+  schemaOptions: {
+    timestamps: false
   }
-  if (this.endTime && this.endTime.getTime() <= Date.now()) {
-    return next(new Error('endTime must be in the future'));
-  }
-  next();
 })
 class Giveaway {
   @prop({ required: true, unique: true, type: () => String })
