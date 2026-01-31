@@ -33,6 +33,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
 import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { EmojiList } from "@/components/EmojiDisplay";
 
 const qotdSchema = z.object({
   enabled: z.boolean().default(true),
@@ -593,6 +594,12 @@ export default function QOTDPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="reactions">Reakcje (emoji oddzielone przecinkami)</Label>
+                {newReactions.trim() && (
+                  <div className="mb-2 flex items-center gap-1 flex-wrap p-2 rounded-md bg-muted/50">
+                    <span className="text-xs text-muted-foreground">Podgląd:</span>
+                    <EmojiList emojis={newReactions.split(",").map(r => r.trim()).filter(r => r)} size={20} />
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Input
                     ref={reactionsInputRef}
@@ -765,6 +772,10 @@ export default function QOTDPage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor={`edit-reactions-${question.questionId}`}>Reakcje</Label>
+                            <div className="mb-2 flex items-center gap-1 flex-wrap">
+                              <span className="text-xs text-muted-foreground">Podgląd:</span>
+                              <EmojiList emojis={editReactions.split(",").map(r => r.trim()).filter(r => r)} size={18} />
+                            </div>
                             <div className="flex gap-2">
                               <Input
                                 ref={editReactionsInputRef}
@@ -860,9 +871,10 @@ export default function QOTDPage() {
                           <div className="flex-1 space-y-1">
                             <p className="text-sm">{question.content}</p>
                             {question.reactions.length > 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                Reakcje: {question.reactions.join(", ")}
-                              </p>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <span>Reakcje:</span>
+                                <EmojiList emojis={question.reactions} size={16} />
+                              </div>
                             )}
                           </div>
                           <div className="flex gap-2">
