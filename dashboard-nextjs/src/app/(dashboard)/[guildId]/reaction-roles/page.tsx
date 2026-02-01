@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import EmojiPicker from "@/components/EmojiPicker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
+import { EmojiDisplay } from "@/components/EmojiDisplay";
 import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { SlideIn } from "@/components/ui/animated";
@@ -478,7 +479,7 @@ export default function ReactionRolesPage() {
                     {reactions.map((reaction, index) => (
                       <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 hover:shadow-lg hover:shadow-bot-primary/10 hover:scale-105 hover:border-bot-primary/30 transition-all duration-300">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">{reaction.emoji}</span>
+                          <EmojiDisplay emoji={reaction.emoji} size={24} />
                           <div>
                             <div className="font-medium">{getRoleName(reaction.roleId)}</div>
                             {reaction.description && (
@@ -572,7 +573,7 @@ export default function ReactionRolesPage() {
                     <div className="space-y-2">
                       {rr.reactions.map((reaction, idx) => (
                         <div key={idx} className="flex items-center gap-3 text-sm">
-                          <span className="text-lg">{reaction.emoji}</span>
+                          <EmojiDisplay emoji={reaction.emoji} size={20} />
                           <span className="font-medium">{getRoleName(reaction.roleId)}</span>
                           {reaction.description && (
                             <span className="text-muted-foreground">• {reaction.description}</span>

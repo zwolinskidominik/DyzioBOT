@@ -1,4 +1,4 @@
-import { Client, TextChannel } from 'discord.js';
+import { Client, TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import cron from 'node-cron';
 import { MonthlyStatsModel } from '../../models/MonthlyStats';
 import { MonthlyStatsConfigModel } from '../../models/MonthlyStatsConfig';
@@ -129,9 +129,21 @@ export default function run(client: Client) {
             const timeStr = `${hours}:${minutes.toString().padStart(2, '0')}h`;
             message += `${emoji} <@${stat.userId}> – ${timeStr} ⌛\n`;
           }
+          message += '\u200b\n';
         }
         
-        await channel.send({ content: message });
+        const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`monthly_stats:details:${monthStr}`)
+            .setLabel('Twoje statystyki')
+            .setEmoji('📊')
+            .setStyle(ButtonStyle.Primary)
+        );
+        
+        await channel.send({ 
+          content: message,
+          components: [buttons]
+        });
         
       } catch (error) {}
     }
