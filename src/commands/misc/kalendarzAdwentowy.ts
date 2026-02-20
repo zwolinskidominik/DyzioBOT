@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder, InteractionEditReplyOptions } from 'discord.js';
 import { AdventCalendarModel } from '../../models/AdventCalendar';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed } from '../../utils/embedHelpers';
@@ -6,6 +6,7 @@ import { COLORS } from '../../config/constants/colors';
 import { modifyXp } from '../../services/xpService';
 import path from 'path';
 import fs from 'fs/promises';
+import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('kalendarz-adwentowy')
@@ -183,14 +184,14 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       embed.setImage(`attachment://day${today}.jpg`);
     }
 
-    const replyOptions: any = { embeds: [embed] };
+    const replyOptions: InteractionEditReplyOptions = { embeds: [embed] };
     if (attachment) {
       replyOptions.files = [attachment];
     }
 
     await interaction.editReply(replyOptions);
   } catch (error) {
-    console.error('[kalendarzAdwentowy] Error:', error);
+    logger.error(`[kalendarzAdwentowy] Error: ${error}`);
     await interaction.editReply({
       embeds: [
         createBaseEmbed({

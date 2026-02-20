@@ -5,9 +5,8 @@ import {
   MessageFlags,
   ChatInputCommandInteraction,
 } from 'discord.js';
-import { BirthdayModel, BirthdayDocument } from '../../../models/Birthday';
-import type { IBirthday } from '../../../interfaces/Models';
 import type { ICommandOptions } from '../../../interfaces/Command';
+import { getBirthday, getDaysForm, BirthdayData } from '../../../services/birthdayService';
 import { getBotConfig } from '../../../config/bot';
 import { COLORS } from '../../../config/constants/colors';
 import { createBaseEmbed } from '../../../utils/embedHelpers';
@@ -44,8 +43,14 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   try {
     await interaction.deferReply();
-    const birthday = await getBirthdayInfo(userId, guildId);
+    const result = await getBirthday({ guildId, userId });
 
+    if (!result.ok) {
+      await handleError(interaction, errorEmbed, userId, result.message);
+      return;
+    }
+
+    const birthday = result.data;
     if (!birthday) {
       await replyWithNoBirthdayInfo(interaction, errorEmbed, targetUser);
       return;
@@ -58,7 +63,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   }
 }
 
-function createBirthdayMessage(botId: string, birthday: IBirthday, targetUser: User) {
+function createBirthdayMessage(botId: string, birthday: BirthdayData, targetUser: User) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -109,15 +114,6 @@ function createBirthdayMessage(botId: string, birthday: IBirthday, targetUser: U
       ? `**${age}** urodziny ${targetUser} są za **${diffDays}** ${getDaysForm(diffDays)}, **${fullDate}** 🎂`
       : `**Następne** urodziny ${targetUser} są za **${diffDays}** ${getDaysForm(diffDays)}, **${fullDate}** 🎂`;
   }
-}
-
-async function getBirthdayInfo(userId: string, guildId: string): Promise<BirthdayDocument | null> {
-  return await BirthdayModel.findOne({ userId, guildId, active: true }).exec();
-}
-
-function getDaysForm(days: number): string {
-  if (days === 1) return 'dzień';
-  return 'dni';
 }
 
 async function replyWithGuildOnlyError(

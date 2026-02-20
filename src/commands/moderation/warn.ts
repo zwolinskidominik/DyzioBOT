@@ -1,19 +1,10 @@
-import { SlashCommandBuilder, PermissionFlagsBits, GuildMember, MessageFlags } from 'discord.js';
-import { WarnModel, WarnDocument } from '../../models/Warn';
+import { SlashCommandBuilder, PermissionFlagsBits, GuildMember } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
-import { checkModPermissions } from '../../utils/moderationHelpers';
-import { createBaseEmbed, formatWarnBar } from '../../utils/embedHelpers';
+import { getModFailMessage } from '../../utils/moderationHelpers';
+import { createBaseEmbed, createErrorEmbed, formatWarnBar } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
+import { addWarn, WARN_LIMIT } from '../../services/warnService';
 import logger from '../../utils/logger';
-
-const WARN_LIMIT = 4;
-
-const WARN_PUNISHMENTS = {
-  1: { duration: 15 * 60 * 1000, label: '15 minut' },
-  2: { duration: 3 * 60 * 60 * 1000, label: '3 godziny' },
-  3: { duration: 24 * 60 * 60 * 1000, label: '1 dzień' },
-  4: { duration: 0, label: 'BAN' },
-} as const;
 
 export const data = new SlashCommandBuilder()
   .setName('warn')
@@ -33,77 +24,61 @@ export const data = new SlashCommandBuilder()
 export const options = {
   userPermissions: PermissionFlagsBits.ModerateMembers,
   botPermissions: PermissionFlagsBits.ModerateMembers,
+  guildOnly: true,
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  if (!interaction.guild) {
-    await interaction.reply({
-      content: 'Ta komenda działa tylko na serwerze.',
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
   await interaction.deferReply();
 
   try {
     const targetUser =
       interaction.options.getUser('użytkownik') || interaction.options.getUser('uzytkownik');
     if (!targetUser) {
-      await interaction.editReply('Nie podano użytkownika');
+      await interaction.editReply({ embeds: [createErrorEmbed('Nie podano użytkownika.')] });
       return;
     }
 
     const reason = interaction.options.getString('powod');
     if (!reason) {
-      await interaction.editReply('Nie podano powodu');
+      await interaction.editReply({ embeds: [createErrorEmbed('Nie podano powodu.')] });
       return;
     }
 
-    const guild = interaction.guild;
+    const guild = interaction.guild!;
     const botId = interaction.client.user!.id;
     let member: GuildMember;
 
     try {
       member = await guild.members.fetch(targetUser.id);
     } catch {
-      await interaction.editReply('Nie udało się znaleźć użytkownika na serwerze.');
+      await interaction.editReply({ embeds: [createErrorEmbed('Nie udało się znaleźć użytkownika na serwerze.')] });
       return;
     }
-    if (
-      !guild.members.me ||
-      !checkModPermissions(member, interaction.member as GuildMember, guild.members.me)
-    ) {
+    const failMessage = getModFailMessage(member, interaction.member as GuildMember, guild.members.me ?? null, 'warn');
+    if (failMessage) {
       logger.debug(
         `Warn command permissions check failed for ${interaction.user.tag} trying to warn ${targetUser.tag}`
       );
-      await interaction.editReply('Nie masz uprawnień do ostrzegania tego użytkownika.');
+      await interaction.editReply({ embeds: [createErrorEmbed(failMessage)] });
       return;
     }
 
-    let record = (await WarnModel.findOne({
-      userId: targetUser.id,
+    const result = await addWarn({
       guildId: guild.id,
-    })) as WarnDocument;
-    if (!record) {
-      record = new WarnModel({
-        userId: targetUser.id,
-        guildId: guild.id,
-        warnings: [],
-      }) as WarnDocument;
-    }
-
-    record.warnings.push({ 
-      reason, 
-      date: new Date(), 
+      userId: targetUser.id,
+      reason,
       moderatorId: interaction.user.id,
-      moderatorTag: interaction.user.tag 
+      moderatorTag: interaction.user.tag,
     });
 
-    await record.save();
+    if (!result.ok) {
+      await interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
+      return;
+    }
 
-    const count = record.warnings.length;
+    const { count, shouldBan, punishment, nextPunishment } = result.data;
 
-    if (count >= 4) {
+    if (shouldBan) {
       try {
         await member.ban({ reason: `Auto-ban: osiągnięto limit ostrzeżeń (${count})` });
         
@@ -146,7 +121,6 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       }
     }
 
-    const punishment = WARN_PUNISHMENTS[count as keyof typeof WARN_PUNISHMENTS];
     const muteDurationMs = punishment?.duration || 0;
 
     let muteEndTs: number | null = null;
@@ -160,7 +134,6 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
 
     try {
-      const nextPunishment = WARN_PUNISHMENTS[(count + 1) as keyof typeof WARN_PUNISHMENTS];
       const consequencesText = nextPunishment 
         ? `\n\n⚠️ **Kolejne ostrzeżenie:** ${nextPunishment.label}`
         : '';

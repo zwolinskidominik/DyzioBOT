@@ -1,6 +1,7 @@
 import { GuildChannel, Client, AuditLogEvent, OverwriteType } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(
   oldChannel: GuildChannel,
@@ -8,6 +9,8 @@ export default async function run(
   client: Client
 ): Promise<void> {
   try {
+    const ctx = { channelId: newChannel.id };
+
     const moderator = await getModerator(newChannel.guild, AuditLogEvent.ChannelUpdate, newChannel.id);
 
     if (oldChannel.name !== newChannel.name) {
@@ -20,7 +23,7 @@ export default async function run(
         ],
         footer: `Channel ID: ${newChannel.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
 
     if ('topic' in oldChannel && 'topic' in newChannel) {
@@ -42,7 +45,7 @@ export default async function run(
           ],
           footer: `Channel ID: ${newChannel.id}`,
           timestamp: new Date(),
-        });
+        }, ctx);
       }
     }
 
@@ -76,7 +79,7 @@ export default async function run(
         description: `**🔐 Aktualizacja uprawnień kanału: <#${newChannel.id}>**\n\n**Permissions:**\n↘️ ${targetMention}\n${permList.length > 0 ? permList.join('\n') : '*Brak uprawnień*'}${moderator ? `\n\n**Moderator:** <@${moderator.id}>` : ''}`,
         footer: `Channel ID: ${newChannel.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
 
     const removedPerms = oldPerms.filter((perm) => !newPerms.has(perm.id));
@@ -94,7 +97,7 @@ export default async function run(
         description: `**🔐 Aktualizacja uprawnień kanału: <#${newChannel.id}>**\n\n**Permissions:**\n↘️ ${targetMention}\n❌ **Usunięto wszystkie uprawnienia**${moderator ? `\n\n**Moderator:** <@${moderator.id}>` : ''}`,
         footer: `Channel ID: ${newChannel.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
 
     const modifiedPerms = newPerms.filter((newPerm) => {
@@ -132,10 +135,10 @@ export default async function run(
         description: `**🔐 Aktualizacja uprawnień kanału: <#${newChannel.id}>**\n\n**Permissions:**\n↘️ ${targetMention}\n${permList.join('\n')}${moderator ? `\n\n**Moderator:** <@${moderator.id}>` : ''}`,
         footer: `Channel ID: ${newChannel.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
   } catch (error) {
-    console.error('[logChannelUpdate] Error:', error);
+    logger.error(`[logChannelUpdate] Error: ${error}`);
   }
 }
 

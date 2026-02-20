@@ -4,13 +4,12 @@ import {
   GuildMember,
   User,
   Guild,
-  MessageFlags,
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import {
   createModErrorEmbed,
   createModSuccessEmbed,
-  checkModPermissions,
+  getModFailMessage,
 } from '../../utils/moderationHelpers';
 import logger from '../../utils/logger';
 
@@ -32,18 +31,11 @@ export const data = new SlashCommandBuilder()
 export const options = {
   userPermissions: [PermissionFlagsBits.BanMembers],
   botPermissions: [PermissionFlagsBits.BanMembers],
+  guildOnly: true,
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  if (!interaction.guild) {
-    await interaction.reply({
-      content: 'Ta komenda działa tylko na serwerze.',
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
-  const guild: Guild = interaction.guild;
+  const guild: Guild = interaction.guild!;
   const errorEmbed = createModErrorEmbed('', guild.name);
 
   try {
@@ -72,13 +64,10 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    if (!checkModPermissions(targetMember, interaction.member as GuildMember, guild.members.me)) {
+    const failMessage = getModFailMessage(targetMember, interaction.member as GuildMember, guild.members.me, 'ban');
+    if (failMessage) {
       await interaction.editReply({
-        embeds: [
-          errorEmbed.setDescription(
-            '**Nie możesz zbanować tego użytkownika z wyższą lub równą rolą.**'
-          ),
-        ],
+        embeds: [errorEmbed.setDescription(`**${failMessage}**`)],
       });
       return;
     }

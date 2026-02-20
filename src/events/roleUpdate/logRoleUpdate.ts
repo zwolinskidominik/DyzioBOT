@@ -1,6 +1,7 @@
 import { Role, Client, AuditLogEvent } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(
   oldRole: Role,
@@ -63,6 +64,6 @@ export default async function run(
       });
     }
   } catch (error) {
-    console.error('[logRoleUpdate] Error:', error);
+    logger.error(`[logRoleUpdate] Error: ${error}`);
   }
 }

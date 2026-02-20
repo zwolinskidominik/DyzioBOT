@@ -1,6 +1,7 @@
 import { VoiceState, Client, AuditLogEvent } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(
   oldState: VoiceState,
@@ -11,6 +12,8 @@ export default async function run(
     const member = newState.member || oldState.member;
     if (!member) return;
 
+    const ctx = { userId: member.id, member };
+
     if (!oldState.channel && newState.channel) {
       await sendLog(client, newState.guild.id, 'voiceJoin', {
         title: null,
@@ -19,7 +22,7 @@ export default async function run(
         authorIcon: member.user.displayAvatarURL({ size: 64 }),
         footer: `User ID: ${member.id} | Channel ID: ${newState.channelId}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
 
     if (oldState.channel && !newState.channel) {
@@ -37,7 +40,7 @@ export default async function run(
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
           footer: `User ID: ${member.id} | Channel ID: ${oldState.channelId}`,
           timestamp: new Date(),
-        });
+        }, ctx);
       } else {
         await sendLog(client, oldState.guild.id, 'voiceLeave', {
           title: null,
@@ -46,7 +49,7 @@ export default async function run(
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
           footer: `User ID: ${member.id} | Channel ID: ${oldState.channelId}`,
           timestamp: new Date(),
-        });
+        }, ctx);
       }
     }
 
@@ -65,7 +68,7 @@ export default async function run(
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
           footer: `User ID: ${member.id}`,
           timestamp: new Date(),
-        });
+        }, ctx);
       } else {
         await sendLog(client, newState.guild.id, 'voiceMove', {
           title: null,
@@ -74,7 +77,7 @@ export default async function run(
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
           footer: `User ID: ${member.id}`,
           timestamp: new Date(),
-        });
+        }, ctx);
       }
     }
 
@@ -108,10 +111,10 @@ export default async function run(
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
           footer: `User ID: ${member.id}`,
           timestamp: new Date(),
-        });
+        }, ctx);
       }
     }
   } catch (error) {
-    console.error('[logVoiceStateUpdate] Error:', error);
+    logger.error(`[logVoiceStateUpdate] Error: ${error}`);
   }
 }

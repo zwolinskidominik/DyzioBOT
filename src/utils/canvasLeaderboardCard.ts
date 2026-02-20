@@ -1,8 +1,8 @@
-import { createCanvas, loadImage, registerFont, Canvas } from 'canvas';
-import path from 'path';
-import fs from 'fs';
+import { createCanvas, loadImage, Canvas, Image } from 'canvas';
 import { xpForLevel, deltaXp } from './levelMath';
 import { getBotConfig } from '../config/bot';
+import { Ctx2D, registerProjectFonts, roundRect, formatNumberCompact } from './canvasHelpers';
+import logger from './logger';
 
 interface LeaderboardEntry {
   username: string;
@@ -21,7 +21,7 @@ interface LeaderboardCardOptions {
 
 export class CanvasLeaderboardCard {
   private canvas: Canvas;
-  private ctx: any;
+  private ctx: Ctx2D;
   private readonly width = 900;
   private readonly height: number;
   private readonly colors = {
@@ -41,6 +41,7 @@ export class CanvasLeaderboardCard {
 
   constructor(options: LeaderboardCardOptions) {
     this.options = options;
+    registerProjectFonts();
     
     const entryCount = this.options.entries.length;
     const headerHeight = 120;
@@ -52,21 +53,6 @@ export class CanvasLeaderboardCard {
     
     this.canvas = createCanvas(this.width, this.height);
     this.ctx = this.canvas.getContext('2d');
-
-    const projectRoot = path.resolve(__dirname, '..', '..');
-    const fontPaths = {
-      regular: path.resolve(projectRoot, 'assets/Inter-Regular.ttf'),
-      bold: path.resolve(projectRoot, 'assets/Inter-Bold.ttf'),
-      semibold: path.resolve(projectRoot, 'assets/Inter-SemiBold.ttf'),
-      daydream: path.resolve(projectRoot, 'assets/Daydream.otf'),
-    };
-
-    Object.entries(fontPaths).forEach(([weight, fontPath]) => {
-      if (fs.existsSync(fontPath)) {
-        const family = weight === 'daydream' ? 'Daydream' : 'Inter';
-        registerFont(fontPath, { family, weight: weight === 'daydream' ? 'normal' : weight });
-      }
-    });
   }
 
   public async build(): Promise<Buffer> {
@@ -82,12 +68,12 @@ export class CanvasLeaderboardCard {
   private async drawBackground() {
     const cornerRadius = 40;
     this.ctx.fillStyle = this.colors.background;
-    this.roundRect(0, 0, this.width, this.height, cornerRadius);
+    roundRect(this.ctx, 0, 0, this.width, this.height, cornerRadius);
     this.ctx.fill();
 
     this.ctx.save();
     this.ctx.beginPath();
-    this.roundRect(0, 0, this.width, this.height, cornerRadius);
+    roundRect(this.ctx, 0, 0, this.width, this.height, cornerRadius);
     this.ctx.clip();
   }
 
@@ -146,7 +132,7 @@ export class CanvasLeaderboardCard {
     this.ctx.fillStyle = isTopThree
       ? this.colors.entryBackgroundHover
       : this.colors.entryBackground;
-    this.roundRect(x, y, width, height, cornerRadius);
+    roundRect(this.ctx, x, y, width, height, cornerRadius);
     this.ctx.fill();
 
     this.ctx.textAlign = 'center';
@@ -198,7 +184,7 @@ export class CanvasLeaderboardCard {
         setTimeout(() => reject(new Error('Avatar load timeout')), 5000)
       );
       
-      const avatarImage = await Promise.race([avatarImagePromise, timeoutPromise]) as any;
+      const avatarImage = await Promise.race([avatarImagePromise, timeoutPromise]) as Image;
       const avatarSize = 45;
       const avatarX = x + 70;
       const avatarY_pos = y + (height - avatarSize) / 2;
@@ -220,7 +206,7 @@ export class CanvasLeaderboardCard {
       this.ctx.drawImage(avatarImage, avatarX, avatarY_pos, avatarSize, avatarSize);
       this.ctx.restore();
     } catch (error) {
-      console.warn('[CANVAS] Error loading avatar for leaderboard:', error);
+      logger.warn(`[CANVAS] Error loading avatar for leaderboard: ${error}`);
       
       const avatarSize = 45;
       const avatarX = x + 70;
@@ -308,33 +294,9 @@ export class CanvasLeaderboardCard {
     this.ctx.font = '600 16px Inter, "Segoe UI", Arial, sans-serif';
     this.ctx.textAlign = 'right';
     const xpX = width + x - 20;
-    this.ctx.fillText(`${this.formatNumber(entry.totalXP)} XP`, xpX, usernameY);
+    this.ctx.fillText(`${formatNumberCompact(entry.totalXP)} XP`, xpX, usernameY);
 
     this.ctx.textAlign = 'left';
-  }
-
-  private formatNumber(num: number): string {
-    if (num >= 1_000_000) {
-      return `${(num / 1_000_000).toFixed(1)}M`;
-    }
-    if (num >= 10_000) {
-      return `${(num / 1_000).toFixed(1)}k`;
-    }
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  }
-
-  private roundRect(x: number, y: number, width: number, height: number, radius: number) {
-    this.ctx.beginPath();
-    this.ctx.moveTo(x + radius, y);
-    this.ctx.lineTo(x + width - radius, y);
-    this.ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    this.ctx.lineTo(x + width, y + height - radius);
-    this.ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    this.ctx.lineTo(x + radius, y + height);
-    this.ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    this.ctx.lineTo(x, y + radius);
-    this.ctx.quadraticCurveTo(x, y, x + radius, y);
-    this.ctx.closePath();
   }
 
   private drawMedalFallback(rankX: number, rankY: number, rank: number) {

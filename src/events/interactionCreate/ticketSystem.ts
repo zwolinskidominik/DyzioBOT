@@ -15,13 +15,14 @@ import {
   MessageFlags,
   User,
 } from 'discord.js';
-import { TicketStatsModel } from '../../models/TicketStats';
-import { TicketConfigModel } from '../../models/TicketConfig';
-import { TicketStateModel } from '../../models/TicketState';
 import { ITicketType } from '../../interfaces/Ticket';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { getGuildConfig } from '../../config/guild';
-import { COLORS } from '../../config/constants/colors';
+import {
+  validateTicketCreation,
+  takeTicket,
+  closeTicket,
+} from '../../services/ticketService';
 import logger from '../../utils/logger';
 import * as path from 'path';
 
@@ -34,51 +35,20 @@ const BUTTON_IDS = {
 
 const TICKET_CLOSE_DELAY = 5_000;
 
-const ticketTypes: Record<string, ITicketType> = {
-  help: {
-    title: 'Dział pomocy',
-    description: (user: User) =>
-      `Witaj ${user}!\n\nPotrzebujesz pomocy? Opisz dokładnie, z czym masz problem, a nasz zespół postara się pomóc jak najszybciej.`,
-    color: COLORS.TICKET,
-    image: 'ticketBanner.png',
-  },
-  report: {
-    title: 'System zgłoszeń',
-    description: (user: User) =>
-      `Witaj ${user}!\n\nJeśli chcesz poinformować o naruszeniu regulaminu, podaj kogo i co zrobił, dodaj dowody i datę zdarzenia.`,
-    color: COLORS.TICKET_REPORT,
-    image: 'ticketReport.png',
-  },
-  partnership: {
-    title: 'Dział partnerstw',
-    description: (user: User) =>
-      `Witaj ${user}!\n\nJeśli jesteś zainteresowany partnerstwem z naszym serwerem, wyślij swoją reklamę i poczekaj na odpowiedź.`,
-    color: COLORS.TICKET_PARTNERSHIP,
-    image: 'ticketPartnership.png',
-  },
-  idea: {
-    title: 'Pomysły',
-    description: (user: User) =>
-      `Witaj ${user}!\n\nMasz pomysł na ulepszenie serwera? Podziel się nim tutaj!`,
-    color: COLORS.TICKET_IDEA,
-    image: 'ticketIdea.png',
-  },
-  rewards: {
-    title: 'Odbiór nagród',
-    description: (user: User) =>
-      `Witaj ${user}!\n\nOdbierz tutaj swoją nagrodę! Napisz, jaką nagrodę chcesz odebrać i za co ją otrzymałeś.`,
-    color: COLORS.TICKET_REWARD,
-    image: 'ticketBanner.png',
-  },
+const ticketDescriptions: Record<string, (user: User) => string> = {
+  help: (user: User) =>
+    `Witaj ${user}!\n\nPotrzebujesz pomocy? Opisz dokładnie, z czym masz problem, a nasz zespół postara się pomóc jak najszybciej.`,
+  report: (user: User) =>
+    `Witaj ${user}!\n\nJeśli chcesz poinformować o naruszeniu regulaminu, podaj kogo i co zrobił, dodaj dowody i datę zdarzenia.`,
+  partnership: (user: User) =>
+    `Witaj ${user}!\n\nJeśli jesteś zainteresowany partnerstwem z naszym serwerem, wyślij swoją reklamę i poczekaj na odpowiedź.`,
+  idea: (user: User) =>
+    `Witaj ${user}!\n\nMasz pomysł na ulepszenie serwera? Podziel się nim tutaj!`,
+  rewards: (user: User) =>
+    `Witaj ${user}!\n\nOdbierz tutaj swoją nagrodę! Napisz, jaką nagrodę chcesz odebrać i za co ją otrzymałeś.`,
 };
 
-const channelNames: Record<string, string> = {
-  help: 'pomoc',
-  report: 'zgloszenie',
-  partnership: 'partnerstwo',
-  idea: 'pomysl',
-  rewards: 'nagrody',
-};
+
 
 export default async function run(interaction: Interaction): Promise<void | boolean> {
   try {
@@ -122,23 +92,18 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
     return;
   }
 
-  const config = await TicketConfigModel.findOne({ guildId });
-  if (!config) {
-    await interaction.editReply({
-      content:
-        'Brak konfiguracji systemu ticketów. Użyj komendy `/setup-ticket`, aby ją skonfigurować.',
-    });
+  const selectedValue = interaction.values[0];
+  const result = await validateTicketCreation(guildId, selectedValue, interaction.user.username);
+
+  if (!result.ok) {
+    await interaction.editReply({ content: result.message });
     return;
   }
 
-  const categoryChannel = interaction.guild?.channels.cache.get(config.categoryId);
-  const isCategory =
-    !!categoryChannel &&
-    (
-      (categoryChannel as any).type === ChannelType.GuildCategory ||
-      !!(categoryChannel as any).children ||
-      !!(categoryChannel as any).id
-    );
+  const { categoryId, ticketType: typeInfo, channelName } = result.data;
+
+  const categoryChannel = interaction.guild?.channels.cache.get(categoryId);
+  const isCategory = categoryChannel?.type === ChannelType.GuildCategory;
 
   if (!isCategory) {
     await interaction.editReply({
@@ -147,24 +112,19 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
     return;
   }
 
-  const selectedValue = interaction.values[0];
-  const selectedType = ticketTypes[selectedValue];
-  if (!selectedType) {
-    await interaction.editReply({
-      content: 'Nieznany rodzaj ticketa.',
-    });
-    return;
-  }
-
-  const channelKey = channelNames[selectedValue];
-  const channelName = `${channelKey}-${interaction.user.username.toLowerCase()}`;
+  const selectedType: ITicketType = {
+    title: typeInfo.title,
+    description: ticketDescriptions[selectedValue] ?? ((u: User) => `Witaj ${u}!`),
+    color: typeInfo.color,
+    image: typeInfo.image,
+  };
 
   let ticketChannel: TextChannel | null = null;
   try {
     ticketChannel = await createTicketChannel(
       interaction,
       channelName,
-      categoryChannel as any
+      categoryChannel as CategoryChannel
     );
   } catch (error) {
     logger.error(`Błąd podczas tworzenia ticketu: ${error}`);
@@ -235,7 +195,7 @@ async function createTicketChannel(
   return await interaction.guild!.channels.create({
     name: channelName,
     type: ChannelType.GuildText,
-    parent: (categoryChannel as any)?.id ?? (categoryChannel as unknown as string),
+    parent: categoryChannel.id,
     permissionOverwrites: [
       {
         id: interaction.guild!.id,
@@ -314,19 +274,18 @@ async function handleTakeTicket(interaction: ButtonInteraction): Promise<void> {
   }
 
   try {
-    const ticketInDB = await TicketStateModel.findOne({
-      channelId: interaction.channel?.id,
-    });
+    const channelId = interaction.channel?.id;
+    if (!channelId) return;
 
-    if (ticketInDB?.assignedTo) {
+    const result = await takeTicket(channelId, interaction.guild!.id, interaction.user.id);
+
+    if (!result.ok) {
       await interaction.followUp({
-        content: 'To zgłoszenie zostało już zajęte!',
+        content: result.message,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
-
-    await updateTicketAssignment(interaction);
 
     await updateTakeTicketButton(interaction);
 
@@ -342,19 +301,6 @@ async function handleTakeTicket(interaction: ButtonInteraction): Promise<void> {
   }
 }
 
-async function updateTicketAssignment(interaction: ButtonInteraction): Promise<void> {
-  await TicketStateModel.findOneAndUpdate(
-    { channelId: interaction.channel?.id },
-    { assignedTo: interaction.user.id },
-    { upsert: true, new: true }
-  );
-
-  await TicketStatsModel.findOneAndUpdate(
-    { guildId: interaction.guild?.id, userId: interaction.user.id },
-    { $inc: { count: 1 } },
-    { upsert: true, new: true }
-  );
-}
 
 async function updateTakeTicketButton(interaction: ButtonInteraction): Promise<void> {
   const oldComponents = interaction.message?.components;
@@ -417,12 +363,12 @@ async function handleConfirmClose(interaction: ButtonInteraction): Promise<void>
 
   setTimeout(async () => {
     try {
-      if (interaction.channel) {
-        await interaction.channel.delete();
+      if (channelId) {
+        await closeTicket(channelId);
       }
 
-      if (channelId) {
-        await TicketStateModel.findOneAndDelete({ channelId });
+      if (interaction.channel) {
+        await interaction.channel.delete();
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);

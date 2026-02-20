@@ -68,7 +68,7 @@ export async function flushMonthlyStats() {
     return;
   }
 
-  const bulkOps: any[] = [];
+  const bulkOps: Parameters<typeof MonthlyStatsModel.bulkWrite>[0] = [];
 
   for (const entry of entries) {
     bulkOps.push({

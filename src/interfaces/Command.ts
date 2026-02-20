@@ -21,6 +21,7 @@ export interface ICommandConfig {
   deleted?: boolean;
   cooldown?: number;
   devOnly?: boolean;
+  guildOnly?: boolean;
 }
 
 export interface ICommandHandlerConfig {

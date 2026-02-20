@@ -1,6 +1,6 @@
-import { SlashCommandBuilder, User, MessageFlags, Guild } from 'discord.js';
+import { SlashCommandBuilder, User, Guild } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
 type AvatarSize = 16 | 32 | 64 | 128 | 256 | 512 | 1024 | 2048 | 4096;
@@ -18,17 +18,18 @@ export const data = new SlashCommandBuilder()
 export const options = {};
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
+  await interaction.deferReply();
+
   try {
     const targetUser: User = interaction.options.getUser('uzytkownik') || interaction.user;
     const avatarURL: string = getUserAvatarURL(targetUser);
     const guild: Guild = interaction.guild!;
     const embed = createAvatarEmbed(targetUser, avatarURL, guild);
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   } catch (error) {
     logger.error(`Błąd podczas wyświetlania avataru: ${error}`);
-    await interaction.reply({
-      content: 'Wystąpił błąd podczas próby wyświetlenia avataru użytkownika.',
-      flags: MessageFlags.Ephemeral,
+    await interaction.editReply({
+      embeds: [createErrorEmbed('Wystąpił błąd podczas próby wyświetlenia avataru użytkownika.')],
     });
   }
 }

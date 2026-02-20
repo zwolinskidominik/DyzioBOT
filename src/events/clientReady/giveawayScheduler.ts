@@ -1,59 +1,33 @@
 import { schedule } from 'node-cron';
+import { CRON } from '../../config/constants/cron';
 import { Client, TextChannel } from 'discord.js';
-import { GiveawayModel } from '../../models/Giveaway';
+import { finalizeExpiredGiveaways } from '../../services/giveawayService';
 import { createBaseEmbed } from '../../utils/embedHelpers';
-import { pickWinners } from '../../utils/giveawayHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
 export default async function run(client: Client): Promise<void> {
   schedule(
-    '* * * * *',
+    CRON.GIVEAWAY_CHECK,
     async () => {
       try {
-        const scanNow = new Date();
-        const candidates = await GiveawayModel.find({
-          endTime: { $lte: scanNow },
-          finalized: false,
-        })
-          .select('giveawayId endTime active finalized')
-          .sort({ endTime: 1 })
-          .lean();
-        let processedCount = 0;
+        const result = await finalizeExpiredGiveaways();
+        if (!result.ok) return;
 
-        while (true) {
-          const now = new Date();
-          const giveaway = await GiveawayModel.findOneAndUpdate(
-            { finalized: false, endTime: { $lte: now } },
-            { active: false },
-            { returnDocument: 'after', sort: { endTime: 1 } }
-          );
-          if (!giveaway) {
-            break;
-          }
-
-          processedCount++;
+        for (const entry of result.data) {
           try {
-            const guild = client.guilds.cache.get(giveaway.guildId);
+            const guild = client.guilds.cache.get(entry.guildId);
             if (!guild) {
               logger.warn(
-                `Nie znaleziono serwera o ID: ${giveaway.guildId} dla giveaway ${giveaway.giveawayId}`
-              );
-              await GiveawayModel.updateOne(
-                { _id: giveaway._id },
-                { $set: { finalized: true } }
+                `Nie znaleziono serwera o ID: ${entry.guildId} dla giveaway ${entry.giveawayId}`
               );
               continue;
             }
 
-            const channel = guild.channels.cache.get(giveaway.channelId);
+            const channel = guild.channels.cache.get(entry.channelId);
             if (!channel || !('messages' in channel)) {
               logger.warn(
-                `Nie znaleziono kanału o ID: ${giveaway.channelId} lub nie jest to kanał tekstowy dla giveaway ${giveaway.giveawayId}`
-              );
-              await GiveawayModel.updateOne(
-                { _id: giveaway._id },
-                { $set: { finalized: true } }
+                `Nie znaleziono kanału o ID: ${entry.channelId} lub nie jest to kanał tekstowy dla giveaway ${entry.giveawayId}`
               );
               continue;
             }
@@ -62,35 +36,30 @@ export default async function run(client: Client): Promise<void> {
 
             let giveawayMessage;
             try {
-              giveawayMessage = await textChannel.messages.fetch(giveaway.messageId);
+              giveawayMessage = await textChannel.messages.fetch(entry.messageId);
             } catch (error) {
               logger.error(
-                `Nie można pobrać wiadomości giveaway ${giveaway.giveawayId} (messageId: ${giveaway.messageId}): ${error}`
-              );
-              await GiveawayModel.updateOne(
-                { _id: giveaway._id },
-                { $set: { finalized: true } }
+                `Nie można pobrać wiadomości giveaway ${entry.giveawayId} (messageId: ${entry.messageId}): ${error}`
               );
               continue;
             }
 
-            const winners = await pickWinners(giveaway.participants, giveaway.winnersCount, guild);
-            const winnersText = winners.length
-              ? winners.map((user) => `<@${user.id}>`).join(', ')
+            const winnersText = entry.winnerIds.length
+              ? entry.winnerIds.map((id) => `<@${id}>`).join(', ')
               : 'Brak zwycięzców';
 
-            if (!winners.length && giveaway.participants.length > 0) {
+            if (!entry.winnerIds.length && entry.participants.length > 0) {
               logger.warn(
-                `Brak zwycięzców mimo uczestników (giveaway=${giveaway.giveawayId}) – możliwe błędy fetch członków. Sprawdź uprawnienia GUILD_MEMBERS / intents.`
+                `Brak zwycięzców mimo uczestników (giveaway=${entry.giveawayId}) – uczest. w puli: ${entry.participants.length}`
               );
             }
 
-            const participantsCount = giveaway.participants.length;
-            const timestamp = getTimestamp(giveaway.endTime);
+            const participantsCount = entry.participants.length;
+            const timestamp = getTimestamp(entry.endTime);
 
             const updatedEmbed = createBaseEmbed({
-              description: `### ${giveaway.prize}\n${giveaway.description}\n\n**Zakończony:** <t:${timestamp}:f>\n**Host:** <@${giveaway.hostId}>\n**Uczestnicy:** ${participantsCount}\n**Zwycięzcy:** ${winnersText}`,
-              footerText: `Giveaway ID: ${giveaway.giveawayId}`,
+              description: `### ${entry.prize}\n${entry.description}\n\n**Zakończony:** <t:${timestamp}:f>\n**Host:** <@${entry.hostId}>\n**Uczestnicy:** ${participantsCount}\n**Zwycięzcy:** ${winnersText}`,
+              footerText: `Giveaway ID: ${entry.giveawayId}`,
               color: COLORS.GIVEAWAY_ENDED,
             });
 
@@ -101,64 +70,38 @@ export default async function run(client: Client): Promise<void> {
               });
             } catch (editError) {
               logger.error(
-                `Błąd podczas edycji wiadomości giveaway ${giveaway.giveawayId}: ${editError}`
+                `Błąd podczas edycji wiadomości giveaway ${entry.giveawayId}: ${editError}`
               );
             }
 
+            const winnerContent = entry.winnerIds.length
+              ? `🎉 Gratulacje ${entry.winnerIds.map((id) => `<@${id}>`).join(', ')}! **${entry.prize}** jest Twoje!`
+              : 'Brak wystarczającej liczby uczestników, więc nie udało się wyłonić zwycięzcy!';
+
+            let sent = false;
             try {
-              const winnerContent = winners.length
-                ? `🎉 Gratulacje ${winners
-                    .map((user) => `<@${user.id}>`)
-                    .join(', ')}! **${giveaway.prize}** jest Twoje!`
-                : 'Brak wystarczającej liczby uczestników, więc nie udało się wyłonić zwycięzcy!';
-
-              let sent = false;
-              try {
-                await giveawayMessage.reply({ content: winnerContent });
-                sent = true;
-              } catch (replyErr) {
-                logger.warn(
-                  `Nie udało się wysłać reply (spróbuję channel.send) giveaway=${giveaway.giveawayId}: ${replyErr}`
-                );
-              }
-              if (!sent) {
-                try {
-                  await textChannel.send({
-                    content: winnerContent,
-                    reply: { messageReference: giveawayMessage.id },
-                  });
-                  sent = true;
-                } catch (fallbackErr) {
-                  logger.error(
-                    `Nie udało się wysłać wiadomości (reply ani channel.send) giveaway=${giveaway.giveawayId}: ${fallbackErr}`
-                  );
-                }
-              }
-
-              try {
-                await GiveawayModel.updateOne(
-                  { _id: giveaway._id, finalized: false },
-                  { $set: { finalized: true } }
-                );
-              } catch (finErr) {
-                logger.error(
-                  `Nie udało się ustawić finalized=true (giveaway=${giveaway.giveawayId}): ${finErr}`
-                );
-              }
-            } catch (replyError) {
-              logger.error(
-                `Błąd podczas końcowego ogłoszenia zwycięzców giveaway ${giveaway.giveawayId}: ${replyError}`
+              await giveawayMessage.reply({ content: winnerContent });
+              sent = true;
+            } catch (replyErr) {
+              logger.warn(
+                `Nie udało się wysłać reply (spróbuję channel.send) giveaway=${entry.giveawayId}: ${replyErr}`
               );
+            }
+            if (!sent) {
+              try {
+                await textChannel.send({
+                  content: winnerContent,
+                  reply: { messageReference: giveawayMessage.id },
+                });
+              } catch (fallbackErr) {
+                logger.error(
+                  `Nie udało się wysłać wiadomości (reply ani channel.send) giveaway=${entry.giveawayId}: ${fallbackErr}`
+                );
+              }
             }
           } catch (error) {
-            logger.error(`Błąd podczas kończenia giveaway ${giveaway.giveawayId}: ${error}`);
+            logger.error(`Błąd podczas kończenia giveaway ${entry.giveawayId}: ${error}`);
           }
-        }
-
-        if (candidates.length > 0 && processedCount === 0) {
-          logger.warn(
-            `Scheduler: znaleziono ${candidates.length} kandydatów w skanie, ale processed=0. Sprawdź różnice czasowe endTime vs now oraz uprawnienia.`
-          );
         }
       } catch (error) {
         logger.error(`Błąd przy sprawdzaniu zakończonych giveawayów: ${error}`);

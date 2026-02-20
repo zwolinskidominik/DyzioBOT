@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, LogOut } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
+import { EmojiProvider } from "@/components/EmojiContext";
 
 interface GuildLayoutProps {
   children: React.ReactNode;
@@ -176,7 +177,9 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
       <div className="flex flex-1">
         <Sidebar />
         <main className="flex-1 ml-64 pl-4" style={{ backgroundColor: '#23272E' }}>
-          {children}
+          <EmojiProvider>
+            {children}
+          </EmojiProvider>
         </main>
       </div>
     </div>

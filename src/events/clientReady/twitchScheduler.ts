@@ -3,7 +3,7 @@ import {
   StreamConfigurationDocument,
   StreamConfigurationModel,
 } from '../../models/StreamConfiguration';
-import { TwitchStreamerDocument, TwitchStreamerModel } from '../../models/TwitchStreamer';
+import { getActiveStreamers, setLiveStatus } from '../../services/twitchService';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
@@ -11,6 +11,7 @@ import { env } from '../../config';
 import { AppTokenAuthProvider } from '@twurple/auth';
 import { ApiClient, HelixStream, HelixUser } from '@twurple/api';
 import { schedule } from 'node-cron';
+import { CRON } from '../../config/constants/cron';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { fetch } from 'undici';
@@ -34,7 +35,7 @@ export default async function run(client: Client): Promise<void> {
   );
 
   schedule(
-    '0 0 * * *',
+    CRON.TWITCH_THUMBNAIL_CLEANUP,
     () => {
       cleanupOldThumbnails().catch((error: unknown) => {
         const msg = error instanceof Error ? error.message : String(error);
@@ -47,7 +48,7 @@ export default async function run(client: Client): Promise<void> {
   );
 
   schedule(
-    '* * * * *',
+    CRON.TWITCH_STREAM_CHECK,
     async () => {
       await checkStreams(client);
     },
@@ -195,7 +196,9 @@ async function sendStreamNotification(
 }
 
 async function checkStreams(client: Client): Promise<void> {
-  const streamers = await TwitchStreamerModel.find<TwitchStreamerDocument>({ active: true }).exec();
+  const streamersResult = await getActiveStreamers();
+  if (!streamersResult.ok) return;
+  const streamers = streamersResult.data;
   const channelCfg = await StreamConfigurationModel.find<StreamConfigurationDocument>()
     .lean()
     .exec();
@@ -219,14 +222,12 @@ async function checkStreams(client: Client): Promise<void> {
             s.twitchChannel
           ))
         ) {
-          s.isLive = true;
-          await s.save();
+          await setLiveStatus(s.guildId, s.twitchChannel, true);
         }
       }
 
       if (!stream && s.isLive) {
-        s.isLive = false;
-        await s.save();
+        await setLiveStatus(s.guildId, s.twitchChannel, false);
       }
     } catch (err) {
       logger.error(`Streamer ${s.twitchChannel}: ${err instanceof Error ? err.message : err}`);

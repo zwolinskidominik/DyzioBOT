@@ -6,7 +6,7 @@ import {
 } from 'discord.js';
 import type { IEmojiMatch, IEmojiAddResult } from '../../interfaces/Emoji';
 import type { ICommandOptions } from '../../interfaces/Command';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
@@ -25,19 +25,19 @@ export const data = new SlashCommandBuilder()
 
 export const options = {
   userPermissions: [PermissionFlagsBits.Administrator],
+  guildOnly: true,
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   const cmd = interaction as ChatInputCommandInteraction;
   try {
     await cmd.deferReply({ flags: MessageFlags.Ephemeral });
-    if (!cmd.guild) throw new Error('Brak guild');
 
     const input = cmd.options.getString('emojis', true);
     const tokens = input.trim().split(/\s+/);
-    const remaining = MAX_EMOJI_PER_SERVER - cmd.guild.emojis.cache.size;
+    const remaining = MAX_EMOJI_PER_SERVER - cmd.guild!.emojis.cache.size;
     if (remaining <= 0) {
-      await cmd.editReply('Limit emoji (150) osiągnięty.');
+      await cmd.editReply({ embeds: [createErrorEmbed('Limit emoji (150) osiągnięty.')] });
       return;
     }
 
@@ -68,7 +68,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   } catch (err) {
     logger.error('emoji-steal:', err);
     await cmd.followUp({
-      content: 'Błąd podczas dodawania emoji.',
+      embeds: [createErrorEmbed('Błąd podczas dodawania emoji.')],
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -149,7 +149,7 @@ async function checkRemainingSlots(
 ): Promise<void> {
   if (emojiData.length > remaining) {
     await interaction.editReply({
-      content: `⚠️ Próbujesz dodać ${emojiData.length} emoji, a zostało ${remaining} slotów. Dodam tylko pierwsze ${remaining}.`,
+      embeds: [createErrorEmbed(`Próbujesz dodać ${emojiData.length} emoji, a zostało ${remaining} slotów. Dodam tylko pierwsze ${remaining}.`)],
     });
   }
 }

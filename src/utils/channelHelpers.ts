@@ -1,4 +1,4 @@
-import { Collection, Guild, GuildMember, TextChannel } from 'discord.js';
+import { Collection, Guild, GuildChannel, GuildMember, TextChannel } from 'discord.js';
 import { ChannelStatsModel } from '../models/ChannelStats';
 import logger from './logger';
 
@@ -6,13 +6,13 @@ const renameTokens = new Map<string, number>();
 let renameSeq = 0;
 
 export async function safeSetChannelName(
-  channel: TextChannel,
+  channel: GuildChannel,
   newName: string,
   retries = 3,
   delay = 1_000
 ): Promise<void> {
   if (channel.name === newName) return;
-  const chanId = (channel as any).id ?? '';
+  const chanId = channel.id ?? '';
   const myToken = ++renameSeq;
   renameTokens.set(chanId, myToken);
 
@@ -69,8 +69,8 @@ export async function updateChannelName(
   const channel = guild.channels.cache.get(channelConfig.channelId);
   if (
     !channel ||
-    typeof (channel as any).setName !== 'function' ||
-    typeof (channel as any).name !== 'string'
+    !('setName' in channel) ||
+    !('name' in channel)
   )
     return;
 

@@ -1,8 +1,7 @@
-import { index, prop, getModelForClass, DocumentType, modelOptions, Severity } from '@typegoose/typegoose';
+import { index, prop, getModelForClass, DocumentType, modelOptions } from '@typegoose/typegoose';
 
 @index({ guildId: 1 })
 @modelOptions({ 
-  options: { allowMixed: Severity.ALLOW },
   schemaOptions: {
     timestamps: false
   }
@@ -47,7 +46,7 @@ class Giveaway {
   @prop({ default: Date.now, type: () => Date })
   public createdAt!: Date;
 
-  @prop({ type: () => Map })
+  @prop({ type: () => Number })
   public roleMultipliers?: Map<string, number>;
 
   @prop({ default: false, type: () => Boolean })

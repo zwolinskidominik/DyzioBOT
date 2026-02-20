@@ -1,8 +1,6 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { BirthdayModel, BirthdayDocument } from '../../../models/Birthday';
-import type { IBirthday } from '../../../interfaces/Models';
-import type { IUpcomingBirthday } from '../../../interfaces/Birthday';
+import { SlashCommandBuilder, EmbedBuilder, User } from 'discord.js';
 import type { ICommandOptions } from '../../../interfaces/Command';
+import { getUpcomingBirthdays, getDaysForm } from '../../../services/birthdayService';
 import { getBotConfig } from '../../../config/bot';
 import { COLORS } from '../../../config/constants/colors';
 import { createBaseEmbed } from '../../../utils/embedHelpers';
@@ -31,13 +29,16 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const birthdays: BirthdayDocument[] = await BirthdayModel.find({ guildId, active: true })
-      .sort({
-        date: 1,
-      })
-      .exec();
+    const result = await getUpcomingBirthdays({ guildId, limit: 10 });
+    if (!result.ok) {
+      await interaction.editReply({
+        embeds: [errorEmbed.setDescription(result.message)],
+      });
+      return;
+    }
 
-    if (birthdays.length === 0) {
+    const entries = result.data;
+    if (entries.length === 0) {
       await interaction.editReply({
         embeds: [
           successEmbed.setDescription(
@@ -48,52 +49,24 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const upcomingBirthdays: IUpcomingBirthday[] = [];
-
-    for (const birthday of birthdays) {
+    // Resolve Discord users for display
+    const displayItems: { user: User; nextBirthday: Date; age: number | null; daysUntil: number }[] = [];
+    for (const entry of entries) {
       try {
-        const { userId, date, yearSpecified } = birthday as IBirthday;
-        const user = await interaction.client.users.fetch(userId).catch(() => null);
+        const user = await interaction.client.users.fetch(entry.userId).catch(() => null);
         if (!user) continue;
-
-        const birthdayDate = new Date(date);
-        const nextBirthday = new Date(
-          today.getFullYear(),
-          birthdayDate.getMonth(),
-          birthdayDate.getDate()
-        );
-
-        if (nextBirthday < today) {
-          nextBirthday.setFullYear(today.getFullYear() + 1);
-        }
-
-        const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-        const utcNextBirthday = Date.UTC(
-          nextBirthday.getFullYear(),
-          nextBirthday.getMonth(),
-          nextBirthday.getDate()
-        );
-
-        const diffTime = utcNextBirthday - utcToday;
-        const daysUntil = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-        const age = yearSpecified ? nextBirthday.getFullYear() - birthdayDate.getFullYear() : null;
-
-        upcomingBirthdays.push({ user, date: nextBirthday, age, daysUntil });
+        displayItems.push({
+          user,
+          nextBirthday: entry.nextBirthday,
+          age: entry.age,
+          daysUntil: entry.daysUntil,
+        });
       } catch (err) {
-        logger.warn(
-          `Nie udało się przetworzyć urodzin użytkownika userId=${birthday.userId}: ${err}`
-        );
+        logger.warn(`Nie udało się przetworzyć urodzin użytkownika userId=${entry.userId}: ${err}`);
       }
     }
 
-    upcomingBirthdays.sort((a, b) => a.daysUntil - b.daysUntil);
-    const displayBirthdays = upcomingBirthdays.slice(0, 10);
-
-    if (displayBirthdays.length === 0) {
+    if (displayItems.length === 0) {
       await interaction.editReply({
         embeds: [
           successEmbed.setDescription('Nie udało się znaleźć żadnych nadchodzących urodzin.'),
@@ -109,9 +82,9 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     successEmbed
       .setTitle(`${emoji} Nadchodzące urodziny`)
       .setDescription(
-        displayBirthdays
-          .map(({ user, date, age, daysUntil }) => {
-            const formattedDate = date.toLocaleDateString('pl-PL', {
+        displayItems
+          .map(({ user, nextBirthday, age, daysUntil }) => {
+            const formattedDate = nextBirthday.toLocaleDateString('pl-PL', {
               day: '2-digit',
               month: 'long',
               year: 'numeric',
@@ -125,7 +98,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
           .join('\n\n')
       )
       .setFooter({
-        text: `Łącznie zapisanych urodzin: ${birthdays.length}`,
+        text: `Łącznie zapisanych urodzin: ${entries.length}`,
       });
 
     await interaction.editReply({ embeds: [successEmbed] });
@@ -137,8 +110,4 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       ],
     });
   }
-}
-
-function getDaysForm(days: number): string {
-  return days === 1 ? 'dzień' : 'dni';
 }

@@ -1,11 +1,13 @@
 import { Invite, Client } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(invite: Invite, client: Client): Promise<void> {
   try {
     if (!invite.guild) return;
 
     const inviter = invite.inviter;
+
     const expiresAt = invite.expiresTimestamp
       ? `<t:${Math.floor(invite.expiresTimestamp / 1000)}:R>`
       : 'Nigdy';
@@ -37,8 +39,8 @@ export default async function run(invite: Invite, client: Client): Promise<void>
       ],
       footer: `Invite Code: ${invite.code}`,
       timestamp: new Date(),
-    });
+    }, { channelId: invite.channelId ?? undefined, userId: inviter?.id });
   } catch (error) {
-    console.error('[logInviteCreate] Error:', error);
+    logger.error(`[logInviteCreate] Error: ${error}`);
   }
 }

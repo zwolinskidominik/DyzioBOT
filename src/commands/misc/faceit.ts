@@ -7,7 +7,7 @@ import {
 } from 'discord.js';
 import type { IFaceitPlayer, ICS2Stats, IPlayerStats } from '../../interfaces/api/Faceit';
 import type { ICommandOptions } from '../../interfaces/Command';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import { env } from '../../config';
 import { getBotConfig } from '../../config/bot';
@@ -34,31 +34,25 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     const botId = interaction.client.application!.id;
 
-    const {
-      emojis: {
-        faceit: { cry: CRY_EMOJI },
-      },
-    } = getBotConfig(botId);
-
     const nickname = interaction.options.getString('nick');
     if (!nickname) {
-      await interaction.editReply('Podaj poprawny nick gracza Faceit.');
+      await interaction.editReply({ embeds: [createErrorEmbed('Podaj poprawny nick gracza Faceit.')] });
       return;
     }
 
     const playerData = await fetchPlayerData(nickname);
     if (!playerData) {
-      await interaction.editReply(
-        `${CRY_EMOJI} Nie znaleziono gracza o nicku **${nickname}**. Upewnij się, że podałeś poprawny nick.`
-      );
+      await interaction.editReply({
+        embeds: [createErrorEmbed(`Nie znaleziono gracza o nicku **${nickname}**. Upewnij się, że podałeś poprawny nick.`)],
+      });
       return;
     }
 
     const cs2Stats = await fetchPlayerStats(playerData.player_id);
     if (!cs2Stats) {
-      await interaction.editReply(
-        `${CRY_EMOJI} Nie znaleziono statystyk dla gracza **${nickname}**. Możliwe, że gracz nie rozegrał żadnych meczów w CS2.`
-      );
+      await interaction.editReply({
+        embeds: [createErrorEmbed(`Nie znaleziono statystyk dla gracza **${nickname}**. Możliwe, że gracz nie rozegrał żadnych meczów w CS2.`)],
+      });
       return;
     }
 
@@ -73,7 +67,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     });
   } catch (error) {
     logger.error(`Błąd podczas pobierania statystyk Faceit: ${error}`);
-    await interaction.editReply('Wystąpił błąd przy próbie pobrania statystyk z Faceit.');
+    await interaction.editReply({ embeds: [createErrorEmbed('Wystąpił błąd przy próbie pobrania statystyk z Faceit.')] });
   }
 }
 

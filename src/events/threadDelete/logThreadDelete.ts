@@ -1,6 +1,7 @@
 import { ThreadChannel, Client, AuditLogEvent } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(thread: ThreadChannel, client: Client): Promise<void> {
   try {
@@ -18,8 +19,8 @@ export default async function run(thread: ThreadChannel, client: Client): Promis
       ],
       footer: `Thread ID: ${thread.id}`,
       timestamp: new Date(),
-    });
+    }, thread.parentId ? { channelId: thread.parentId } : undefined);
   } catch (error) {
-    console.error('[logThreadDelete] Error:', error);
+    logger.error(`[logThreadDelete] Error: ${error}`);
   }
 }

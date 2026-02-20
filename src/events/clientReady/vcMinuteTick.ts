@@ -1,16 +1,17 @@
 import { Client } from 'discord.js';
 import cron from 'node-cron';
+import { CRON } from '../../config/constants/cron';
 import cache from '../../cache/xpCache';
-import { LevelConfigModel } from '../../models/LevelConfig';
-import { getUserXpMultiplier, getChannelXpMultiplier } from '../../utils/xpMultiplier';
+import { getConfig } from '../../services/xpService';
+import { getXpMultipliers } from '../../utils/xpMultiplier';
 import monthlyStatsCache from '../../cache/monthlyStatsCache';
 
 export default function run(client: Client) {
-  cron.schedule('*/30 * * * * *', async () => {
+  cron.schedule(CRON.VC_MINUTE_TICK, async () => {
     const currentMonth = new Date().toISOString().slice(0, 7);
     
     for (const guild of client.guilds.cache.values()) {
-      const cfg = await LevelConfigModel.findOne({ guildId: guild.id }).lean();
+      const cfg = await getConfig(guild.id);
       const xpPerMin = cfg?.xpPerMinVc ?? 10;
       const xpPerCheck = Math.round(xpPerMin / 2);
 
@@ -26,8 +27,7 @@ export default function run(client: Client) {
           
           if (cfg?.ignoredRoles?.some((roleId) => member.roles.cache.has(roleId))) continue;
 
-          const roleMultiplier = await getUserXpMultiplier(member);
-          const channelMultiplier = await getChannelXpMultiplier(guild.id, channel.id);
+          const { role: roleMultiplier, channel: channelMultiplier } = getXpMultipliers(member, channel.id, cfg);
           const totalMultiplier = roleMultiplier * channelMultiplier;
           const finalXp = Math.round(xpPerCheck * totalMultiplier);
 

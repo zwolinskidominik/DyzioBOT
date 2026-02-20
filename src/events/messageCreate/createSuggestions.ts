@@ -6,9 +6,7 @@ import {
   ActionRowBuilder,
   ThreadAutoArchiveDuration,
 } from 'discord.js';
-import { SuggestionConfigurationModel } from '../../models/SuggestionConfiguration';
-import { SuggestionModel } from '../../models/Suggestion';
-import type { ISuggestion } from '../../interfaces/Models';
+import { isSuggestionChannel, createSuggestion } from '../../services/suggestionService';
 import { formatResults, createBaseEmbed } from '../../utils/embedHelpers';
 import { getBotConfig } from '../../config/bot';
 import { COLORS } from '../../config/constants/colors';
@@ -23,8 +21,8 @@ export default async function run(message: Message): Promise<void> {
     const guildId = message.guild!.id;
     const botId = message.client.user!.id;
 
-    const suggestionConfig = await SuggestionConfigurationModel.findOne({ guildId });
-    if (!suggestionConfig || suggestionConfig.suggestionChannelId !== message.channelId) {
+    const isSuggestion = await isSuggestionChannel({ guildId, channelId: message.channelId });
+    if (!isSuggestion) {
       return;
     }
 
@@ -46,15 +44,20 @@ export default async function run(message: Message): Promise<void> {
       content: '💡 Tworzenie sugestii, proszę czekać...',
     });
 
-    const newSuggestion = await createSuggestionRecord(
-      message.author.id,
+    const result = await createSuggestion({
+      authorId: message.author.id,
       guildId,
-      suggestionMessage.id,
-      suggestionText
-    );
+      messageId: suggestionMessage.id,
+      content: suggestionText,
+    });
+
+    if (!result.ok) {
+      logger.error(`Failed to create suggestion: ${result.message}`);
+      return;
+    }
 
     const suggestionEmbed = createSuggestionEmbed(botId, message, suggestionText);
-    const components = createVotingButtons(botId, newSuggestion.suggestionId);
+    const components = createVotingButtons(botId, result.data.suggestionId);
 
     await suggestionMessage.edit({
       content: '',
@@ -87,21 +90,6 @@ function shouldProcessMessage(message: Message): boolean {
   if (!message.guild) return false;
 
   return true;
-}
-
-async function createSuggestionRecord(
-  authorId: string,
-  guildId: string,
-  messageId: string,
-  content: string
-): Promise<ISuggestion> {
-  const doc = await SuggestionModel.create({
-    authorId,
-    guildId,
-    messageId,
-    content,
-  });
-  return doc.toObject();
 }
 
 async function createDiscussionThread(

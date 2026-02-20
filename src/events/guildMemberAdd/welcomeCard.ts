@@ -1,6 +1,7 @@
-import { GuildMember, EmbedBuilder, AttachmentBuilder } from 'discord.js';
+import { GuildMember, AttachmentBuilder } from 'discord.js';
 import { GreetingsConfigurationModel } from '../../models/GreetingsConfiguration';
 import { COLORS } from '../../config/constants/colors';
+import { createBaseEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 import fs from 'fs';
 import path from 'path';
@@ -56,7 +57,6 @@ export default async function run(member: GuildMember): Promise<void> {
     const avatar = member.user.displayAvatarURL({ extension: 'png', size: 256 });
 
     const rulesChannelId = config.rulesChannelId || 'CHANNEL_ID_REGULAMIN';
-    const rolesChannelId = config.rolesChannelId || 'CHANNEL_ID_ROLE';
     const chatChannelId = config.chatChannelId || 'CHANNEL_ID_CHAT';
 
     const defaultMessage = 
@@ -64,7 +64,7 @@ export default async function run(member: GuildMember): Promise<void> {
       `**Witamy na pokładzie!**\n` +
       `Gratulacje, właśnie wbiłeś/aś do miejsca, w którym gry są poważniejsze niż życie… prawie.\n\n` +
       `➔ Przeczytaj {rulesChannel}\n` +
-      `➔ Wybierz role {rolesChannel}\n` +
+      `➔ Wybierz role <id:customize>\n` +
       `➔ Przywitaj się z nami {chatChannel}\n\n` +
       `**Rozgość się i znajdź ekipę do grania.**`;
 
@@ -76,13 +76,14 @@ export default async function run(member: GuildMember): Promise<void> {
       .replace(/{memberCount}/g, member.guild.memberCount.toString())
       .replace(/{username}/g, member.user.username)
       .replace(/{rulesChannel}/g, `<#${rulesChannelId}>`)
-      .replace(/{rolesChannel}/g, `<#${rolesChannelId}>`)
+      .replace(/{rolesChannel}/g, `<id:customize>`)
       .replace(/{chatChannel}/g, `<#${chatChannelId}>`);
 
-    const embed = new EmbedBuilder()
-      .setColor(COLORS.JOIN)
-      .setDescription(message)
-      .setThumbnail(avatar);
+    const embed = createBaseEmbed({
+      color: COLORS.JOIN,
+      description: message,
+      thumbnail: avatar,
+    });
 
     if (gifData) {
       embed.setImage(`attachment://${gifData.name}`);
@@ -104,11 +105,12 @@ export default async function run(member: GuildMember): Promise<void> {
         
         await member.send({
           embeds: [
-            new EmbedBuilder()
-              .setColor(COLORS.JOIN)
-              .setTitle(`Witaj na ${member.guild.name}!`)
-              .setDescription(dmMessage)
-              .setThumbnail(member.guild.iconURL({ size: 256 }) || '')
+            createBaseEmbed({
+              color: COLORS.JOIN,
+              title: `Witaj na ${member.guild.name}!`,
+              description: dmMessage,
+              thumbnail: member.guild.iconURL({ size: 256 }) || undefined,
+            })
           ]
         });
       } catch (dmError) {

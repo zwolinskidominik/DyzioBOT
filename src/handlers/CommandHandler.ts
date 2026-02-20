@@ -40,12 +40,12 @@ export class CommandHandler {
     this.client.once('clientReady', async () => {
       if (this.config.bulkRegister) {
         await this.clearCommands()
-          .then(() => console.log('✅ Wyczyszczono wszystkie komendy.'))
+          .then(() => logger.info('✅ Wyczyszczono wszystkie komendy.'))
           .catch((err) => logger.error(`❌ Błąd czyszczenia komend: ${err}`));
       }
 
       await this.registerCommands()
-        .then(() => console.log('✅ Zarejestrowano komendy aplikacji.'))
+        .then(() => logger.info('✅ Zarejestrowano komendy aplikacji.'))
         .catch((err) => logger.error(`❌ Błąd rejestracji komend: ${err}`));
     });
   }
@@ -63,7 +63,7 @@ export class CommandHandler {
       const commandModule = require(fullPath);
 
       if (!commandModule.data || !commandModule.run) {
-        console.warn(`❕ Pominięto ${entry} (brak eksportu 'data' lub 'run')`);
+        logger.warn(`❕ Pominięto ${entry} (brak eksportu 'data' lub 'run')`);
         continue;
       }
 
@@ -107,7 +107,7 @@ export class CommandHandler {
 
     for (const command of this.commands.values()) {
       if (command.options?.deleted) {
-        console.log(`⏩ Pominięto komendę "${command.data.name}" - oznaczona jako usunięta.`);
+        logger.info(`⏩ Pominięto komendę "${command.data.name}" - oznaczona jako usunięta.`);
         continue;
       }
 
@@ -118,20 +118,20 @@ export class CommandHandler {
     if (this.config.bulkRegister) {
       if (globalCommands.length) {
         await this.client.application.commands.set(globalCommands);
-        console.log(`✅ Załadowano globalnie ${globalCommands.length} komend.`);
+        logger.info(`✅ Załadowano globalnie ${globalCommands.length} komend.`);
       }
 
       if (devCommands.length && this.config.devGuildIds?.length) {
         for (const guildId of this.config.devGuildIds) {
           const guild = await this.client.guilds.fetch(guildId);
           if (!guild) {
-            console.warn(
+            logger.warn(
               `⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend dev.`
             );
             continue;
           }
           await guild.commands.set(devCommands);
-          console.log(
+          logger.info(
             `✅ Załadowano ${devCommands.length} deweloperskich komend na serwerze "${guild.name}".`
           );
         }
@@ -145,12 +145,12 @@ export class CommandHandler {
         const found = existing.find((cmd) => cmd.name === cmdData.name);
         if (!found) {
           await this.client.application.commands.create(cmdData);
-          console.log(`✅ Utworzono globalnie "${cmdData.name}".`);
+          logger.info(`✅ Utworzono globalnie "${cmdData.name}".`);
           continue;
         }
         if (this.commandChanged(found, cmdData)) {
           await this.client.application.commands.edit(found.id, cmdData);
-          console.log(`✅ Zaktualizowano globalnie "${cmdData.name}".`);
+          logger.info(`✅ Zaktualizowano globalnie "${cmdData.name}".`);
         }
       }
     }
@@ -159,7 +159,7 @@ export class CommandHandler {
       for (const guildId of this.config.devGuildIds) {
         const guild = await this.client.guilds.fetch(guildId);
         if (!guild) {
-          console.warn(`⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend dev.`);
+          logger.warn(`⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend dev.`);
           continue;
         }
 
@@ -169,12 +169,12 @@ export class CommandHandler {
           const found = existing.find((cmd) => cmd.name === cmdData.name);
           if (!found) {
             await guild.commands.create(cmdData);
-            console.log(`✅ Utworzono "${cmdData.name}" na serwerze "${guild.name}".`);
+            logger.info(`✅ Utworzono "${cmdData.name}" na serwerze "${guild.name}".`);
             continue;
           }
           if (this.commandChanged(found, cmdData)) {
             await guild.commands.edit(found.id, cmdData);
-            console.log(`✅ Zaktualizowano "${cmdData.name}" na serwerze "${guild.name}".`);
+            logger.info(`✅ Zaktualizowano "${cmdData.name}" na serwerze "${guild.name}".`);
           }
         }
       }
@@ -187,7 +187,7 @@ export class CommandHandler {
     }
 
     await this.client.application.commands.set([]);
-    console.log('🧹 Wyczyszczono globalne komendy');
+    logger.info('🧹 Wyczyszczono globalne komendy');
 
     if (this.config.devGuildIds?.length) {
       for (const guildId of this.config.devGuildIds) {
@@ -195,10 +195,10 @@ export class CommandHandler {
           const guild = await this.client.guilds.fetch(guildId);
           if (guild) {
             await guild.commands.set([]);
-            console.log(`🧹 Wyczyszczono komendy na serwerze "${guild.name}"`);
+            logger.info(`🧹 Wyczyszczono komendy na serwerze "${guild.name}"`);
           }
         } catch (error) {
-          console.warn(`⚠️ Nie udało się wyczyścić komend na serwerze ${guildId}:`, error);
+          logger.warn(`⚠️ Nie udało się wyczyścić komend na serwerze ${guildId}: ${error}`);
         }
       }
     }
@@ -224,6 +224,13 @@ export class CommandHandler {
       }
     }
 
+    if (command.options?.guildOnly && !interaction.guild) {
+      await this.respond(interaction, {
+        content: 'Ta komenda działa tylko na serwerze.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
     if (command.options?.devOnly && !this.isDeveloper(interaction)) {
       await this.respond(interaction, {
         content: '⛔ Ta komenda jest dostępna tylko dla deweloperów.',
@@ -307,22 +314,24 @@ export class CommandHandler {
   }
 
   private summarize(cmd: ApplicationCommand | ApplicationCommandData): string {
-    const base: any = {
-      name: (cmd as any).name,
-      description: (cmd as any).description || '',
-      type: (cmd as any).type || 1,
+    const raw = cmd as unknown as Record<string, unknown>;
+    const base: Record<string, unknown> = {
+      name: raw.name,
+      description: (raw.description as string) || '',
+      type: (raw.type as number) || 1,
     };
-    const opts = (cmd as any).options || [];
+    const opts = (raw.options as Array<Record<string, unknown>>) || [];
     if (opts.length) {
-      base.options = opts.map((o: any) => {
-        const opt: any = {
+      base.options = opts.map((o: Record<string, unknown>) => {
+        const opt: Record<string, unknown> = {
           name: o.name,
           type: o.type,
-          description: o.description || '',
+          description: (o.description as string) || '',
           required: !!o.required,
         };
-        if (o.choices?.length) {
-          opt.choices = o.choices.map((c: any) => ({ name: c.name, value: c.value }));
+        const choices = o.choices as Array<Record<string, unknown>> | undefined;
+        if (choices?.length) {
+          opt.choices = choices.map((c: Record<string, unknown>) => ({ name: c.name, value: c.value }));
         }
         return opt;
       });
@@ -331,7 +340,7 @@ export class CommandHandler {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         return Object.keys(value)
           .sort()
-          .reduce((sorted: any, k) => {
+          .reduce((sorted: Record<string, unknown>, k) => {
             sorted[k] = value[k];
             return sorted;
           }, {});

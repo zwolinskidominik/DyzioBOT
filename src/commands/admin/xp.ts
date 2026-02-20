@@ -1,10 +1,8 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits } from 'discord.js';
-import { modifyXp } from '../../services/xpService';
-import { LevelModel } from '../../models/Level';
+import { modifyXp, setXp, setLevel, flush } from '../../services/xpService';
 import { notifyLevelUp } from '../../services/levelNotifier';
-import { computeLevelProgress } from '../../utils/levelMath';
-import xpCache from '../../cache/xpCache';
-import flushXp from '../../events/clientReady/xpFlush';
+import { createErrorEmbed } from '../../utils/embedHelpers';
+import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('xp')
@@ -41,75 +39,66 @@ export const data = new SlashCommandBuilder()
       )
   );
 
+export const options = {
+  guildOnly: true,
+};
+
 export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
-  if (!interaction.inCachedGuild()) return;
+  try {
+    const gid = interaction.guildId!;
+    const subcommand = interaction.options.getSubcommand();
+    const user = interaction.options.getUser('uzytkownik', true);
 
-  await interaction.deferReply();
+    if (subcommand === 'set') {
+      const valueStr = interaction.options.getString('wartosc', true);
 
-  const gid = interaction.guildId!;
-  const subcommand = interaction.options.getSubcommand();
-  const user = interaction.options.getUser('uzytkownik', true);
+      const isLevelSet = valueStr.toLowerCase().endsWith('l');
+      const numericValue = parseInt(valueStr.replace(/[lL]$/, ''), 10);
 
-  if (subcommand === 'set') {
-    const valueStr = interaction.options.getString('wartosc', true);
-
-    const isLevel = valueStr.toLowerCase().endsWith('l');
-    const numericValue = parseInt(valueStr.replace(/[lL]$/, ''), 10);
-
-    if (isNaN(numericValue) || numericValue < 0) {
-      return interaction.editReply({
-        content: '❌ Nieprawidłowa wartość. Użyj liczby lub liczby z suffixem L (np. 1000 lub 5L)',
-      });
-    }
-
-    if (isLevel) {
-      if (numericValue < 1) {
+      if (isNaN(numericValue) || numericValue < 0) {
         return interaction.editReply({
-          content: '❌ Poziom musi być większy niż 0',
+          embeds: [createErrorEmbed('Nieprawidłowa wartość. Użyj liczby lub liczby z suffixem L (np. 1000 lub 5L)')],
         });
       }
 
-      await LevelModel.findOneAndUpdate(
-        { guildId: gid, userId: user.id },
-        { level: numericValue, xp: 0 },
-        { upsert: true }
-      );
+      if (isLevelSet) {
+        const result = await setLevel(gid, user.id, numericValue);
+        if (!result.ok) {
+          return interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
+        }
 
-      xpCache.invalidateUser(gid, user.id);
-      await flushXp();
-      
-      await notifyLevelUp(interaction.client, gid, user.id, numericValue).catch(() => null);
+        await flush();
+        await notifyLevelUp(interaction.client, gid, user.id, result.data.level).catch(() => null);
 
-      return interaction.editReply({
-        content: `🔧 Ustawiono poziom **${numericValue}** użytkownikowi <@${user.id}>`,
-      });
-    } else {
-      const { level: calculatedLevel, xpIntoLevel } = computeLevelProgress(numericValue);
-      
-      await LevelModel.findOneAndUpdate(
-        { guildId: gid, userId: user.id },
-        { level: calculatedLevel, xp: xpIntoLevel },
-        { upsert: true }
-      );
+        return interaction.editReply({
+          content: `🔧 Ustawiono poziom **${result.data.level}** użytkownikowi <@${user.id}>`,
+        });
+      } else {
+        const result = await setXp(gid, user.id, numericValue);
+        if (!result.ok) {
+          return interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
+        }
 
-      xpCache.invalidateUser(gid, user.id);
-      await flushXp();
+        await flush();
+        await notifyLevelUp(interaction.client, gid, user.id, result.data.level).catch(() => null);
 
-      await notifyLevelUp(interaction.client, gid, user.id, calculatedLevel).catch(() => null);
-
-      return interaction.editReply({
-        content: `🔧 Ustawiono **${numericValue}** punktów XP użytkownikowi <@${user.id}>`,
-      });
+        return interaction.editReply({
+          content: `🔧 Ustawiono **${numericValue}** punktów XP użytkownikowi <@${user.id}>`,
+        });
+      }
     }
+
+    const amt = interaction.options.getInteger('ilosc', true);
+    const delta = subcommand === 'add' ? amt : -amt;
+
+    await modifyXp(interaction.client, gid, user.id, delta);
+    const sign = delta > 0 ? '+' : '−';
+
+    return interaction.editReply({
+      content: `✅ ${sign}${Math.abs(delta)} XP dla <@${user.id}>`,
+    });
+  } catch (error) {
+    logger.error(`[xp] Błąd wykonania komendy: ${error}`);
+    return interaction.editReply({ embeds: [createErrorEmbed('Wystąpił błąd podczas wykonywania komendy.')] });
   }
-
-  const amt = interaction.options.getInteger('ilosc', true);
-  const delta = subcommand === 'add' ? amt : -amt;
-
-  await modifyXp(interaction.client, gid, user.id, delta);
-  const sign = delta > 0 ? '+' : '−';
-
-  return interaction.editReply({
-    content: `✅ ${sign}${Math.abs(delta)} XP dla <@${user.id}>`,
-  });
 }

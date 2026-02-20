@@ -1,10 +1,11 @@
 import { Client } from 'discord.js';
 import cron from 'node-cron';
+import { CRON } from '../../config/constants/cron';
 import { updateChannelStats } from '../../utils/channelHelpers';
 import logger from '../../utils/logger';
 
 export default async function run(client: Client): Promise<void> {
-  cron.schedule('*/10 * * * *', async () => {
+  cron.schedule(CRON.CHANNEL_STATS_UPDATE, async () => {
     try {
       const guilds = client.guilds.cache;
       let updated = 0;

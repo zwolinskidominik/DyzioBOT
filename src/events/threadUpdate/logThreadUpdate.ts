@@ -1,6 +1,7 @@
 import { ThreadChannel, Client, AuditLogEvent } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(
   oldThread: ThreadChannel,
@@ -8,6 +9,8 @@ export default async function run(
   client: Client
 ): Promise<void> {
   try {
+    const ctx = newThread.parentId ? { channelId: newThread.parentId } : undefined;
+
     const moderator = await getModerator(newThread.guild, AuditLogEvent.ThreadUpdate, newThread.id);
 
     if (oldThread.name !== newThread.name) {
@@ -20,7 +23,7 @@ export default async function run(
         ],
         footer: `Thread ID: ${newThread.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
 
     if (oldThread.archived !== newThread.archived) {
@@ -31,7 +34,7 @@ export default async function run(
           : `**📂 Wątek <#${newThread.id}> został odarchiwizowany${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
         footer: `Thread ID: ${newThread.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
 
     if (oldThread.locked !== newThread.locked) {
@@ -42,9 +45,9 @@ export default async function run(
           : `**🔓 Wątek <#${newThread.id}> został otwarty${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
         footer: `Thread ID: ${newThread.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
   } catch (error) {
-    console.error('[logThreadUpdate] Error:', error);
+    logger.error(`[logThreadUpdate] Error: ${error}`);
   }
 }

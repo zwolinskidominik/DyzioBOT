@@ -3,7 +3,7 @@ import logger from '../utils/logger';
 import { fetch, Response as UndiciResponse } from 'undici';
 import * as cheerio from 'cheerio';
 
-export function getDefaultHeaders(): Record<string, string> {
+function getDefaultHeaders(): Record<string, string> {
   return {
     'User-Agent':
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -30,7 +30,7 @@ async function fetchHtml(
   return { html, res };
 }
 
-export async function parseKwejkRandom(): Promise<IMemeData> {
+async function parseKwejkRandom(): Promise<IMemeData> {
   const { html } = await fetchHtml('https://kwejk.pl/losowy');
   const $ = cheerio.load(html);
   const title = $('.media-element-wrapper .content h1').text().trim() || 'Kwejk Meme';
@@ -46,7 +46,7 @@ export async function parseKwejkRandom(): Promise<IMemeData> {
   throw new Error('Brak obrazu lub wideo na Kwejk');
 }
 
-export async function parseDemotywatoryRandom(): Promise<IMemeData> {
+async function parseDemotywatoryRandom(): Promise<IMemeData> {
   const { res } = await fetchHtml('https://demotywatory.pl/losuj', true);
   const redirectUrl = res.headers.get('location');
   if (!redirectUrl) throw new Error('Brak przekierowania Demotywatory');
@@ -62,7 +62,7 @@ export async function parseDemotywatoryRandom(): Promise<IMemeData> {
   return { title: titleText || null, url: image.attr('src') || '', isVideo: false };
 }
 
-export async function parseMistrzowieRandom(): Promise<IMemeData> {
+async function parseMistrzowieRandom(): Promise<IMemeData> {
   const { res } = await fetchHtml('https://mistrzowie.org/losuj', true);
   const redirectUrl = res.headers.get('location');
   if (!redirectUrl) throw new Error('Brak przekierowania Mistrzowie');
@@ -77,7 +77,7 @@ export async function parseMistrzowieRandom(): Promise<IMemeData> {
   };
 }
 
-export async function parseIvallMemy(): Promise<IMemeData> {
+async function parseIvallMemy(): Promise<IMemeData> {
   const res = await fetch('https://ivall.pl/memy', { headers: getDefaultHeaders() });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
   const data = (await res.json()) as { title?: string; url?: string };

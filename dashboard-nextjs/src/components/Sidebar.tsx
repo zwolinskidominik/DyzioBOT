@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, Home, Cake, Hand, Trophy, UserPlus, Lightbulb, Ticket, HelpCircle, Tv, Smile, FileText, BarChart3, Activity, Radio, ScrollText, Gamepad2 } from "lucide-react";
+import { ChevronDown, Home, Cake, Hand, Trophy, UserPlus, Lightbulb, Ticket, HelpCircle, Tv, Smile, FileText, BarChart3, Activity, Radio, ScrollText, Gamepad2, Music } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { prefetchGuildData } from "@/lib/cache";
 
@@ -28,6 +28,7 @@ const modules = [
   { id: "channel-stats", name: "Kanały z licznikami", icon: Activity, href: "/channel-stats" },
   { id: "temp-channels", name: "Tymczasowe Kanały", icon: Radio, href: "/temp-channels" },
   { id: "autoroles", name: "Auto role", icon: UserPlus, href: "/autoroles" },
+  { id: "music", name: "Muzyka", icon: Music, href: "/music" },
   { id: "qotd", name: "Pytanie Dnia", icon: HelpCircle, href: "/qotd" },
   { id: "stream-config", name: "Powiadomienia Twitch", icon: Tv, href: "/stream-config" },
   { id: "suggestions", name: "Sugestie", icon: Lightbulb, href: "/suggestions" },

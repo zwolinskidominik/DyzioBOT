@@ -2,6 +2,7 @@ import { Client, TextChannel, ChannelType } from 'discord.js';
 import logger from '../../utils/logger';
 import { getGuildConfig } from '../../config/guild';
 import { schedule, ScheduledTask } from 'node-cron';
+import { CRON } from '../../config/constants/cron';
 import { TournamentConfigModel } from '../../models/TournamentConfig';
 
 let scheduledTask: ScheduledTask | null = null;
@@ -20,7 +21,7 @@ export default async function run(client: Client): Promise<void> {
       }
 
       scheduledTask = schedule(
-        tournamentConfig.cronSchedule || '25 20 * * 1',
+        tournamentConfig.cronSchedule || CRON.TOURNAMENT_RULES_DEFAULT,
         async () => {
           try {
             const channelId = tournamentConfig.channelId;

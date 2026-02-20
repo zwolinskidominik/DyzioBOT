@@ -100,6 +100,12 @@ const GiveawayConfigSchema = new mongoose.Schema({
 }, { collection: 'giveawayconfigs' });
 const GiveawayConfig = mongoose.models.GiveawayConfig || mongoose.model('GiveawayConfig', GiveawayConfigSchema);
 
+const MusicConfigSchema = new mongoose.Schema({
+  guildId: String,
+  enabled: Boolean,
+}, { collection: 'musicconfigs' });
+const MusicConfig = mongoose.models.MusicConfig || mongoose.model('MusicConfig', MusicConfigSchema);
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -129,6 +135,7 @@ export async function GET(
       logs,
       tournament,
       giveaway,
+      music,
     ] = await Promise.all([
       BirthdayConfig.findOne({ guildId }).lean(),
       GreetingsConfig.findOne({ guildId }).lean(),
@@ -145,6 +152,7 @@ export async function GET(
       LogConfiguration.findOne({ guildId }).lean(),
       TournamentConfig.findOne({ guildId }).lean(),
       GiveawayConfig.findOne({ guildId }).lean(),
+      MusicConfig.findOne({ guildId }).lean(),
     ]);
 
     const status = {
@@ -155,6 +163,7 @@ export async function GET(
       "channel-stats": !!((channelStats as any)?.channels && Object.keys((channelStats as any).channels).some((key: string) => (channelStats as any).channels[key]?.channelId)),
       "temp-channels": !!((tempChannels as any)?.channelIds && Array.isArray((tempChannels as any).channelIds) && (tempChannels as any).channelIds.length > 0),
       autoroles: (autoRole as any)?.enabled === true,
+      music: (music as any)?.enabled === true,
       qotd: (qotd as any)?.enabled === true,
       suggestions: (suggestions as any)?.enabled === true,
       tickets: (tickets as any)?.enabled === true,

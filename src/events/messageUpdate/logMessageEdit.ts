@@ -1,5 +1,5 @@
 import { Message, PartialMessage, Client } from 'discord.js';
-import { sendLog, truncate, isIgnored } from '../../utils/logHelpers';
+import { sendLog, truncate } from '../../utils/logHelpers';
 
 export default async function run(
   oldMessage: Message | PartialMessage,
@@ -11,11 +11,6 @@ export default async function run(
   if (newMessage.author?.bot) return;
 
   if (oldMessage.content === newMessage.content) return;
-
-  if (await isIgnored(newMessage.guild.id, {
-    channelId: newMessage.channelId,
-    userId: newMessage.author?.id,
-  })) return;
 
   const oldContent = oldMessage.content || '*Brak treści*';
   const newContent = newMessage.content || '*Brak treści*';
@@ -30,5 +25,5 @@ export default async function run(
     authorName: newMessage.author?.tag || 'Nieznany',
     authorIcon: newMessage.author?.displayAvatarURL(),
     footer: `Message ID: ${newMessage.id}`,
-  });
+  }, { channelId: newMessage.channelId, userId: newMessage.author?.id });
 }

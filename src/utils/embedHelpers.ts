@@ -25,6 +25,14 @@ export function createBaseEmbed(opts: IBaseEmbedOptions = {}): EmbedBuilder {
   return embed;
 }
 
+/** Universal error embed for any command — red color with ❌ prefix. */
+export function createErrorEmbed(description: string): EmbedBuilder {
+  return createBaseEmbed({
+    isError: true,
+    description: `❌ ${description}`,
+  });
+}
+
 export function formatResults(
   botId: string,
   upvotes: string[] = [],

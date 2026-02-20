@@ -3,13 +3,12 @@ import {
   PermissionFlagsBits,
   GuildMember,
   Guild,
-  MessageFlags,
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import {
   createModErrorEmbed,
   createModSuccessEmbed,
-  checkModPermissions,
+  getModFailMessage,
 } from '../../utils/moderationHelpers';
 import logger from '../../utils/logger';
 
@@ -31,24 +30,16 @@ export const data = new SlashCommandBuilder()
 export const options = {
   userPermissions: PermissionFlagsBits.KickMembers,
   botPermissions: PermissionFlagsBits.KickMembers,
+  guildOnly: true,
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  if (!interaction.guild) {
-    await interaction.reply({
-      content: 'Ta komenda działa tylko na serwerze.',
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
-  const guild: Guild = interaction.guild;
+  const guild: Guild = interaction.guild!;
   const errorEmbed = createModErrorEmbed('', guild.name);
   try {
     await interaction.deferReply();
 
-    const targetUser =
-      interaction.options.getUser('użytkownik') || interaction.options.getUser('uzytkownik');
+    const targetUser = interaction.options.getUser('uzytkownik');
     if (!targetUser) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription('**Nie znaleziono użytkownika.**')],
@@ -84,13 +75,10 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    if (!checkModPermissions(targetMember, interaction.member as GuildMember, guild.members.me)) {
+    const failMessage = getModFailMessage(targetMember, interaction.member as GuildMember, guild.members.me, 'kick');
+    if (failMessage) {
       await interaction.editReply({
-        embeds: [
-          errorEmbed.setDescription(
-            '**Nie możesz wyrzucić tego użytkownika z wyższą lub równą rolą.**'
-          ),
-        ],
+        embeds: [errorEmbed.setDescription(`**${failMessage}**`)],
       });
       return;
     }

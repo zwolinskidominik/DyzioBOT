@@ -5,6 +5,7 @@ import flushXp, { startXpFlushScheduler } from './events/clientReady/xpFlush';
 import { startMonthlyStatsFlushScheduler } from './events/clientReady/monthlyStatsFlush';
 import xpCache from './cache/xpCache';
 import { flushMonthlyStats } from './cache/monthlyStatsCache';
+import { initializeMusicPlayer } from './services/musicPlayer';
 import logger from './utils/logger';
 import { env } from './config';
 import mongoose from 'mongoose';
@@ -47,6 +48,7 @@ mongoose
         await xpCache.setClient(client);
         startXpFlushScheduler();
         startMonthlyStatsFlushScheduler();
+        await initializeMusicPlayer(client);
         logger.info(`${client.user.tag} jest online.`);
       })
       .catch((err) => logger.error(`❌ Nie udało się zalogować: ${err}`));
@@ -64,20 +66,20 @@ process.on('uncaughtException', (err, origin) => {
 });
 
 async function gracefulShutdown() {
-  console.log('⚙️  Received shutdown signal — flushing caches…');
+  logger.info('⚙️  Received shutdown signal — flushing caches…');
   
   try {
     await flushXp();
-    console.log('✅ XP cache flushed');
+    logger.info('✅ XP cache flushed');
   } catch (err) {
-    console.error('❌ Błąd podczas ostatniego flushu XP:', err);
+    logger.error(`❌ Błąd podczas ostatniego flushu XP: ${err}`);
   }
 
   try {
     await flushMonthlyStats();
-    console.log('✅ Monthly stats cache flushed');
+    logger.info('✅ Monthly stats cache flushed');
   } catch (err) {
-    console.error('❌ Błąd podczas ostatniego flushu monthly stats:', err);
+    logger.error(`❌ Błąd podczas ostatniego flushu monthly stats: ${err}`);
   }
 
   if (client && client.isReady()) {

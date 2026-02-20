@@ -8,8 +8,13 @@ import {
   GuildMember,
   MessageFlags,
 } from 'discord.js';
-import { GiveawayModel, GiveawayDocument } from '../../models/Giveaway';
-import { GiveawayConfigModel } from '../../models/GiveawayConfig';
+import {
+  joinGiveaway,
+  leaveGiveaway,
+  getActiveGiveaway,
+  getGiveaway,
+  GiveawayData,
+} from '../../services/giveawayService';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import { getBotConfig } from '../../config/bot';
@@ -36,34 +41,34 @@ export default async function run(interaction: ButtonInteraction, client: Client
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const giveaway = (await GiveawayModel.findOne({
-      giveawayId,
-      guildId: interaction.guild!.id,
-    })) as GiveawayDocument | null;
+    const giveawayResult = await getActiveGiveaway(giveawayId, interaction.guild!.id);
 
-    if (!giveaway) {
+    if (!giveawayResult.ok) {
       await interaction.editReply({
-        content: 'Ten giveaway nie został znaleziony lub został już zakończony.',
+        content: giveawayResult.code === 'NOT_ACTIVE'
+          ? 'Ten giveaway został już zakończony.'
+          : 'Ten giveaway nie został znaleziony lub został już zakończony.',
       });
       return;
     }
 
-    if (!giveaway.active) {
-      await interaction.editReply({
-        content: 'Ten giveaway został już zakończony.',
-      });
-      return;
-    }
+    let giveaway = giveawayResult.data;
 
     let updated = false;
     switch (action) {
-      case 'join':
-        updated = await handleJoinGiveaway(interaction, giveaway);
+      case 'join': {
+        const joinResult = await handleJoinGiveaway(interaction, giveaway);
+        updated = joinResult.updated;
+        if (joinResult.freshData) giveaway = joinResult.freshData;
         break;
+      }
 
-      case 'leave':
-        updated = await handleLeaveGiveaway(interaction, giveaway);
+      case 'leave': {
+        const leaveResult = await handleLeaveGiveaway(interaction, giveaway);
+        updated = leaveResult.updated;
+        if (leaveResult.freshData) giveaway = leaveResult.freshData;
         break;
+      }
 
       case 'count':
         await handleShowParticipants(interaction, giveaway);
@@ -94,75 +99,51 @@ export default async function run(interaction: ButtonInteraction, client: Client
 
 async function handleJoinGiveaway(
   interaction: ButtonInteraction,
-  giveaway: GiveawayDocument
-): Promise<boolean> {
-  if (giveaway.participants.includes(interaction.user.id)) {
-    const leaveButton = new ButtonBuilder()
-      .setCustomId(`giveaway_leave_${giveaway.giveawayId}`)
-      .setLabel('Opuść giveaway')
-      .setStyle(ButtonStyle.Danger);
-
-    const cancelButton = new ButtonBuilder()
-      .setCustomId('giveaway_cancel_ephemeral')
-      .setLabel('Anuluj')
-      .setStyle(ButtonStyle.Secondary);
-
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(leaveButton, cancelButton);
-
-    const embed = createBaseEmbed({
-      title: '🎉 Już uczestniczysz',
-      description:
-        'Już dołączyłeś do tego giveawayu. Możesz opuścić giveaway naciskając przycisk poniżej.',
-      color: COLORS.GIVEAWAY,
-    });
-
-    await interaction.editReply({
-      embeds: [embed],
-      components: [row],
-    });
-
-    return false;
-  }
-
-  // Merge mnożników: globalne + nadpisanie per-giveaway
-  let multiplier = 1;
+  giveaway: GiveawayData
+): Promise<{ updated: boolean; freshData?: GiveawayData }> {
   const member = interaction.member as GuildMember;
-  const memberRoles = member.roles.cache;
+  const memberRoleIds = [...member.roles.cache.keys()];
 
-  const finalMultipliers: Record<string, number> = {};
+  const result = await joinGiveaway(
+    giveaway.giveawayId,
+    interaction.guild!.id,
+    interaction.user.id,
+    memberRoleIds,
+  );
 
-  // 1. Zacznij od globalnych mnożników z GiveawayConfig
-  try {
-    const config = await GiveawayConfigModel.findOne({ guildId: interaction.guild!.id });
-    if (config?.enabled && config.roleMultipliers?.length > 0) {
-      for (const rm of config.roleMultipliers) {
-        finalMultipliers[rm.roleId] = rm.multiplier;
-      }
+  if (!result.ok) {
+    if (result.code === 'ALREADY_JOINED') {
+      const leaveButton = new ButtonBuilder()
+        .setCustomId(`giveaway_leave_${giveaway.giveawayId}`)
+        .setLabel('Opuść giveaway')
+        .setStyle(ButtonStyle.Danger);
+
+      const cancelButton = new ButtonBuilder()
+        .setCustomId('giveaway_cancel_ephemeral')
+        .setLabel('Anuluj')
+        .setStyle(ButtonStyle.Secondary);
+
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(leaveButton, cancelButton);
+
+      const embed = createBaseEmbed({
+        title: '🎉 Już uczestniczysz',
+        description:
+          'Już dołączyłeś do tego giveawayu. Możesz opuścić giveaway naciskając przycisk poniżej.',
+        color: COLORS.GIVEAWAY,
+      });
+
+      await interaction.editReply({
+        embeds: [embed],
+        components: [row],
+      });
+      return { updated: false };
     }
-  } catch (error) {
-    logger.debug(`Nie udało się pobrać konfiguracji giveaway: ${error}`);
+
+    await interaction.editReply({ content: result.message });
+    return { updated: false };
   }
 
-  // 2. Nadpisz/dodaj per-giveaway mnożniki
-  if (giveaway.roleMultipliers && Object.keys(giveaway.roleMultipliers).length > 0) {
-    for (const [roleId, mult] of Object.entries(giveaway.roleMultipliers)) {
-      finalMultipliers[roleId] = mult;
-    }
-  }
-
-  // 3. Sprawdź który mnożnik użytkownik ma (najwyższy)
-  for (const [roleId, mult] of Object.entries(finalMultipliers)) {
-    if (memberRoles.has(roleId) && mult > multiplier) {
-      multiplier = mult;
-    }
-  }
-
-  // Dodaj użytkownika wielokrotnie według mnożnika
-  for (let i = 0; i < multiplier; i++) {
-    giveaway.participants.push(interaction.user.id);
-  }
-
-  await giveaway.save();
+  const { multiplier } = result.data;
 
   const embed = createBaseEmbed({
     title: '🎉 Dołączono do giveaway',
@@ -174,23 +155,26 @@ async function handleJoinGiveaway(
   });
 
   await interaction.editReply({ embeds: [embed] });
-  return true;
+
+  // Reload giveaway data so updateGiveawayMessage sees fresh participants
+  const freshResult = await getGiveaway(giveaway.giveawayId, interaction.guild!.id);
+  return { updated: true, freshData: freshResult.ok ? freshResult.data : undefined };
 }
 
 async function handleLeaveGiveaway(
   interaction: ButtonInteraction,
-  giveaway: GiveawayDocument
-): Promise<boolean> {
-  if (!giveaway.participants.includes(interaction.user.id)) {
-    await interaction.editReply({
-      content: 'Nie jesteś zapisany do tego giveawayu.',
-    });
-    return false;
+  giveaway: GiveawayData
+): Promise<{ updated: boolean; freshData?: GiveawayData }> {
+  const result = await leaveGiveaway(
+    giveaway.giveawayId,
+    interaction.guild!.id,
+    interaction.user.id,
+  );
+
+  if (!result.ok) {
+    await interaction.editReply({ content: result.message });
+    return { updated: false };
   }
-
-  giveaway.participants = giveaway.participants.filter((id: string) => id !== interaction.user.id);
-
-  await giveaway.save();
 
   const embed = createBaseEmbed({
     title: '🎉 Opuszczono giveaway',
@@ -199,10 +183,13 @@ async function handleLeaveGiveaway(
   });
 
   await interaction.editReply({ embeds: [embed] });
-  return true;
+
+  // Reload giveaway data so updateGiveawayMessage sees fresh participants
+  const freshResult = await getGiveaway(giveaway.giveawayId, interaction.guild!.id);
+  return { updated: true, freshData: freshResult.ok ? freshResult.data : undefined };
 }
 
-async function updateGiveawayMessage(giveaway: GiveawayDocument, client: Client): Promise<void> {
+async function updateGiveawayMessage(giveaway: GiveawayData, client: Client): Promise<void> {
   try {
     const guild = client.guilds.cache.get(giveaway.guildId);
     if (!guild) return;
@@ -248,7 +235,7 @@ async function updateGiveawayMessage(giveaway: GiveawayDocument, client: Client)
 
 async function handleShowParticipants(
   interaction: ButtonInteraction,
-  giveaway: GiveawayDocument
+  giveaway: GiveawayData
 ): Promise<void> {
   const uniqueIds = [...new Set(giveaway.participants)];
   if (uniqueIds.length === 0) {

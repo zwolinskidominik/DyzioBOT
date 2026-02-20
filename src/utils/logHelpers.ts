@@ -1,7 +1,19 @@
-import { Client, EmbedBuilder, TextChannel, User, GuildMember } from 'discord.js';
+import { Client, EmbedBuilder, TextChannel, GuildMember } from 'discord.js';
 import { LogConfigurationModel } from '../models/LogConfiguration';
 import { LogEventType, LOG_EVENT_CONFIGS } from '../interfaces/LogEvent';
 import logger from './logger';
+
+/** Lean (plain-object) representation of a LogConfiguration document. */
+interface LeanLogConfiguration {
+  guildId: string;
+  enabled: boolean;
+  logChannels: Record<string, string>;
+  enabledEvents: Record<string, boolean>;
+  ignoredChannels?: string[];
+  ignoredRoles?: string[];
+  ignoredUsers?: string[];
+  colorOverrides?: Record<string, string>;
+}
 
 export interface LogEmbedData {
   title?: string | null;
@@ -14,6 +26,12 @@ export interface LogEmbedData {
   footer?: string;
   footerIcon?: string;
   timestamp?: boolean | Date;
+}
+
+export interface LogContext {
+  channelId?: string;
+  userId?: string;
+  member?: GuildMember;
 }
 
 export function createLogEmbed(eventType: LogEventType, data: LogEmbedData): EmbedBuilder {
@@ -70,13 +88,26 @@ export async function sendLog(
   client: Client,
   guildId: string,
   eventType: LogEventType,
-  embedData: LogEmbedData
+  embedData: LogEmbedData,
+  context?: LogContext
 ): Promise<void> {
   try {
-    const config = await LogConfigurationModel.findOne({ guildId }).lean();
+    const config = await LogConfigurationModel.findOne({ guildId }).lean<LeanLogConfiguration>();
     
     if (!config) return;
     if (!config.enabledEvents?.[eventType]) return;
+
+    // Check ignored channels/users/roles
+    if (context) {
+      if (context.channelId && config.ignoredChannels?.includes(context.channelId)) return;
+      if (context.userId && config.ignoredUsers?.includes(context.userId)) return;
+      if (context.member && config.ignoredRoles) {
+        const hasIgnoredRole = config.ignoredRoles.some(roleId =>
+          context.member!.roles.cache.has(roleId)
+        );
+        if (hasIgnoredRole) return;
+      }
+    }
     
     const channelId = config.logChannels?.[eventType];
     if (!channelId) return;
@@ -92,40 +123,6 @@ export async function sendLog(
   } catch (error) {
     logger.error(`Błąd podczas wysyłania logu ${eventType}: ${error}`);
   }
-}
-
-export async function isIgnored(
-  guildId: string,
-  options: {
-    channelId?: string;
-    userId?: string;
-    member?: GuildMember;
-  }
-): Promise<boolean> {
-  const config = await LogConfigurationModel.findOne({ guildId }).lean();
-  if (!config) return false;
-
-  if (options.channelId && config.ignoredChannels?.includes(options.channelId)) {
-    return true;
-  }
-
-  if (options.userId && config.ignoredUsers?.includes(options.userId)) {
-    return true;
-  }
-
-  if (options.member && config.ignoredRoles) {
-    const hasIgnoredRole = config.ignoredRoles.some(roleId => 
-      options.member!.roles.cache.has(roleId)
-    );
-    if (hasIgnoredRole) return true;
-  }
-
-  return false;
-}
-
-export function formatUser(user: User | GuildMember): string {
-  const u = user instanceof GuildMember ? user.user : user;
-  return `${u.tag} (${u.id})`;
 }
 
 export function truncate(text: string, maxLength: number = 1024): string {

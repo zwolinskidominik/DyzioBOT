@@ -3,13 +3,14 @@ import {
   PermissionFlagsBits,
   GuildMember,
   Guild,
-  MessageFlags,
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import {
   createModErrorEmbed,
   createModSuccessEmbed,
-  formatDuration,
+  getModFailMessage,
+  parseDuration,
+  formatHumanDuration,
 } from '../../utils/moderationHelpers';
 import logger from '../../utils/logger';
 
@@ -37,53 +38,19 @@ export const data = new SlashCommandBuilder()
 export const options = {
   userPermissions: PermissionFlagsBits.MuteMembers,
   botPermissions: PermissionFlagsBits.MuteMembers,
+  guildOnly: true,
 };
 
-function parseDuration(durationStr: string): number {
-  const regex = /(\d+)\s*(d(?:ays?)?|h(?:ours?)?|m(?:in(?:utes?)?)?|s(?:ec(?:onds?)?)?)/gi;
-  let totalMs = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(durationStr)) !== null) {
-    const value = parseInt(match[1], 10);
-    const unit = match[2].toLowerCase();
-    let multiplier = 0;
-
-    if (unit.startsWith('d')) {
-      multiplier = 86400000;
-    } else if (unit.startsWith('h')) {
-      multiplier = 3600000;
-    } else if (unit.startsWith('m')) {
-      multiplier = 60000;
-    } else if (unit.startsWith('s')) {
-      multiplier = 1000;
-    }
-
-    totalMs += value * multiplier;
-  }
-
-  return totalMs;
-}
-
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  if (!interaction.guild) {
-    await interaction.reply({
-      content: 'Ta komenda działa tylko na serwerze.',
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
-  const guild: Guild = interaction.guild;
+  const guild: Guild = interaction.guild!;
   const errorEmbed = createModErrorEmbed('', guild.name);
   try {
     await interaction.deferReply();
 
-    const targetUser =
-      interaction.options.getUser('użytkownik') || interaction.options.getUser('uzytkownik');
+    const targetUser = interaction.options.getUser('uzytkownik');
     if (!targetUser) {
       await interaction.editReply({
-        embeds: [errorEmbed.setDescription(`**${'Nie znaleziono użytkownika.'}**`)],
+        embeds: [errorEmbed.setDescription('**Nie znaleziono użytkownika.**')],
       });
       return;
     }
@@ -91,7 +58,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const duration = interaction.options.getString('czas_trwania');
     if (!duration) {
       await interaction.editReply({
-        embeds: [errorEmbed.setDescription(`**${'Nie podano czasu wyciszenia.'}**`)],
+        embeds: [errorEmbed.setDescription('**Nie podano czasu wyciszenia.**')],
       });
       return;
     }
@@ -99,7 +66,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const reason = interaction.options.getString('powod');
     if (!reason) {
       await interaction.editReply({
-        embeds: [errorEmbed.setDescription(`**${'Nie podano powodu.'}**`)],
+        embeds: [errorEmbed.setDescription('**Nie podano powodu.**')],
       });
       return;
     }
@@ -110,14 +77,14 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     } catch (error) {
       await interaction.editReply({
         embeds: [
-          errorEmbed.setDescription(`**${'Taki użytkownik nie istnieje na tym serwerze.'}**`),
+          errorEmbed.setDescription('**Taki użytkownik nie istnieje na tym serwerze.**'),
         ],
       });
       return;
     }
 
-    const msDuration: number = parseDuration(duration);
-    if (!msDuration || msDuration < 5000 || msDuration > 2.419e9) {
+    const msDuration = parseDuration(duration);
+    if (!msDuration) {
       await interaction.editReply({
         content: 'Podaj prawidłową wartość czasu trwania wyciszenia (5 sekund - 28 dni).',
       });
@@ -127,28 +94,21 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     if (!guild.members.me) {
       await interaction.editReply({
         embeds: [
-          errorEmbed.setDescription(`**${'Wystąpił błąd podczas sprawdzania uprawnień bota.'}**`),
+          errorEmbed.setDescription('**Wystąpił błąd podczas sprawdzania uprawnień bota.**'),
         ],
       });
       return;
     }
 
-    const targetUserRolePosition: number = targetMember.roles.highest.position;
-    const requestUserRolePosition: number = (interaction.member as GuildMember).roles.highest
-      .position;
-    const botRolePosition: number = guild.members.me.roles.highest.position;
-
-    if (
-      targetUserRolePosition >= requestUserRolePosition ||
-      targetUserRolePosition >= botRolePosition
-    ) {
+    const failMessage = getModFailMessage(targetMember, interaction.member as GuildMember, guild.members.me, 'mute');
+    if (failMessage) {
       await interaction.editReply({
-        content: 'Nie możesz wyciszyć użytkownika z wyższą lub równą rolą.',
+        embeds: [errorEmbed.setDescription(`**${failMessage}**`)],
       });
       return;
     }
 
-    const prettyDuration = await formatDuration(msDuration);
+    const prettyDuration = formatHumanDuration(msDuration);
     const prettyDurationFixed = prettyDuration.replace(/(\d+)\s?m(?![a-zA-Z])/, '$1 min');
 
     const wasMuted = targetMember.isCommunicationDisabled();
@@ -179,7 +139,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     await interaction.editReply({
       embeds: [
         errorEmbed.setDescription(
-          `**${'Wystąpił błąd podczas wysyłania użytkownika na przerwę.'}**`
+          '**Wystąpił błąd podczas wysyłania użytkownika na przerwę.**'
         ),
       ],
     });

@@ -1,5 +1,6 @@
 import { GuildMember, Client } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(member: GuildMember, client: Client): Promise<void> {
   try {
@@ -24,6 +25,6 @@ export default async function run(member: GuildMember, client: Client): Promise<
       timestamp: new Date(),
     });
   } catch (error) {
-    console.error('[logMemberJoin] Error:', error);
+    logger.error(`[logMemberJoin] Error: ${error}`);
   }
 }

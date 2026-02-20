@@ -1,6 +1,7 @@
-import { GuildMember, EmbedBuilder } from 'discord.js';
+import { GuildMember } from 'discord.js';
 import { GreetingsConfigurationModel } from '../../models/GreetingsConfiguration';
 import { COLORS } from '../../config/constants/colors';
+import { createBaseEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
 export default async function run(member: GuildMember): Promise<void> {
@@ -35,10 +36,12 @@ export default async function run(member: GuildMember): Promise<void> {
       .replace(/{memberCount}/g, member.guild.memberCount.toString())
       .replace(/{username}/g, member.user.username);
 
-    const embed = new EmbedBuilder()
-      .setColor(COLORS.LEAVE)
-      .setAuthor({ name: `${member.user.tag} opuścił/a serwer.`, iconURL: avatar })
-      .setDescription(message);
+    const embed = createBaseEmbed({
+      color: COLORS.LEAVE,
+      description: message,
+      authorName: `${member.user.tag} opuścił/a serwer.`,
+      authorIcon: avatar,
+    });
 
     await channel.send({ embeds: [embed] });
   } catch (error) {

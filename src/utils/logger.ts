@@ -24,19 +24,4 @@ const logger = createLogger({
   ],
 });
 
-const lastLogged = new Map<string, number>();
-
-export function logOncePerInterval(
-  level: 'error' | 'warn' | 'info' | 'debug',
-  key: string,
-  message: string,
-  intervalMs = 30_000
-): void {
-  const now = Date.now();
-  const last = lastLogged.get(key);
-  if (last !== undefined && now - last < intervalMs) return;
-  lastLogged.set(key, now);
-  (logger as any)[level](`${message} (suppress-key=${key}, interval=${intervalMs}ms)`);
-}
-
 export default logger;

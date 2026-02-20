@@ -1,6 +1,6 @@
-import { SlashCommandBuilder, Guild, GuildMember, EmbedBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, Guild, GuildMember, EmbedBuilder } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
 const VERIFICATION_LEVELS = ['Żaden', 'Niski', 'Średni', 'Wysoki', 'Bardzo wysoki'];
@@ -10,38 +10,24 @@ export const data = new SlashCommandBuilder()
   .setDescription('Wyświetla informacje o serwerze.')
   .setDMPermission(false);
 
-export const options = {};
+export const options = {
+  guildOnly: true,
+};
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  try {
-    if (!interaction.guild) {
-      await interaction.reply({
-        content: 'Ta komenda działa tylko na serwerze.',
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
+  await interaction.deferReply();
 
-    const guild = interaction.guild;
+  try {
+    const guild = interaction.guild!;
     const member = interaction.member as GuildMember;
 
-    try {
-      const embed = createServerInfoEmbed(guild, member);
-      await interaction.reply({ embeds: [embed] });
-    } catch (innerError) {
-      await interaction.reply({
-        content: 'Nie udało się pobrać daty dołączenia.',
-        flags: MessageFlags.Ephemeral,
-      });
-    }
+    const embed = createServerInfoEmbed(guild, member);
+    await interaction.editReply({ embeds: [embed] });
   } catch (error) {
     logger.error(`Błąd podczas wyświetlania informacji o serwerze: ${error}`);
-    await interaction
-      .reply({
-        content: 'Wystąpił błąd podczas wyświetlania informacji o serwerze.',
-        flags: MessageFlags.Ephemeral,
-      })
-      .catch(() => {});
+    await interaction.editReply({
+      embeds: [createErrorEmbed('Wystąpił błąd podczas wyświetlania informacji o serwerze.')],
+    });
   }
 }
 

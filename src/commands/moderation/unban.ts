@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, Guild } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, Guild } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import {
   createModErrorEmbed,
@@ -22,18 +22,11 @@ export const data = new SlashCommandBuilder()
 export const options = {
   userPermissions: [PermissionFlagsBits.BanMembers],
   botPermissions: [PermissionFlagsBits.BanMembers],
+  guildOnly: true,
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  if (!interaction.guild) {
-    await interaction.reply({
-      content: 'Ta komenda działa tylko na serwerze.',
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
-  const guild: Guild = interaction.guild;
+  const guild: Guild = interaction.guild!;
   const errorEmbed = createModErrorEmbed('', guild.name);
 
   try {
@@ -43,7 +36,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     const bannedUser = await findBannedUser(guild, targetUserId);
     if (!bannedUser) {
-      errorEmbed.setDescription(`**${'Nie znaleziono użytkownika na liście banów.'}**`);
+      errorEmbed.setDescription('**Nie znaleziono użytkownika na liście banów.**');
       await interaction.editReply({ embeds: [errorEmbed] });
       return;
     }
@@ -63,7 +56,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     logger.error(`Błąd podczas próby odbanowania użytkownika: ${error}`);
     await interaction.editReply({
       embeds: [
-        errorEmbed.setDescription(`**${'Wystąpił błąd podczas odbanowywania użytkownika.'}**`),
+        errorEmbed.setDescription('**Wystąpił błąd podczas odbanowywania użytkownika.**'),
       ],
     });
   }

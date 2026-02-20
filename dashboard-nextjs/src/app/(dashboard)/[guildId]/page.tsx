@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Home, Cake, Hand, TrendingUp, UserPlus, Lightbulb, Ticket, HelpCircle, MessagesSquare, Smile, BarChart3, Activity, Radio, Gift } from "lucide-react";
+import { Loader2, Home, Cake, Hand, TrendingUp, UserPlus, Lightbulb, Ticket, HelpCircle, MessagesSquare, Smile, BarChart3, Activity, Radio, Gift, Music } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +32,7 @@ const modules = [
   { id: "channel-stats", name: "Statystyki Kanałów", icon: Activity, description: "Dynamiczne statystyki na kanałach głosowych", color: "bg-teal-500" },
   { id: "temp-channels", name: "Tymczasowe Kanały", icon: Radio, description: "Automatyczne tworzenie prywatnych kanałów głosowych", color: "bg-pink-500" },
   { id: "autoroles", name: "Auto-role", icon: UserPlus, description: "Automatyczne role przy dołączeniu", color: "bg-blue-500" },
+  { id: "music", name: "Muzyka", icon: Music, description: "Odtwarzacz muzyki z YouTube i Spotify", color: "bg-violet-500" },
   { id: "qotd", name: "Pytanie Dnia", icon: HelpCircle, description: "Codzienne pytania dla społeczności", color: "bg-cyan-500" },
   { id: "suggestions", name: "Sugestie", icon: Lightbulb, description: "System zgłaszania propozycji", color: "bg-yellow-500" },
   { id: "tickets", name: "Tickety", icon: Ticket, description: "System zgłoszeń wsparcia", color: "bg-red-500" },

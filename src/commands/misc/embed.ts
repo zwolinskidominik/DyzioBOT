@@ -7,7 +7,7 @@ import {
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import type { IEmbedField } from '../../interfaces/Embed';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
@@ -44,20 +44,16 @@ export const data = new SlashCommandBuilder()
 export const options = {
   userPermissions: [PermissionFlagsBits.Administrator],
   botPermissions: [PermissionFlagsBits.Administrator],
+  guildOnly: true,
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     await interaction.deferReply();
 
-    if (!interaction.guild) {
-      await interaction.editReply({ content: 'Ta komenda może być użyta tylko na serwerze.' });
-      return;
-    }
-
     const embed = buildEmbed(interaction);
     if (!embed) {
-      await interaction.editReply({ content: 'Nie udało się utworzyć embeda.' });
+      await interaction.editReply({ embeds: [createErrorEmbed('Nie udało się utworzyć embeda.')] });
       return;
     }
 
@@ -69,7 +65,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
     logger.error(`Błąd podczas tworzenia embeda: ${error}`);
-    await interaction.editReply({ content: 'Wystąpił błąd podczas tworzenia embeda.' });
+    await interaction.editReply({ embeds: [createErrorEmbed('Wystąpił błąd podczas tworzenia embeda.')] });
   }
 }
 

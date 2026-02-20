@@ -1,7 +1,8 @@
 import { Message, PartialMessage, AuditLogEvent, Client } from 'discord.js';
-import { sendLog, truncate, isIgnored } from '../../utils/logHelpers';
+import { sendLog, truncate } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
-import { SuggestionModel } from '../../models/Suggestion';
+import { deleteSuggestionByMessageId } from '../../services/suggestionService';
+import logger from '../../utils/logger';
 
 export default async function run(
   message: Message | PartialMessage,
@@ -12,18 +13,10 @@ export default async function run(
   if (message.author?.bot) return;
 
   try {
-    const suggestion = await SuggestionModel.findOne({ messageId: message.id });
-    if (suggestion) {
-      await SuggestionModel.deleteOne({ messageId: message.id });
-    }
+    await deleteSuggestionByMessageId(message.id);
   } catch (error) {
-    console.error('[Suggestion] Błąd podczas usuwania sugestii z bazy danych:', error);
+    logger.error(`[Suggestion] Błąd podczas usuwania sugestii z bazy danych: ${error}`);
   }
-
-  if (await isIgnored(message.guild.id, {
-    channelId: message.channelId,
-    userId: message.author?.id,
-  })) return;
 
   const moderator = await getModerator(
     message.guild,
@@ -42,5 +35,5 @@ export default async function run(
     authorName: message.author?.tag || 'Nieznany',
     authorIcon: message.author?.displayAvatarURL(),
     footer: `Message ID: ${message.id}`,
-  });
+  }, { channelId: message.channelId, userId: message.author?.id });
 }

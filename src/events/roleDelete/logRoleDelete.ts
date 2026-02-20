@@ -1,6 +1,7 @@
 import { Role, Client, AuditLogEvent } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(role: Role, client: Client): Promise<void> {
   try {
@@ -20,6 +21,6 @@ export default async function run(role: Role, client: Client): Promise<void> {
       timestamp: new Date(),
     });
   } catch (error) {
-    console.error('[logRoleDelete] Error:', error);
+    logger.error(`[logRoleDelete] Error: ${error}`);
   }
 }

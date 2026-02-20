@@ -46,7 +46,7 @@ export class EventHandler {
           for (const handler of handlers) {
             try {
               const result = await handler(
-                ...([...(args as any), this.client] as Parameters<typeof handler>)
+                ...([...args, this.client] as Parameters<typeof handler>)
               );
               if (result === true) break;
             } catch (err) {

@@ -6,10 +6,9 @@ import {
   PermissionFlagsBits,
   ChatInputCommandInteraction,
 } from 'discord.js';
-import { WarnModel } from '../../models/Warn';
 import type { ICommandOptions } from '../../interfaces/Command';
-import type { IWarnDocument } from '../../interfaces/Models';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
+import { getWarnings, GetWarningsData } from '../../services/warnService';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
@@ -24,34 +23,34 @@ export const data = new SlashCommandBuilder()
       .setRequired(false)
   );
 
-export const options = {};
+export const options = {
+  guildOnly: true,
+};
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  if (!interaction.guild) {
-    await interaction.reply({
-      content: 'Ta komenda działa tylko na serwerze.',
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
   const targetUser: User = interaction.options.getUser('nick') || interaction.user;
   const userId = targetUser.id;
-  const guildId = interaction.guild.id;
+  const guildId = interaction.guild!.id;
 
   if (!hasPermissionToCheckOthers(interaction, userId)) {
     await interaction.reply({
-      content: 'Nie masz uprawnień do sprawdzania ostrzeżeń innych użytkowników.',
+      embeds: [createErrorEmbed('Nie masz uprawnień do sprawdzania ostrzeżeń innych użytkowników.')],
       flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
-  try {
-    const warn = await WarnModel.findOne({ userId, guildId }).lean<IWarnDocument>().exec();
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const warnings = warn?.warnings ?? [];
-    const count = warnings.length;
+  try {
+    const result = await getWarnings({ guildId, userId });
+
+    if (!result.ok) {
+      await interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
+      return;
+    }
+
+    const { warnings, count } = result.data;
 
     const embed = createWarningsEmbed(
       targetUser,
@@ -60,18 +59,17 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       interaction.user.tag,
       interaction.user.displayAvatarURL()
     );
-    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [embed] });
   } catch (error) {
     logger.error(`Błąd /warnings: ${error}`);
-    await interaction.reply({
-      content: 'Wystąpił błąd podczas sprawdzania ostrzeżeń.',
-      flags: MessageFlags.Ephemeral,
+    await interaction.editReply({
+      embeds: [createErrorEmbed('Wystąpił błąd podczas sprawdzania ostrzeżeń.')],
     });
   }
 }
 
 const WarnHelpers = {
-  formatWarningList: (warnings: IWarnDocument['warnings']): string => {
+  formatWarningList: (warnings: GetWarningsData['warnings']): string => {
     return warnings
       .map(
         (warning, index) => {
@@ -99,7 +97,7 @@ function hasPermissionToCheckOthers(
 function createWarningsEmbed(
   targetUser: User,
   warningCount: number,
-  warnings: IWarnDocument['warnings'],
+  warnings: GetWarningsData['warnings'],
   userTag: string,
   avatarURL: string
 ): EmbedBuilder {

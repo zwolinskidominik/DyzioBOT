@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Smile, Search } from "lucide-react";
+import { useEmojis } from "@/components/EmojiContext";
 
 interface CustomEmoji {
   id: string;
@@ -997,31 +998,15 @@ const unicodeEmojis: Record<string, EmojiWithName[]> = {
 };
 
 export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" }: EmojiPickerProps) {
-  const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { customEmojis, loading, fetchEmojis } = useEmojis();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (open && customEmojis.length === 0) {
-      fetchCustomEmojis();
+    if (open) {
+      fetchEmojis();
     }
-  }, [open]);
-
-  const fetchCustomEmojis = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/discord/user/emojis");
-      if (response.ok) {
-        const emojis = await response.json();
-        setCustomEmojis(emojis);
-      }
-    } catch (error) {
-      console.error("Failed to fetch custom emojis:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [open, fetchEmojis]);
 
   const handleEmojiClick = (emoji: string | CustomEmoji) => {
     if (typeof emoji === "string") {

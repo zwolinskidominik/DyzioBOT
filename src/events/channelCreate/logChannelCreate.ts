@@ -1,6 +1,7 @@
 import { GuildChannel, Client, ChannelType, AuditLogEvent } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(channel: GuildChannel, client: Client): Promise<void> {
   try {
@@ -36,8 +37,8 @@ export default async function run(channel: GuildChannel, client: Client): Promis
       ],
       footer: `Channel ID: ${channel.id}`,
       timestamp: new Date(),
-    });
+    }, { channelId: channel.id });
   } catch (error) {
-    console.error('[logChannelCreate] Error:', error);
+    logger.error(`[logChannelCreate] Error: ${error}`);
   }
 }

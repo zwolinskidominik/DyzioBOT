@@ -1,6 +1,6 @@
-import { createCanvas, loadImage, registerFont, Canvas } from 'canvas';
-import path from 'path';
-import fs from 'fs';
+import { createCanvas, loadImage, Canvas, Image } from 'canvas';
+import { Ctx2D, registerProjectFonts, roundRect, formatNumberDotSep } from './canvasHelpers';
+import logger from './logger';
 
 interface RankCardOptions {
   username: string;
@@ -14,7 +14,7 @@ interface RankCardOptions {
 
 export class CanvasRankCard {
   private canvas: Canvas;
-  private ctx: any;
+  private ctx: Ctx2D;
   private readonly width = 1000;
   private readonly height = 250;
   private readonly colors = {
@@ -30,70 +30,10 @@ export class CanvasRankCard {
     avatarBorder: '#60a5fa',
   };
 
-  private formatNumber(num: number): string {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  }
-
   constructor(private options: RankCardOptions) {
+    registerProjectFonts();
     this.canvas = createCanvas(this.width, this.height);
     this.ctx = this.canvas.getContext('2d');
-    this.loadFonts();
-  }
-
-  private loadFonts() {
-    try {
-      const projectRoot = path.resolve(__dirname, '..', '..');
-      const fontPaths = {
-        bold: path.resolve(projectRoot, 'assets/Inter-Bold.ttf'),
-        bolditalic: path.resolve(projectRoot, 'assets/Inter-BoldItalic.ttf'),
-        semibold: path.resolve(projectRoot, 'assets/Inter-SemiBold.ttf'),
-        semibolditalic: path.resolve(projectRoot, 'assets/Inter-SemiBoldItalic.ttf'),
-        medium: path.resolve(projectRoot, 'assets/Inter-Medium.ttf'),
-        mediumitalic: path.resolve(projectRoot, 'assets/Inter-MediumItalic.ttf'),
-        regular: path.resolve(projectRoot, 'assets/Inter-Regular.ttf'),
-        light: path.resolve(projectRoot, 'assets/Inter-Light.ttf'),
-        lightitalic: path.resolve(projectRoot, 'assets/Inter-LightItalic.ttf'),
-      };
-
-      Object.entries(fontPaths).forEach(([type, fontPath]) => {
-        if (fs.existsSync(fontPath)) {
-          try {
-            registerFont(fontPath, {
-              family: 'Inter',
-              weight: this.getFontWeight(type),
-              style: this.getFontStyle(type),
-            });
-          } catch (error) {
-            console.warn(`[CANVAS] Could not register font ${type}:`, error);
-          }
-        }
-      });
-    } catch (error) {
-      console.warn('[CANVAS] Error loading fonts:', error);
-    }
-  }
-
-  private getFontWeight(type: string): string {
-    switch (type) {
-      case 'bold':
-      case 'bolditalic':
-        return 'bold';
-      case 'semibold':
-      case 'semibolditalic':
-        return '600';
-      case 'medium':
-      case 'mediumitalic':
-        return '500';
-      case 'light':
-      case 'lightitalic':
-        return '300';
-      default:
-        return 'normal';
-    }
-  }
-
-  private getFontStyle(type: string): string {
-    return type.includes('italic') ? 'italic' : 'normal';
   }
 
   public async build(): Promise<Buffer> {
@@ -117,12 +57,12 @@ export class CanvasRankCard {
   private async drawBackground() {
     const cornerRadius = 40;
     this.ctx.fillStyle = this.colors.background;
-    this.roundRect(0, 0, this.width, this.height, cornerRadius);
+    roundRect(this.ctx, 0, 0, this.width, this.height, cornerRadius);
     this.ctx.fill();
     
     this.ctx.save();
     this.ctx.beginPath();
-    this.roundRect(0, 0, this.width, this.height, cornerRadius);
+    roundRect(this.ctx, 0, 0, this.width, this.height, cornerRadius);
     this.ctx.clip();
   }
 
@@ -194,7 +134,7 @@ export class CanvasRankCard {
         setTimeout(() => reject(new Error('Avatar load timeout')), 5000)
       );
       
-      const avatarImage = await Promise.race([avatarImagePromise, timeoutPromise]) as any;
+      const avatarImage = await Promise.race([avatarImagePromise, timeoutPromise]) as Image;
       const avatarSize = 150;
       const avatarX = 30;
       const avatarY = 50;
@@ -204,7 +144,7 @@ export class CanvasRankCard {
       
       const tempSize = avatarSize * 2;
       const tempCanvas = createCanvas(tempSize, tempSize);
-      const tempCtx: any = tempCanvas.getContext('2d');
+      const tempCtx = tempCanvas.getContext('2d') as Ctx2D;
       tempCtx.imageSmoothingEnabled = true;
       tempCtx.imageSmoothingQuality = 'high';
 
@@ -231,7 +171,7 @@ export class CanvasRankCard {
       this.ctx.drawImage(tempCanvas, avatarX, avatarY, avatarSize, avatarSize);
       this.ctx.restore();
     } catch (error) {
-      console.warn('[CANVAS] Error loading avatar:', error);
+      logger.warn(`[CANVAS] Error loading avatar: ${error}`);
 
       const avatarSize = 150;
       const avatarX = 30;
@@ -335,7 +275,7 @@ export class CanvasRankCard {
     const cornerRadius = 20;
 
     this.ctx.fillStyle = this.colors.progressBackground;
-    this.roundRect(progressX, progressY, progressWidth, progressHeight, cornerRadius);
+    roundRect(this.ctx, progressX, progressY, progressWidth, progressHeight, cornerRadius);
     this.ctx.fill();
 
     const progressPercent = Math.min(this.options.currentXP / this.options.requiredXP, 1);
@@ -345,11 +285,11 @@ export class CanvasRankCard {
       this.ctx.save();
       
       this.ctx.beginPath();
-      this.roundRect(progressX, progressY, progressWidth, progressHeight, cornerRadius);
+      roundRect(this.ctx, progressX, progressY, progressWidth, progressHeight, cornerRadius);
       this.ctx.clip();
       
       this.ctx.fillStyle = this.colors.progressFill;
-      this.roundRect(progressX, progressY, fillWidth, progressHeight, cornerRadius);
+      roundRect(this.ctx, progressX, progressY, fillWidth, progressHeight, cornerRadius);
       this.ctx.fill();
       
       this.ctx.restore();
@@ -362,7 +302,7 @@ export class CanvasRankCard {
     const progressWidth = this.width - 240;
     const progressHeight = 35;
 
-    const totalText = `Razem: ${this.formatNumber(this.options.totalXP)} XP`;
+    const totalText = `Razem: ${formatNumberDotSep(this.options.totalXP)} XP`;
     const totalX = progressX + progressWidth / 2;
     const totalY = progressY + progressHeight / 2 + 5;
 
@@ -390,19 +330,5 @@ export class CanvasRankCard {
     this.ctx.restore();
 
     this.ctx.textAlign = 'left';
-  }
-
-  private roundRect(x: number, y: number, width: number, height: number, radius: number) {
-    this.ctx.beginPath();
-    this.ctx.moveTo(x + radius, y);
-    this.ctx.lineTo(x + width - radius, y);
-    this.ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    this.ctx.lineTo(x + width, y + height - radius);
-    this.ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    this.ctx.lineTo(x + radius, y + height);
-    this.ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    this.ctx.lineTo(x, y + radius);
-    this.ctx.quadraticCurveTo(x, y, x + radius, y);
-    this.ctx.closePath();
   }
 }

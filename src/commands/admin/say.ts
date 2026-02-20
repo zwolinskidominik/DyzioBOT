@@ -10,7 +10,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
 const CUSTOM_IDS = {
@@ -33,7 +33,7 @@ export const options = {
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   if (!interaction.channel || !(interaction.channel instanceof TextChannel)) {
     await interaction.reply({
-      content: 'Ta komenda może być używana tylko na kanale tekstowym.',
+      embeds: [createErrorEmbed('Ta komenda może być używana tylko na kanale tekstowym.')],
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -50,7 +50,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   } catch (error) {
     logger.error(`Błąd podczas wysyłania wiadomości w /say: ${error}`);
     await interaction.followUp({
-      content: 'Nie udało się wysłać wiadomości. Spróbuj ponownie.',
+      embeds: [createErrorEmbed('Nie udało się wysłać wiadomości. Spróbuj ponownie.')],
       flags: MessageFlags.Ephemeral,
     });
   }

@@ -1,5 +1,5 @@
 import { ButtonInteraction, TextChannel, MessageFlags } from 'discord.js';
-import { SuggestionModel } from '../../models/Suggestion';
+import { vote, getSuggestion } from '../../services/suggestionService';
 import { formatResults } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
@@ -9,14 +9,17 @@ export default async function run(interaction: ButtonInteraction): Promise<void>
   try {
     const [type, suggestionId, action] = interaction.customId.split('.');
     if (type !== 'suggestion' || !suggestionId || !action) return;
+    if (action !== 'upvote' && action !== 'downvote') return;
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const targetSuggestion = await SuggestionModel.findOne({ suggestionId });
-    if (!targetSuggestion) {
+    // Fetch the suggestion via service to get the messageId for embed update
+    const suggestionResult = await getSuggestion(suggestionId);
+    if (!suggestionResult.ok) {
       await interaction.editReply('Sugestia nie została znaleziona.');
       return;
     }
+    const targetSuggestion = suggestionResult.data;
 
     if (!interaction.channel || !('messages' in interaction.channel)) {
       await interaction.editReply('Nie można pobrać wiadomości z tego kanału.');
@@ -29,33 +32,25 @@ export default async function run(interaction: ButtonInteraction): Promise<void>
       return;
     }
 
-    const targetMessageEmbed = targetMessage.embeds[0];
+    const result = await vote({
+      suggestionId,
+      odId: interaction.user.id,
+      username: interaction.user.username,
+      direction: action,
+    });
 
-    const alreadyVoted =
-      targetSuggestion.upvotes.includes(interaction.user.id) ||
-      targetSuggestion.downvotes.includes(interaction.user.id);
-
-    if (alreadyVoted) {
-      await interaction.editReply('Oddano już głos na tę sugestię.');
+    if (!result.ok) {
+      await interaction.editReply(result.message);
       return;
     }
 
-    if (action === 'upvote') {
-      targetSuggestion.upvotes.push(interaction.user.id);
-      targetSuggestion.upvoteUsernames.push(interaction.user.username);
-      await interaction.editReply('Oddano głos na tak!');
-    } else if (action === 'downvote') {
-      targetSuggestion.downvotes.push(interaction.user.id);
-      targetSuggestion.downvoteUsernames.push(interaction.user.username);
-      await interaction.editReply('Oddano głos na nie!');
-    }
+    await interaction.editReply(action === 'upvote' ? 'Oddano głos na tak!' : 'Oddano głos na nie!');
 
-    await targetSuggestion.save();
-
+    const targetMessageEmbed = targetMessage.embeds[0];
     targetMessageEmbed.fields[1].value = formatResults(
       interaction.client.user!.id,
-      targetSuggestion.upvotes,
-      targetSuggestion.downvotes
+      result.data.upvotes,
+      result.data.downvotes
     );
 
     await targetMessage.edit({ embeds: [targetMessageEmbed] });

@@ -1,28 +1,15 @@
 import { GuildMember, AuditLogEvent, Client } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
-import { getModerator } from '../../utils/auditLogHelpers';
+import { getAuditLogEntry, getModerator, getReason } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(member: GuildMember, client: Client): Promise<void> {
   try {
-    let kickEntry;
-    try {
-      const auditLogs = await member.guild.fetchAuditLogs({
-        type: AuditLogEvent.MemberKick,
-        limit: 5,
-      });
-
-      kickEntry = auditLogs.entries.find(
-        (entry) =>
-          entry.target?.id === member.id &&
-          Date.now() - entry.createdTimestamp < 5000
-      );
-    } catch (auditError) {
-      kickEntry = undefined;
-    }
+    const kickEntry = await getAuditLogEntry(member.guild, AuditLogEvent.MemberKick, member.id);
 
     if (kickEntry) {
       const moderator = await getModerator(member.guild, AuditLogEvent.MemberKick, member.id);
-      const reason = kickEntry.reason || 'Brak powodu';
+      const reason = (await getReason(member.guild, AuditLogEvent.MemberKick, member.id)) || 'Brak powodu';
 
       await sendLog(client, member.guild.id, 'memberKick', {
         title: null,
@@ -71,6 +58,6 @@ export default async function run(member: GuildMember, client: Client): Promise<
       });
     }
   } catch (error) {
-    console.error('[logMemberRemove] Error:', error);
+    logger.error(`[logMemberRemove] Error: ${error}`);
   }
 }

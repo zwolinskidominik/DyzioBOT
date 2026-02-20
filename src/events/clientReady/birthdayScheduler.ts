@@ -1,24 +1,25 @@
 import { Client, TextChannel, ChannelType } from 'discord.js';
-import { BirthdayModel } from '../../models/Birthday';
-import { BirthdayConfigurationModel } from '../../models/BirthdayConfiguration';
+import { getTodayBirthdays, getBirthdayConfigs } from '../../services/birthdayService';
 import logger from '../../utils/logger';
 import { schedule } from 'node-cron';
+import { CRON } from '../../config/constants/cron';
 
 export default async function run(client: Client): Promise<void> {
   schedule(
-    '0 9 * * *',
+    CRON.BIRTHDAY_CHECK,
     async () => {
       try {
-        const birthdayConfigs = await BirthdayConfigurationModel.find({});
-        
+        const configResult = await getBirthdayConfigs();
+        if (!configResult.ok) {
+          logger.error(`Błąd pobierania konfiguracji urodzin: ${configResult.message}`);
+          return;
+        }
+
+        const birthdayConfigs = configResult.data;
         if (birthdayConfigs.length === 0) {
           logger.warn('Konfiguracja urodzin nie istnieje!');
           return;
         }
-
-        const today = new Date();
-        const day = today.getDate();
-        const month = today.getMonth() + 1;
 
         for (const birthdayConfig of birthdayConfigs) {
           try {
@@ -43,16 +44,14 @@ export default async function run(client: Client): Promise<void> {
 
             const birthdayChannel = channel as TextChannel;
 
-            const birthdays = await BirthdayModel.find({ guildId: birthdayConfig.guildId, active: true });
-            const todaysBirthdays = birthdays.filter((birthday) => {
-              return birthday.day === day && birthday.month === month;
-            });
+            const todayResult = await getTodayBirthdays({ guildId: birthdayConfig.guildId });
+            if (!todayResult.ok) continue;
 
-            for (const birthday of todaysBirthdays) {
+            for (const entry of todayResult.data) {
               try {
-                const member = await guild.members.fetch(birthday.userId);
+                const member = await guild.members.fetch(entry.userId);
                 if (!member) {
-                  logger.warn(`Użytkownik nie został znaleziony: ${birthday.userId}`);
+                  logger.warn(`Użytkownik nie został znaleziony: ${entry.userId}`);
                   continue;
                 }
 
@@ -75,11 +74,9 @@ export default async function run(client: Client): Promise<void> {
                   }
                 }
               } catch (memberError) {
-                logger.warn(`Nie udało się pobrać członka ${birthday.userId}: ${memberError}`);
+                logger.warn(`Nie udało się pobrać członka ${entry.userId}: ${memberError}`);
               }
             }
-
-
 
           } catch (guildError) {
             logger.error(`Błąd podczas przetwarzania guild ${birthdayConfig.guildId}:`, guildError);

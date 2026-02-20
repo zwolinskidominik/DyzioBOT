@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
+import { createErrorEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
 const RESULT_EMOJI = ':game_die:';
@@ -21,7 +22,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const sides = interaction.options.getInteger('max-liczba') ?? 6;
 
     if (!isValidSides(sides)) {
-      await interaction.reply('Kostka musi mieć co najmniej 2 ścianki.');
+      await interaction.reply({ embeds: [createErrorEmbed('Kostka musi mieć co najmniej 2 ścianki.')], flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -31,7 +32,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     logger.error(`Błąd podczas wykonywania komendy /roll: ${error}`);
     await interaction
       .reply({
-        content: 'Wystąpił błąd podczas rzucania kostką.',
+        embeds: [createErrorEmbed('Wystąpił błąd podczas rzucania kostką.')],
         flags: MessageFlags.Ephemeral,
       })
       .catch(() => {});

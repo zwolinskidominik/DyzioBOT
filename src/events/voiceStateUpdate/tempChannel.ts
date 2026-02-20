@@ -5,33 +5,38 @@ import {
   VoiceChannel,
   GuildChannelCreateOptions,
   GuildChannelTypes,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
 } from 'discord.js';
-import { TempChannelModel } from '../../models/TempChannel';
-import { TempChannelConfigurationModel } from '../../models/TempChannelConfiguration';
+import {
+  getMonitoredChannels as fetchMonitoredChannels,
+  saveTempChannel,
+  deleteTempChannel,
+  transferOwnership,
+  getTempChannel,
+  setControlMessageId,
+  TempChannelData,
+} from '../../services/tempChannelService';
 import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createControlPanelButtons } from '../interactionCreate/voiceControl';
 import logger from '../../utils/logger';
 
 export default async function run(oldState: VoiceState, newState: VoiceState): Promise<void> {
   try {
-    const monitoredChannelIds = await getMonitoredChannels(newState.guild.id);
+    const monResult = await fetchMonitoredChannels(newState.guild.id);
+    const monitoredChannelIds = monResult.ok ? monResult.data : [];
 
     if (isJoiningMonitoredChannel(oldState, newState, monitoredChannelIds)) {
       const newChannel = await createTemporaryChannel(newState);
 
-      const tempChannelDoc = await saveTemporaryChannel(newState, newChannel);
+      const tempChannelData = await saveTemporaryChannelRecord(newState, newChannel);
 
-      await sendControlPanel(newChannel, tempChannelDoc);
+      await sendControlPanel(newChannel, tempChannelData);
 
       await moveUserToChannel(newState, newChannel);
     }
     
     if (newState.channel && newState.channelId !== oldState.channelId) {
-      const tempChannel = await TempChannelModel.findOne({
-        channelId: newState.channelId,
-      });
+      const tcResult = await getTempChannel(newState.channelId!);
+      const tempChannel = tcResult.ok ? tcResult.data : null;
       
       if (tempChannel && newState.member && newState.channel instanceof VoiceChannel) {
         await newState.channel.permissionOverwrites.edit(newState.member.id, {
@@ -80,10 +85,6 @@ function isVoiceChannel(channel: GuildChannel): channel is VoiceChannel {
   return channel.type === ChannelType.GuildVoice;
 }
 
-async function getMonitoredChannels(guildId: string): Promise<string[]> {
-  const config = await TempChannelConfigurationModel.findOne({ guildId });
-  return config?.channelIds || [];
-}
 
 async function createTemporaryChannel(newState: VoiceState): Promise<VoiceChannel> {
   const guild = newState.guild;
@@ -137,7 +138,7 @@ async function createTemporaryChannel(newState: VoiceState): Promise<VoiceChanne
   );
 }
 
-async function saveTemporaryChannel(newState: VoiceState, newChannel: VoiceChannel): Promise<any> {
+async function saveTemporaryChannelRecord(newState: VoiceState, newChannel: VoiceChannel): Promise<TempChannelData> {
   const guild = newState.guild;
   const parentChannel = (newState.channel as GuildChannel)?.parent;
 
@@ -145,64 +146,37 @@ async function saveTemporaryChannel(newState: VoiceState, newChannel: VoiceChann
     throw new Error('Kanał rodzica nie istnieje - nie można utworzyć tymczasowego kanału');
   }
 
-  const tempChannel = new TempChannelModel({
+  const result = await saveTempChannel({
     guildId: guild.id,
     parentId: parentChannel.id,
     channelId: newChannel.id,
-    ownerId: newState.member?.id,
+    ownerId: newState.member?.id ?? '',
   });
 
-  await tempChannel.save();
-  return tempChannel;
+  if (!result.ok) {
+    throw new Error(result.message);
+  }
+
+  return result.data;
 }
 
-async function sendControlPanel(channel: VoiceChannel, tempChannelDoc: any): Promise<void> {
+async function sendControlPanel(channel: VoiceChannel, tempChannelData: TempChannelData): Promise<void> {
   try {
     const embed = createBaseEmbed({
       title: '⚙️ Panel zarządzania kanałem',
-      description: `<@${tempChannelDoc.ownerId}> - Witaj na swoim tymczasowym kanale!`,
+      description: `<@${tempChannelData.ownerId}> - Witaj na swoim tymczasowym kanale!`,
       timestamp: false,
     }).setFooter({ text: 'Użyj przycisków poniżej, aby zarządzać tym kanałem głosowym' });
 
-    const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId('voice_limit')
-        .setLabel('Limit')
-        .setEmoji('🔢')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('voice_name')
-        .setLabel('Nazwa')
-        .setEmoji('✏️')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('voice_lock')
-        .setLabel('Lock')
-        .setEmoji('🔒')
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId('voice_kick')
-        .setLabel('Kick')
-        .setEmoji('⚡')
-        .setStyle(ButtonStyle.Danger)
-    );
-
-    const buttons2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId('voice_transfer')
-        .setLabel('Transfer')
-        .setEmoji('👑')
-        .setStyle(ButtonStyle.Success)
-    );
+    const [buttons, buttons2] = createControlPanelButtons();
 
     const message = await channel.send({
-      content: `<@${tempChannelDoc.ownerId}>`,
+      content: `<@${tempChannelData.ownerId}>`,
       embeds: [embed],
       components: [buttons, buttons2],
     });
 
-    tempChannelDoc.controlMessageId = message.id;
-    await tempChannelDoc.save();
+    await setControlMessageId(tempChannelData.channelId, message.id);
   } catch (error) {
     logger.error(`Błąd podczas wysyłania panelu kontrolnego: ${error}`);
   }
@@ -214,10 +188,11 @@ async function moveUserToChannel(newState: VoiceState, newChannel: VoiceChannel)
   if (!newState.channel) {
     // Użytkownik opuścił kanał przed przeniesieniem - usuń pusty tymczasowy kanał
     try {
-      const tempChannel = await TempChannelModel.findOne({ channelId: newChannel.id });
+      const tcResult = await getTempChannel(newChannel.id);
+      const tempChannel = tcResult.ok ? tcResult.data : null;
       if (tempChannel && newChannel.members.size === 0) {
         await newChannel.delete();
-        await TempChannelModel.findOneAndDelete({ channelId: newChannel.id });
+        await deleteTempChannel(newChannel.id);
       }
     } catch (error) {
       logger.debug(`Nie można usunąć pustego kanału: ${error}`);
@@ -241,9 +216,8 @@ async function cleanupEmptyTempChannel(oldState: VoiceState, newState: VoiceStat
     return;
   }
 
-  const tempChannel = await TempChannelModel.findOne({
-    channelId: oldState.channelId,
-  });
+  const tcResult = await getTempChannel(oldState.channelId!);
+  const tempChannel = tcResult.ok ? tcResult.data : null;
 
   if (!tempChannel) {
     return;
@@ -259,8 +233,7 @@ async function cleanupEmptyTempChannel(oldState: VoiceState, newState: VoiceStat
 
     if (remainingMembers.length > 0) {
       const newOwner = remainingMembers[0];
-      tempChannel.ownerId = newOwner.id;
-      await tempChannel.save();
+      await transferOwnership(oldState.channelId!, newOwner.id);
 
       await oldState.channel.permissionOverwrites.edit(newOwner.id, {
         ViewChannel: true,
@@ -293,36 +266,7 @@ async function cleanupEmptyTempChannel(oldState: VoiceState, newState: VoiceStat
             timestamp: false,
           });
 
-          const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setCustomId('voice_limit')
-              .setLabel('Limit')
-              .setEmoji('🔢')
-              .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-              .setCustomId('voice_name')
-              .setLabel('Nazwa')
-              .setEmoji('✏️')
-              .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-              .setCustomId('voice_lock')
-              .setLabel('Lock')
-              .setEmoji('🔒')
-              .setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder()
-              .setCustomId('voice_kick')
-              .setLabel('Kick')
-              .setEmoji('⚡')
-              .setStyle(ButtonStyle.Danger)
-          );
-
-          const buttons2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setCustomId('voice_transfer')
-              .setLabel('Transfer')
-              .setEmoji('👑')
-              .setStyle(ButtonStyle.Success)
-          );
+          const [buttons, buttons2] = createControlPanelButtons();
 
           await controlMessage.edit({
             content: `<@${newOwner.id}>`,
@@ -352,9 +296,7 @@ async function cleanupEmptyTempChannel(oldState: VoiceState, newState: VoiceStat
   
   if (!channelStillExists) {
     logger.warn(`Kanał został już usunięty przed cleanup`);
-    await TempChannelModel.findOneAndDelete({
-      channelId: oldState.channelId,
-    });
+    await deleteTempChannel(oldState.channelId!);
     return;
   }
 
@@ -380,9 +322,7 @@ async function cleanupEmptyTempChannel(oldState: VoiceState, newState: VoiceStat
     logger.warn(`Nie udało się usunąć kanału ${oldState.channelId}: ${error}`);
   }
 
-  await TempChannelModel.findOneAndDelete({
-    channelId: oldState.channelId,
-  });
+  await deleteTempChannel(oldState.channelId!);
 }
 
 function isJoiningMonitoredChannel(

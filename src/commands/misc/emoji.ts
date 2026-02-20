@@ -12,7 +12,7 @@ import {
 } from 'discord.js';
 import { chunk } from 'lodash';
 import type { ICommandOptions } from '../../interfaces/Command';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { getBotConfig } from '../../config/bot';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
@@ -33,7 +33,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     if (!interaction.guild) {
       await interaction.reply({
-        content: 'Ta komenda działa tylko na serwerze.',
+        embeds: [createErrorEmbed('Ta komenda działa tylko na serwerze.')],
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -114,7 +114,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   } catch (error) {
     logger.error(`Błąd podczas wyświetlania emoji: ${error}`);
     await interaction.reply({
-      content: 'Wystąpił błąd podczas wyświetlania emoji.',
+      embeds: [createErrorEmbed('Wystąpił błąd podczas wyświetlania emoji.')],
       flags: MessageFlags.Ephemeral,
     });
   }

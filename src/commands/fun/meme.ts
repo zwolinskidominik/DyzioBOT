@@ -2,7 +2,7 @@ import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import type { IMemeData } from '../../interfaces/api/Meme';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { fetchMeme, SITES } from '../../utils/memeHelpers';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
@@ -41,7 +41,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
 
     await interaction.editReply({
-      content: 'Przepraszamy, nie udało się pobrać mema. Spróbuj ponownie później.',
+      embeds: [createErrorEmbed('Przepraszamy, nie udało się pobrać mema. Spróbuj ponownie później.')],
     });
   }
 }

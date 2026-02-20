@@ -1,13 +1,9 @@
-import { prop, getModelForClass, modelOptions, Severity } from '@typegoose/typegoose';
-import { LogEventType } from '../interfaces/LogEvent';
+import { prop, getModelForClass, modelOptions } from '@typegoose/typegoose';
 
 @modelOptions({
   schemaOptions: {
     collection: 'logconfigurations',
     timestamps: true,
-  },
-  options: {
-    allowMixed: Severity.ALLOW,
   },
 })
 export class LogConfiguration {
@@ -17,11 +13,11 @@ export class LogConfiguration {
   @prop({ type: Boolean, default: false })
   public enabled!: boolean;
 
-  @prop({ type: () => Object, default: {} })
-  public logChannels!: Partial<Record<LogEventType, string>>;
+  @prop({ type: () => String, default: {} })
+  public logChannels!: Map<string, string>;
 
-  @prop({ type: () => Object, default: {} })
-  public enabledEvents!: Partial<Record<LogEventType, boolean>>;
+  @prop({ type: () => Boolean, default: {} })
+  public enabledEvents!: Map<string, boolean>;
 
   @prop({ type: () => [String], default: [] })
   public ignoredChannels?: string[];
@@ -32,8 +28,8 @@ export class LogConfiguration {
   @prop({ type: () => [String], default: [] })
   public ignoredUsers?: string[];
 
-  @prop({ type: () => Object, default: {} })
-  public colorOverrides?: Partial<Record<LogEventType, string>>;
+  @prop({ type: () => String, default: {} })
+  public colorOverrides?: Map<string, string>;
 }
 
 export const LogConfigurationModel = getModelForClass(LogConfiguration);

@@ -1,8 +1,9 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, AttachmentBuilder, MessageFlags } from 'discord.js';
-import { xpForLevel } from '../../utils/levelMath';
-import { LevelModel } from '../../models/Level';
+import { getLeaderboard } from '../../services/xpService';
 import { CanvasLeaderboardCard } from '../../utils/canvasLeaderboardCard';
+import { createErrorEmbed } from '../../utils/embedHelpers';
 import flushXp from '../../events/clientReady/xpFlush';
+import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('toplvl')
@@ -16,45 +17,37 @@ export const data = new SlashCommandBuilder()
       .setMaxValue(10)
   );
 
-export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
-  if (!interaction.inCachedGuild()) return;
+export const options = {
+  guildOnly: true,
+};
 
+export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
   const guildId = interaction.guildId!;
   const guild = interaction.guild!;
   const page = interaction.options.getInteger('strona') ?? 1;
   const perPage = 10;
-  const skip = (page - 1) * perPage;
 
   await flushXp();
 
-  const allUsers = await LevelModel.find({ guildId }).lean();
+  const result = await getLeaderboard(guildId, page, perPage);
 
-  const usersWithTotalXp = allUsers
-    .map((user) => ({
-      userId: user.userId,
-      level: user.level,
-      xp: user.xp,
-      totalXp: xpForLevel(user.level) + user.xp,
-    }))
-    .sort((a, b) => b.totalXp - a.totalXp);
-
-  const paginatedUsers = usersWithTotalXp.slice(skip, skip + perPage);
-
-  if (paginatedUsers.length === 0) {
-    const totalPages = Math.ceil(usersWithTotalXp.length / perPage);
-    if (usersWithTotalXp.length === 0) {
+  if (!result.ok) {
+    if (result.code === 'NO_USERS') {
       await interaction.reply({
-        content: '❌ Brak użytkowników z poziomami na tym serwerze!',
+        embeds: [createErrorEmbed('Brak użytkowników z poziomami na tym serwerze!')],
         flags: MessageFlags.Ephemeral,
       });
     } else {
       await interaction.reply({
-        content: `❌ Strona ${page} nie istnieje! Dostępne strony: 1-${totalPages}`,
+        embeds: [createErrorEmbed(result.message)],
         flags: MessageFlags.Ephemeral,
       });
     }
     return;
   }
+
+  const { entries: paginatedUsers } = result.data;
+  const skip = (page - 1) * perPage;
 
   await interaction.deferReply();
 
@@ -70,7 +63,7 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
           avatarURL: user.displayAvatarURL({ extension: 'png', size: 256 }),
         };
       } catch (error) {
-        console.error(`[TOPLVL] Error fetching user ${userData.userId}:`, error);
+        logger.error(`[TOPLVL] Error fetching user ${userData.userId}: ${error}`);
         return {
           username: 'Nieznany użytkownik',
           level: userData.level,

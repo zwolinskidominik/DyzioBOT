@@ -1,12 +1,13 @@
 import { Client, ChannelType, TextChannel } from 'discord.js';
 import { QuestionConfigurationModel } from '../../models/QuestionConfiguration';
-import { QuestionModel } from '../../models/Question';
+import { getRandomQuestion, markUsed } from '../../services/questionService';
 import logger from '../../utils/logger';
 import { schedule } from 'node-cron';
+import { CRON } from '../../config/constants/cron';
 
 export default async function run(client: Client): Promise<void> {
   schedule(
-    '0 0 10 * * *',
+    CRON.QUESTION_POST,
     async () => {
       try {
         const questionConfigs = await QuestionConfigurationModel.find();
@@ -24,15 +25,15 @@ export default async function run(client: Client): Promise<void> {
             }
             const questionChannel = channel as TextChannel;
 
-            const availableQuestions = await QuestionModel.find({ disabled: { $ne: true } });
+            const questionResult = await getRandomQuestion();
             
-            if (availableQuestions.length === 0) {
+            if (!questionResult.ok) {
               logger.info(`[${questionConfig.guildId}] Brak dostępnych pytań (wszystkie zostały już użyte)`);
               await questionChannel.send('Brak dostępnych pytań - wszystkie pytania zostały już zadane! Poproś administratora o dodanie nowych pytań.');
               continue;
             }
 
-            const randomQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+            const randomQuestion = questionResult.data;
 
             let threadName = randomQuestion.content.slice(0, 97);
             if (randomQuestion.content.length > 97) threadName += '...';
@@ -58,10 +59,7 @@ export default async function run(client: Client): Promise<void> {
               }
             }
 
-            await QuestionModel.findOneAndUpdate(
-              { questionId: randomQuestion.questionId },
-              { disabled: true }
-            );
+            await markUsed(randomQuestion.questionId);
           } catch (error) {
             logger.error(`[${questionConfig.guildId}] Błąd wysyłania pytania dnia: ${error}`);
           }

@@ -37,7 +37,7 @@ export async function fetchRandomAnimalImage(
     lastImageId.set(config.apiURL, chosen.id);
     return chosen;
   } catch (error) {
-    const aborted = (error as any)?.name === 'AbortError';
+    const aborted = error instanceof Error && error.name === 'AbortError';
     logger.error(
       `Błąd pobierania ${config.animalType} (${config.apiSource})${aborted ? ' (timeout)' : ''}: ${error}`
     );

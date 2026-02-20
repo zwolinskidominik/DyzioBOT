@@ -7,7 +7,7 @@ module.exports = {
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', { diagnostics: false }],
   },
-  collectCoverageFrom: ['src/**/*.{ts,js}', '!src/index.ts'],
+  collectCoverageFrom: ['src/**/*.{ts,js}', '!src/index.ts', '!src/scripts/**'],
   coverageDirectory: 'coverage',
   coverageThreshold: {
     global: {

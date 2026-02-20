@@ -95,26 +95,19 @@ export class XpCache {
     let levelChanged = false;
 
     while (currentXp >= deltaXp(currentLevel + 1)) {
-      const needed = deltaXp(currentLevel + 1);
-      currentXp -= needed;
+      currentXp -= deltaXp(currentLevel + 1);
       currentLevel++;
       levelChanged = true;
+    }
 
-      await LevelModel.findOneAndUpdate(
-        { guildId: g, userId: u },
-        { level: currentLevel, xp: currentXp },
-        { upsert: true }
-      );
-    }
-    
-    if (levelChanged && this.client) {
-      await notifyLevelUp(this.client, g, u, currentLevel).catch(() => null);
-    }
-    
     if (levelChanged) {
       e.persistedLevel = currentLevel;
       e.persistedXp = currentXp;
       e.levelDelta = 0;
+
+      if (this.client) {
+        await notifyLevelUp(this.client, g, u, currentLevel).catch(() => null);
+      }
     }
 
     this.map.set(k, e);

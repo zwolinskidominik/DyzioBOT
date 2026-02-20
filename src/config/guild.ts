@@ -61,5 +61,5 @@ export function getGuildConfig(guildId: string): IGuildConfig {
 }
 
 export function __getGuildAssetsUnsafeForTests(): Record<string, IGuildConfig> {
-  return GUILD_ASSETS as any;
+  return GUILD_ASSETS as unknown as Record<string, IGuildConfig>;
 }

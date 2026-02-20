@@ -1,6 +1,7 @@
 import { GuildMember, Client, AuditLogEvent } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(
   oldMember: GuildMember,
@@ -8,6 +9,8 @@ export default async function run(
   client: Client
 ): Promise<void> {
   try {
+    const ctx = { userId: newMember.id, member: newMember };
+
     if (oldMember.communicationDisabledUntil !== newMember.communicationDisabledUntil) {
       const moderator = await getModerator(
         newMember.guild,
@@ -24,7 +27,7 @@ export default async function run(
           authorIcon: newMember.user.displayAvatarURL({ size: 64 }),
           footer: `User ID: ${newMember.id}`,
           timestamp: new Date(),
-        });
+        }, ctx);
       } else {
         await sendLog(client, newMember.guild.id, 'memberTimeout', {
           title: null,
@@ -33,7 +36,7 @@ export default async function run(
           authorIcon: newMember.user.displayAvatarURL({ size: 64 }),
           footer: `User ID: ${newMember.id}`,
           timestamp: new Date(),
-        });
+        }, ctx);
       }
     }
 
@@ -57,7 +60,7 @@ export default async function run(
         ],
         footer: `User ID: ${newMember.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
 
     const addedRoles = newMember.roles.cache.filter(
@@ -75,7 +78,7 @@ export default async function run(
         authorIcon: newMember.user.displayAvatarURL({ size: 64 }),
         footer: `User ID: ${newMember.id} | Role ID: ${role.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
 
     for (const role of removedRoles.values()) {
@@ -86,9 +89,9 @@ export default async function run(
         authorIcon: newMember.user.displayAvatarURL({ size: 64 }),
         footer: `User ID: ${newMember.id} | Role ID: ${role.id}`,
         timestamp: new Date(),
-      });
+      }, ctx);
     }
   } catch (error) {
-    console.error('[logMemberUpdate] Error:', error);
+    logger.error(`[logMemberUpdate] Error: ${error}`);
   }
 }

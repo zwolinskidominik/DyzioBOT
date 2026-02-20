@@ -9,17 +9,21 @@ import {
   ChatInputCommandInteraction,
   MessageFlags,
 } from 'discord.js';
-import { GiveawayModel } from '../../models/Giveaway';
-import { GiveawayConfigModel } from '../../models/GiveawayConfig';
 import type { ICommandOptions } from '../../interfaces/Command';
-import type { IGiveaway } from '../../interfaces/Models';
-import type { IWinnerUser } from '../../interfaces/Giveaway';
-import { pickWinners } from '../../utils/giveawayHelpers';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import {
+  createGiveaway,
+  editGiveaway,
+  deleteGiveaway,
+  endGiveaway,
+  listActiveGiveaways,
+  rerollGiveaway,
+  parseDuration,
+  getAdditionalNote,
+} from '../../services/giveawayService';
+import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
-import { randomUUID } from 'crypto';
 
 export const data = new SlashCommandBuilder()
   .setName('giveaway')
@@ -151,7 +155,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
         break;
       default:
         await interaction.reply({
-          content: 'Nieznana subkomenda.',
+          embeds: [createErrorEmbed('Nieznana subkomenda.')],
           flags: MessageFlags.Ephemeral,
         });
     }
@@ -159,43 +163,17 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     logger.error(`Błąd w komendzie giveaway (${subcommand}): ${error}`);
 
     try {
-      const errorMessage = 'Wystąpił błąd podczas wykonywania operacji. Spróbuj ponownie później.';
+      const errorEmbed = createErrorEmbed('Wystąpił błąd podczas wykonywania operacji. Spróbuj ponownie później.');
 
       if (interaction.deferred) {
-        await interaction.editReply({ content: errorMessage });
+        await interaction.editReply({ embeds: [errorEmbed] });
       } else {
-        await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
       }
     } catch (replyError) {
       logger.error(`Nie można odpowiedzieć na interakcję: ${replyError}`);
     }
   }
-}
-
-function parseDuration(durationStr: string): number {
-  const regex = /(\d+)\s*(d(?:ays?)?|h(?:ours?)?|m(?:in(?:utes?)?)?|s(?:ec(?:onds?)?)?)/gi;
-  let totalMs = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(durationStr)) !== null) {
-    const value = parseInt(match[1], 10);
-    const unit = match[2].toLowerCase();
-    let multiplier = 0;
-
-    if (unit.startsWith('d')) {
-      multiplier = 86400000;
-    } else if (unit.startsWith('h')) {
-      multiplier = 3600000;
-    } else if (unit.startsWith('m')) {
-      multiplier = 60000;
-    } else if (unit.startsWith('s')) {
-      multiplier = 1000;
-    }
-
-    totalMs += value * multiplier;
-  }
-
-  return totalMs;
 }
 
 function getTimestamp(date: Date): number {
@@ -215,30 +193,21 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
 
   const durationMs = parseDuration(durationStr);
   if (isNaN(durationMs) || durationMs <= 0) {
-    await interaction.editReply(
-      "Podaj poprawny czas trwania giveawayu (np. '5 days 4 hours 2 minutes')."
-    );
+    await interaction.editReply({
+      embeds: [createErrorEmbed("Podaj poprawny czas trwania giveawayu (np. '5 days 4 hours 2 minutes').")],
+    });
     return;
   }
 
   const endTime = new Date(Date.now() + durationMs);
   const timestamp = getTimestamp(endTime);
-  const giveawayId = randomUUID();
 
-  // Pobierz dodatkową notatkę z konfiguracji
-  let additionalNote = '';
-  try {
-    const config = await GiveawayConfigModel.findOne({ guildId: interaction.guild!.id });
-    if (config?.enabled && config.additionalNote) {
-      additionalNote = `\n\n${config.additionalNote}`;
-    }
-  } catch (error) {
-    logger.debug(`Nie udało się pobrać konfiguracji giveaway: ${error}`);
-  }
+  const additionalNote = await getAdditionalNote(interaction.guild!.id);
 
-  const embed = createBaseEmbed({
+  // Build placeholder embed + buttons, then send message to get messageId
+  const placeholderEmbed = createBaseEmbed({
     description: `### ${prize}\n${description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
-    footerText: `Giveaway ID: ${giveawayId}`,
+    footerText: `Giveaway`,
     color: COLORS.GIVEAWAY,
   });
 
@@ -248,55 +217,75 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
     },
   } = getBotConfig(interaction.client.application!.id);
 
-  const uniqueCount = 0;
-
   const joinButton = new ButtonBuilder()
-    .setCustomId(`giveaway_join_${giveawayId}`)
+    .setCustomId(`giveaway_join_placeholder`)
     .setLabel(`Dołącz do konkursu (100%)`)
     .setEmoji(joinEmoji)
     .setStyle(ButtonStyle.Secondary);
 
   const countButton = new ButtonBuilder()
-    .setCustomId(`giveaway_count_${giveawayId}`)
-    .setLabel(`Lista (${uniqueCount})`)
+    .setCustomId(`giveaway_count_placeholder`)
+    .setLabel(`Lista (0)`)
     .setEmoji(listEmoji)
     .setStyle(ButtonStyle.Secondary);
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(joinButton, countButton);
-
   const content = `${pingRole ? `<@&${pingRole.id}>\n` : ''}`;
 
   const channel = interaction.channel as TextChannel;
-  const giveawayMessage = await channel.send({ content, embeds: [embed], components: [row] });
+  const giveawayMessage = await channel.send({ content, embeds: [placeholderEmbed], components: [row] });
 
   let roleMultipliers: Record<string, number> | undefined;
   if (multiplierRole && multiplier > 1) {
     roleMultipliers = { [multiplierRole.id]: multiplier };
   }
 
-  const giveawayData: IGiveaway = {
-    giveawayId,
+  const result = await createGiveaway({
     guildId: interaction.guild!.id,
     channelId: interaction.channel!.id,
     messageId: giveawayMessage.id,
     prize,
     description,
     winnersCount,
-    endTime,
-    pingRoleId: pingRole ? pingRole.id : undefined,
-    active: true,
-    participants: [],
+    durationMs,
     hostId: interaction.user.id,
-    createdAt: new Date(),
+    pingRoleId: pingRole ? pingRole.id : undefined,
     roleMultipliers,
-    finalized: false,
-  };
+  });
 
-  await GiveawayModel.create(giveawayData);
+  if (!result.ok) {
+    await giveawayMessage.delete().catch(() => null);
+    await interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
+    return;
+  }
+
+  const ga = result.data;
+
+  // Update message with real giveaway ID in buttons + footer
+  const realEmbed = createBaseEmbed({
+    description: `### ${prize}\n${description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
+    footerText: `Giveaway ID: ${ga.giveawayId}`,
+    color: COLORS.GIVEAWAY,
+  });
+
+  const realJoinButton = new ButtonBuilder()
+    .setCustomId(`giveaway_join_${ga.giveawayId}`)
+    .setLabel(`Dołącz do konkursu (100%)`)
+    .setEmoji(joinEmoji)
+    .setStyle(ButtonStyle.Secondary);
+
+  const realCountButton = new ButtonBuilder()
+    .setCustomId(`giveaway_count_${ga.giveawayId}`)
+    .setLabel(`Lista (0)`)
+    .setEmoji(listEmoji)
+    .setStyle(ButtonStyle.Secondary);
+
+  const realRow = new ActionRowBuilder<ButtonBuilder>().addComponents(realJoinButton, realCountButton);
+  await giveawayMessage.edit({ embeds: [realEmbed], components: [realRow] });
 
   const confirmEmbed = createBaseEmbed({
     title: '🎉 Giveaway utworzony',
-    description: `Pomyślnie utworzono nowy giveaway!\n\n**Nagroda:** ${prize}\n**Koniec:** <t:${timestamp}:R>\n**ID:** \`${giveawayId}\``,
+    description: `Pomyślnie utworzono nowy giveaway!\n\n**Nagroda:** ${prize}\n**Koniec:** <t:${timestamp}:R>\n**ID:** \`${ga.giveawayId}\``,
     color: COLORS.GIVEAWAY,
   });
 
@@ -313,78 +302,55 @@ async function handleEditGiveaway(interaction: ChatInputCommandInteraction): Pro
   const newDurationStr = interaction.options.getString('czas_trwania');
   const newPingRole = interaction.options.getRole('ping');
 
-  if (!newPrize && !newDescription && !newWinners && !newDurationStr && !newPingRole) {
-    await interaction.editReply('Nie podałeś żadnych wartości do edycji giveawayu.');
+  const durationMs = newDurationStr ? parseDuration(newDurationStr) : undefined;
+  if (durationMs !== undefined && (!durationMs || durationMs <= 0)) {
+    await interaction.editReply({
+      embeds: [createErrorEmbed("Podaj poprawny czas trwania giveawayu (np. '5 days 4 hours 2 minutes').")],
+    });
     return;
   }
 
-  const giveaway = await GiveawayModel.findOne({
-    giveawayId,
-    guildId: interaction.guild!.id,
-  }).exec();
-
-  if (!giveaway) {
-    await interaction.editReply('Giveaway o podanym ID nie został znaleziony.');
-    return;
-  }
-
-  if (newPrize) giveaway.prize = newPrize;
-  if (newDescription) giveaway.description = newDescription;
-  if (newWinners) giveaway.winnersCount = newWinners;
-  if (newDurationStr) {
-    const durationMs = parseDuration(newDurationStr);
-    if (!durationMs || durationMs <= 0) {
-      await interaction.editReply(
-        "Podaj poprawny czas trwania giveawayu (np. '5 days 4 hours 2 minutes')."
-      );
-      return;
-    }
-    giveaway.endTime = new Date(Date.now() + durationMs);
-  }
-  if (newPingRole) giveaway.pingRoleId = newPingRole.id;
-
-  await giveaway.save();
-
-  const channel = interaction.guild!.channels.cache.get(giveaway.channelId) as
-    | TextChannel
-    | undefined;
-  if (!channel) {
-    await interaction.editReply('Nie znaleziono kanału, na którym był uruchomiony ten giveaway.');
-    return;
-  }
-
-  let giveawayMessage: Message | undefined;
-  try {
-    giveawayMessage = await channel.messages.fetch(giveaway.messageId);
-  } catch (err) {
-    logger.warn(`Nie udało się pobrać wiadomości giveaway: ${err}`);
-  }
-
-  // Pobierz dodatkową notatkę z konfiguracji
-  let additionalNote = '';
-  try {
-    const config = await GiveawayConfigModel.findOne({ guildId: interaction.guild!.id });
-    if (config?.enabled && config.additionalNote) {
-      additionalNote = `\n\n${config.additionalNote}`;
-    }
-  } catch (error) {
-    logger.debug(`Nie udało się pobrać konfiguracji giveaway: ${error}`);
-  }
-
-  const timestamp = getTimestamp(giveaway.endTime);
-  const updatedEmbed = createBaseEmbed({
-    description: `### ${giveaway.prize}\n${giveaway.description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${giveaway.hostId}>\n**Zwycięzcy:** ${giveaway.winnersCount}`,
-    footerText: `Giveaway ID: ${giveaway.giveawayId}`,
-    color: COLORS.GIVEAWAY,
+  const result = await editGiveaway(giveawayId, interaction.guild!.id, {
+    prize: newPrize ?? undefined,
+    description: newDescription ?? undefined,
+    winnersCount: newWinners ?? undefined,
+    durationMs,
+    pingRoleId: newPingRole?.id,
   });
 
-  if (giveawayMessage) {
-    await giveawayMessage.edit({ embeds: [updatedEmbed] });
+  if (!result.ok) {
+    await interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
+    return;
   }
 
+  const ga = result.data;
+
+  // Update Discord message
+  const channel = interaction.guild!.channels.cache.get(ga.channelId) as TextChannel | undefined;
+  if (channel) {
+    let giveawayMessage: Message | undefined;
+    try {
+      giveawayMessage = await channel.messages.fetch(ga.messageId);
+    } catch (err) {
+      logger.warn(`Nie udało się pobrać wiadomości giveaway: ${err}`);
+    }
+
+    if (giveawayMessage) {
+      const additionalNote = await getAdditionalNote(interaction.guild!.id);
+      const timestamp = getTimestamp(ga.endTime);
+      const updatedEmbed = createBaseEmbed({
+        description: `### ${ga.prize}\n${ga.description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${ga.hostId}>\n**Zwycięzcy:** ${ga.winnersCount}`,
+        footerText: `Giveaway ID: ${ga.giveawayId}`,
+        color: COLORS.GIVEAWAY,
+      });
+      await giveawayMessage.edit({ embeds: [updatedEmbed] });
+    }
+  }
+
+  const timestamp = getTimestamp(ga.endTime);
   const confirmEmbed = createBaseEmbed({
     title: '🎉 Giveaway zaktualizowany',
-    description: `Pomyślnie zaktualizowano giveaway!\n\n**ID:** \`${giveaway.giveawayId}\`\n**Nagroda:** ${giveaway.prize}\n**Koniec:** <t:${timestamp}:R>`,
+    description: `Pomyślnie zaktualizowano giveaway!\n\n**ID:** \`${ga.giveawayId}\`\n**Nagroda:** ${ga.prize}\n**Koniec:** <t:${timestamp}:R>`,
     color: COLORS.GIVEAWAY,
   });
 
@@ -396,34 +362,26 @@ async function handleDeleteGiveaway(interaction: ChatInputCommandInteraction): P
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const giveawayId = interaction.options.getString('id', true);
+  const result = await deleteGiveaway(giveawayId, interaction.guild!.id);
 
-  const giveaway = await GiveawayModel.findOne({
-    giveawayId,
-    guildId: interaction.guild!.id,
-  })
-    .lean<IGiveaway>()
-    .exec();
-
-  if (!giveaway) {
-    await interaction.editReply('Giveaway o podanym ID nie został znaleziony.');
+  if (!result.ok) {
+    await interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
     return;
   }
 
-  const channel = interaction.guild!.channels.cache.get(giveaway.channelId) as
-    | TextChannel
-    | undefined;
+  const { messageId, channelId } = result.data;
+
+  const channel = interaction.guild!.channels.cache.get(channelId) as TextChannel | undefined;
   if (channel) {
     try {
-      const message = await channel.messages.fetch(giveaway.messageId);
+      const message = await channel.messages.fetch(messageId);
       if (message) await message.delete();
     } catch (err) {
-      logger.warn(`Nie udało się usunąć wiadomości giveawayu (ID: ${giveaway.messageId}): ${err}`);
+      logger.warn(`Nie udało się usunąć wiadomości giveawayu (ID: ${messageId}): ${err}`);
     }
   } else {
-    logger.warn(`Kanał o ID ${giveaway.channelId} nie został znaleziony.`);
+    logger.warn(`Kanał o ID ${channelId} nie został znaleziony.`);
   }
-
-  await GiveawayModel.deleteOne({ giveawayId, guildId: interaction.guild!.id });
 
   const confirmEmbed = createBaseEmbed({
     title: '🎉 Giveaway usunięty',
@@ -439,61 +397,43 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const giveawayId = interaction.options.getString('id', true);
+  const result = await endGiveaway(giveawayId, interaction.guild!.id);
 
-  const giveaway = await GiveawayModel.findOne({
-    giveawayId,
-    guildId: interaction.guild!.id,
-  }).exec();
-
-  if (!giveaway) {
-    await interaction.editReply('Giveaway o podanym ID nie został znaleziony.');
+  if (!result.ok) {
+    await interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
     return;
   }
 
-  if (!giveaway.active) {
-    await interaction.editReply('Ten giveaway został już zakończony.');
-    return;
-  }
+  const { giveaway: ga, winnerIds } = result.data;
 
-  giveaway.active = false;
-  giveaway.finalized = true;
-  await giveaway.save();
-
-  const channel = interaction.guild!.channels.cache.get(giveaway.channelId) as
-    | TextChannel
-    | undefined;
+  const channel = interaction.guild!.channels.cache.get(ga.channelId) as TextChannel | undefined;
   if (!channel) {
-    await interaction.editReply(
-      'Nie znaleziono kanału, na którym został uruchomiony ten giveaway.'
-    );
+    await interaction.editReply({
+      embeds: [createErrorEmbed('Nie znaleziono kanału, na którym został uruchomiony ten giveaway.')],
+    });
     return;
   }
 
   let giveawayMessage: Message | undefined;
   try {
-    giveawayMessage = await channel.messages.fetch(giveaway.messageId);
+    giveawayMessage = await channel.messages.fetch(ga.messageId);
   } catch (err) {
     logger.warn(`Nie udało się pobrać wiadomości giveaway: ${err}`);
-    await interaction.editReply('Nie udało się pobrać wiadomości giveawayu.');
+    await interaction.editReply({ embeds: [createErrorEmbed('Nie udało się pobrać wiadomości giveawayu.')] });
     return;
   }
 
-  const winners = await pickWinners(
-    giveaway.participants,
-    giveaway.winnersCount,
-    interaction.guild!,
-    giveaway.roleMultipliers as Record<string, number> | undefined
-  );
-  const winnersText = winners.length
-    ? winners.map((user: IWinnerUser) => `<@${user.id}>`).join(', ')
+  // Resolve winner mentions
+  const winnersText = winnerIds.length
+    ? winnerIds.map((id) => `<@${id}>`).join(', ')
     : 'Brak zwycięzców';
 
-  const participantsCount = giveaway.participants.length;
-  const timestamp = getTimestamp(giveaway.endTime);
+  const participantsCount = ga.participants.length;
+  const timestamp = getTimestamp(ga.endTime);
 
   const updatedEmbed = createBaseEmbed({
-    description: `### ${giveaway.prize}\n${giveaway.description}\n\n**Zakończony:** <t:${timestamp}:f>\n**Host:** <@${giveaway.hostId}>\n**Uczestnicy:** ${participantsCount}\n**Zwycięzcy:** ${winnersText}`,
-    footerText: `Giveaway ID: ${giveaway.giveawayId}`,
+    description: `### ${ga.prize}\n${ga.description}\n\n**Zakończony:** <t:${timestamp}:f>\n**Host:** <@${ga.hostId}>\n**Uczestnicy:** ${participantsCount}\n**Zwycięzcy:** ${winnersText}`,
+    footerText: `Giveaway ID: ${ga.giveawayId}`,
     color: COLORS.GIVEAWAY_ENDED,
   });
 
@@ -504,10 +444,8 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
   });
 
   {
-    const winnerContent = winners.length
-      ? `🎉 Gratulacje ${winners
-          .map((user: IWinnerUser) => `<@${user.id}>`)
-          .join(', ')}! **${giveaway.prize}** jest Twoje!`
+    const winnerContent = winnerIds.length
+      ? `🎉 Gratulacje ${winnerIds.map((id) => `<@${id}>`).join(', ')}! **${ga.prize}** jest Twoje!`
       : 'Brak zgłoszeń, więc nie udało się wyłonić zwycięzcy!';
     let sent = false;
     try {
@@ -530,7 +468,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
 
   const confirmEmbed = createBaseEmbed({
     title: '🎉 Giveaway zakończony',
-    description: `Giveaway został zakończony.\n\n**ID:** \`${giveawayId}\`\n**Nagroda:** ${giveaway.prize}\n**Zwycięzcy:** ${winnersText}`,
+    description: `Giveaway został zakończony.\n\n**ID:** \`${giveawayId}\`\n**Nagroda:** ${ga.prize}\n**Zwycięzcy:** ${winnersText}`,
     color: COLORS.GIVEAWAY_ENDED,
   });
 
@@ -541,22 +479,18 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
 async function handleListGiveaways(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const giveaways = await GiveawayModel.find({
-    guildId: interaction.guild!.id,
-    active: true,
-  }).lean<IGiveaway[]>();
+  const result = await listActiveGiveaways(interaction.guild!.id);
 
-  if (!giveaways || giveaways.length === 0) {
-    await interaction.editReply('Brak aktywnych giveawayów na tym serwerze.');
+  if (!result.ok) {
+    await interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
     return;
   }
 
-  giveaways.sort((a, b) => a.endTime.getTime() - b.endTime.getTime());
-
-  const description = giveaways
+  const list = result.data;
+  const description = list
     .map((g) => {
       const timestamp = getTimestamp(g.endTime);
-      return `**ID:** \`${g.giveawayId}\`\n**Nagroda:** ${g.prize}\n**Liczba wygranych:** ${g.winnersCount}\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Uczestnicy:** ${g.participants.length}`;
+      return `**ID:** \`${g.giveawayId}\`\n**Nagroda:** ${g.prize}\n**Liczba wygranych:** ${g.winnersCount}\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Uczestnicy:** ${g.participantsCount}`;
     })
     .join('\n\n');
 
@@ -564,7 +498,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction): Pr
     title: '🎉 Aktywne Giveawaye',
     description,
     color: COLORS.GIVEAWAY,
-    footerText: `Łącznie: ${giveaways.length} giveawayów`,
+    footerText: `Łącznie: ${list.length} giveawayów`,
   });
 
   await interaction.editReply({ embeds: [embed] });
@@ -574,64 +508,41 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction): P
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const giveawayId = interaction.options.getString('id', true);
+  const result = await rerollGiveaway(giveawayId, interaction.guild!.id);
 
-  const giveaway = await GiveawayModel.findOne({
-    giveawayId,
-    guildId: interaction.guild!.id,
-  })
-    .lean<IGiveaway>()
-    .exec();
-
-  if (!giveaway) {
-    await interaction.editReply('Giveaway o podanym ID nie został znaleziony.');
+  if (!result.ok) {
+    await interaction.editReply({ embeds: [createErrorEmbed(result.message)] });
     return;
   }
 
-  if (giveaway.active) {
-    await interaction.editReply('Giveaway musi być zakończony, aby móc wykonać reroll.');
-    return;
-  }
+  const { giveaway: ga, winnerIds } = result.data;
 
-  const channel = interaction.guild!.channels.cache.get(giveaway.channelId) as
-    | TextChannel
-    | undefined;
+  const channel = interaction.guild!.channels.cache.get(ga.channelId) as TextChannel | undefined;
   if (!channel) {
-    await interaction.editReply(
-      'Nie znaleziono kanału, na którym został uruchomiony ten giveaway.'
-    );
+    await interaction.editReply({
+      embeds: [createErrorEmbed('Nie znaleziono kanału, na którym został uruchomiony ten giveaway.')],
+    });
     return;
   }
 
   let giveawayMessage: Message | undefined;
   try {
-    giveawayMessage = await channel.messages.fetch(giveaway.messageId);
+    giveawayMessage = await channel.messages.fetch(ga.messageId);
   } catch (err) {
     logger.warn(`Nie udało się pobrać wiadomości giveaway: ${err}`);
-    await interaction.editReply('Nie można pobrać wiadomości giveawayu.');
+    await interaction.editReply({ embeds: [createErrorEmbed('Nie można pobrać wiadomości giveawayu.')] });
     return;
   }
 
-  const participantArray = giveaway.participants;
-  if (participantArray.length === 0) {
-    await interaction.editReply('Brak uczestników giveawayu.');
-    return;
-  }
-
-  const winners = await pickWinners(
-    participantArray, 
-    giveaway.winnersCount, 
-    interaction.guild!,
-    giveaway.roleMultipliers as Record<string, number> | undefined
-  );
-  const winnersText = winners.length
-    ? winners.map((user: IWinnerUser) => `<@${user.id}>`).join(', ')
+  const winnersText = winnerIds.length
+    ? winnerIds.map((id) => `<@${id}>`).join(', ')
     : 'Brak zwycięzców';
 
-  const timestamp = getTimestamp(giveaway.endTime);
+  const timestamp = getTimestamp(ga.endTime);
 
   const updatedEmbed = createBaseEmbed({
-    description: `### ${giveaway.prize}\n${giveaway.description}\n\n**Zakończony:** <t:${timestamp}:f>\n**Host:** <@${giveaway.hostId}>\n**Uczestnicy:** ${participantArray.length}\n**Zwycięzcy (reroll):** ${winnersText}`,
-    footerText: `Giveaway ID: ${giveaway.giveawayId}`,
+    description: `### ${ga.prize}\n${ga.description}\n\n**Zakończony:** <t:${timestamp}:f>\n**Host:** <@${ga.hostId}>\n**Uczestnicy:** ${ga.participants.length}\n**Zwycięzcy (reroll):** ${winnersText}`,
+    footerText: `Giveaway ID: ${ga.giveawayId}`,
     color: COLORS.GIVEAWAY_ENDED,
   });
 
@@ -642,10 +553,8 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction): P
   });
 
   {
-    const winnerContent = winners.length
-      ? `🎉 **REROLL!** Gratulacje nowym zwycięzcom: ${winners
-          .map((user: IWinnerUser) => `<@${user.id}>`)
-          .join(', ')}! **${giveaway.prize}** jest Twoje!`
+    const winnerContent = winnerIds.length
+      ? `🎉 **REROLL!** Gratulacje nowym zwycięzcom: ${winnerIds.map((id) => `<@${id}>`).join(', ')}! **${ga.prize}** jest Twoje!`
       : 'Brak wystarczającej liczby uczestników, nie udało się wyłonić nowych zwycięzców!';
     let sent = false;
     try {
@@ -668,7 +577,7 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction): P
 
   const confirmEmbed = createBaseEmbed({
     title: '🎉 Giveaway reroll',
-    description: `Wylosowano nowych zwycięzców dla giveawayu.\n\n**ID:** \`${giveawayId}\`\n**Nagroda:** ${giveaway.prize}\n**Nowi zwycięzcy:** ${winnersText}`,
+    description: `Wylosowano nowych zwycięzców dla giveawayu.\n\n**ID:** \`${giveawayId}\`\n**Nagroda:** ${ga.prize}\n**Nowi zwycięzcy:** ${winnersText}`,
     color: COLORS.GIVEAWAY_ENDED,
   });
 

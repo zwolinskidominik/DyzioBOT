@@ -1,6 +1,7 @@
 import { Guild, Client, AuditLogEvent } from 'discord.js';
 import { sendLog } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
+import logger from '../../utils/logger';
 
 export default async function run(
   oldGuild: Guild,
@@ -70,6 +71,6 @@ export default async function run(
       });
     }
   } catch (error) {
-    console.error('[logGuildUpdate] Error:', error);
+    logger.error(`[logGuildUpdate] Error: ${error}`);
   }
 }
