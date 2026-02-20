@@ -1,11 +1,21 @@
 import { BaseExtractor, Track, SearchQueryType, ExtractorSearchContext, ExtractorStreamable, ExtractorInfo, Playlist, GuildQueueHistory } from 'discord-player';
-import { execFile } from 'child_process';
+import { execFile, execFileSync } from 'child_process';
 import https from 'https';
 import { formatClock } from '../utils/timeHelpers';
 import logger from '../utils/logger';
 
-// Path to yt-dlp via python
-const YT_DLP_CMD = 'python';
+// Detect python command: prefer 'python3' (Ubuntu/Debian), fall back to 'python' (Windows/venv)
+function detectPythonCmd(): string {
+  for (const cmd of ['python3', 'python']) {
+    try {
+      execFileSync(cmd, ['--version'], { timeout: 5000, stdio: 'ignore' });
+      return cmd;
+    } catch {}
+  }
+  return 'python3'; // fallback, will produce a clear error if neither exists
+}
+
+const YT_DLP_CMD = detectPythonCmd();
 const YT_DLP_ARGS = ['-m', 'yt_dlp'];
 
 async function runYtDlp(...args: string[]): Promise<string> {

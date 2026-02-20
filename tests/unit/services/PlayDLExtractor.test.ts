@@ -1,6 +1,9 @@
 /* ── Mocks ─────────────────────────────────────────── */
 const mockExecFile = jest.fn();
-jest.mock('child_process', () => ({ execFile: (...args: any[]) => mockExecFile(...args) }));
+jest.mock('child_process', () => ({
+  execFile: (...args: any[]) => mockExecFile(...args),
+  execFileSync: jest.fn(), // detectPythonCmd() — returns undefined (truthy not needed, just no throw)
+}));
 
 jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,

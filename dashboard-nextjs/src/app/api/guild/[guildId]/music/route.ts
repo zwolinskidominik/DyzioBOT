@@ -13,6 +13,7 @@ const musicConfigSchema = new mongoose.Schema({
   leaveOnEmpty: { type: Boolean, default: true },
   leaveOnEnd: { type: Boolean, default: true },
   leaveTimeout: { type: Number, default: 300 },
+  prefix: { type: String, default: '!' },
   updatedAt: { type: Date, default: Date.now },
 }, {
   collection: 'musicconfigs'
@@ -51,6 +52,7 @@ export async function GET(
         leaveOnEmpty: true,
         leaveOnEnd: true,
         leaveTimeout: 300,
+        prefix: '!',
       });
     }
 
@@ -65,6 +67,7 @@ export async function GET(
       leaveOnEmpty: config.leaveOnEmpty ?? true,
       leaveOnEnd: config.leaveOnEnd ?? true,
       leaveTimeout: config.leaveTimeout ?? 300,
+      prefix: config.prefix ?? '!',
     });
   } catch (error) {
     console.error('Error fetching music config:', error);
@@ -82,6 +85,9 @@ export async function PUT(
 
     await connectDB();
 
+    const rawPrefix = typeof body.prefix === 'string' ? body.prefix.trim() : '!';
+    const prefix = rawPrefix.length > 0 && rawPrefix.length <= 5 ? rawPrefix : '!';
+
     const updateData = {
       guildId,
       enabled: body.enabled ?? true,
@@ -94,6 +100,7 @@ export async function PUT(
       leaveOnEmpty: body.leaveOnEmpty ?? true,
       leaveOnEnd: body.leaveOnEnd ?? true,
       leaveTimeout: Math.max(0, body.leaveTimeout ?? 300),
+      prefix,
       updatedAt: new Date(),
     };
 

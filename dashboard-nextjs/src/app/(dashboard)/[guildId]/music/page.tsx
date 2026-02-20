@@ -46,6 +46,7 @@ interface MusicConfig {
   leaveOnEmpty: boolean;
   leaveOnEnd: boolean;
   leaveTimeout: number;
+  prefix: string;
 }
 
 export default function MusicPage() {
@@ -69,6 +70,7 @@ export default function MusicPage() {
     leaveOnEmpty: true,
     leaveOnEnd: true,
     leaveTimeout: 300,
+    prefix: '!',
   });
 
   useEffect(() => {
@@ -209,17 +211,18 @@ export default function MusicPage() {
     );
   }
 
+  const p = config.prefix || '!';
   const commands = [
-    { name: '/play', description: 'Odtwórz muzykę z YouTube, Spotify lub wyszukaj po frazie' },
-    { name: '/pause', description: 'Zapauzuj odtwarzanie' },
-    { name: '/resume', description: 'Wznów odtwarzanie' },
-    { name: '/skip', description: 'Pomiń aktualny utwór' },
-    { name: '/stop', description: 'Zatrzymaj odtwarzanie i wyczyść kolejkę' },
-    { name: '/queue', description: 'Wyświetl kolejkę utworów' },
-    { name: '/nowplaying', description: 'Wyświetl aktualnie odtwarzany utwór' },
-    { name: '/volume', description: 'Ustaw głośność odtwarzania (0-100)' },
-    { name: '/shuffle', description: 'Przemieszaj kolejkę utworów' },
-    { name: '/loop', description: 'Zapętl utwór lub całą kolejkę' },
+    { name: `${p}play`, description: 'Odtwórz muzykę z YouTube, Spotify lub wyszukaj po frazie' },
+    { name: `${p}pause`, description: 'Zapauzuj odtwarzanie' },
+    { name: `${p}resume`, description: 'Wznów odtwarzanie' },
+    { name: `${p}skip`, description: 'Pomiń aktualny utwór' },
+    { name: `${p}stop`, description: 'Zatrzymaj odtwarzanie i wyczyść kolejkę' },
+    { name: `${p}queue`, description: 'Wyświetl kolejkę utworów' },
+    { name: `${p}nowplaying`, description: 'Wyświetl aktualnie odtwarzany utwór' },
+    { name: `${p}volume`, description: 'Ustaw głośność odtwarzania (0-100)' },
+    { name: `${p}shuffle`, description: 'Przemieszaj kolejkę utworów' },
+    { name: `${p}loop`, description: 'Zapętl utwór lub całą kolejkę' },
   ];
 
   return (
@@ -263,6 +266,23 @@ export default function MusicPage() {
                   <div className="flex items-center gap-2 mb-4">
                     <Volume2 className="w-5 h-5 text-muted-foreground" />
                     <h3 className="text-lg font-semibold">Podstawowe ustawienia</h3>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="prefix">Prefix komend muzycznych</Label>
+                    <Input
+                      id="prefix"
+                      type="text"
+                      maxLength={5}
+                      value={config.prefix}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.length <= 5) setConfig({ ...config, prefix: val });
+                      }}
+                      placeholder="!"
+                      className="max-w-[120px] font-mono text-center text-lg"
+                    />
+                    <p className="text-xs text-muted-foreground">Prefix używany przed komendami muzycznymi (np. <span className="font-mono">{config.prefix || '!'}play</span>). Maks. 5 znaków.</p>
                   </div>
 
                   <div className="space-y-3">

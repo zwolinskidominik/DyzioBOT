@@ -34,6 +34,9 @@ export class MusicConfig {
   @prop({ default: 300, min: 0, type: () => Number })
   leaveTimeout!: number;
 
+  @prop({ default: '!', type: () => String })
+  prefix!: string;
+
   @prop({ default: Date.now, type: () => Date })
   createdAt!: Date;
 

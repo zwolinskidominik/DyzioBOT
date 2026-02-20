@@ -6,14 +6,34 @@ import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
-const PREFIX = '!';
+const DEFAULT_PREFIX = '!';
+
+/** Cache prefix per guild to avoid DB query on every message */
+const prefixCache = new Map<string, { prefix: string; expiresAt: number }>();
+const PREFIX_CACHE_TTL = 60_000; // 1 minute
+
+async function getPrefix(guildId: string): Promise<string> {
+  const cached = prefixCache.get(guildId);
+  if (cached && cached.expiresAt > Date.now()) return cached.prefix;
+
+  try {
+    const config = await MusicConfigModel.findOne({ guildId }).lean();
+    const prefix = (config as any)?.prefix || DEFAULT_PREFIX;
+    prefixCache.set(guildId, { prefix, expiresAt: Date.now() + PREFIX_CACHE_TTL });
+    return prefix;
+  } catch {
+    return DEFAULT_PREFIX;
+  }
+}
 
 export default async function handleMusicCommands(message: Message): Promise<void> {
-  if (!message.content.startsWith(PREFIX)) return;
   if (message.author.bot) return;
   if (!message.guild) return;
 
-  const args = message.content.slice(PREFIX.length).trim().split(/\s+/);
+  const prefix = await getPrefix(message.guild.id);
+  if (!message.content.startsWith(prefix)) return;
+
+  const args = message.content.slice(prefix.length).trim().split(/\s+/);
   const commandName = args.shift()?.toLowerCase();
 
   if (!commandName) return;
@@ -409,36 +429,38 @@ async function handleLoopQueue(message: Message, player: Player): Promise<void> 
 }
 
 async function handleMusicHelp(message: Message): Promise<void> {
+  const p = message.guild ? await getPrefix(message.guild.id) : DEFAULT_PREFIX;
+
   const embed = createBaseEmbed({
     color: COLORS.MUSIC,
     title: '🎵 Komendy muzyczne',
     description: 'Lista wszystkich komend do sterowania muzyką.',
-    footerText: 'Prefix: ! | Pomoc: !mhelp',
+    footerText: `Prefix: ${p} | Pomoc: ${p}mhelp`,
   }).addFields(
       {
         name: '▶️ Odtwarzanie',
         value: [
-          '`!play <nazwa/link>` (`!p`) — odtwarza utwór lub dodaje do kolejki',
-          '`!pause` — wstrzymuje odtwarzanie',
-          '`!resume` — wznawia odtwarzanie',
-          '`!skip` — pomija bieżący utwór',
-          '`!stop` — zatrzymuje muzykę i czyści kolejkę',
+          `\`${p}play <nazwa/link>\` (\`${p}p\`) — odtwarza utwór lub dodaje do kolejki`,
+          `\`${p}pause\` — wstrzymuje odtwarzanie`,
+          `\`${p}resume\` — wznawia odtwarzanie`,
+          `\`${p}skip\` — pomija bieżący utwór`,
+          `\`${p}stop\` — zatrzymuje muzykę i czyści kolejkę`,
         ].join('\n'),
       },
       {
         name: '📋 Kolejka',
         value: [
-          '`!queue` (`!q`) — wyświetla kolejkę',
-          '`!nowplaying` (`!np`) — aktualnie odtwarzany utwór',
-          '`!shuffle` — losuje kolejność kolejki',
+          `\`${p}queue\` (\`${p}q\`) — wyświetla kolejkę`,
+          `\`${p}nowplaying\` (\`${p}np\`) — aktualnie odtwarzany utwór`,
+          `\`${p}shuffle\` — losuje kolejność kolejki`,
         ].join('\n'),
       },
       {
         name: '🔧 Ustawienia',
         value: [
-          '`!volume <0-100>` (`!vol`) — ustawia głośność',
-          '`!loop` — zapętl/odłącz bieżący utwór',
-          '`!loopq` — zapętl/odłącz całą kolejkę',
+          `\`${p}volume <0-100>\` (\`${p}vol\`) — ustawia głośność`,
+          `\`${p}loop\` — zapętl/odłącz bieżący utwór`,
+          `\`${p}loopq\` — zapętl/odłącz całą kolejkę`,
         ].join('\n'),
       },
       {
