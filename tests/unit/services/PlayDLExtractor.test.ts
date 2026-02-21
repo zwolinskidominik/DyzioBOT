@@ -320,18 +320,37 @@ describe('PlayDLExtractor', () => {
 
   /* ── stream ─────────────────────────────────────── */
   describe('stream', () => {
-    it('returns direct audio URL on first attempt (with auth)', async () => {
+    // The stream method tries 3 format strategies with auth, then 3 without auth,
+    // then a final fallback search = up to 7 total calls.
+
+    it('returns direct audio URL on first strategy (auth + bestaudio*)', async () => {
       simulateExecFile('https://rr3---sn-audio-url.googlevideo.com/audio.webm');
 
       const result = await extractor.stream({ url: 'https://youtube.com/watch?v=abc' } as any);
       expect(result).toBe('https://rr3---sn-audio-url.googlevideo.com/audio.webm');
     });
 
-    it('succeeds on no-auth retry when auth attempt fails', async () => {
+    it('succeeds on second format strategy when first fails', async () => {
       let callCount = 0;
       mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
         callCount++;
         if (callCount === 1) {
+          cb(new Error('format failed'), '', '');
+        } else {
+          cb(null, 'https://second-strategy.googlevideo.com/audio.webm', '');
+        }
+      });
+
+      const result = await extractor.stream({ url: 'https://youtube.com/watch?v=abc' } as any);
+      expect(result).toBe('https://second-strategy.googlevideo.com/audio.webm');
+    });
+
+    it('succeeds on no-auth strategies when all auth strategies fail', async () => {
+      let callCount = 0;
+      mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
+        callCount++;
+        // 3 auth strategies fail, 4th call (first no-auth) succeeds
+        if (callCount <= 3) {
           cb(new Error('auth failed'), '', '');
         } else {
           cb(null, 'https://noauth-audio.googlevideo.com/audio.webm', '');
@@ -342,11 +361,12 @@ describe('PlayDLExtractor', () => {
       expect(result).toBe('https://noauth-audio.googlevideo.com/audio.webm');
     });
 
-    it('falls back to YouTube search when both auth and no-auth fail', async () => {
+    it('falls back to YouTube search when all direct strategies fail', async () => {
       let callCount = 0;
       mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
         callCount++;
-        if (callCount <= 2) {
+        // 3 auth + 3 no-auth strategies fail, 7th call (search fallback) succeeds
+        if (callCount <= 6) {
           cb(new Error('stream failed'), '', '');
         } else {
           cb(null, 'https://fallback-audio.googlevideo.com/audio.webm', '');

@@ -467,41 +467,50 @@ export class PlayDLExtractor extends BaseExtractor {
 
   async stream(info: Track): Promise<ExtractorStreamable> {
     const url = info.url;
-    const streamArgs: string[] = [
+    const baseArgs: string[] = [
       '--get-url',
       '--no-warnings',
       '--no-playlist',
       '--no-check-formats',
-      '--extractor-args', 'youtube:player_client=default,web_creator',
     ];
 
-    // 1) Try with auth (cookies / OAuth2)
-    try {
-      const output = await runYtDlp(...streamArgs, url);
-      const lines = output.trim().split('\n').filter(l => l.trim());
-      return lines[lines.length - 1].trim();
-    } catch (err) {
-      logger.warn(`[yt-dlp] Stream error for ${url}, retrying without auth: ${err}`);
-    }
+    // Strategy list: try multiple format selectors.
+    // Without ffmpeg-merge-capable formats first, then let yt-dlp decide.
+    const formatStrategies: string[][] = [
+      ['-f', 'bestaudio*/best'],  // audio-containing format (merged or audio-only)
+      ['-f', 'bestaudio/best'],   // strict audio-only, fallback combined
+      [],                          // no -f, let yt-dlp use default (needs ffmpeg for merge)
+    ];
 
-    // 2) Retry without auth — expired cookies can be worse than none.
-    try {
-      const output = await runYtDlpNoAuth(...streamArgs, url);
-      const lines = output.trim().split('\n').filter(l => l.trim());
-      return lines[lines.length - 1].trim();
-    } catch {
-      logger.warn(`[yt-dlp] No-auth retry also failed for ${url}, trying fallback search`);
+    // 1) Try each format strategy with auth
+    for (const fmt of formatStrategies) {
+      try {
+        const output = await runYtDlp(...baseArgs, ...fmt, url);
+        const lines = output.trim().split('\n').filter(l => l.trim());
+        return lines[lines.length - 1].trim();
+      } catch {}
     }
+    logger.warn(`[yt-dlp] All auth strategies failed for ${url}, retrying without auth`);
+
+    // 2) Retry best strategies without auth (expired cookies can block access)
+    for (const fmt of formatStrategies) {
+      try {
+        const output = await runYtDlpNoAuth(...baseArgs, ...fmt, url);
+        const lines = output.trim().split('\n').filter(l => l.trim());
+        return lines[lines.length - 1].trim();
+      } catch {}
+    }
+    logger.warn(`[yt-dlp] No-auth also failed for ${url}, trying fallback search`);
 
     // 3) Final fallback: search YouTube by track title + author.
     try {
       const fallbackQuery = `${info.title} ${info.author}`;
-      const output = await runYtDlp(
+      const output = await runYtDlpNoAuth(
         `ytsearch1:${fallbackQuery}`,
+        '-f', 'bestaudio*/best',
         '--get-url',
         '--no-warnings',
         '--no-check-formats',
-        '--extractor-args', 'youtube:player_client=default,web_creator',
       );
       const lines = output.trim().split('\n').filter(l => l.trim());
       return lines[lines.length - 1].trim();
