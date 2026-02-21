@@ -99,7 +99,7 @@ export default function GuildsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {guilds.map((guild) => {
               const hasBot = guild.hasBot !== false;
-              const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1248419676740915310";
+              const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1119327417237000285";
               const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands&guild_id=${guild.id}`;
               
               return (

@@ -9,7 +9,7 @@ export default function HomePage() {
     document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1248419676740915310";
+  const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1119327417237000285";
   const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`;
 
   return (

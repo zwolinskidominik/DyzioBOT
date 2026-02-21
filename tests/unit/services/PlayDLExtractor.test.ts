@@ -320,18 +320,33 @@ describe('PlayDLExtractor', () => {
 
   /* ── stream ─────────────────────────────────────── */
   describe('stream', () => {
-    it('returns direct audio URL', async () => {
+    it('returns direct audio URL on first attempt (with auth)', async () => {
       simulateExecFile('https://rr3---sn-audio-url.googlevideo.com/audio.webm');
 
       const result = await extractor.stream({ url: 'https://youtube.com/watch?v=abc' } as any);
       expect(result).toBe('https://rr3---sn-audio-url.googlevideo.com/audio.webm');
     });
 
-    it('falls back to YouTube search when direct stream fails', async () => {
+    it('succeeds on no-auth retry when auth attempt fails', async () => {
       let callCount = 0;
       mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
         callCount++;
         if (callCount === 1) {
+          cb(new Error('auth failed'), '', '');
+        } else {
+          cb(null, 'https://noauth-audio.googlevideo.com/audio.webm', '');
+        }
+      });
+
+      const result = await extractor.stream({ url: 'https://youtube.com/watch?v=abc' } as any);
+      expect(result).toBe('https://noauth-audio.googlevideo.com/audio.webm');
+    });
+
+    it('falls back to YouTube search when both auth and no-auth fail', async () => {
+      let callCount = 0;
+      mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
+        callCount++;
+        if (callCount <= 2) {
           cb(new Error('stream failed'), '', '');
         } else {
           cb(null, 'https://fallback-audio.googlevideo.com/audio.webm', '');
@@ -342,7 +357,7 @@ describe('PlayDLExtractor', () => {
       expect(result).toBe('https://fallback-audio.googlevideo.com/audio.webm');
     });
 
-    it('throws when both direct stream and fallback fail', async () => {
+    it('throws when all stream attempts fail', async () => {
       simulateExecFileError(new Error('stream failed'));
 
       await expect(

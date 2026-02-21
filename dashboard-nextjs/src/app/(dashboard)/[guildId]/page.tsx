@@ -181,7 +181,7 @@ export default function GuildDashboard() {
           <CardContent>
             <Button asChild className="w-full" size="lg">
               <a
-                href={`https://discord.com/api/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands&guild_id=${guildId}`}
+                href={`https://discord.com/api/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1119327417237000285"}&permissions=8&scope=bot%20applications.commands&guild_id=${guildId}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

@@ -18,6 +18,8 @@ services:
     build:
       context: ./dashboard-nextjs
       dockerfile: ../Dockerfile.dashboard
+      args:
+        NEXT_PUBLIC_DISCORD_CLIENT_ID: "1119327417237000285"
     container_name: dyziobot-dashboard
     restart: unless-stopped
     env_file:

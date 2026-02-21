@@ -53,10 +53,9 @@ function getAuthArgs(): string[] {
   return ['--username', 'oauth2', '--password', ''];
 }
 
-async function runYtDlp(...args: string[]): Promise<string> {
-  const authArgs = getAuthArgs();
+function execYtDlp(extraArgs: string[], args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile(YT_DLP_CMD, [...YT_DLP_ARGS, ...authArgs, ...args], {
+    execFile(YT_DLP_CMD, [...YT_DLP_ARGS, ...extraArgs, ...args], {
       timeout: 60000,
       maxBuffer: 1024 * 1024 * 50,
     }, (error, stdout, _stderr) => {
@@ -70,6 +69,14 @@ async function runYtDlp(...args: string[]): Promise<string> {
       }
     });
   });
+}
+
+async function runYtDlp(...args: string[]): Promise<string> {
+  return execYtDlp(getAuthArgs(), args);
+}
+
+async function runYtDlpNoAuth(...args: string[]): Promise<string> {
+  return execYtDlp([], args);
 }
 
 /** Helper: perform an HTTPS GET and return the response body as a string. */
@@ -460,40 +467,49 @@ export class PlayDLExtractor extends BaseExtractor {
 
   async stream(info: Track): Promise<ExtractorStreamable> {
     const url = info.url;
+    const streamArgs: string[] = [
+      '-f', 'bestaudio/best',
+      '--get-url',
+      '--no-warnings',
+      '--no-playlist',
+      '--no-check-formats',
+      '--extractor-args', 'youtube:player_client=default,web_creator',
+    ];
 
+    // 1) Try with auth (cookies / OAuth2)
     try {
-      // Get direct audio stream URL from yt-dlp
-      // Don't specify -f — let yt-dlp pick the best available format.
-      // --get-url may return multiple lines (video + audio) for DASH;
-      // we pick the last line which is typically the audio stream.
+      const output = await runYtDlp(...streamArgs, url);
+      const lines = output.trim().split('\n').filter(l => l.trim());
+      return lines[lines.length - 1].trim();
+    } catch (err) {
+      logger.warn(`[yt-dlp] Stream error for ${url}, retrying without auth: ${err}`);
+    }
+
+    // 2) Retry without auth — expired cookies can be worse than none.
+    try {
+      const output = await runYtDlpNoAuth(...streamArgs, url);
+      const lines = output.trim().split('\n').filter(l => l.trim());
+      return lines[lines.length - 1].trim();
+    } catch {
+      logger.warn(`[yt-dlp] No-auth retry also failed for ${url}, trying fallback search`);
+    }
+
+    // 3) Final fallback: search YouTube by track title + author.
+    try {
+      const fallbackQuery = `${info.title} ${info.author}`;
       const output = await runYtDlp(
+        `ytsearch1:${fallbackQuery}`,
+        '-f', 'bestaudio/best',
         '--get-url',
         '--no-warnings',
-        '--no-playlist',
         '--no-check-formats',
-        url
+        '--extractor-args', 'youtube:player_client=default,web_creator',
       );
-
       const lines = output.trim().split('\n').filter(l => l.trim());
-      const audioUrl = lines[lines.length - 1].trim();
-      return audioUrl;
-    } catch (err) {
-      logger.warn(`[yt-dlp] Stream error for ${url}, trying fallback search: ${err}`);
-      // Fallback: search YouTube by track title + author instead.
-      try {
-        const fallbackQuery = `${info.title} ${info.author}`;
-        const output = await runYtDlp(
-          `ytsearch1:${fallbackQuery}`,
-          '--get-url',
-          '--no-warnings',
-          '--no-check-formats',
-        );
-        const lines = output.trim().split('\n').filter(l => l.trim());
-        return lines[lines.length - 1].trim();
-      } catch (fallbackErr) {
-        logger.error(`[yt-dlp] Stream fallback also failed: ${fallbackErr}`);
-        throw fallbackErr;
-      }
+      return lines[lines.length - 1].trim();
+    } catch (fallbackErr) {
+      logger.error(`[yt-dlp] All stream attempts failed: ${fallbackErr}`);
+      throw fallbackErr;
     }
   }
 
