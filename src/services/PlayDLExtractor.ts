@@ -1,5 +1,7 @@
 import { BaseExtractor, Track, SearchQueryType, ExtractorSearchContext, ExtractorStreamable, ExtractorInfo, Playlist, GuildQueueHistory } from 'discord-player';
 import { execFile, execFileSync } from 'child_process';
+import { existsSync } from 'fs';
+import path from 'path';
 import https from 'https';
 import { formatClock } from '../utils/timeHelpers';
 import logger from '../utils/logger';
@@ -18,9 +20,27 @@ function detectPythonCmd(): string {
 const YT_DLP_CMD = detectPythonCmd();
 const YT_DLP_ARGS = ['-m', 'yt_dlp'];
 
+// YouTube authentication — prevents "Sign in to confirm you're not a bot" on VPS.
+// Strategy (in priority order):
+// 1. cookies.txt file (manual export from browser, expires after weeks)
+// 2. OAuth2 token (auto-renewing, stored in yt-dlp cache dir)
+const COOKIES_PATHS = [
+  path.resolve(process.cwd(), 'cookies.txt'),
+  path.resolve(__dirname, '..', '..', 'cookies.txt'),
+  '/app/cookies.txt',
+];
+const COOKIES_FILE = COOKIES_PATHS.find(p => existsSync(p)) ?? null;
+
+function getAuthArgs(): string[] {
+  if (COOKIES_FILE) return ['--cookies', COOKIES_FILE];
+  // OAuth2 — yt-dlp caches the token and auto-refreshes it
+  return ['--username', 'oauth2', '--password', ''];
+}
+
 async function runYtDlp(...args: string[]): Promise<string> {
+  const authArgs = getAuthArgs();
   return new Promise((resolve, reject) => {
-    execFile(YT_DLP_CMD, [...YT_DLP_ARGS, ...args], {
+    execFile(YT_DLP_CMD, [...YT_DLP_ARGS, ...authArgs, ...args], {
       timeout: 60000,
       maxBuffer: 1024 * 1024 * 50,
     }, (error, stdout, _stderr) => {

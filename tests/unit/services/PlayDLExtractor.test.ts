@@ -5,6 +5,11 @@ jest.mock('child_process', () => ({
   execFileSync: jest.fn(), // detectPythonCmd() — returns undefined (truthy not needed, just no throw)
 }));
 
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  existsSync: jest.fn().mockReturnValue(false), // no cookies.txt in tests
+}));
+
 jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },

@@ -11,6 +11,8 @@ services:
       - dyziobot-network
     volumes:
       - ./logs:/app/logs
+      - ./cookies.txt:/app/cookies.txt:ro
+      - yt-dlp-cache:/root/.cache/yt-dlp
 
   dashboard:
     build:
@@ -29,4 +31,7 @@ services:
 
 networks:
   dyziobot-network:
+
+volumes:
+  yt-dlp-cache:
     driver: bridge

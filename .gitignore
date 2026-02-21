@@ -19,6 +19,9 @@ dashboard-nextjs/.env.local
 /logs/
 *.log
 
+# YouTube cookies (sensitive – contains session tokens)
+cookies.txt
+
 # Coverage
 coverage
 
