@@ -8,6 +8,7 @@ jest.mock('child_process', () => ({
 jest.mock('fs', () => ({
   ...jest.requireActual('fs'),
   existsSync: jest.fn().mockReturnValue(false), // no cookies.txt in tests
+  copyFileSync: jest.fn(),
 }));
 
 jest.mock('../../../src/utils/logger', () => ({

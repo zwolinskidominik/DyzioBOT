@@ -1,7 +1,8 @@
 import { BaseExtractor, Track, SearchQueryType, ExtractorSearchContext, ExtractorStreamable, ExtractorInfo, Playlist, GuildQueueHistory } from 'discord-player';
 import { execFile, execFileSync } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, copyFileSync } from 'fs';
 import path from 'path';
+import os from 'os';
 import https from 'https';
 import { formatClock } from '../utils/timeHelpers';
 import logger from '../utils/logger';
@@ -31,8 +32,23 @@ const COOKIES_PATHS = [
 ];
 const COOKIES_FILE = COOKIES_PATHS.find(p => existsSync(p)) ?? null;
 
+// yt-dlp writes updated cookies back to the file, so if the source is
+// read-only (e.g. Docker bind mount with :ro), copy to a writable location.
+function getWritableCookiesPath(): string | null {
+  if (!COOKIES_FILE) return null;
+  const writablePath = path.join(os.tmpdir(), 'yt-dlp-cookies.txt');
+  try {
+    copyFileSync(COOKIES_FILE, writablePath);
+    return writablePath;
+  } catch {
+    return COOKIES_FILE; // fallback to original if copy fails
+  }
+}
+
+const WRITABLE_COOKIES = getWritableCookiesPath();
+
 function getAuthArgs(): string[] {
-  if (COOKIES_FILE) return ['--cookies', COOKIES_FILE];
+  if (WRITABLE_COOKIES) return ['--cookies', WRITABLE_COOKIES];
   // OAuth2 — yt-dlp caches the token and auto-refreshes it
   return ['--username', 'oauth2', '--password', ''];
 }
@@ -448,7 +464,7 @@ export class PlayDLExtractor extends BaseExtractor {
     try {
       // Get direct audio stream URL from yt-dlp
       const audioUrl = await runYtDlp(
-        '-f', 'bestaudio',
+        '-f', 'bestaudio/best',
         '--get-url',
         '--no-warnings',
         '--no-playlist',
@@ -466,7 +482,7 @@ export class PlayDLExtractor extends BaseExtractor {
         const fallbackQuery = `${info.title} ${info.author}`;
         const audioUrl = await runYtDlp(
           `ytsearch1:${fallbackQuery}`,
-          '-f', 'bestaudio',
+          '-f', 'bestaudio/best',
           '--get-url',
           '--no-warnings',
         );
