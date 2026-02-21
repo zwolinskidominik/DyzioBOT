@@ -468,7 +468,6 @@ export class PlayDLExtractor extends BaseExtractor {
   async stream(info: Track): Promise<ExtractorStreamable> {
     const url = info.url;
     const streamArgs: string[] = [
-      '-f', 'bestaudio/best',
       '--get-url',
       '--no-warnings',
       '--no-playlist',
@@ -499,7 +498,6 @@ export class PlayDLExtractor extends BaseExtractor {
       const fallbackQuery = `${info.title} ${info.author}`;
       const output = await runYtDlp(
         `ytsearch1:${fallbackQuery}`,
-        '-f', 'bestaudio/best',
         '--get-url',
         '--no-warnings',
         '--no-check-formats',
