@@ -468,6 +468,7 @@ export class PlayDLExtractor extends BaseExtractor {
         '--get-url',
         '--no-warnings',
         '--no-playlist',
+        '--no-check-formats',
         url
       );
 
@@ -485,6 +486,7 @@ export class PlayDLExtractor extends BaseExtractor {
           '-f', 'bestaudio/best',
           '--get-url',
           '--no-warnings',
+          '--no-check-formats',
         );
         return audioUrl.trim();
       } catch (fallbackErr) {
