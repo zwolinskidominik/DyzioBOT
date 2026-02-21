@@ -97,7 +97,7 @@ export async function initializeMusicPlayer(client: Client): Promise<Player> {
       const timeout = Math.max(1, config.leaveTimeout || 300); // Minimum 1 second
       debounce(`musicLeave:${queue.guild.id}`, () => {
         if (queue.tracks.size === 0) {
-          queue.delete();
+          try { queue.delete(); } catch {}
         }
       }, timeout * 1000);
     }
@@ -112,7 +112,7 @@ export async function initializeMusicPlayer(client: Client): Promise<Player> {
         if (voiceChannel && voiceChannel.members.filter(m => !m.user.bot).size === 0) {
           await removeNowPlayingButtons(queue);
           queue.metadata?.channel?.send({ embeds: [createBaseEmbed({ description: '👋 Kanał był pusty przez 3 minuty. Rozłączam się...' })] });
-          queue.delete();
+          try { queue.delete(); } catch {}
         }
       }, 3 * 60 * 1000);
     }

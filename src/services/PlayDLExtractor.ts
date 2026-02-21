@@ -463,8 +463,10 @@ export class PlayDLExtractor extends BaseExtractor {
 
     try {
       // Get direct audio stream URL from yt-dlp
-      const audioUrl = await runYtDlp(
-        '-f', 'bestaudio/best',
+      // Don't specify -f — let yt-dlp pick the best available format.
+      // --get-url may return multiple lines (video + audio) for DASH;
+      // we pick the last line which is typically the audio stream.
+      const output = await runYtDlp(
         '--get-url',
         '--no-warnings',
         '--no-playlist',
@@ -472,23 +474,22 @@ export class PlayDLExtractor extends BaseExtractor {
         url
       );
 
-      // Return the direct URL - discord-player will handle fetching it
-      return audioUrl.trim();
+      const lines = output.trim().split('\n').filter(l => l.trim());
+      const audioUrl = lines[lines.length - 1].trim();
+      return audioUrl;
     } catch (err) {
       logger.warn(`[yt-dlp] Stream error for ${url}, trying fallback search: ${err}`);
-      // Fallback: if the stored URL can't be streamed (e.g. Spotify URL that
-      // yt-dlp resolved to YouTube during search but URL still points to Spotify),
-      // search YouTube by track title + author instead.
+      // Fallback: search YouTube by track title + author instead.
       try {
         const fallbackQuery = `${info.title} ${info.author}`;
-        const audioUrl = await runYtDlp(
+        const output = await runYtDlp(
           `ytsearch1:${fallbackQuery}`,
-          '-f', 'bestaudio/best',
           '--get-url',
           '--no-warnings',
           '--no-check-formats',
         );
-        return audioUrl.trim();
+        const lines = output.trim().split('\n').filter(l => l.trim());
+        return lines[lines.length - 1].trim();
       } catch (fallbackErr) {
         logger.error(`[yt-dlp] Stream fallback also failed: ${fallbackErr}`);
         throw fallbackErr;

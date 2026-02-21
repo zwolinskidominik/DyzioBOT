@@ -116,7 +116,7 @@ export default async function run(interaction: Interaction): Promise<void> {
           const msg = meta?.nowPlayingMessage;
           if (msg?.editable) await msg.edit({ components: [] }).catch(() => {});
         } catch {}
-        queue.delete();
+        try { queue.delete(); } catch {}
         await interaction.reply({
           embeds: [createBaseEmbed({ isError: true, description: '⏹️ Zatrzymano odtwarzanie i wyczyszczono kolejkę.' })],
         });
