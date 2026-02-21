@@ -34,4 +34,3 @@ networks:
 
 volumes:
   yt-dlp-cache:
-    driver: bridge
