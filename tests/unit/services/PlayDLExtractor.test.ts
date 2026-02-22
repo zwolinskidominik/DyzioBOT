@@ -1,8 +1,10 @@
 /* ── Mocks ─────────────────────────────────────────── */
 const mockExecFile = jest.fn();
+const mockSpawn = jest.fn();
 jest.mock('child_process', () => ({
   execFile: (...args: any[]) => mockExecFile(...args),
   execFileSync: jest.fn(), // detectPythonCmd() — returns undefined (truthy not needed, just no throw)
+  spawn: (...args: any[]) => mockSpawn(...args),
 }));
 
 jest.mock('fs', () => ({
@@ -105,6 +107,8 @@ jest.mock('discord-player', () => ({
 }));
 
 import { PlayDLExtractor } from '../../../src/services/PlayDLExtractor';
+import { EventEmitter } from 'events';
+import { PassThrough } from 'stream';
 
 /* ── Helpers ──────────────────────────────────────── */
 
@@ -118,6 +122,50 @@ function simulateExecFileError(error: Error) {
   mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
     cb(error, '', 'error');
   });
+}
+
+/** Create a mock child process for spawn() that emits audio data on stdout. */
+function createMockChildProcess(options: { audioData?: string; exitCode?: number; stderrData?: string }) {
+  const stdout = new PassThrough();
+  const stderr = new PassThrough();
+  const child = new EventEmitter() as any;
+  child.stdout = stdout;
+  child.stderr = stderr;
+  child.killed = false;
+  child.kill = jest.fn(() => { child.killed = true; });
+
+  // Schedule events asynchronously
+  process.nextTick(() => {
+    if (options.stderrData) stderr.write(options.stderrData);
+    if (options.audioData) {
+      stdout.write(Buffer.from(options.audioData));
+    }
+    if (options.exitCode !== undefined && !options.audioData) {
+      // Only emit close if there's no data (error case)
+      stdout.end();
+      stderr.end();
+      child.emit('close', options.exitCode);
+    } else if (options.audioData) {
+      // Normal end after data
+      setTimeout(() => {
+        stdout.end();
+        stderr.end();
+        child.emit('close', 0);
+      }, 10);
+    }
+  });
+
+  return child;
+}
+
+/** Make spawn return a successful audio stream. */
+function simulateSpawnSuccess(audioData = 'fake-audio-data') {
+  mockSpawn.mockImplementation(() => createMockChildProcess({ audioData }));
+}
+
+/** Make spawn return a failed process. */
+function simulateSpawnError(stderrMsg = 'yt-dlp error', exitCode = 1) {
+  mockSpawn.mockImplementation(() => createMockChildProcess({ exitCode, stderrData: stderrMsg }));
 }
 
 describe('PlayDLExtractor', () => {
@@ -320,65 +368,70 @@ describe('PlayDLExtractor', () => {
 
   /* ── stream ─────────────────────────────────────── */
   describe('stream', () => {
-    // stream() tries AUTH_STRATEGIES × formatStrategies (no cookies in tests → OAuth2 + noAuth = 2×3=6),
-    // then fallback search with each auth (2 more). Total up to 8 calls.
+    // In tests: no cookies → AUTH_STRATEGIES = [NO_AUTH].
+    // stream() tries: pipe (auth×fmt) → URL (auth×fmt) → search pipe (auth).
 
-    it('returns direct audio URL on first strategy', async () => {
-      simulateExecFile('https://rr3---sn-audio-url.googlevideo.com/audio.webm');
+    it('returns a stream when pipe approach succeeds on first try', async () => {
+      simulateSpawnSuccess('audio-bytes');
 
       const result = await extractor.stream({ url: 'https://youtube.com/watch?v=abc' } as any);
-      expect(result).toBe('https://rr3---sn-audio-url.googlevideo.com/audio.webm');
+      expect(result).toBeInstanceOf(PassThrough);
+      expect(mockSpawn).toHaveBeenCalledTimes(1);
     });
 
-    it('succeeds on later format strategy when first fails', async () => {
-      let callCount = 0;
-      mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
-        callCount++;
-        if (callCount === 1) {
-          cb(new Error('format failed'), '', '');
-        } else {
-          cb(null, 'https://second-strategy.googlevideo.com/audio.webm', '');
+    it('falls through pipe formats and succeeds on later format', async () => {
+      let spawnCount = 0;
+      mockSpawn.mockImplementation(() => {
+        spawnCount++;
+        if (spawnCount === 1) {
+          return createMockChildProcess({ exitCode: 1, stderrData: 'format not available' });
         }
+        return createMockChildProcess({ audioData: 'audio-ok' });
       });
 
       const result = await extractor.stream({ url: 'https://youtube.com/watch?v=abc' } as any);
-      expect(result).toBe('https://second-strategy.googlevideo.com/audio.webm');
+      expect(result).toBeInstanceOf(PassThrough);
+      expect(spawnCount).toBe(2);
     });
 
-    it('succeeds on no-auth strategies when OAuth2 strategies fail', async () => {
-      let callCount = 0;
-      mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
-        callCount++;
-        // In tests: no cookies, so AUTH_STRATEGIES = [OAuth2, noAuth]. 3 OAuth2 formats fail, 4th (first noAuth) succeeds
-        if (callCount <= 3) {
-          cb(new Error('auth failed'), '', '');
-        } else {
-          cb(null, 'https://noauth-audio.googlevideo.com/audio.webm', '');
-        }
-      });
+    it('falls back to URL approach when all pipe attempts fail', async () => {
+      simulateSpawnError('pipe failed');
+      simulateExecFile('https://cdn.audio.googlevideo.com/audio.webm');
 
       const result = await extractor.stream({ url: 'https://youtube.com/watch?v=abc' } as any);
-      expect(result).toBe('https://noauth-audio.googlevideo.com/audio.webm');
+      expect(result).toBe('https://cdn.audio.googlevideo.com/audio.webm');
     });
 
-    it('falls back to YouTube search when all direct strategies fail', async () => {
-      let callCount = 0;
-      mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
-        callCount++;
-        // 2 auth × 3 formats = 6 direct fail, 7th (search fallback) succeeds
-        if (callCount <= 6) {
-          cb(new Error('stream failed'), '', '');
-        } else {
-          cb(null, 'https://fallback-audio.googlevideo.com/audio.webm', '');
+    it('falls back to search when both pipe and URL fail', async () => {
+      // All pipe attempts fail
+      simulateSpawnError('pipe failed');
+      // All URL attempts fail
+      simulateExecFileError(new Error('url failed'));
+
+      // Now override spawn for the search fallback: first N pipe fails already set,
+      // but search also uses spawn → make later spawn calls succeed
+      let spawnCallCount = 0;
+      const totalPipeAttempts = 3; // 1 auth × 3 formats
+      mockSpawn.mockImplementation(() => {
+        spawnCallCount++;
+        // First 3 are direct pipe attempts (fail), next are search (succeed)
+        if (spawnCallCount <= totalPipeAttempts) {
+          return createMockChildProcess({ exitCode: 1, stderrData: 'pipe failed' });
         }
+        return createMockChildProcess({ audioData: 'search-audio' });
       });
 
-      const result = await extractor.stream({ url: 'https://youtube.com/watch?v=abc', title: 'Test Song', author: 'Test Artist' } as any);
-      expect(result).toBe('https://fallback-audio.googlevideo.com/audio.webm');
+      const result = await extractor.stream({
+        url: 'https://youtube.com/watch?v=abc',
+        title: 'Test Song',
+        author: 'Test Artist',
+      } as any);
+      expect(result).toBeInstanceOf(PassThrough);
     });
 
     it('throws when all stream attempts fail', async () => {
-      simulateExecFileError(new Error('stream failed'));
+      simulateSpawnError('all failed');
+      simulateExecFileError(new Error('all failed'));
 
       await expect(
         extractor.stream({ url: 'https://youtube.com/watch?v=abc', title: 'Test', author: 'A' } as any)

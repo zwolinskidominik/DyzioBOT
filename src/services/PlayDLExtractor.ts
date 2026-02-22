@@ -1,6 +1,7 @@
 import { BaseExtractor, Track, SearchQueryType, ExtractorSearchContext, ExtractorStreamable, ExtractorInfo, Playlist, GuildQueueHistory } from 'discord-player';
-import { execFile, execFileSync } from 'child_process';
+import { execFile, execFileSync, spawn } from 'child_process';
 import { existsSync, copyFileSync } from 'fs';
+import { PassThrough } from 'stream';
 import path from 'path';
 import os from 'os';
 import https from 'https';
@@ -48,16 +49,12 @@ function getWritableCookiesPath(): string | null {
 const WRITABLE_COOKIES = getWritableCookiesPath();
 
 const COOKIE_AUTH: string[] = WRITABLE_COOKIES ? ['--cookies', WRITABLE_COOKIES] : [];
-const OAUTH2_AUTH: string[] = ['--username', 'oauth2', '--password', ''];
 const NO_AUTH: string[] = [];
 
-// Auth strategies ordered by reliability:
-// 1. Cookies (fastest, no interactive flow)
-// 2. OAuth2 (auto-cached by yt-dlp, refreshes itself)
-// 3. No auth (works only for non-restricted content on non-blocked IPs)
+// Auth strategies: cookies first (for restricted content), then no auth.
+// OAuth2 is skipped — requires interactive browser flow that can't run in Docker.
 const AUTH_STRATEGIES: string[][] = [
   ...(WRITABLE_COOKIES ? [COOKIE_AUTH] : []),
-  OAUTH2_AUTH,
   NO_AUTH,
 ];
 
@@ -80,7 +77,64 @@ function execYtDlp(extraArgs: string[], args: string[]): Promise<string> {
 }
 
 async function runYtDlp(...args: string[]): Promise<string> {
-  return execYtDlp(COOKIE_AUTH.length ? COOKIE_AUTH : OAUTH2_AUTH, args);
+  return execYtDlp(COOKIE_AUTH.length ? COOKIE_AUTH : NO_AUTH, args);
+}
+
+/**
+ * Spawn yt-dlp and pipe audio to stdout. Returns a Readable stream.
+ * This avoids --get-url issues where the extracted URL requires auth headers
+ * that only yt-dlp provides. yt-dlp handles the download internally.
+ */
+function spawnYtDlpStream(auth: string[], fmtArgs: string[], url: string): Promise<PassThrough> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(YT_DLP_CMD, [
+      ...YT_DLP_ARGS,
+      ...auth,
+      '-o', '-',       // output to stdout
+      ...fmtArgs,
+      '--no-warnings',
+      '--no-playlist',
+      '--no-part',
+      url,
+    ], { stdio: ['ignore', 'pipe', 'pipe'] }); // close stdin (prevents interactive prompts)
+
+    const output = new PassThrough();
+    let resolved = false;
+    let stderrBuf = '';
+
+    child.stderr!.on('data', (d: Buffer) => { stderrBuf += d.toString(); });
+    child.stdout!.pipe(output);
+
+    // Timeout: 30s to start receiving data
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        if (!child.killed) child.kill('SIGTERM');
+        reject(new Error('yt-dlp pipe timeout (30s)'));
+      }
+    }, 30000);
+
+    // Resolve as soon as first audio data arrives
+    child.stdout!.once('data', () => {
+      if (!resolved) { resolved = true; clearTimeout(timer); resolve(output); }
+    });
+
+    child.on('error', (err) => {
+      if (!resolved) { resolved = true; clearTimeout(timer); reject(err); }
+      else output.destroy(err);
+    });
+
+    child.on('close', (code) => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        reject(new Error(`yt-dlp exit ${code}: ${stderrBuf.trim().slice(0, 300)}`));
+      }
+    });
+
+    // Kill child process when stream is destroyed (skip/stop)
+    output.on('close', () => { if (!child.killed) child.kill('SIGTERM'); });
+  });
 }
 
 /** Helper: perform an HTTPS GET and return the response body as a string. */
@@ -471,46 +525,53 @@ export class PlayDLExtractor extends BaseExtractor {
 
   async stream(info: Track): Promise<ExtractorStreamable> {
     const url = info.url;
-    const baseArgs: string[] = [
-      '--get-url',
-      '--no-warnings',
-      '--no-playlist',
-      '--no-check-formats',
+
+    // Format selectors from most to least specific.
+    const fmtStrategies: string[][] = [
+      ['-f', 'bestaudio*/best'],   // audio-containing format (merged or audio-only)
+      ['-f', 'bestaudio/best'],    // strict audio-only, fallback combined
+      [],                           // no selector — let yt-dlp choose (needs ffmpeg to merge)
     ];
 
-    // Try every combination of auth × format.
-    // Auth: cookies → OAuth2 → none.  Format: ba*/b → ba/b → default.
-    const formatStrategies: string[][] = [
-      ['-f', 'bestaudio*/best'],
-      ['-f', 'bestaudio/best'],
-      [],
-    ];
-
+    // ── 1) PIPE approach: spawn yt-dlp and pipe audio directly ──
+    // This is more reliable than --get-url because yt-dlp sends auth
+    // headers during the download, avoiding CDN auth issues.
     for (const auth of AUTH_STRATEGIES) {
-      for (const fmt of formatStrategies) {
+      for (const fmt of fmtStrategies) {
         try {
-          const output = await execYtDlp(auth, [...baseArgs, ...fmt, url]);
-          const lines = output.trim().split('\n').filter(l => l.trim());
-          return lines[lines.length - 1].trim();
-        } catch {}
+          return await spawnYtDlpStream(auth, fmt, url);
+        } catch (err) {
+          const errMsg = (err as Error).message?.split('\n')[0]?.slice(0, 200) ?? 'unknown';
+          logger.warn(`[yt-dlp] Pipe failed [auth=${auth.length ? auth[0] : 'none'}, fmt=${fmt[1] ?? 'default'}]: ${errMsg}`);
+        }
       }
     }
-    logger.warn(`[yt-dlp] All direct strategies failed for ${url}, trying fallback search`);
 
-    // Final fallback: search YouTube by track title + author (with auth).
+    // ── 2) URL approach fallback (in case pipe doesn't work) ──
+    const urlArgs = ['--get-url', '--no-warnings', '--no-playlist', '--no-check-formats'];
+    for (const auth of AUTH_STRATEGIES) {
+      for (const fmt of fmtStrategies) {
+        try {
+          const output = await execYtDlp(auth, [...urlArgs, ...fmt, url]);
+          const lines = output.trim().split('\n').filter(l => l.trim());
+          return lines[lines.length - 1].trim();
+        } catch (err) {
+          const errMsg = (err as Error).message?.split('\n')[0]?.slice(0, 200) ?? 'unknown';
+          logger.warn(`[yt-dlp] URL failed [auth=${auth.length ? auth[0] : 'none'}, fmt=${fmt[1] ?? 'default'}]: ${errMsg}`);
+        }
+      }
+    }
+
+    // ── 3) Search fallback: search YouTube by title + author ──
+    logger.warn(`[yt-dlp] All direct strategies failed for ${url}, trying search fallback`);
+    const searchQuery = `ytsearch1:${info.title} ${info.author}`;
     for (const auth of AUTH_STRATEGIES) {
       try {
-        const fallbackQuery = `${info.title} ${info.author}`;
-        const output = await execYtDlp(auth, [
-          `ytsearch1:${fallbackQuery}`,
-          '-f', 'bestaudio*/best',
-          '--get-url',
-          '--no-warnings',
-          '--no-check-formats',
-        ]);
-        const lines = output.trim().split('\n').filter(l => l.trim());
-        return lines[lines.length - 1].trim();
-      } catch {}
+        return await spawnYtDlpStream(auth, ['-f', 'bestaudio*/best'], searchQuery);
+      } catch (err) {
+        const errMsg = (err as Error).message?.split('\n')[0]?.slice(0, 200) ?? 'unknown';
+        logger.warn(`[yt-dlp] Search fallback failed [auth=${auth.length ? auth[0] : 'none'}]: ${errMsg}`);
+      }
     }
 
     const msg = `All stream attempts failed for ${url}`;
