@@ -415,6 +415,42 @@ describe('PlayDLExtractor', () => {
       expect(result).toBe('https://pipedproxy.kavin.rocks/audioplayback?id=test');
     });
 
+    it('falls back to Invidious when pipe and Piped fail', async () => {
+      simulateSpawnError('pipe failed');
+      // First 3 calls are Piped (fail with 403), next 3 are Invidious (first succeeds)
+      let httpCallCount = 0;
+      mockHttpsGet.mockImplementation((_url: any, _opts: any, callback: any) => {
+        httpCallCount++;
+        const urlStr = typeof _url === 'string' ? _url : '';
+        if (urlStr.includes('/api/v1/videos/')) {
+          // Invidious response
+          const res: any = {
+            statusCode: 200,
+            setEncoding: jest.fn(),
+            on: jest.fn((event: string, cb: Function): any => {
+              if (event === 'data') setTimeout(() => cb(JSON.stringify({
+                adaptiveFormats: [
+                  { type: 'audio/webm; codecs="opus"', bitrate: 128000, url: 'https://inv.nadeko.net/latest_version?id=test' },
+                ],
+              })), 0);
+              if (event === 'end') setTimeout(() => cb(), 1);
+              return res;
+            }),
+            resume: jest.fn(),
+          };
+          callback(res);
+        } else {
+          // Piped response — return 403
+          const res: any = { statusCode: 403, resume: jest.fn(), setEncoding: jest.fn(), on: jest.fn().mockReturnThis() };
+          callback(res);
+        }
+        return { on: jest.fn().mockReturnThis(), destroy: jest.fn() };
+      });
+
+      const result = await extractor.stream({ url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' } as any);
+      expect(result).toBe('https://inv.nadeko.net/latest_version?id=test');
+    });
+
     it('falls back to URL approach when pipe and Piped fail', async () => {
       simulateSpawnError('pipe failed');
       simulateExecFile('https://cdn.audio.googlevideo.com/audio.webm');

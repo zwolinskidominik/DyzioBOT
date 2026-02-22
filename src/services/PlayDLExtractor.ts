@@ -168,10 +168,18 @@ function extractYouTubeId(url: string): string | null {
 }
 
 // Public Piped API instances — YouTube proxy, fetches audio from a different IP.
+// Updated 2026-02 — only instances verified as working.
 const PIPED_INSTANCES = [
   'https://pipedapi.kavin.rocks',
-  'https://pipedapi.adminforge.de',
-  'https://pipedapi.in.projectsegfault.com',
+  'https://pipedapi.leptons.xyz',
+  'https://pipedapi.darkness.services',
+];
+
+// Public Invidious API instances — another YouTube proxy.
+const INVIDIOUS_INSTANCES = [
+  'https://inv.nadeko.net',
+  'https://invidious.nerdvpn.de',
+  'https://invidious.jing.rocks',
 ];
 
 /**
@@ -194,6 +202,30 @@ async function getAudioUrlFromPiped(videoId: string): Promise<string | null> {
       }
     } catch (err) {
       logger.warn(`[Piped] ${instance} failed for ${videoId}: ${(err as Error).message?.slice(0, 100)}`);
+    }
+  }
+  return null;
+}
+
+/**
+ * Try to get an audio stream URL via a public Invidious API instance.
+ * Returns a proxied audio URL (streams through Invidious server).
+ */
+async function getAudioUrlFromInvidious(videoId: string): Promise<string | null> {
+  for (const instance of INVIDIOUS_INSTANCES) {
+    try {
+      const json = await httpsGet(`${instance}/api/v1/videos/${videoId}`);
+      const data = JSON.parse(json);
+      // adaptiveFormats contains separate audio/video streams
+      const audioFmts = (data.adaptiveFormats || [])
+        .filter((f: any) => f.type?.startsWith('audio/') && f.url)
+        .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+      if (audioFmts.length) {
+        logger.info(`[Invidious] Got audio from ${instance} (${audioFmts[0].type}, ${audioFmts[0].bitrate}bps)`);
+        return audioFmts[0].url;
+      }
+    } catch (err) {
+      logger.warn(`[Invidious] ${instance} failed for ${videoId}: ${(err as Error).message?.slice(0, 100)}`);
     }
   }
   return null;
@@ -258,6 +290,20 @@ export class PlayDLExtractor extends BaseExtractor {
       logger.info(`[yt-dlp] version: ${ver}`);
     } catch (err) {
       logger.warn(`[yt-dlp] Could not determine version: ${(err as Error).message?.slice(0, 100)}`);
+    }
+    // Verify cookie validity by listing formats for a known public video
+    if (COOKIE_AUTH.length) {
+      try {
+        const out = await execYtDlp(COOKIE_AUTH, ['--list-formats', '--no-warnings', 'https://www.youtube.com/watch?v=jNQXAC9IVRw']);
+        const lines = out.split('\n').filter(l => /^\d/.test(l.trim()));
+        if (lines.length > 0) {
+          logger.info(`[yt-dlp] Cookies valid — ${lines.length} formats available for test video`);
+        } else {
+          logger.warn(`[yt-dlp] ⚠️ Cookies may be expired — 0 formats returned for test video. Export fresh cookies!`);
+        }
+      } catch (err) {
+        logger.warn(`[yt-dlp] ⚠️ Cookie check failed: ${(err as Error).message?.slice(0, 150)}. Export fresh cookies!`);
+      }
     }
   }
 
@@ -602,12 +648,14 @@ export class PlayDLExtractor extends BaseExtractor {
       }
     }
 
-    // ── 2) Piped API fallback (public YouTube proxy — different IP) ──
+    // ── 2) Public YouTube proxies (Piped + Invidious) — different IP ──
     const videoId = extractYouTubeId(url);
     if (videoId) {
-      logger.info(`[yt-dlp] Trying Piped API fallback for ${videoId}`);
+      logger.info(`[yt-dlp] Trying public proxy fallbacks for ${videoId}`);
       const pipedUrl = await getAudioUrlFromPiped(videoId);
       if (pipedUrl) return pipedUrl;
+      const invUrl = await getAudioUrlFromInvidious(videoId);
+      if (invUrl) return invUrl;
     }
 
     // ── 3) URL approach fallback ──
