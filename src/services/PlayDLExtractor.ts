@@ -26,7 +26,8 @@ const YT_DLP_ARGS = ['-m', 'yt_dlp'];
 // Common args applied to all YouTube requests.
 // --force-ipv4: avoids broken IPv6 on some VPS.
 // --no-check-formats: accept any format without probing.
-const YT_COMMON_ARGS = ['--force-ipv4', '--no-check-formats'];
+// --js-runtimes node: use Node.js for EJS challenge solving (nsig decryption).
+const YT_COMMON_ARGS = ['--force-ipv4', '--no-check-formats', '--js-runtimes', 'node'];
 
 // YouTube authentication — prevents "Sign in to confirm you're not a bot" on VPS.
 // cookies.txt file (manual export from browser, must be refreshed periodically)
@@ -374,7 +375,7 @@ export class PlayDLExtractor extends BaseExtractor {
     // Verify cookie validity by listing formats for a known public video
     if (COOKIE_AUTH.length) {
       try {
-        const out = await execYtDlp(COOKIE_AUTH, ['--list-formats', '--no-warnings', 'https://www.youtube.com/watch?v=jNQXAC9IVRw']);
+        const out = await execYtDlp(COOKIE_AUTH, ['--list-formats', '--no-warnings', ...YT_COMMON_ARGS, 'https://www.youtube.com/watch?v=jNQXAC9IVRw']);
         // Format lines look like "251 webm audio only" — require ID + ext
         const lines = out.split('\n').filter(l => /^\d+\s+\w+/.test(l.trim()));
         if (lines.length > 0) {

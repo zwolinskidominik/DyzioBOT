@@ -44,6 +44,8 @@ export const options = {
 };
 
 export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
+  await interaction.deferReply();
+
   try {
     const gid = interaction.guildId!;
     const subcommand = interaction.options.getSubcommand();
