@@ -5,6 +5,7 @@ import { PassThrough } from 'stream';
 import path from 'path';
 import os from 'os';
 import https from 'https';
+import { URL } from 'url';
 import { formatClock } from '../utils/timeHelpers';
 import logger from '../utils/logger';
 
@@ -161,6 +162,45 @@ function httpsGet(url: string): Promise<string> {
   });
 }
 
+/** Helper: perform an HTTPS POST and return the response body as a string. */
+function httpsPost(url: string, body: string, headers: Record<string, string> = {}): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const parsed = new URL(url);
+    const req = https.request({
+      hostname: parsed.hostname,
+      port: parsed.port || 443,
+      path: parsed.pathname + parsed.search,
+      method: 'POST',
+      timeout: 15000,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'Accept': 'application/json',
+        ...headers,
+      },
+    }, (res) => {
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        // For redirect responses, the Location header IS the audio URL
+        res.resume();
+        if (res.headers.location) return resolve(JSON.stringify({ status: 'redirect', url: res.headers.location }));
+        return reject(new Error(`Redirect without Location`));
+      }
+      if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk: string) => { data += chunk; });
+      res.on('end', () => resolve(data));
+    });
+    req.on('error', (err) => reject(err));
+    req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
 /** Extract YouTube video ID from a URL. Returns null if not a valid YouTube URL. */
 function extractYouTubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/);
@@ -226,6 +266,43 @@ async function getAudioUrlFromInvidious(videoId: string): Promise<string | null>
       }
     } catch (err) {
       logger.warn(`[Invidious] ${instance} failed for ${videoId}: ${(err as Error).message?.slice(0, 100)}`);
+    }
+  }
+  return null;
+}
+
+/**
+ * Try to get an audio stream URL via cobalt.tools API.
+ * cobalt is an actively maintained service that extracts audio from YouTube
+ * and streams it through its own infrastructure.
+ */
+async function getAudioUrlFromCobalt(videoId: string): Promise<string | null> {
+  const COBALT_INSTANCES = [
+    'https://api.cobalt.tools',
+  ];
+
+  const payload = JSON.stringify({
+    url: `https://www.youtube.com/watch?v=${videoId}`,
+    audioFormat: 'opus',
+    isAudioOnly: true,
+    filenameStyle: 'basic',
+  });
+
+  for (const instance of COBALT_INSTANCES) {
+    try {
+      const json = await httpsPost(instance, payload);
+      const data = JSON.parse(json);
+      if (data.status === 'tunnel' || data.status === 'redirect') {
+        if (data.url) {
+          logger.info(`[Cobalt] Got audio URL from ${instance} (status: ${data.status})`);
+          return data.url;
+        }
+      }
+      if (data.status === 'error') {
+        logger.warn(`[Cobalt] ${instance} error: ${data.error?.code || 'unknown'}`);
+      }
+    } catch (err) {
+      logger.warn(`[Cobalt] ${instance} failed for ${videoId}: ${(err as Error).message?.slice(0, 100)}`);
     }
   }
   return null;
@@ -648,10 +725,12 @@ export class PlayDLExtractor extends BaseExtractor {
       }
     }
 
-    // ── 2) Public YouTube proxies (Piped + Invidious) — different IP ──
+    // ── 2) Public YouTube proxies (Cobalt → Piped → Invidious) — different IP ──
     const videoId = extractYouTubeId(url);
     if (videoId) {
       logger.info(`[yt-dlp] Trying public proxy fallbacks for ${videoId}`);
+      const cobaltUrl = await getAudioUrlFromCobalt(videoId);
+      if (cobaltUrl) return cobaltUrl;
       const pipedUrl = await getAudioUrlFromPiped(videoId);
       if (pipedUrl) return pipedUrl;
       const invUrl = await getAudioUrlFromInvidious(videoId);

@@ -27,11 +27,15 @@ jest.mock('../../../src/utils/timeHelpers', () => ({
   }),
 }));
 
-/* Mock Node.js https module used by resolveSpotifyQuery */
+/* Mock Node.js https module used by resolveSpotifyQuery and proxy APIs */
 const mockHttpsGet = jest.fn();
+const mockHttpsRequest = jest.fn();
 jest.mock('https', () => ({
   __esModule: true,
-  default: { get: (...args: any[]) => mockHttpsGet(...args) },
+  default: {
+    get: (...args: any[]) => mockHttpsGet(...args),
+    request: (...args: any[]) => mockHttpsRequest(...args),
+  },
 }));
 
 /**
@@ -402,8 +406,40 @@ describe('PlayDLExtractor', () => {
       expect(spawnCount).toBe(2);
     });
 
-    it('falls back to Piped API when all pipe attempts fail', async () => {
+    it('falls back to Cobalt API when all pipe attempts fail', async () => {
       simulateSpawnError('pipe failed');
+      // Mock https.request for Cobalt POST
+      mockHttpsRequest.mockImplementation((_opts: any, callback: any) => {
+        const res: any = {
+          statusCode: 200,
+          setEncoding: jest.fn(),
+          on: jest.fn((event: string, cb: Function): any => {
+            if (event === 'data') setTimeout(() => cb(JSON.stringify({
+              status: 'tunnel',
+              url: 'https://cobalt-cdn.example.com/audio.opus',
+            })), 0);
+            if (event === 'end') setTimeout(() => cb(), 1);
+            return res;
+          }),
+          resume: jest.fn(),
+        };
+        callback(res);
+        return { on: jest.fn().mockReturnThis(), destroy: jest.fn(), write: jest.fn(), end: jest.fn() };
+      });
+
+      const result = await extractor.stream({ url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' } as any);
+      expect(result).toBe('https://cobalt-cdn.example.com/audio.opus');
+    });
+
+    it('falls back to Piped API when pipe and Cobalt fail', async () => {
+      simulateSpawnError('pipe failed');
+      // Make Cobalt fail (https.request)
+      mockHttpsRequest.mockImplementation((_opts: any, callback: any) => {
+        const res: any = { statusCode: 500, resume: jest.fn(), setEncoding: jest.fn(), on: jest.fn().mockReturnThis() };
+        callback(res);
+        return { on: jest.fn().mockReturnThis(), destroy: jest.fn(), write: jest.fn(), end: jest.fn() };
+      });
+      // Make Piped succeed (https.get)
       simulateHttpsResponse(200, JSON.stringify({
         audioStreams: [
           { url: 'https://pipedproxy.kavin.rocks/audioplayback?id=test', mimeType: 'audio/webm', bitrate: 128000 },
