@@ -29,9 +29,7 @@ const YT_DLP_ARGS = ['-m', 'yt_dlp'];
 const YT_COMMON_ARGS = ['--force-ipv4', '--no-check-formats'];
 
 // YouTube authentication — prevents "Sign in to confirm you're not a bot" on VPS.
-// Strategy (in priority order):
-// 1. cookies.txt file (manual export from browser, expires after weeks)
-// 2. OAuth2 token (auto-renewing, stored in yt-dlp cache dir)
+// cookies.txt file (manual export from browser, must be refreshed periodically)
 const COOKIES_PATHS = [
   path.resolve(process.cwd(), 'cookies.txt'),
   path.resolve(__dirname, '..', '..', 'cookies.txt'),
@@ -55,7 +53,6 @@ function getWritableCookiesPath(): string | null {
 const WRITABLE_COOKIES = getWritableCookiesPath();
 
 const COOKIE_AUTH: string[] = WRITABLE_COOKIES ? ['--cookies', WRITABLE_COOKIES] : [];
-const OAUTH2_AUTH: string[] = ['--username', 'oauth2', '--password', ''];
 const NO_AUTH: string[] = [];
 
 function execYtDlp(extraArgs: string[], args: string[]): Promise<string> {
@@ -361,9 +358,8 @@ async function resolveSpotifyQuery(spotifyUrl: string): Promise<string | null> {
 export class PlayDLExtractor extends BaseExtractor {
   static identifier = 'com.playdl.extractor' as const;
 
-  // Set during activate() — skip strategies that are known-bad.
+  // Set during activate() — skip expired-cookie strategies for faster fallthrough.
   private _cookiesValid = false;
-  private _oauth2Available = false;
 
   async activate(): Promise<void> {
     this.protocols = ['https', 'http'];
@@ -375,47 +371,23 @@ export class PlayDLExtractor extends BaseExtractor {
       logger.warn(`[yt-dlp] Could not determine version: ${(err as Error).message?.slice(0, 100)}`);
     }
 
-    const TEST_VIDEO = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
-
-    // ── 1) Verify cookie validity ──
+    // Verify cookie validity by listing formats for a known public video
     if (COOKIE_AUTH.length) {
       try {
-        const out = await execYtDlp(COOKIE_AUTH, ['--list-formats', '--no-warnings', TEST_VIDEO]);
-        // Format lines: "251 webm audio only", version lines: "2025.01.15" — require ID + ext
+        const out = await execYtDlp(COOKIE_AUTH, ['--list-formats', '--no-warnings', 'https://www.youtube.com/watch?v=jNQXAC9IVRw']);
+        // Format lines look like "251 webm audio only" — require ID + ext
         const lines = out.split('\n').filter(l => /^\d+\s+\w+/.test(l.trim()));
         if (lines.length > 0) {
           this._cookiesValid = true;
           logger.info(`[yt-dlp] ✅ Cookies valid — ${lines.length} formats available`);
         } else {
-          logger.warn(`[yt-dlp] ⚠️ Cookies expired — 0 formats for test video. Run OAuth2 setup or export fresh cookies!`);
+          logger.warn(`[yt-dlp] ⚠️ Cookies expired — 0 formats returned. Export fresh cookies!`);
         }
       } catch (err) {
         logger.warn(`[yt-dlp] ⚠️ Cookie check failed: ${(err as Error).message?.slice(0, 150)}`);
       }
-    }
-
-    // ── 2) Verify OAuth2 token ──
-    try {
-      const out = await execYtDlp(OAUTH2_AUTH, ['--list-formats', '--no-warnings', TEST_VIDEO]);
-      const lines = out.split('\n').filter(l => /^\d+\s+\w+/.test(l.trim()));
-      if (lines.length > 0) {
-        this._oauth2Available = true;
-        logger.info(`[yt-dlp] ✅ OAuth2 token valid — ${lines.length} formats available`);
-      } else {
-        logger.info(`[yt-dlp] OAuth2 returned 0 formats (token may not be set up)`);
-      }
-    } catch (err) {
-      const msg = (err as Error).message?.slice(0, 150) || '';
-      // Don't warn for expected "no cached token" case
-      if (msg.includes('oauth2')) {
-        logger.info(`[yt-dlp] OAuth2 not configured — run setup to enable. See README.`);
-      } else {
-        logger.info(`[yt-dlp] OAuth2 check: ${msg}`);
-      }
-    }
-
-    if (!this._cookiesValid && !this._oauth2Available) {
-      logger.warn(`[yt-dlp] ⚠️ No working auth! YouTube will likely block requests. Set up OAuth2 token (recommended) or export fresh cookies.`);
+    } else {
+      logger.warn(`[yt-dlp] ⚠️ No cookies.txt found. YouTube will likely block requests from VPS IPs. Export cookies from your browser!`);
     }
   }
 
@@ -737,21 +709,14 @@ export class PlayDLExtractor extends BaseExtractor {
     interface PipeStrategy { label: string; auth: string[]; args: string[] }
     const strategies: PipeStrategy[] = [];
 
-    // 1) OAuth2 (auto-refreshing token) — most reliable when configured
-    if (this._oauth2Available) {
-      strategies.push(
-        { label: 'oauth2+default', auth: OAUTH2_AUTH, args: [] },
-        { label: 'oauth2+web_creator', auth: OAUTH2_AUTH, args: ['--extractor-args', 'youtube:player_client=web_creator'] },
-      );
-    }
-    // 2) Cookies (manual export, expires after days/weeks)
+    // 1) Cookies (valid, verified at startup)
     if (this._cookiesValid) {
       strategies.push(
         { label: 'cookies+default', auth: COOKIE_AUTH, args: [] },
         { label: 'cookies+web_creator', auth: COOKIE_AUTH, args: ['--extractor-args', 'youtube:player_client=web_creator'] },
       );
     }
-    // 3) No-auth: try clients known to bypass datacenter bot detection
+    // 2) No-auth: try clients known to bypass datacenter bot detection
     strategies.push(
       { label: 'ios', auth: NO_AUTH, args: ['--extractor-args', 'youtube:player_client=ios'] },
       { label: 'tv_embedded', auth: NO_AUTH, args: ['--extractor-args', 'youtube:player_client=tv_embedded'] },
