@@ -55,6 +55,7 @@ function getWritableCookiesPath(): string | null {
 const WRITABLE_COOKIES = getWritableCookiesPath();
 
 const COOKIE_AUTH: string[] = WRITABLE_COOKIES ? ['--cookies', WRITABLE_COOKIES] : [];
+const OAUTH2_AUTH: string[] = ['--username', 'oauth2', '--password', ''];
 const NO_AUTH: string[] = [];
 
 function execYtDlp(extraArgs: string[], args: string[]): Promise<string> {
@@ -281,10 +282,11 @@ async function getAudioUrlFromCobalt(videoId: string): Promise<string | null> {
     'https://api.cobalt.tools',
   ];
 
+  // cobalt API v10 format — note: downloadMode replaces isAudioOnly
   const payload = JSON.stringify({
     url: `https://www.youtube.com/watch?v=${videoId}`,
+    downloadMode: 'audio',
     audioFormat: 'opus',
-    isAudioOnly: true,
     filenameStyle: 'basic',
   });
 
@@ -359,6 +361,10 @@ async function resolveSpotifyQuery(spotifyUrl: string): Promise<string | null> {
 export class PlayDLExtractor extends BaseExtractor {
   static identifier = 'com.playdl.extractor' as const;
 
+  // Set during activate() — skip strategies that are known-bad.
+  private _cookiesValid = false;
+  private _oauth2Available = false;
+
   async activate(): Promise<void> {
     this.protocols = ['https', 'http'];
     // Log yt-dlp version for easier VPS debugging
@@ -368,19 +374,48 @@ export class PlayDLExtractor extends BaseExtractor {
     } catch (err) {
       logger.warn(`[yt-dlp] Could not determine version: ${(err as Error).message?.slice(0, 100)}`);
     }
-    // Verify cookie validity by listing formats for a known public video
+
+    const TEST_VIDEO = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
+
+    // ── 1) Verify cookie validity ──
     if (COOKIE_AUTH.length) {
       try {
-        const out = await execYtDlp(COOKIE_AUTH, ['--list-formats', '--no-warnings', 'https://www.youtube.com/watch?v=jNQXAC9IVRw']);
-        const lines = out.split('\n').filter(l => /^\d/.test(l.trim()));
+        const out = await execYtDlp(COOKIE_AUTH, ['--list-formats', '--no-warnings', TEST_VIDEO]);
+        // Format lines: "251 webm audio only", version lines: "2025.01.15" — require ID + ext
+        const lines = out.split('\n').filter(l => /^\d+\s+\w+/.test(l.trim()));
         if (lines.length > 0) {
-          logger.info(`[yt-dlp] Cookies valid — ${lines.length} formats available for test video`);
+          this._cookiesValid = true;
+          logger.info(`[yt-dlp] ✅ Cookies valid — ${lines.length} formats available`);
         } else {
-          logger.warn(`[yt-dlp] ⚠️ Cookies may be expired — 0 formats returned for test video. Export fresh cookies!`);
+          logger.warn(`[yt-dlp] ⚠️ Cookies expired — 0 formats for test video. Run OAuth2 setup or export fresh cookies!`);
         }
       } catch (err) {
-        logger.warn(`[yt-dlp] ⚠️ Cookie check failed: ${(err as Error).message?.slice(0, 150)}. Export fresh cookies!`);
+        logger.warn(`[yt-dlp] ⚠️ Cookie check failed: ${(err as Error).message?.slice(0, 150)}`);
       }
+    }
+
+    // ── 2) Verify OAuth2 token ──
+    try {
+      const out = await execYtDlp(OAUTH2_AUTH, ['--list-formats', '--no-warnings', TEST_VIDEO]);
+      const lines = out.split('\n').filter(l => /^\d+\s+\w+/.test(l.trim()));
+      if (lines.length > 0) {
+        this._oauth2Available = true;
+        logger.info(`[yt-dlp] ✅ OAuth2 token valid — ${lines.length} formats available`);
+      } else {
+        logger.info(`[yt-dlp] OAuth2 returned 0 formats (token may not be set up)`);
+      }
+    } catch (err) {
+      const msg = (err as Error).message?.slice(0, 150) || '';
+      // Don't warn for expected "no cached token" case
+      if (msg.includes('oauth2')) {
+        logger.info(`[yt-dlp] OAuth2 not configured — run setup to enable. See README.`);
+      } else {
+        logger.info(`[yt-dlp] OAuth2 check: ${msg}`);
+      }
+    }
+
+    if (!this._cookiesValid && !this._oauth2Available) {
+      logger.warn(`[yt-dlp] ⚠️ No working auth! YouTube will likely block requests. Set up OAuth2 token (recommended) or export fresh cookies.`);
     }
   }
 
@@ -698,17 +733,25 @@ export class PlayDLExtractor extends BaseExtractor {
     // Each strategy is a complete config: auth + player client args.
     // Different player clients use different YouTube API endpoints with
     // different bot-detection and format availability.
+    // Only strategies validated during activate() are included.
     interface PipeStrategy { label: string; auth: string[]; args: string[] }
     const strategies: PipeStrategy[] = [];
 
-    if (COOKIE_AUTH.length) {
-      // Cookies: try yt-dlp default client chain, then web_creator
+    // 1) OAuth2 (auto-refreshing token) — most reliable when configured
+    if (this._oauth2Available) {
+      strategies.push(
+        { label: 'oauth2+default', auth: OAUTH2_AUTH, args: [] },
+        { label: 'oauth2+web_creator', auth: OAUTH2_AUTH, args: ['--extractor-args', 'youtube:player_client=web_creator'] },
+      );
+    }
+    // 2) Cookies (manual export, expires after days/weeks)
+    if (this._cookiesValid) {
       strategies.push(
         { label: 'cookies+default', auth: COOKIE_AUTH, args: [] },
         { label: 'cookies+web_creator', auth: COOKIE_AUTH, args: ['--extractor-args', 'youtube:player_client=web_creator'] },
       );
     }
-    // No-auth: try clients known to bypass datacenter bot detection
+    // 3) No-auth: try clients known to bypass datacenter bot detection
     strategies.push(
       { label: 'ios', auth: NO_AUTH, args: ['--extractor-args', 'youtube:player_client=ios'] },
       { label: 'tv_embedded', auth: NO_AUTH, args: ['--extractor-args', 'youtube:player_client=tv_embedded'] },
@@ -738,8 +781,11 @@ export class PlayDLExtractor extends BaseExtractor {
     }
 
     // ── 3) URL approach fallback ──
+    // Prefer auth strategies; if none available, try first 2 no-auth strategies.
+    const authStrategies = strategies.filter(s => s.auth.length > 0);
+    const urlSearchStrategies = authStrategies.length ? authStrategies : strategies.slice(0, 2);
     const urlArgs = ['--get-url', '--no-warnings', '--no-playlist', ...YT_COMMON_ARGS];
-    for (const s of strategies.slice(0, 2)) {
+    for (const s of urlSearchStrategies) {
       try {
         const output = await execYtDlp(s.auth, [...urlArgs, ...s.args, url]);
         const lines = output.trim().split('\n').filter(l => l.trim());
@@ -753,7 +799,7 @@ export class PlayDLExtractor extends BaseExtractor {
     // ── 4) Search fallback: search YouTube by title + author ──
     logger.warn(`[yt-dlp] All direct strategies failed for ${url}, trying search fallback`);
     const searchQuery = `ytsearch1:${info.title} ${info.author}`;
-    for (const s of strategies.slice(0, 2)) {
+    for (const s of urlSearchStrategies) {
       try {
         return await spawnYtDlpStream(s.auth, s.args, searchQuery);
       } catch (err) {

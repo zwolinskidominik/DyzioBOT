@@ -194,6 +194,28 @@ describe('PlayDLExtractor', () => {
       await extractor.activate();
       expect((extractor as any).protocols).toEqual(['https', 'http']);
     });
+
+    it('sets _oauth2Available when OAuth2 check returns formats', async () => {
+      // First call: version → second call: oauth2 --list-formats
+      let callCount = 0;
+      mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
+        callCount++;
+        if (callCount === 1) {
+          cb(null, '2025.01.15', '');  // version
+        } else {
+          // Format listing with digit-prefixed lines
+          cb(null, 'ID  EXT  RESOLUTION\n251 webm audio only\n140 m4a  audio only', '');
+        }
+      });
+      await extractor.activate();
+      expect((extractor as any)._oauth2Available).toBe(true);
+    });
+
+    it('leaves _oauth2Available false when no cached token', async () => {
+      simulateExecFile('2025.01.15');
+      await extractor.activate();
+      expect((extractor as any)._oauth2Available).toBe(false);
+    });
   });
 
   describe('deactivate', () => {
