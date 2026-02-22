@@ -320,17 +320,17 @@ describe('PlayDLExtractor', () => {
 
   /* ── stream ─────────────────────────────────────── */
   describe('stream', () => {
-    // The stream method tries 3 format strategies with auth, then 3 without auth,
-    // then a final fallback search = up to 7 total calls.
+    // stream() tries AUTH_STRATEGIES × formatStrategies (no cookies in tests → OAuth2 + noAuth = 2×3=6),
+    // then fallback search with each auth (2 more). Total up to 8 calls.
 
-    it('returns direct audio URL on first strategy (auth + bestaudio*)', async () => {
+    it('returns direct audio URL on first strategy', async () => {
       simulateExecFile('https://rr3---sn-audio-url.googlevideo.com/audio.webm');
 
       const result = await extractor.stream({ url: 'https://youtube.com/watch?v=abc' } as any);
       expect(result).toBe('https://rr3---sn-audio-url.googlevideo.com/audio.webm');
     });
 
-    it('succeeds on second format strategy when first fails', async () => {
+    it('succeeds on later format strategy when first fails', async () => {
       let callCount = 0;
       mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
         callCount++;
@@ -345,11 +345,11 @@ describe('PlayDLExtractor', () => {
       expect(result).toBe('https://second-strategy.googlevideo.com/audio.webm');
     });
 
-    it('succeeds on no-auth strategies when all auth strategies fail', async () => {
+    it('succeeds on no-auth strategies when OAuth2 strategies fail', async () => {
       let callCount = 0;
       mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
         callCount++;
-        // 3 auth strategies fail, 4th call (first no-auth) succeeds
+        // In tests: no cookies, so AUTH_STRATEGIES = [OAuth2, noAuth]. 3 OAuth2 formats fail, 4th (first noAuth) succeeds
         if (callCount <= 3) {
           cb(new Error('auth failed'), '', '');
         } else {
@@ -365,7 +365,7 @@ describe('PlayDLExtractor', () => {
       let callCount = 0;
       mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: any, cb: Function) => {
         callCount++;
-        // 3 auth + 3 no-auth strategies fail, 7th call (search fallback) succeeds
+        // 2 auth × 3 formats = 6 direct fail, 7th (search fallback) succeeds
         if (callCount <= 6) {
           cb(new Error('stream failed'), '', '');
         } else {
@@ -382,7 +382,7 @@ describe('PlayDLExtractor', () => {
 
       await expect(
         extractor.stream({ url: 'https://youtube.com/watch?v=abc', title: 'Test', author: 'A' } as any)
-      ).rejects.toThrow('stream failed');
+      ).rejects.toThrow('All stream attempts failed');
     });
   });
 

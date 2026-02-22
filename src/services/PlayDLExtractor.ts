@@ -47,11 +47,19 @@ function getWritableCookiesPath(): string | null {
 
 const WRITABLE_COOKIES = getWritableCookiesPath();
 
-function getAuthArgs(): string[] {
-  if (WRITABLE_COOKIES) return ['--cookies', WRITABLE_COOKIES];
-  // OAuth2 — yt-dlp caches the token and auto-refreshes it
-  return ['--username', 'oauth2', '--password', ''];
-}
+const COOKIE_AUTH: string[] = WRITABLE_COOKIES ? ['--cookies', WRITABLE_COOKIES] : [];
+const OAUTH2_AUTH: string[] = ['--username', 'oauth2', '--password', ''];
+const NO_AUTH: string[] = [];
+
+// Auth strategies ordered by reliability:
+// 1. Cookies (fastest, no interactive flow)
+// 2. OAuth2 (auto-cached by yt-dlp, refreshes itself)
+// 3. No auth (works only for non-restricted content on non-blocked IPs)
+const AUTH_STRATEGIES: string[][] = [
+  ...(WRITABLE_COOKIES ? [COOKIE_AUTH] : []),
+  OAUTH2_AUTH,
+  NO_AUTH,
+];
 
 function execYtDlp(extraArgs: string[], args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -72,7 +80,7 @@ function execYtDlp(extraArgs: string[], args: string[]): Promise<string> {
 }
 
 async function runYtDlp(...args: string[]): Promise<string> {
-  return execYtDlp(getAuthArgs(), args);
+  return execYtDlp(COOKIE_AUTH.length ? COOKIE_AUTH : OAUTH2_AUTH, args);
 }
 
 async function runYtDlpNoAuth(...args: string[]): Promise<string> {
@@ -474,50 +482,44 @@ export class PlayDLExtractor extends BaseExtractor {
       '--no-check-formats',
     ];
 
-    // Strategy list: try multiple format selectors.
-    // Without ffmpeg-merge-capable formats first, then let yt-dlp decide.
+    // Try every combination of auth × format.
+    // Auth: cookies → OAuth2 → none.  Format: ba*/b → ba/b → default.
     const formatStrategies: string[][] = [
-      ['-f', 'bestaudio*/best'],  // audio-containing format (merged or audio-only)
-      ['-f', 'bestaudio/best'],   // strict audio-only, fallback combined
-      [],                          // no -f, let yt-dlp use default (needs ffmpeg for merge)
+      ['-f', 'bestaudio*/best'],
+      ['-f', 'bestaudio/best'],
+      [],
     ];
 
-    // 1) Try each format strategy with auth
-    for (const fmt of formatStrategies) {
+    for (const auth of AUTH_STRATEGIES) {
+      for (const fmt of formatStrategies) {
+        try {
+          const output = await execYtDlp(auth, [...baseArgs, ...fmt, url]);
+          const lines = output.trim().split('\n').filter(l => l.trim());
+          return lines[lines.length - 1].trim();
+        } catch {}
+      }
+    }
+    logger.warn(`[yt-dlp] All direct strategies failed for ${url}, trying fallback search`);
+
+    // Final fallback: search YouTube by track title + author (with auth).
+    for (const auth of AUTH_STRATEGIES) {
       try {
-        const output = await runYtDlp(...baseArgs, ...fmt, url);
+        const fallbackQuery = `${info.title} ${info.author}`;
+        const output = await execYtDlp(auth, [
+          `ytsearch1:${fallbackQuery}`,
+          '-f', 'bestaudio*/best',
+          '--get-url',
+          '--no-warnings',
+          '--no-check-formats',
+        ]);
         const lines = output.trim().split('\n').filter(l => l.trim());
         return lines[lines.length - 1].trim();
       } catch {}
     }
-    logger.warn(`[yt-dlp] All auth strategies failed for ${url}, retrying without auth`);
 
-    // 2) Retry best strategies without auth (expired cookies can block access)
-    for (const fmt of formatStrategies) {
-      try {
-        const output = await runYtDlpNoAuth(...baseArgs, ...fmt, url);
-        const lines = output.trim().split('\n').filter(l => l.trim());
-        return lines[lines.length - 1].trim();
-      } catch {}
-    }
-    logger.warn(`[yt-dlp] No-auth also failed for ${url}, trying fallback search`);
-
-    // 3) Final fallback: search YouTube by track title + author.
-    try {
-      const fallbackQuery = `${info.title} ${info.author}`;
-      const output = await runYtDlpNoAuth(
-        `ytsearch1:${fallbackQuery}`,
-        '-f', 'bestaudio*/best',
-        '--get-url',
-        '--no-warnings',
-        '--no-check-formats',
-      );
-      const lines = output.trim().split('\n').filter(l => l.trim());
-      return lines[lines.length - 1].trim();
-    } catch (fallbackErr) {
-      logger.error(`[yt-dlp] All stream attempts failed: ${fallbackErr}`);
-      throw fallbackErr;
-    }
+    const msg = `All stream attempts failed for ${url}`;
+    logger.error(`[yt-dlp] ${msg}`);
+    throw new Error(msg);
   }
 
   async getRelatedTracks(track: Track, _history: GuildQueueHistory): Promise<ExtractorInfo> {
