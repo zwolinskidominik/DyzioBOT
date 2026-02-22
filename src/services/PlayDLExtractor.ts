@@ -56,13 +56,6 @@ const WRITABLE_COOKIES = getWritableCookiesPath();
 const COOKIE_AUTH: string[] = WRITABLE_COOKIES ? ['--cookies', WRITABLE_COOKIES] : [];
 const NO_AUTH: string[] = [];
 
-// Auth strategies: cookies first (for restricted content), then no auth.
-// OAuth2 is skipped — requires interactive browser flow that can't run in Docker.
-const AUTH_STRATEGIES: string[][] = [
-  ...(WRITABLE_COOKIES ? [COOKIE_AUTH] : []),
-  NO_AUTH,
-];
-
 function execYtDlp(extraArgs: string[], args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(YT_DLP_CMD, [...YT_DLP_ARGS, ...extraArgs, ...args], {
