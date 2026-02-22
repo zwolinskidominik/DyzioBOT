@@ -375,8 +375,9 @@ describe('PlayDLExtractor', () => {
 
   /* ── stream ─────────────────────────────────────── */
   describe('stream', () => {
-    // In tests: no cookies → AUTH_STRATEGIES = [NO_AUTH].
-    // stream() tries: pipe (auth×fmt) → URL (auth×fmt) → search pipe (auth).
+    // In tests: no cookies → strategies = [ios, tv_embedded, mweb] (3 strategies).
+    // stream() tries: pipe → Piped API → URL (first 2) → search (first 2).
+    // Test URLs use short IDs (<11 chars) so Piped API is skipped unless specified.
 
     it('returns a stream when pipe approach succeeds on first try', async () => {
       simulateSpawnSuccess('audio-bytes');
@@ -386,12 +387,12 @@ describe('PlayDLExtractor', () => {
       expect(mockSpawn).toHaveBeenCalledTimes(1);
     });
 
-    it('falls through pipe formats and succeeds on later format', async () => {
+    it('succeeds on a later player-client strategy when first fails', async () => {
       let spawnCount = 0;
       mockSpawn.mockImplementation(() => {
         spawnCount++;
         if (spawnCount === 1) {
-          return createMockChildProcess({ exitCode: 1, stderrData: 'format not available' });
+          return createMockChildProcess({ exitCode: 1, stderrData: 'bot detected' });
         }
         return createMockChildProcess({ audioData: 'audio-ok' });
       });
@@ -401,7 +402,20 @@ describe('PlayDLExtractor', () => {
       expect(spawnCount).toBe(2);
     });
 
-    it('falls back to URL approach when all pipe attempts fail', async () => {
+    it('falls back to Piped API when all pipe attempts fail', async () => {
+      simulateSpawnError('pipe failed');
+      simulateHttpsResponse(200, JSON.stringify({
+        audioStreams: [
+          { url: 'https://pipedproxy.kavin.rocks/audioplayback?id=test', mimeType: 'audio/webm', bitrate: 128000 },
+        ],
+      }));
+
+      // Use 11-char video ID so extractYouTubeId returns a valid ID
+      const result = await extractor.stream({ url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' } as any);
+      expect(result).toBe('https://pipedproxy.kavin.rocks/audioplayback?id=test');
+    });
+
+    it('falls back to URL approach when pipe and Piped fail', async () => {
       simulateSpawnError('pipe failed');
       simulateExecFile('https://cdn.audio.googlevideo.com/audio.webm');
 
@@ -409,19 +423,15 @@ describe('PlayDLExtractor', () => {
       expect(result).toBe('https://cdn.audio.googlevideo.com/audio.webm');
     });
 
-    it('falls back to search when both pipe and URL fail', async () => {
-      // All pipe attempts fail
+    it('falls back to search when pipe, Piped, and URL all fail', async () => {
       simulateSpawnError('pipe failed');
-      // All URL attempts fail
       simulateExecFileError(new Error('url failed'));
 
-      // Now override spawn for the search fallback: first N pipe fails already set,
-      // but search also uses spawn → make later spawn calls succeed
+      // Override spawn: first 3 are pipe attempts (fail), next are search (succeed)
       let spawnCallCount = 0;
-      const totalPipeAttempts = 3; // 1 auth × 3 formats
+      const totalPipeAttempts = 3; // ios, tv_embedded, mweb
       mockSpawn.mockImplementation(() => {
         spawnCallCount++;
-        // First 3 are direct pipe attempts (fail), next are search (succeed)
         if (spawnCallCount <= totalPipeAttempts) {
           return createMockChildProcess({ exitCode: 1, stderrData: 'pipe failed' });
         }

@@ -22,13 +22,10 @@ function detectPythonCmd(): string {
 const YT_DLP_CMD = detectPythonCmd();
 const YT_DLP_ARGS = ['-m', 'yt_dlp'];
 
-// Common args for YouTube extraction — web_creator client bypasses many VPS restrictions
-// and --force-ipv4 avoids broken IPv6 on some servers.
-const YT_COMMON_ARGS = [
-  '--extractor-args', 'youtube:player_client=web_creator,mediaconnect',
-  '--force-ipv4',
-  '--no-check-formats',
-];
+// Common args applied to all YouTube requests.
+// --force-ipv4: avoids broken IPv6 on some VPS.
+// --no-check-formats: accept any format without probing.
+const YT_COMMON_ARGS = ['--force-ipv4', '--no-check-formats'];
 
 // YouTube authentication — prevents "Sign in to confirm you're not a bot" on VPS.
 // Strategy (in priority order):
@@ -93,14 +90,14 @@ async function runYtDlp(...args: string[]): Promise<string> {
  * This avoids --get-url issues where the extracted URL requires auth headers
  * that only yt-dlp provides. yt-dlp handles the download internally.
  */
-function spawnYtDlpStream(auth: string[], fmtArgs: string[], url: string): Promise<PassThrough> {
+function spawnYtDlpStream(auth: string[], extraArgs: string[], url: string): Promise<PassThrough> {
   return new Promise((resolve, reject) => {
     const child = spawn(YT_DLP_CMD, [
       ...YT_DLP_ARGS,
       ...auth,
       ...YT_COMMON_ARGS,
+      ...extraArgs,
       '-o', '-',       // output to stdout
-      ...fmtArgs,
       '--no-warnings',
       '--no-playlist',
       '--no-part',
@@ -169,6 +166,44 @@ function httpsGet(url: string): Promise<string> {
     req.on('error', (err) => reject(err));
     req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
   });
+}
+
+/** Extract YouTube video ID from a URL. Returns null if not a valid YouTube URL. */
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/);
+  return m?.[1] ?? null;
+}
+
+// Public Piped API instances — YouTube proxy, fetches audio from a different IP.
+const PIPED_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://pipedapi.adminforge.de',
+  'https://pipedapi.in.projectsegfault.com',
+];
+
+/**
+ * Try to get an audio stream URL via a public Piped API instance.
+ * Piped proxies audio through its own servers, bypassing VPS IP blocks.
+ */
+async function getAudioUrlFromPiped(videoId: string): Promise<string | null> {
+  for (const instance of PIPED_INSTANCES) {
+    try {
+      const json = await httpsGet(`${instance}/streams/${videoId}`);
+      const data = JSON.parse(json);
+      if (data.audioStreams?.length) {
+        const best = data.audioStreams
+          .filter((s: any) => s.url && s.mimeType?.startsWith('audio/'))
+          .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+        if (best.length) {
+          logger.info(`[Piped] Got audio from ${instance} (${best[0].mimeType}, ${best[0].bitrate}bps)`);
+          return best[0].url;
+        }
+      }
+    } catch (err) {
+      logger.warn(`[Piped] ${instance} failed for ${videoId}: ${(err as Error).message?.slice(0, 100)}`);
+    }
+  }
+  return null;
 }
 
 /**
@@ -544,51 +579,66 @@ export class PlayDLExtractor extends BaseExtractor {
   async stream(info: Track): Promise<ExtractorStreamable> {
     const url = info.url;
 
-    // Format selectors from most to least specific.
-    const fmtStrategies: string[][] = [
-      ['-f', 'bestaudio*/best'],   // audio-containing format (merged or audio-only)
-      ['-f', 'bestaudio/best'],    // strict audio-only, fallback combined
-      [],                           // no selector — let yt-dlp choose (needs ffmpeg to merge)
-    ];
+    // Each strategy is a complete config: auth + player client args.
+    // Different player clients use different YouTube API endpoints with
+    // different bot-detection and format availability.
+    interface PipeStrategy { label: string; auth: string[]; args: string[] }
+    const strategies: PipeStrategy[] = [];
 
-    // ── 1) PIPE approach: spawn yt-dlp and pipe audio directly ──
-    // This is more reliable than --get-url because yt-dlp sends auth
-    // headers during the download, avoiding CDN auth issues.
-    for (const auth of AUTH_STRATEGIES) {
-      for (const fmt of fmtStrategies) {
-        try {
-          return await spawnYtDlpStream(auth, fmt, url);
-        } catch (err) {
-          const errMsg = (err as Error).message?.slice(-400) ?? 'unknown';
-          logger.warn(`[yt-dlp] Pipe failed [auth=${auth.length ? auth[0] : 'none'}, fmt=${fmt[1] ?? 'default'}]: ${errMsg}`);
-        }
-      }
+    if (COOKIE_AUTH.length) {
+      // Cookies: try yt-dlp default client chain, then web_creator
+      strategies.push(
+        { label: 'cookies+default', auth: COOKIE_AUTH, args: [] },
+        { label: 'cookies+web_creator', auth: COOKIE_AUTH, args: ['--extractor-args', 'youtube:player_client=web_creator'] },
+      );
     }
+    // No-auth: try clients known to bypass datacenter bot detection
+    strategies.push(
+      { label: 'ios', auth: NO_AUTH, args: ['--extractor-args', 'youtube:player_client=ios'] },
+      { label: 'tv_embedded', auth: NO_AUTH, args: ['--extractor-args', 'youtube:player_client=tv_embedded'] },
+      { label: 'mweb', auth: NO_AUTH, args: ['--extractor-args', 'youtube:player_client=mweb'] },
+    );
 
-    // ── 2) URL approach fallback (in case pipe doesn't work) ──
-    const urlArgs = ['--get-url', '--no-warnings', '--no-playlist', ...YT_COMMON_ARGS];
-    for (const auth of AUTH_STRATEGIES) {
-      for (const fmt of fmtStrategies) {
-        try {
-          const output = await execYtDlp(auth, [...urlArgs, ...fmt, url]);
-          const lines = output.trim().split('\n').filter(l => l.trim());
-          return lines[lines.length - 1].trim();
-        } catch (err) {
-          const errMsg = (err as Error).message?.slice(-400) ?? 'unknown';
-          logger.warn(`[yt-dlp] URL failed [auth=${auth.length ? auth[0] : 'none'}, fmt=${fmt[1] ?? 'default'}]: ${errMsg}`);
-        }
-      }
-    }
-
-    // ── 3) Search fallback: search YouTube by title + author ──
-    logger.warn(`[yt-dlp] All direct strategies failed for ${url}, trying search fallback`);
-    const searchQuery = `ytsearch1:${info.title} ${info.author}`;
-    for (const auth of AUTH_STRATEGIES) {
+    // ── 1) PIPE approach with different player clients ──
+    for (const s of strategies) {
       try {
-        return await spawnYtDlpStream(auth, ['-f', 'bestaudio*/best'], searchQuery);
+        return await spawnYtDlpStream(s.auth, s.args, url);
       } catch (err) {
         const errMsg = (err as Error).message?.slice(-400) ?? 'unknown';
-        logger.warn(`[yt-dlp] Search fallback failed [auth=${auth.length ? auth[0] : 'none'}]: ${errMsg}`);
+        logger.warn(`[yt-dlp] Pipe failed [${s.label}]: ${errMsg}`);
+      }
+    }
+
+    // ── 2) Piped API fallback (public YouTube proxy — different IP) ──
+    const videoId = extractYouTubeId(url);
+    if (videoId) {
+      logger.info(`[yt-dlp] Trying Piped API fallback for ${videoId}`);
+      const pipedUrl = await getAudioUrlFromPiped(videoId);
+      if (pipedUrl) return pipedUrl;
+    }
+
+    // ── 3) URL approach fallback ──
+    const urlArgs = ['--get-url', '--no-warnings', '--no-playlist', ...YT_COMMON_ARGS];
+    for (const s of strategies.slice(0, 2)) {
+      try {
+        const output = await execYtDlp(s.auth, [...urlArgs, ...s.args, url]);
+        const lines = output.trim().split('\n').filter(l => l.trim());
+        return lines[lines.length - 1].trim();
+      } catch (err) {
+        const errMsg = (err as Error).message?.slice(-400) ?? 'unknown';
+        logger.warn(`[yt-dlp] URL failed [${s.label}]: ${errMsg}`);
+      }
+    }
+
+    // ── 4) Search fallback: search YouTube by title + author ──
+    logger.warn(`[yt-dlp] All direct strategies failed for ${url}, trying search fallback`);
+    const searchQuery = `ytsearch1:${info.title} ${info.author}`;
+    for (const s of strategies.slice(0, 2)) {
+      try {
+        return await spawnYtDlpStream(s.auth, s.args, searchQuery);
+      } catch (err) {
+        const errMsg = (err as Error).message?.slice(-400) ?? 'unknown';
+        logger.warn(`[yt-dlp] Search fallback failed [${s.label}]: ${errMsg}`);
       }
     }
 
