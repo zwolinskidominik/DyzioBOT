@@ -22,6 +22,14 @@ function detectPythonCmd(): string {
 const YT_DLP_CMD = detectPythonCmd();
 const YT_DLP_ARGS = ['-m', 'yt_dlp'];
 
+// Common args for YouTube extraction — web_creator client bypasses many VPS restrictions
+// and --force-ipv4 avoids broken IPv6 on some servers.
+const YT_COMMON_ARGS = [
+  '--extractor-args', 'youtube:player_client=web_creator,mediaconnect',
+  '--force-ipv4',
+  '--no-check-formats',
+];
+
 // YouTube authentication — prevents "Sign in to confirm you're not a bot" on VPS.
 // Strategy (in priority order):
 // 1. cookies.txt file (manual export from browser, expires after weeks)
@@ -90,6 +98,7 @@ function spawnYtDlpStream(auth: string[], fmtArgs: string[], url: string): Promi
     const child = spawn(YT_DLP_CMD, [
       ...YT_DLP_ARGS,
       ...auth,
+      ...YT_COMMON_ARGS,
       '-o', '-',       // output to stdout
       ...fmtArgs,
       '--no-warnings',
@@ -128,7 +137,9 @@ function spawnYtDlpStream(auth: string[], fmtArgs: string[], url: string): Promi
       if (!resolved) {
         resolved = true;
         clearTimeout(timer);
-        reject(new Error(`yt-dlp exit ${code}: ${stderrBuf.trim().slice(0, 300)}`));
+        // Show LAST 500 chars of stderr — actual errors are at the end, progress info at the start
+        const tail = stderrBuf.trim().slice(-500);
+        reject(new Error(`yt-dlp exit ${code}: ${tail}`));
       }
     });
 
@@ -213,6 +224,13 @@ export class PlayDLExtractor extends BaseExtractor {
 
   async activate(): Promise<void> {
     this.protocols = ['https', 'http'];
+    // Log yt-dlp version for easier VPS debugging
+    try {
+      const ver = await execYtDlp([], ['--version']);
+      logger.info(`[yt-dlp] version: ${ver}`);
+    } catch (err) {
+      logger.warn(`[yt-dlp] Could not determine version: ${(err as Error).message?.slice(0, 100)}`);
+    }
   }
 
   async deactivate(): Promise<void> {}
@@ -541,14 +559,14 @@ export class PlayDLExtractor extends BaseExtractor {
         try {
           return await spawnYtDlpStream(auth, fmt, url);
         } catch (err) {
-          const errMsg = (err as Error).message?.split('\n')[0]?.slice(0, 200) ?? 'unknown';
+          const errMsg = (err as Error).message?.slice(-400) ?? 'unknown';
           logger.warn(`[yt-dlp] Pipe failed [auth=${auth.length ? auth[0] : 'none'}, fmt=${fmt[1] ?? 'default'}]: ${errMsg}`);
         }
       }
     }
 
     // ── 2) URL approach fallback (in case pipe doesn't work) ──
-    const urlArgs = ['--get-url', '--no-warnings', '--no-playlist', '--no-check-formats'];
+    const urlArgs = ['--get-url', '--no-warnings', '--no-playlist', ...YT_COMMON_ARGS];
     for (const auth of AUTH_STRATEGIES) {
       for (const fmt of fmtStrategies) {
         try {
@@ -556,7 +574,7 @@ export class PlayDLExtractor extends BaseExtractor {
           const lines = output.trim().split('\n').filter(l => l.trim());
           return lines[lines.length - 1].trim();
         } catch (err) {
-          const errMsg = (err as Error).message?.split('\n')[0]?.slice(0, 200) ?? 'unknown';
+          const errMsg = (err as Error).message?.slice(-400) ?? 'unknown';
           logger.warn(`[yt-dlp] URL failed [auth=${auth.length ? auth[0] : 'none'}, fmt=${fmt[1] ?? 'default'}]: ${errMsg}`);
         }
       }
@@ -569,7 +587,7 @@ export class PlayDLExtractor extends BaseExtractor {
       try {
         return await spawnYtDlpStream(auth, ['-f', 'bestaudio*/best'], searchQuery);
       } catch (err) {
-        const errMsg = (err as Error).message?.split('\n')[0]?.slice(0, 200) ?? 'unknown';
+        const errMsg = (err as Error).message?.slice(-400) ?? 'unknown';
         logger.warn(`[yt-dlp] Search fallback failed [auth=${auth.length ? auth[0] : 'none'}]: ${errMsg}`);
       }
     }

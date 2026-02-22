@@ -179,7 +179,14 @@ describe('PlayDLExtractor', () => {
 
   /* ── activate / deactivate ──────────────────────── */
   describe('activate', () => {
-    it('sets protocols to https and http', async () => {
+    it('sets protocols to https and http and logs yt-dlp version', async () => {
+      simulateExecFile('2025.01.15');
+      await extractor.activate();
+      expect((extractor as any).protocols).toEqual(['https', 'http']);
+    });
+
+    it('activates even if yt-dlp version check fails', async () => {
+      simulateExecFileError(new Error('yt-dlp not found'));
       await extractor.activate();
       expect((extractor as any).protocols).toEqual(['https', 'http']);
     });
