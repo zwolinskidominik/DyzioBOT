@@ -83,10 +83,6 @@ async function runYtDlp(...args: string[]): Promise<string> {
   return execYtDlp(COOKIE_AUTH.length ? COOKIE_AUTH : OAUTH2_AUTH, args);
 }
 
-async function runYtDlpNoAuth(...args: string[]): Promise<string> {
-  return execYtDlp([], args);
-}
-
 /** Helper: perform an HTTPS GET and return the response body as a string. */
 function httpsGet(url: string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
