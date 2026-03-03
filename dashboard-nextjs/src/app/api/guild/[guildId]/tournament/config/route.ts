@@ -79,7 +79,7 @@ export async function POST(
         reactionEmoji,
       },
       { new: true, upsert: true }
-    ).lean();
+    ).lean() as Record<string, unknown> | null;
 
     await createAuditLog({
       guildId,
