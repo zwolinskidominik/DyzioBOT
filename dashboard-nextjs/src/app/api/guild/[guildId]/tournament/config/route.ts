@@ -65,14 +65,21 @@ export async function POST(
     const { guildId } = await params;
     const body = await req.json();
 
+    // Only allow known fields — strip _id, __v, guildId, etc.
+    const { enabled, channelId, messageTemplate, cronSchedule, reactionEmoji } = body;
+
     const updatedConfig = await TournamentConfig.findOneAndUpdate(
       { guildId },
       { 
-        ...body,
-        guildId 
+        guildId,
+        enabled,
+        channelId: channelId || null,
+        messageTemplate,
+        cronSchedule,
+        reactionEmoji,
       },
       { new: true, upsert: true }
-    );
+    ).lean();
 
     await createAuditLog({
       guildId,
@@ -82,12 +89,19 @@ export async function POST(
       module: 'tournament',
       description: 'Zaktualizowano konfigurację turnieju',
       metadata: {
-        enabled: body.enabled,
-        cronSchedule: body.cronSchedule,
+        enabled,
+        cronSchedule,
       },
     });
 
-    return NextResponse.json(updatedConfig);
+    return NextResponse.json({
+      guildId,
+      enabled: updatedConfig?.enabled ?? false,
+      channelId: updatedConfig?.channelId || null,
+      messageTemplate: updatedConfig?.messageTemplate || '',
+      cronSchedule: updatedConfig?.cronSchedule || '25 20 * * 1',
+      reactionEmoji: updatedConfig?.reactionEmoji || '🎮',
+    });
   } catch (error) {
     console.error('Error updating tournament config:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -26,6 +26,22 @@ async function getPrefix(guildId: string): Promise<string> {
   }
 }
 
+/** Calculate total duration string from tracks with duration strings like "3:42" or "1:02:30". */
+function calculateTotalDuration(tracks: { duration: string }[]): string {
+  let totalSeconds = 0;
+  for (const t of tracks) {
+    const parts = t.duration.split(':').map(Number);
+    if (parts.length === 3) totalSeconds += parts[0] * 3600 + parts[1] * 60 + parts[2];
+    else if (parts.length === 2) totalSeconds += parts[0] * 60 + parts[1];
+  }
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return h > 0
+    ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+    : `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export default async function handleMusicCommands(message: Message): Promise<void> {
   if (message.author.bot) return;
   if (!message.guild) return;
@@ -145,7 +161,8 @@ async function handlePlay(message: Message, args: string[], player: Player): Pro
     });
 
     if (!searchResult.hasTracks()) {
-      await msg.edit('❌ Nie znaleziono utworu.');
+      await msg.delete().catch(() => {});
+      await message.reply('❌ Nie znaleziono utworu.');
       return;
     }
 
@@ -165,32 +182,22 @@ async function handlePlay(message: Message, args: string[], player: Player): Pro
     if (!queue.connection) {
       await queue.connect(message.member.voice.channel);
     } else if (queue.channel && message.member.voice.channel.id !== queue.channel.id) {
-      await message.reply('❌ Bot jest już na innym kanale głosowym! Dołącz do tego samego kanału lub poczekaj aż skończy.');
+      const errMsg = await message.reply('❌ Bot jest już na innym kanale głosowym! Dołącz do tego samego kanału lub poczekaj aż skończy.');
+      setTimeout(() => errMsg.delete().catch(() => {}), 7000);
       return;
     }
 
     // Check queue size limit
     if (config?.maxQueueSize && queue.tracks.size >= config.maxQueueSize) {
-      await msg.edit(`❌ Kolejka jest pełna! Maksymalna liczba utworów: ${config.maxQueueSize}`);
+      await msg.delete().catch(() => {});
+      await message.reply(`❌ Kolejka jest pełna! Maksymalna liczba utworów: ${config.maxQueueSize}`);
       return;
     }
 
     if (searchResult.playlist) {
       queue.addTrack(searchResult.tracks);
 
-      // Calculate total playlist duration
-      let totalSeconds = 0;
-      for (const t of searchResult.tracks) {
-        const parts = t.duration.split(':').map(Number);
-        if (parts.length === 3) totalSeconds += parts[0] * 3600 + parts[1] * 60 + parts[2];
-        else if (parts.length === 2) totalSeconds += parts[0] * 60 + parts[1];
-      }
-      const totalH = Math.floor(totalSeconds / 3600);
-      const totalM = Math.floor((totalSeconds % 3600) / 60);
-      const totalS = Math.floor(totalSeconds % 60);
-      const totalDuration = totalH > 0
-        ? `${totalH}:${totalM.toString().padStart(2, '0')}:${totalS.toString().padStart(2, '0')}`
-        : `${totalM}:${totalS.toString().padStart(2, '0')}`;
+      const totalDuration = calculateTotalDuration(searchResult.tracks);
 
       const firstTrack = searchResult.tracks[0];
       const playlistEmbed = createBaseEmbed({
@@ -204,7 +211,8 @@ async function handlePlay(message: Message, args: string[], player: Player): Pro
         { name: 'Utworów', value: `${searchResult.tracks.length}`, inline: true }
       );
 
-      await msg.edit({ content: null, embeds: [playlistEmbed] });
+      await msg.delete().catch(() => {});
+      await message.reply({ embeds: [playlistEmbed] });
     } else {
       const track = searchResult.tracks[0];
       
@@ -212,25 +220,34 @@ async function handlePlay(message: Message, args: string[], player: Player): Pro
       if (config?.maxSongDuration && config.maxSongDuration > 0) {
         const durationSeconds = track.durationMS / 1000;
         if (durationSeconds > config.maxSongDuration) {
-          await msg.edit(`❌ Utwór jest za długi! Maksymalna długość: ${Math.floor(config.maxSongDuration / 60)} minut.`);
+          await msg.delete().catch(() => {});
+          await message.reply(`❌ Utwór jest za długi! Maksymalna długość: ${Math.floor(config.maxSongDuration / 60)} minut.`);
           return;
         }
       }
 
+      const wasPlaying = queue.isPlaying();
       queue.addTrack(track);
 
-      const trackEmbed = createBaseEmbed({
-        color: COLORS.MUSIC,
-        title: 'Dodano do kolejki',
-        description: `[${track.title}](${track.url})`,
-        thumbnail: track.thumbnail,
-        footerText: `Dodane przez ${message.author.username}`,
-      }).addFields(
-        { name: 'Autor', value: track.author, inline: true },
-        { name: 'Długość', value: track.duration, inline: true }
-      );
+      await msg.delete().catch(() => {});
 
-      await msg.edit({ content: null, embeds: [trackEmbed] });
+      if (wasPlaying) {
+        // Queue already playing — show full embed since "Teraz odtwarzane" won't appear
+        const trackEmbed = createBaseEmbed({
+          color: COLORS.MUSIC,
+          title: 'Dodano do kolejki',
+          description: `[${track.title}](${track.url})`,
+          thumbnail: track.thumbnail,
+          footerText: `Dodane przez ${message.author.username}`,
+        }).addFields(
+          { name: 'Autor', value: track.author, inline: true },
+          { name: 'Długość', value: track.duration, inline: true }
+        );
+        await message.reply({ embeds: [trackEmbed] });
+      } else {
+        // First track — compact format since "Teraz odtwarzane" will follow
+        await message.reply(`✅ Dodano do kolejki: **${track.title}** by **${track.author}** \`[${track.duration}]\``);
+      }
     }
 
     if (!queue.isPlaying()) {
@@ -238,7 +255,8 @@ async function handlePlay(message: Message, args: string[], player: Player): Pro
     }
   } catch (error) {
     logger.error('Play error:', error);
-    await msg.edit(`❌ Wystąpił błąd podczas odtwarzania: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
+    await msg.delete().catch(() => {});
+    await message.reply(`❌ Wystąpił błąd podczas odtwarzania: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
   }
 }
 

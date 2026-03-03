@@ -106,6 +106,24 @@ const MusicConfigSchema = new mongoose.Schema({
 }, { collection: 'musicconfigs' });
 const MusicConfig = mongoose.models.MusicConfig || mongoose.model('MusicConfig', MusicConfigSchema);
 
+const AntiSpamConfigSchema = new mongoose.Schema({
+  guildId: String,
+  enabled: Boolean,
+}, { collection: 'antispamconfigs' });
+const AntiSpamModuleConfig = mongoose.models.AntiSpamModuleConfig || mongoose.model('AntiSpamModuleConfig', AntiSpamConfigSchema);
+
+const DisboardConfigSchema = new mongoose.Schema({
+  guildId: String,
+  enabled: Boolean,
+}, { collection: 'disboardconfigs' });
+const DisboardModuleConfig = mongoose.models.DisboardModuleConfig || mongoose.model('DisboardModuleConfig', DisboardConfigSchema);
+
+const InviteTrackerConfigSchema = new mongoose.Schema({
+  guildId: String,
+  enabled: Boolean,
+}, { collection: 'invitetrackerconfigs' });
+const InviteTrackerModuleConfig = mongoose.models.InviteTrackerModuleConfig || mongoose.model('InviteTrackerModuleConfig', InviteTrackerConfigSchema);
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -136,6 +154,7 @@ export async function GET(
       tournament,
       giveaway,
       music,
+      antiSpam,
     ] = await Promise.all([
       BirthdayConfig.findOne({ guildId }).lean(),
       GreetingsConfig.findOne({ guildId }).lean(),
@@ -153,7 +172,11 @@ export async function GET(
       TournamentConfig.findOne({ guildId }).lean(),
       GiveawayConfig.findOne({ guildId }).lean(),
       MusicConfig.findOne({ guildId }).lean(),
+      AntiSpamModuleConfig.findOne({ guildId }).lean(),
     ]);
+
+    const disboard = await DisboardModuleConfig.findOne({ guildId }).lean();
+    const inviteTracker = await InviteTrackerModuleConfig.findOne({ guildId }).lean();
 
     const status = {
       birthdays: (birthday as any)?.enabled === true,
@@ -172,6 +195,9 @@ export async function GET(
       "reaction-roles": (reactionRoles as any)?.enabled === true,
       tournament: (tournament as any)?.enabled === true,
       giveaway: (giveaway as any)?.enabled === true,
+      "anti-spam": (antiSpam as any)?.enabled === true,
+      disboard: (disboard as any)?.enabled === true,
+      "invite-tracker": (inviteTracker as any)?.enabled === true,
     };
 
     return NextResponse.json(status);

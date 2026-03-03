@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, ArrowLeft, Gamepad2, Hash } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Gamepad2, Hash, Eye } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +16,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import VariableInserter from "@/components/VariableInserter";
+import { DiscordMessagePreview } from "@/components/DiscordMessagePreview";
 
 interface TournamentConfig {
   guildId: string;
@@ -34,6 +35,14 @@ export default function TournamentPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [channels, setChannels] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
+  const [guildIds, setGuildIds] = useState<{
+    tournamentParticipantsRoleId: string;
+    tournamentOrganizerRoleId: string;
+    organizerUserIds: string[];
+    voiceChannelId: string;
+  } | null>(null);
   
   const [config, setConfig] = useState<TournamentConfig>({
     guildId,
@@ -67,9 +76,12 @@ export default function TournamentPage() {
       try {
         setLoading(true);
         
-        const [configResponse, channelsResponse] = await Promise.all([
+        const [configResponse, channelsResponse, rolesResponse, membersResponse, guildIdsResponse] = await Promise.all([
           fetchWithAuth(`/api/guild/${guildId}/tournament/config`),
-          fetchWithAuth(`/api/guild/${guildId}/channels`)
+          fetchWithAuth(`/api/guild/${guildId}/channels`),
+          fetchWithAuth(`/api/guild/${guildId}/roles`),
+          fetchWithAuth(`/api/discord/guild/${guildId}/members`),
+          fetchWithAuth(`/api/guild/${guildId}/tournament/guild-ids`),
         ]);
         
         if (configResponse.ok) {
@@ -81,6 +93,18 @@ export default function TournamentPage() {
         if (channelsResponse.ok) {
           const channelsData = await channelsResponse.json();
           setChannels(channelsData.filter((ch: any) => ch.type === 0 || ch.type === 5));
+        }
+
+        if (rolesResponse.ok) {
+          setRoles(await rolesResponse.json());
+        }
+
+        if (membersResponse.ok) {
+          setMembers(await membersResponse.json());
+        }
+
+        if (guildIdsResponse.ok) {
+          setGuildIds(await guildIdsResponse.json());
         }
         
         setLoading(false);
@@ -100,18 +124,32 @@ export default function TournamentPage() {
     try {
       setSaving(true);
 
-      const response = await fetch(`/api/guild/${guildId}/tournament/config`, {
+      const response = await fetchWithAuth(`/api/guild/${guildId}/tournament/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
+        body: JSON.stringify({
+          enabled: config.enabled,
+          channelId: config.channelId,
+          messageTemplate: config.messageTemplate,
+          cronSchedule: config.cronSchedule,
+          reactionEmoji: config.reactionEmoji,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save tournament config');
+        const err = await response.json().catch(() => null);
+        throw new Error(err?.error || 'Failed to save tournament config');
       }
 
       const savedConfig = await response.json();
-      setConfig(savedConfig);
+      setConfig({
+        guildId,
+        enabled: savedConfig.enabled ?? false,
+        channelId: savedConfig.channelId || null,
+        messageTemplate: savedConfig.messageTemplate || '',
+        cronSchedule: savedConfig.cronSchedule || '25 20 * * 1',
+        reactionEmoji: savedConfig.reactionEmoji || '🎮',
+      });
       toast.success('Konfiguracja turnieju została zapisana!');
     } catch (error) {
       console.error('Error saving tournament config:', error);
@@ -230,6 +268,64 @@ export default function TournamentPage() {
                 <p className="text-xs text-muted-foreground">
                   Wiadomość wspiera markdown Discord. Użyj zmiennych wymienionych powyżej.
                 </p>
+
+                {/* Live preview */}
+                {!loading && config.messageTemplate && (() => {
+                  // Build lookup maps
+                  const roleMap: Record<string, { name: string; color?: string }> = {};
+                  for (const r of roles) {
+                    const hex = r.color ? `#${r.color.toString(16).padStart(6, '0')}` : undefined;
+                    roleMap[r.id] = { name: r.name, color: hex === '#000000' ? undefined : hex };
+                  }
+
+                  const userMap: Record<string, string> = {};
+                  for (const m of members) {
+                    userMap[m.id] = m.nickname || m.username;
+                  }
+
+                  const channelMap: Record<string, string> = {};
+                  for (const c of channels) {
+                    channelMap[c.id] = c.name;
+                  }
+
+                  // Resolve template variables to Discord mention syntax
+                  let preview = config.messageTemplate;
+                  if (guildIds) {
+                    const roleMention = guildIds.tournamentParticipantsRoleId
+                      ? `<@&${guildIds.tournamentParticipantsRoleId}>`
+                      : '@Uczestnik turnieju';
+                    const organizerRoleMention = guildIds.tournamentOrganizerRoleId
+                      ? `<@&${guildIds.tournamentOrganizerRoleId}>`
+                      : '@Organizator turnieju';
+                    const organizerUserPings = guildIds.organizerUserIds.length
+                      ? guildIds.organizerUserIds.map(id => `<@${id}>`).join(' ')
+                      : '@Organizator1 @Organizator2';
+                    const voiceChannelLink = guildIds.voiceChannelId
+                      ? `https://discord.com/channels/${guildId}/${guildIds.voiceChannelId}`
+                      : '**kanale głosowym CS2**';
+
+                    preview = preview
+                      .replace(/{roleMention}/g, roleMention)
+                      .replace(/{organizerRoleMention}/g, organizerRoleMention)
+                      .replace(/{organizerUserPings}/g, organizerUserPings)
+                      .replace(/{voiceChannelLink}/g, voiceChannelLink);
+                  }
+
+                  return (
+                    <div className="space-y-2 mt-4">
+                      <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Eye className="h-3.5 w-3.5" />
+                        Podgląd wiadomości
+                      </Label>
+                      <DiscordMessagePreview
+                        content={preview}
+                        roles={roleMap}
+                        users={userMap}
+                        channels={channelMap}
+                      />
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Channel Selection */}

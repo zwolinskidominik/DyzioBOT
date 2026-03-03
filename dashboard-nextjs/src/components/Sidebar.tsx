@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, Home, Cake, Hand, Trophy, UserPlus, Lightbulb, Ticket, HelpCircle, Tv, Smile, FileText, BarChart3, Activity, Radio, ScrollText, Gamepad2, Music } from "lucide-react";
+import { ChevronDown, Home, Cake, Hand, Trophy, UserPlus, UserCheck, Lightbulb, Ticket, HelpCircle, Tv, Smile, FileText, BarChart3, Activity, Radio, ScrollText, Gamepad2, Music, Gift, ShieldAlert, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { prefetchGuildData } from "@/lib/cache";
 
@@ -34,7 +34,11 @@ const modules = [
   { id: "suggestions", name: "Sugestie", icon: Lightbulb, href: "/suggestions" },
   { id: "tournament", name: "Turniej CS2", icon: Gamepad2, href: "/tournament" },
   { id: "tickets", name: "Tickety", icon: Ticket, href: "/tickets" },
+  { id: "giveaway", name: "Giveaway", icon: Gift, href: "/giveaway" },
   { id: "reaction-roles", name: "Role za reakcje", icon: Smile, href: "/reaction-roles" },
+  { id: "anti-spam", name: "Anti-Spam", icon: ShieldAlert, href: "/anti-spam" },
+  { id: "invite-tracker", name: "Invite Tracker", icon: UserCheck, href: "/invite-tracker" },
+  { id: "disboard", name: "Disboard", icon: Star, href: "/disboard" },
   { id: "logs", name: "Logi", icon: FileText, href: "/logs" },
   { id: "audit-logs", name: "Logi Systemowe", icon: ScrollText, href: "/audit-logs" },
 ];
@@ -196,7 +200,7 @@ export default function Sidebar() {
                 <button
                   onClick={() => {
                     setGuildOpen(false);
-                    window.open(`https://discord.com/api/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1119327417237000285"}&permissions=8&scope=bot%20applications.commands`, "_blank");
+                    window.open(`https://discord.com/api/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID ?? ""}&permissions=8&scope=bot%20applications.commands`, "_blank");
                   }}
                   className="w-full flex items-center gap-3 p-3 hover:bg-accent transition-colors text-bot-light"
                 >

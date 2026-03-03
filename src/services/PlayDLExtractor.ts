@@ -356,6 +356,21 @@ async function resolveSpotifyQuery(spotifyUrl: string): Promise<string | null> {
   }
 }
 
+/** Parsed query metadata used to route handle() logic. */
+interface QueryInfo {
+  original: string;
+  normalized: string;
+  isURL: boolean;
+  hasVideoId: boolean;
+  hasList: boolean;
+  isSpotifyPlaylist: boolean;
+  isSoundCloudSet: boolean;
+  isSpotifyTrack: boolean;
+  isSoundCloudTrack: boolean;
+  isPlaylistOnly: boolean;
+  isVideoWithPlaylist: boolean;
+}
+
 export class PlayDLExtractor extends BaseExtractor {
   static identifier = 'com.playdl.extractor' as const;
 
@@ -434,40 +449,52 @@ export class PlayDLExtractor extends BaseExtractor {
     return false;
   }
 
+  /** Parse and normalize a query string, detecting URL type and platform. */
+  private parseQuery(query: string): QueryInfo {
+    const looksLikeURL = query.startsWith('http://') || query.startsWith('https://')
+      || query.startsWith('//')
+      || query.includes('youtube.com/') || query.includes('youtu.be/')
+      || query.includes('open.spotify.com/')
+      || query.includes('soundcloud.com/');
+
+    let normalized = query;
+    if (looksLikeURL && !query.startsWith('http://') && !query.startsWith('https://')) {
+      normalized = query.startsWith('//') ? 'https:' + query : 'https://' + query;
+    }
+
+    const hasVideoId = query.includes('watch?v=') || query.includes('youtu.be/');
+    const hasList = query.includes('list=');
+    const isSpotifyPlaylist = normalized.includes('open.spotify.com/playlist/') || normalized.includes('open.spotify.com/album/');
+    const isSoundCloudSet = normalized.includes('soundcloud.com/') && normalized.includes('/sets/');
+    const isSpotifyTrack = normalized.includes('open.spotify.com/track/');
+    const isSoundCloudTrack = normalized.includes('soundcloud.com/') && !normalized.includes('/sets/');
+    const isExternalPlaylist = isSpotifyPlaylist || isSoundCloudSet;
+
+    return {
+      original: query,
+      normalized,
+      isURL: looksLikeURL,
+      hasVideoId,
+      hasList,
+      isSpotifyPlaylist,
+      isSoundCloudSet,
+      isSpotifyTrack,
+      isSoundCloudTrack,
+      isPlaylistOnly: looksLikeURL && ((hasList && !hasVideoId) || isExternalPlaylist),
+      isVideoWithPlaylist: looksLikeURL && hasVideoId && hasList,
+    };
+  }
+
   async handle(query: string, context: ExtractorSearchContext): Promise<ExtractorInfo> {
     const tracks: Track[] = [];
     let playlist: Playlist | null = null;
 
     try {
-      // discord-player strips "https:" from URLs, so we may receive:
-      //   "//open.spotify.com/track/..." or "//www.youtube.com/watch?v=..."
-      // Detect URL by checking multiple patterns
-      const looksLikeURL = query.startsWith('http://') || query.startsWith('https://') 
-        || query.startsWith('//')
-        || query.includes('youtube.com/') || query.includes('youtu.be/')
-        || query.includes('open.spotify.com/')
-        || query.includes('soundcloud.com/');
-      const isURL = looksLikeURL;
-      
-      // Normalize: ensure URL has proper protocol prefix for yt-dlp
-      // discord-player strips "https:" but leaves "//www.youtube.com/..."
-      let normalizedQuery = query;
-      if (isURL && !query.startsWith('http://') && !query.startsWith('https://')) {
-        if (query.startsWith('//')) {
-          normalizedQuery = 'https:' + query;
-        } else {
-          normalizedQuery = 'https://' + query;
-        }
-      }
-      
-      const hasVideoId = query.includes('watch?v=') || query.includes('youtu.be/');
-      const hasList = query.includes('list=');
-      // Detect Spotify/SoundCloud playlists & albums
-      const isSpotifyPlaylist = normalizedQuery.includes('open.spotify.com/playlist/') || normalizedQuery.includes('open.spotify.com/album/');
-      const isSoundCloudSet = normalizedQuery.includes('soundcloud.com/') && normalizedQuery.includes('/sets/');
-      const isExternalPlaylist = isSpotifyPlaylist || isSoundCloudSet;
-      const isPlaylistOnly = isURL && ((hasList && !hasVideoId) || isExternalPlaylist);
-      const isVideoWithPlaylist = isURL && hasVideoId && hasList;
+      const {
+        normalized: normalizedQuery, isURL, hasVideoId,
+        isSpotifyPlaylist, isSoundCloudSet, isPlaylistOnly, isVideoWithPlaylist,
+        isSpotifyTrack, isSoundCloudTrack,
+      } = this.parseQuery(query);
 
       if (isPlaylistOnly || isVideoWithPlaylist) {
         // For Spotify playlists/albums, resolve the name and search YouTube
@@ -611,10 +638,6 @@ export class PlayDLExtractor extends BaseExtractor {
           }
         }
       } else if (isURL) {
-        // Detect Spotify / SoundCloud single-track URLs
-        const isSpotifyTrack = normalizedQuery.includes('open.spotify.com/track/');
-        const isSoundCloudTrack = normalizedQuery.includes('soundcloud.com/') && !normalizedQuery.includes('/sets/');
-
         if (isSpotifyTrack) {
           const searchQuery = await resolveSpotifyQuery(normalizedQuery);
           if (searchQuery) {

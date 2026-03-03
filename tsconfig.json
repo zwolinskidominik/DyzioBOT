@@ -17,8 +17,9 @@
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "baseUrl": ".",
-    "ignoreDeprecations": "5.0"
+    "types": ["node", "jest"],
+    "ignoreDeprecations": "6.0"
   },
-  "include": ["src"],
+  "include": ["src", "tests"],
   "exclude": ["node_modules"]
 }

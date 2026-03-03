@@ -7,9 +7,8 @@ import { getActiveStreamers, setLiveStatus } from '../../services/twitchService'
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
-import { env } from '../../config';
-import { AppTokenAuthProvider } from '@twurple/auth';
-import { ApiClient, HelixStream, HelixUser } from '@twurple/api';
+import { getTwitchClient } from '../../utils/twitchApi';
+import { HelixStream, HelixUser } from '@twurple/api';
 import { schedule } from 'node-cron';
 import { CRON } from '../../config/constants/cron';
 import { promises as fs } from 'fs';
@@ -21,13 +20,7 @@ const THUMBNAIL_HEIGHT = '720';
 const THUMBNAILS_DIR = path.resolve(__dirname, '../../../assets/thumbnails');
 const MAX_THUMBNAILS = 100;
 
-const { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET } = env();
-
-const authProvider = new AppTokenAuthProvider(
-  TWITCH_CLIENT_ID as string,
-  TWITCH_CLIENT_SECRET as string
-);
-const twitchClient = new ApiClient({ authProvider });
+const twitchClient = getTwitchClient();
 
 export default async function run(client: Client): Promise<void> {
   await ensureThumbnailsDirectory().catch((error) =>
@@ -196,6 +189,11 @@ async function sendStreamNotification(
 }
 
 async function checkStreams(client: Client): Promise<void> {
+  if (!twitchClient) {
+    logger.warn('Twitch API niedostępne – pomijam sprawdzanie streamów.');
+    return;
+  }
+
   const streamersResult = await getActiveStreamers();
   if (!streamersResult.ok) return;
   const streamers = streamersResult.data;

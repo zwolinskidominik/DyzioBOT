@@ -96,13 +96,6 @@ export class CanvasLeaderboardCard {
     
     this.ctx.textAlign = 'center';
 
-    const page = this.options.page ?? 1;
-    if (page > 1) {
-      this.ctx.fillStyle = this.colors.textSecondary;
-      this.ctx.font = '16px Inter, "Segoe UI", Arial, sans-serif';
-      this.ctx.fillText(`Strona ${page}`, this.width / 2, 82);
-    }
-
     this.ctx.strokeStyle = this.colors.primary;
     this.ctx.lineWidth = 3;
     this.ctx.beginPath();

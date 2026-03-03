@@ -21,9 +21,16 @@ export default function run(client: Client) {
         
         if (cfg?.ignoredChannels?.includes(channel.id)) continue;
 
+        // Count non-bot humans on the channel (muted/deafened still count as present)
+        const humanCount = [...channel.members.values()].filter(
+          (m) => !m.user.bot
+        ).length;
+
+        // Require at least 2 humans to prevent solo XP farming
+        if (humanCount < 2) continue;
+
         for (const member of channel.members.values()) {
           if (member.user.bot) continue;
-          if (member.voice.serverMute || member.voice.serverDeaf) continue;
           
           if (cfg?.ignoredRoles?.some((roleId) => member.roles.cache.has(roleId))) continue;
 

@@ -142,7 +142,10 @@ jest.mock('../../../src/models/QuestionConfiguration', () => ({
 }));
 
 jest.mock('../../../src/models/TournamentConfig', () => ({
-  TournamentConfigModel: { findOne: jest.fn() },
+  TournamentConfigModel: {
+    find: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+    findOne: jest.fn().mockResolvedValue(null),
+  },
 }));
 
 const mockGetActiveStreamers = jest.fn();
@@ -612,14 +615,15 @@ describe('questionScheduler', () => {
    ═══════════════════════════════════════════════════════════════════ */
 describe('sendTournamentRules', () => {
   it('does nothing when no tournament config', async () => {
-    (TournamentConfigModel.findOne as jest.Mock).mockResolvedValue(null);
+    (TournamentConfigModel.find as jest.Mock).mockReturnValue({ lean: jest.fn().mockResolvedValue([]) });
     const client = makeClient();
     await sendTournamentRules(client as any);
-    // No cron scheduled for tournament (beyond outer setup)
   });
 
   it('does nothing when tournament disabled', async () => {
-    (TournamentConfigModel.findOne as jest.Mock).mockResolvedValue({ enabled: false });
+    (TournamentConfigModel.find as jest.Mock).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([{ guildId: 'g1', enabled: false }]),
+    });
     const client = makeClient();
     await sendTournamentRules(client as any);
   });
@@ -634,22 +638,48 @@ describe('sendTournamentRules', () => {
       send: sendFn,
     });
 
-    (TournamentConfigModel.findOne as jest.Mock)
-      .mockResolvedValueOnce({ enabled: true, cronSchedule: '0 18 * * 5', channelId: 'tCh1', reactionEmoji: '🎮' })
-      .mockResolvedValueOnce({ enabled: true, messageTemplate: 'Rules: {roleMention} in {voiceChannel}', reactionEmoji: '🎮' });
+    // syncSchedules reads all configs via find().lean()
+    (TournamentConfigModel.find as jest.Mock).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([
+        { guildId: 'g1', enabled: true, cronSchedule: '0 18 * * 5', channelId: 'tCh1', reactionEmoji: '🎮' },
+      ]),
+    });
+
+    // sendTournamentMessage re-reads from DB via findOne({ guildId })
+    (TournamentConfigModel.findOne as jest.Mock).mockResolvedValue({
+      guildId: 'g1',
+      enabled: true,
+      channelId: 'tCh1',
+      messageTemplate: 'Rules: {roleMention}',
+      reactionEmoji: '🎮',
+    });
 
     await sendTournamentRules(client as any);
-    // A cron was scheduled - invoke it
-    const lastCb = cronCallbacks[cronCallbacks.length - 1];
-    if (lastCb) await lastCb();
+
+    // The per-guild cron was scheduled — invoke it
+    const guildCb = cronCallbacks.find((_cb, i) => {
+      // Find the callback for the guild cron (not the '* * * * *' sync cron)
+      return i >= 0;
+    });
+    if (guildCb) await guildCb();
     expect(sendFn).toHaveBeenCalled();
   });
 
   it('handles missing channel in callback', async () => {
     const client = makeClient();
-    (TournamentConfigModel.findOne as jest.Mock)
-      .mockResolvedValueOnce({ enabled: true, channelId: null, cronSchedule: '0 0 * * *' })
-      .mockResolvedValueOnce({ enabled: true, channelId: null, messageTemplate: 'test' });
+
+    (TournamentConfigModel.find as jest.Mock).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([
+        { guildId: 'g1', enabled: true, channelId: null, cronSchedule: '0 0 * * *' },
+      ]),
+    });
+    (TournamentConfigModel.findOne as jest.Mock).mockResolvedValue({
+      guildId: 'g1',
+      enabled: true,
+      channelId: null,
+      messageTemplate: 'test',
+    });
+
     await sendTournamentRules(client as any);
     const lastCb = cronCallbacks[cronCallbacks.length - 1];
     if (lastCb) await lastCb();
@@ -660,7 +690,37 @@ describe('sendTournamentRules', () => {
    vcMinuteTick
    ═══════════════════════════════════════════════════════════════════ */
 describe('vcMinuteTick', () => {
-  it('adds XP for voice channel members', async () => {
+  it('adds XP for voice channel members when at least 2 eligible users', async () => {
+    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
+    const member1 = {
+      id: 'u1',
+      user: { bot: false },
+      voice: { serverMute: false, serverDeaf: false },
+      roles: { cache: { has: jest.fn().mockReturnValue(false) } },
+    };
+    const member2 = {
+      id: 'u2',
+      user: { bot: false },
+      voice: { serverMute: false, serverDeaf: false },
+      roles: { cache: { has: jest.fn().mockReturnValue(false) } },
+    };
+    const voiceChannel = {
+      id: 'vc1',
+      isVoiceBased: () => true,
+      members: new Map([['u1', member1], ['u2', member2]]),
+    };
+    const guild = {
+      id: 'g1',
+      afkChannelId: 'afk1',
+      channels: { cache: new Map([['vc1', voiceChannel]]) },
+    };
+    const client = makeClient([guild]);
+    vcMinuteTick(client as any);
+    await cronCallbacks[cronCallbacks.length - 1]();
+    expect(mockXpCacheAddVcMin).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips solo user in voice channel (anti-farm)', async () => {
     mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
     const member = {
       id: 'u1',
@@ -681,14 +741,44 @@ describe('vcMinuteTick', () => {
     const client = makeClient([guild]);
     vcMinuteTick(client as any);
     await cronCallbacks[cronCallbacks.length - 1]();
-    expect(mockXpCacheAddVcMin).toHaveBeenCalled();
+    expect(mockXpCacheAddVcMin).not.toHaveBeenCalled();
+  });
+
+  it('skips user alone with bots (only 1 eligible human)', async () => {
+    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
+    const human = {
+      id: 'u1',
+      user: { bot: false },
+      voice: { serverMute: false, serverDeaf: false },
+      roles: { cache: { has: jest.fn().mockReturnValue(false) } },
+    };
+    const bot = {
+      id: 'b1',
+      user: { bot: true },
+      voice: { serverMute: false, serverDeaf: false },
+      roles: { cache: { has: jest.fn().mockReturnValue(false) } },
+    };
+    const voiceChannel = {
+      id: 'vc1',
+      isVoiceBased: () => true,
+      members: new Map([['u1', human], ['b1', bot]]),
+    };
+    const guild = {
+      id: 'g1',
+      afkChannelId: 'afk1',
+      channels: { cache: new Map([['vc1', voiceChannel]]) },
+    };
+    const client = makeClient([guild]);
+    vcMinuteTick(client as any);
+    await cronCallbacks[cronCallbacks.length - 1]();
+    expect(mockXpCacheAddVcMin).not.toHaveBeenCalled();
   });
 
   it('skips bots and muted members', async () => {
     mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
-    const botMember = { id: 'b1', user: { bot: true }, voice: { serverMute: false, serverDeaf: false }, roles: { cache: { has: jest.fn() } } };
-    const mutedMember = { id: 'u2', user: { bot: false }, voice: { serverMute: true, serverDeaf: false }, roles: { cache: { has: jest.fn() } } };
-    const deafMember = { id: 'u3', user: { bot: false }, voice: { serverMute: false, serverDeaf: true }, roles: { cache: { has: jest.fn() } } };
+    const botMember = { id: 'b1', user: { bot: true }, voice: { serverMute: false, serverDeaf: false }, roles: { cache: { has: jest.fn().mockReturnValue(false) } } };
+    const mutedMember = { id: 'u2', user: { bot: false }, voice: { serverMute: true, serverDeaf: false }, roles: { cache: { has: jest.fn().mockReturnValue(false) } } };
+    const deafMember = { id: 'u3', user: { bot: false }, voice: { serverMute: false, serverDeaf: true }, roles: { cache: { has: jest.fn().mockReturnValue(false) } } };
     const voiceChannel = {
       id: 'vc1',
       isVoiceBased: () => true,
@@ -702,7 +792,41 @@ describe('vcMinuteTick', () => {
     const client = makeClient([guild]);
     vcMinuteTick(client as any);
     await cronCallbacks[cronCallbacks.length - 1]();
-    expect(mockXpCacheAddVcMin).not.toHaveBeenCalled();
+    // 2 humans (muted+deaf) → both get XP, bot is skipped
+    expect(mockXpCacheAddVcMin).toHaveBeenCalledTimes(2);
+  });
+
+  it('awards XP to both users including muted when 2 humans present', async () => {
+    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
+    const normalMember = {
+      id: 'u1',
+      user: { bot: false },
+      voice: { serverMute: false, serverDeaf: false },
+      roles: { cache: { has: jest.fn().mockReturnValue(false) } },
+    };
+    const mutedMember = {
+      id: 'u2',
+      user: { bot: false },
+      voice: { serverMute: true, serverDeaf: false },
+      roles: { cache: { has: jest.fn().mockReturnValue(false) } },
+    };
+    const voiceChannel = {
+      id: 'vc1',
+      isVoiceBased: () => true,
+      members: new Map([['u1', normalMember], ['u2', mutedMember]]),
+    };
+    const guild = {
+      id: 'g1',
+      afkChannelId: 'afk1',
+      channels: { cache: new Map([['vc1', voiceChannel]]) },
+    };
+    const client = makeClient([guild]);
+    vcMinuteTick(client as any);
+    await cronCallbacks[cronCallbacks.length - 1]();
+    // Both humans get XP — muted/deaf does not block XP
+    expect(mockXpCacheAddVcMin).toHaveBeenCalledTimes(2);
+    expect(mockXpCacheAddVcMin).toHaveBeenCalledWith('g1', 'u1', expect.any(Number));
+    expect(mockXpCacheAddVcMin).toHaveBeenCalledWith('g1', 'u2', expect.any(Number));
   });
 
   it('skips AFK channel and ignored channels', async () => {

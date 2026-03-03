@@ -101,7 +101,10 @@ jest.mock('../../../src/models/QuestionConfiguration', () => ({
 }));
 
 jest.mock('../../../src/models/TournamentConfig', () => ({
-  TournamentConfigModel: { findOne: jest.fn().mockResolvedValue(null) },
+  TournamentConfigModel: {
+    find: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+    findOne: jest.fn().mockResolvedValue(null),
+  },
 }));
 
 jest.mock('../../../src/config/bot', () => ({
@@ -304,9 +307,16 @@ describe('clientReady / sendTournamentRules', () => {
     run = (await import('../../../src/events/clientReady/sendTournamentRules')).default;
   });
 
-  it('handles no tournament config', async () => {
+  it('handles no tournament config and registers sync cron', async () => {
+    scheduleMock.mockClear();
     const client = mockClient();
     await expect(run(client)).resolves.not.toThrow();
+    // Should register the every-minute sync schedule
+    expect(scheduleMock).toHaveBeenCalledWith(
+      '* * * * *',
+      expect.any(Function),
+      expect.objectContaining({ timezone: 'Europe/Warsaw' }),
+    );
   });
 });
 

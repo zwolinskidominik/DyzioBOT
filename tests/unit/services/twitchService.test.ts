@@ -1,3 +1,7 @@
+jest.mock('../../../src/utils/twitchApi', () => ({
+  validateTwitchUser: jest.fn(),
+}));
+
 import { TwitchStreamerModel } from '../../../src/models/TwitchStreamer';
 import {
   getActiveStreamers,
@@ -6,11 +10,21 @@ import {
   setLiveStatus,
   listStreamers,
 } from '../../../src/services/twitchService';
+import { validateTwitchUser } from '../../../src/utils/twitchApi';
+
+const mockValidateTwitchUser = validateTwitchUser as jest.MockedFunction<typeof validateTwitchUser>;
 
 const GID = 'guild-twitch';
 
 beforeEach(async () => {
   await TwitchStreamerModel.deleteMany({});
+  // By default, mock returns a valid Twitch user with canonical login
+  mockValidateTwitchUser.mockImplementation(async (login: string) => ({
+    id: '123456',
+    login: login.toLowerCase().trim(),
+    displayName: login,
+    profilePictureUrl: 'https://example.com/avatar.png',
+  }));
 });
 
 /* ── addStreamer ───────────────────────────────────────────── */
@@ -31,6 +45,27 @@ describe('addStreamer', () => {
     expect(res.ok).toBe(false);
     if (res.ok) return;
     expect(res.code).toBe('ALREADY_EXISTS');
+  });
+
+  it('fails with TWITCH_USER_NOT_FOUND when Twitch user does not exist', async () => {
+    mockValidateTwitchUser.mockResolvedValueOnce(null);
+    const res = await addStreamer(GID, 'user-1', 'nonexistent_user');
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.code).toBe('TWITCH_USER_NOT_FOUND');
+  });
+
+  it('uses canonical login from Twitch response', async () => {
+    mockValidateTwitchUser.mockResolvedValueOnce({
+      id: '999',
+      login: 'canonicalname',
+      displayName: 'CanonicalName',
+      profilePictureUrl: 'https://example.com/pic.png',
+    });
+    const res = await addStreamer(GID, 'user-1', 'CaNoNiCaLnAmE');
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data.twitchChannel).toBe('canonicalname');
   });
 });
 

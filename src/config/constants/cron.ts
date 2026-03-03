@@ -40,4 +40,10 @@ export const CRON = {
 
   /** Every 10 minutes — update channel statistics */
   CHANNEL_STATS_UPDATE: '*/10 * * * *',
+
+  /** Every hour — check for expired temp roles */
+  TEMP_ROLE_CHECK: '0 * * * *',
+
+  /** Every hour — check if it's time to send Disboard review reminder */
+  DISBOARD_REMINDER_CHECK: '0 * * * *',
 } as const;

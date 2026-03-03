@@ -313,28 +313,49 @@ export class CommandHandler {
     return existingSummary !== nextSummary;
   }
 
+  /**
+   * Strip Unicode Variation Selector-16 (U+FE0F) that Discord may silently
+   * remove from stored command descriptions, causing phantom "changed" diffs.
+   */
+  private static stripVS16(text: string): string {
+    return text.replace(/\uFE0F/g, '');
+  }
+
+  private summarizeOption(o: Record<string, unknown>): Record<string, unknown> {
+    const opt: Record<string, unknown> = {
+      name: o.name,
+      type: o.type,
+      description: CommandHandler.stripVS16((o.description as string) || ''),
+      required: !!o.required,
+    };
+
+    const choices = o.choices as Array<Record<string, unknown>> | undefined;
+    if (choices?.length) {
+      opt.choices = choices.map((c: Record<string, unknown>) => ({
+        name: c.name,
+        value: c.value,
+      }));
+    }
+
+    /* Recurse into sub-options (subcommands / subcommand-groups) */
+    const subOpts = (o.options as Array<Record<string, unknown>>) || [];
+    if (subOpts.length) {
+      opt.options = subOpts.map((sub) => this.summarizeOption(sub));
+    }
+
+    return opt;
+  }
+
   private summarize(cmd: ApplicationCommand | ApplicationCommandData): string {
     const raw = cmd as unknown as Record<string, unknown>;
     const base: Record<string, unknown> = {
       name: raw.name,
-      description: (raw.description as string) || '',
+      description: CommandHandler.stripVS16((raw.description as string) || ''),
       type: (raw.type as number) || 1,
     };
     const opts = (raw.options as Array<Record<string, unknown>>) || [];
     if (opts.length) {
-      base.options = opts.map((o: Record<string, unknown>) => {
-        const opt: Record<string, unknown> = {
-          name: o.name,
-          type: o.type,
-          description: (o.description as string) || '',
-          required: !!o.required,
-        };
-        const choices = o.choices as Array<Record<string, unknown>> | undefined;
-        if (choices?.length) {
-          opt.choices = choices.map((c: Record<string, unknown>) => ({ name: c.name, value: c.value }));
-        }
-        return opt;
-      });
+      base.options = opts.map((o) => this.summarizeOption(o));
     }
     return JSON.stringify(base, (_key, value) => {
       if (value && typeof value === 'object' && !Array.isArray(value)) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import mongoose from 'mongoose';
+import { validateTwitchUser } from '@/lib/twitchApi';
 
 const twitchStreamerSchema = new mongoose.Schema({
   guildId: { type: String, required: true },
@@ -65,6 +66,20 @@ export async function POST(
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Validate Twitch user exists before saving
+    try {
+      const twitchUser = await validateTwitchUser(twitchChannel);
+      if (!twitchUser) {
+        return NextResponse.json(
+          { error: `Użytkownik Twitch „${twitchChannel}" nie istnieje.` },
+          { status: 404 },
+        );
+      }
+    } catch (err) {
+      console.error('Twitch validation error:', err);
+      // Graceful degradation: allow save if Twitch API is unavailable
+    }
+
     await connectDB();
     
     const existing = await TwitchStreamer.findOne({ guildId, userId });
@@ -106,6 +121,19 @@ export async function PATCH(
 
     if (!streamerId || !twitchChannel || !userId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Validate Twitch user exists before saving
+    try {
+      const twitchUser = await validateTwitchUser(twitchChannel);
+      if (!twitchUser) {
+        return NextResponse.json(
+          { error: `Użytkownik Twitch „${twitchChannel}" nie istnieje.` },
+          { status: 404 },
+        );
+      }
+    } catch (err) {
+      console.error('Twitch validation error:', err);
     }
 
     await connectDB();

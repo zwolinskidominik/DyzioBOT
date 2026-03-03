@@ -5,7 +5,7 @@
   "scripts": {
     "check:types": "tsc -p tsconfig.json --noEmit",
     "dev": "nodemon --exec \"node --no-deprecation -r tsx/cjs\" --watch src src/index.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node .",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",

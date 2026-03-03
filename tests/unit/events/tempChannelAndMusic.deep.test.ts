@@ -327,7 +327,7 @@ describe('musicCommands – handleMusicCommands', () => {
       },
       channel: { id: 'ch1' },
       client: { user: { id: 'bot1' } },
-      reply: jest.fn().mockResolvedValue({ edit: jest.fn().mockResolvedValue(undefined) }),
+      reply: jest.fn().mockResolvedValue({ edit: jest.fn().mockResolvedValue(undefined), delete: jest.fn().mockResolvedValue(undefined) }),
     };
   }
 

@@ -28,7 +28,8 @@ export type LogEventType =
   | 'roleDelete'
   | 'roleUpdate'
   | 'guildUpdate'
-  | 'inviteCreate';
+  | 'inviteCreate'
+  | 'antiSpam';
 
 export interface LogEventConfig {
   name: string;
@@ -75,4 +76,5 @@ export const LOG_EVENT_CONFIGS: Record<LogEventType, LogEventConfig> = {
   
   guildUpdate: { name: 'Aktualizacja serwera', emoji: '🏠', color: 0x2C3E50, description: 'Zaktualizowano serwer' },
   inviteCreate: { name: 'Wysłano zaproszenie', emoji: '📨', color: 0x1F8B4C, description: 'Utworzono zaproszenie' },
+  antiSpam: { name: 'Anti-Spam', emoji: '🛡️', color: 0xE74C3C, description: 'Wykryto spam — podjęto automatyczną akcję' },
 };

@@ -206,3 +206,22 @@ export interface ITournamentConfig {
   cronSchedule: string;
   reactionEmoji: string;
 }
+
+export interface IInviteTrackerConfig {
+  guildId: string;
+  enabled: boolean;
+  logChannelId?: string | null;
+  joinMessage?: string;
+  leaveMessage?: string;
+}
+
+export interface IInviteEntry {
+  guildId: string;
+  inviterId?: string | null;
+  joinedUserId: string;
+  inviteCode?: string | null;
+  active: boolean;
+  fake: boolean;
+  joinedAt: Date;
+  leftAt?: Date | null;
+}

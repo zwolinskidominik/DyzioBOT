@@ -1,5 +1,6 @@
 import { ServiceResult, ok, fail } from '../types/serviceResult';
 import { TwitchStreamerModel } from '../models/TwitchStreamer';
+import { validateTwitchUser } from '../utils/twitchApi';
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -27,15 +28,25 @@ export async function getActiveStreamers(
 
 /**
  * Add a new streamer to watch.
+ * Validates that the Twitch channel exists before saving.
  */
 export async function addStreamer(
   guildId: string,
   userId: string,
   twitchChannel: string,
 ): Promise<ServiceResult<TwitchStreamerData>> {
+  // Validate Twitch user exists
+  const twitchUser = await validateTwitchUser(twitchChannel);
+  if (twitchUser === null) {
+    return fail('TWITCH_USER_NOT_FOUND', `Użytkownik Twitch „${twitchChannel}" nie istnieje.`);
+  }
+
+  // Use the canonical login name from Twitch
+  const canonicalChannel = twitchUser.login;
+
   const existing = await TwitchStreamerModel.findOne({
     guildId,
-    twitchChannel: twitchChannel.toLowerCase(),
+    twitchChannel: canonicalChannel,
   });
   if (existing) {
     return fail('ALREADY_EXISTS', 'Ten streamer jest już na liście.');
@@ -44,7 +55,7 @@ export async function addStreamer(
   const doc = await TwitchStreamerModel.create({
     guildId,
     userId,
-    twitchChannel: twitchChannel.toLowerCase(),
+    twitchChannel: canonicalChannel,
     isLive: false,
     active: true,
   });

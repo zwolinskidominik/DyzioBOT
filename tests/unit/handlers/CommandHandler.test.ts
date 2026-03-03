@@ -165,4 +165,50 @@ describe('CommandHandler', () => {
     const cmd = { name: 'test', description: 'desc', type: 1 };
     expect((handler as any).commandChanged(cmd, { ...cmd })).toBe(false);
   });
+
+  it('commandChanged ignores VS-16 variation selector in descriptions', () => {
+    mockReaddirSync.mockReturnValue([]);
+    const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
+    const client = mockClient();
+    const handler = new CH(client, {});
+
+    const withVS16 = { name: 'kpn', description: 'Graj! \u2702\uFE0F', type: 1 };
+    const withoutVS16 = { name: 'kpn', description: 'Graj! \u2702', type: 1 };
+    expect((handler as any).commandChanged(withVS16, withoutVS16)).toBe(false);
+  });
+
+  it('summarize recurses into subcommand options', () => {
+    mockReaddirSync.mockReturnValue([]);
+    const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
+    const client = mockClient();
+    const handler = new CH(client, {});
+
+    const cmd1 = {
+      name: 'cmd',
+      description: 'desc',
+      type: 1,
+      options: [
+        {
+          name: 'sub',
+          type: 1,
+          description: 'sub desc',
+          options: [{ name: 'arg', type: 3, description: 'arg desc', required: true }],
+        },
+      ],
+    };
+    const cmd2 = {
+      name: 'cmd',
+      description: 'desc',
+      type: 1,
+      options: [
+        {
+          name: 'sub',
+          type: 1,
+          description: 'sub desc',
+          options: [{ name: 'arg', type: 3, description: 'arg desc', required: false }],
+        },
+      ],
+    };
+    expect((handler as any).commandChanged(cmd1, cmd2)).toBe(true);
+  });
 });
