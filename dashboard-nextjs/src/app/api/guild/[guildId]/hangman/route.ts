@@ -23,7 +23,7 @@ export async function GET(
       name: c.name,
       emoji: c.emoji,
       wordCount: c.words.length,
-      words: c.words,
+      words: [...c.words].sort((a: string, b: string) => a.localeCompare(b, 'pl')),
     }));
 
     return NextResponse.json({
