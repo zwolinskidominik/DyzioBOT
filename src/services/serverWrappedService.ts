@@ -1,4 +1,4 @@
-import { Client, Guild, GuildMember } from 'discord.js';
+import { Guild, GuildMember } from 'discord.js';
 import { createCanvas, loadImage } from 'canvas';
 import { registerProjectFonts, roundRect, formatNumberDotSep, formatNumberCompact } from '../utils/canvasHelpers';
 import { MonthlyStatsModel } from '../models/MonthlyStats';
@@ -7,7 +7,7 @@ import { LevelSnapshotModel } from '../models/LevelSnapshot';
 import { GiveawayModel } from '../models/Giveaway';
 import { WordleStatModel } from '../models/WordleStat';
 import { InviteEntryModel } from '../models/InviteEntry';
-import logger from '../utils/logger';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,8 +160,6 @@ export async function collectWrappedData(guild: Guild): Promise<WrappedData> {
 const W = 800;
 const H = 1200;
 
-const BG_DARK  = '#0d0d0d';
-const BG_CARD  = '#1a1a2e';
 const ACCENT   = '#6c5ce7';
 const ACCENT_2 = '#a29bfe';
 const GOLD     = '#ffd700';

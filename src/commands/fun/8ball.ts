@@ -218,7 +218,7 @@ function drawTriangle(ctx: Ctx2D, category: Category) {
   ctx.stroke();
 }
 
-function drawAnswerText(ctx: Ctx2D, answer: string, category: Category) {
+function drawAnswerText(ctx: Ctx2D, answer: string, _category: Category) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
