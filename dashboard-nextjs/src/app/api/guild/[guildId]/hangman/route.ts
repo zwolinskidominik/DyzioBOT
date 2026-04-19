@@ -63,9 +63,9 @@ export async function POST(
       }
 
       const normalized = word.toLowerCase().trim();
-      if (!/^[a-ząćęłńóśźż]+$/.test(normalized)) {
+      if (!/^[a-ząćęłńóśźż]+(\s[a-ząćęłńóśźż]+){0,3}$/.test(normalized)) {
         return NextResponse.json(
-          { error: "Słowo może zawierać tylko polskie litery (bez q, v, x)" },
+          { error: "Hasło może zawierać tylko polskie litery i spacje (bez q, v, x)" },
           { status: 400 }
         );
       }

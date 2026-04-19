@@ -135,10 +135,10 @@ export default function HangmanBrowserPage() {
     const word = (newWordInputs[categoryName] || "").trim().toLowerCase();
     if (!word) return;
 
-    if (!/^[a-ząćęłńóśźż]+$/.test(word)) {
+    if (!/^[a-ząćęłńóśźż]+(\s[a-ząćęłńóśźż]+){0,3}$/.test(word)) {
       setWordErrors((prev) => ({
         ...prev,
-        [categoryName]: "Tylko polskie litery (bez q, v, x)",
+        [categoryName]: "Tylko polskie litery i spacje (bez q, v, x)",
       }));
       return;
     }

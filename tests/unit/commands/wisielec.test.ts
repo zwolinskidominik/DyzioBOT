@@ -99,6 +99,16 @@ describe('getWordDisplay', () => {
     const display = getWordDisplay('kot', new Set(['k', 'o', 't', 'a', 'b']));
     expect(display).toBe('**K** **O** **T**');
   });
+
+  it('shows spaces as gaps in multi-word phrases', () => {
+    const display = getWordDisplay('dom kot', new Set(['d', 'o', 'k']));
+    expect(display).toBe('**D** **O** \\_     **K** **O** \\_');
+  });
+
+  it('reveals full multi-word phrase', () => {
+    const display = getWordDisplay('dom kot', new Set(['d', 'o', 'm', 'k', 't']));
+    expect(display).toBe('**D** **O** **M**     **K** **O** **T**');
+  });
 });
 
 /* ── isWordGuessed ────────────────────────────────────────── */
@@ -121,6 +131,14 @@ describe('isWordGuessed', () => {
 
   it('handles words with repeated letters', () => {
     expect(isWordGuessed('pizza', new Set(['p', 'i', 'z', 'a']))).toBe(true);
+  });
+
+  it('treats spaces as auto-guessed in multi-word phrases', () => {
+    expect(isWordGuessed('dom kot', new Set(['d', 'o', 'm', 'k', 't']))).toBe(true);
+  });
+
+  it('returns false for partial multi-word phrase', () => {
+    expect(isWordGuessed('dom kot', new Set(['d', 'o', 'm']))).toBe(false);
   });
 });
 
