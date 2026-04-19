@@ -179,6 +179,8 @@ export function mockInteraction(
       getInteger: jest.fn().mockImplementation((name: string, _req?: boolean) => optionValues[name] ?? null),
       getSubcommand: jest.fn().mockReturnValue(optionValues._subcommand ?? null),
       getBoolean: jest.fn().mockImplementation((name: string) => optionValues[name] ?? null),
+      getAttachment: jest.fn().mockImplementation((name: string) => optionValues[name] ?? null),
+      getRole: jest.fn().mockImplementation((name: string) => optionValues[name] ?? null),
     },
     reply: jest.fn().mockResolvedValue({ id: 'reply-msg' }),
     editReply: jest.fn().mockResolvedValue({ id: 'edit-msg' }),

@@ -59,6 +59,7 @@ export interface IGiveaway {
   winnersCount: number;
   endTime: Date;
   pingRoleId?: string;
+  imageUrl?: string;
   active: boolean;
   participants: string[];
   hostId: string;
@@ -212,6 +213,8 @@ export interface IInviteTrackerConfig {
   enabled: boolean;
   logChannelId?: string | null;
   joinMessage?: string;
+  joinMessageUnknown?: string;
+  joinMessageVanity?: string;
   leaveMessage?: string;
 }
 

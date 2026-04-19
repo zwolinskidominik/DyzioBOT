@@ -68,7 +68,7 @@ export default function TournamentPage() {
 
   const updateCronSchedule = (day: string, hr: string, min: string) => {
     const cronExpression = `${min} ${hr} * * ${day}`;
-    setConfig({ ...config, cronSchedule: cronExpression });
+    setConfig((prev) => ({ ...prev, cronSchedule: cronExpression }));
   };
 
   useEffect(() => {

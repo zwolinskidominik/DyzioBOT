@@ -1,9 +1,10 @@
 import { schedule } from 'node-cron';
 import { CRON } from '../../config/constants/cron';
-import { Client, TextChannel } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, TextChannel } from 'discord.js';
 import { finalizeExpiredGiveaways } from '../../services/giveawayService';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
+import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
 
 export default async function run(client: Client): Promise<void> {
@@ -11,7 +12,8 @@ export default async function run(client: Client): Promise<void> {
     CRON.GIVEAWAY_CHECK,
     async () => {
       try {
-        const result = await finalizeExpiredGiveaways();
+        const guildIds = [...client.guilds.cache.keys()];
+        const result = await finalizeExpiredGiveaways(guildIds);
         if (!result.ok) return;
 
         for (const entry of result.data) {
@@ -61,12 +63,27 @@ export default async function run(client: Client): Promise<void> {
               description: `### ${entry.prize}\n${entry.description}\n\n**Zakończony:** <t:${timestamp}:f>\n**Host:** <@${entry.hostId}>\n**Uczestnicy:** ${participantsCount}\n**Zwycięzcy:** ${winnersText}`,
               footerText: `Giveaway ID: ${entry.giveawayId}`,
               color: COLORS.GIVEAWAY_ENDED,
+              image: entry.imageUrl,
             });
 
             try {
+              const {
+                emojis: {
+                  giveaway: { list: listEmoji },
+                },
+              } = getBotConfig(client.user!.id);
+
+              const participantsButton = new ButtonBuilder()
+                .setCustomId(`giveaway_count_${entry.giveawayId}`)
+                .setLabel(`Uczestnicy (${new Set(entry.participants).size})`)
+                .setEmoji(listEmoji)
+                .setStyle(ButtonStyle.Secondary);
+
+              const endedRow = new ActionRowBuilder<ButtonBuilder>().addComponents(participantsButton);
+
               await giveawayMessage.edit({
                 embeds: [updatedEmbed],
-                components: [],
+                components: [endedRow],
               });
             } catch (editError) {
               logger.error(

@@ -10,7 +10,6 @@ import {
   rerollGiveaway,
   listActiveGiveaways,
   finalizeExpiredGiveaways,
-  parseDuration,
   pickWinnerIds,
   computeMultiplier,
   getAdditionalNote,
@@ -35,33 +34,13 @@ async function seedGiveaway(overrides: Partial<Parameters<typeof createGiveaway>
     prize: 'Nitro',
     description: 'Win Nitro!',
     winnersCount: 1,
-    durationMs: 86_400_000,
+    endTime: new Date(Date.now() + 86_400_000),
     hostId: 'host1',
     ...overrides,
   });
   if (!res.ok) throw new Error(`seedGiveaway failed: ${res.message}`);
   return res.data;
 }
-
-/* ── parseDuration (pure) ─────────────────────────────────── */
-
-describe('parseDuration', () => {
-  it('parses days, hours, minutes, seconds', () => {
-    expect(parseDuration('1 day 2 hours 30 minutes 10 seconds')).toBe(
-      86_400_000 + 7_200_000 + 1_800_000 + 10_000,
-    );
-  });
-
-  it('parses short units', () => {
-    expect(parseDuration('5d 4h 2m')).toBe(
-      5 * 86_400_000 + 4 * 3_600_000 + 2 * 60_000,
-    );
-  });
-
-  it('returns 0 for gibberish', () => {
-    expect(parseDuration('abc xyz')).toBe(0);
-  });
-});
 
 /* ── pickWinnerIds (pure) ─────────────────────────────────── */
 
@@ -111,6 +90,7 @@ describe('computeMultiplier', () => {
 
 describe('createGiveaway', () => {
   it('creates a giveaway with UUID', async () => {
+    const futureDate = new Date(Date.now() + 3_600_000);
     const res = await createGiveaway({
       guildId: GID,
       channelId: 'ch1',
@@ -118,7 +98,7 @@ describe('createGiveaway', () => {
       prize: 'Nitro',
       description: 'Free Nitro!',
       winnersCount: 2,
-      durationMs: 3_600_000,
+      endTime: futureDate,
       hostId: 'host1',
     });
 
@@ -128,11 +108,11 @@ describe('createGiveaway', () => {
       expect(res.data.prize).toBe('Nitro');
       expect(res.data.active).toBe(true);
       expect(res.data.participants).toEqual([]);
-      expect(res.data.endTime.getTime()).toBeGreaterThan(Date.now());
+      expect(res.data.endTime.getTime()).toBe(futureDate.getTime());
     }
   });
 
-  it('fails for invalid duration', async () => {
+  it('fails for past end time', async () => {
     const res = await createGiveaway({
       guildId: GID,
       channelId: 'ch1',
@@ -140,12 +120,12 @@ describe('createGiveaway', () => {
       prize: 'Nitro',
       description: 'Desc',
       winnersCount: 1,
-      durationMs: 0,
+      endTime: new Date(Date.now() - 1000),
       hostId: 'host1',
     });
 
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.code).toBe('INVALID_DURATION');
+    if (!res.ok) expect(res.code).toBe('INVALID_END_TIME');
   });
 
   it('stores roleMultipliers', async () => {
@@ -349,8 +329,8 @@ describe('rerollGiveaway', () => {
 
 describe('listActiveGiveaways', () => {
   it('returns active giveaways sorted by endTime', async () => {
-    await seedGiveaway({ durationMs: 100_000, prize: 'Late' });
-    await seedGiveaway({ durationMs: 50_000, prize: 'Early' });
+    await seedGiveaway({ endTime: new Date(Date.now() + 100_000), prize: 'Late' });
+    await seedGiveaway({ endTime: new Date(Date.now() + 50_000), prize: 'Early' });
 
     const res = await listActiveGiveaways(GID);
     expect(res.ok).toBe(true);
@@ -389,7 +369,7 @@ describe('finalizeExpiredGiveaways', () => {
       finalized: false,
     });
 
-    const res = await finalizeExpiredGiveaways();
+    const res = await finalizeExpiredGiveaways([GID]);
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.data).toHaveLength(1);
@@ -404,7 +384,7 @@ describe('finalizeExpiredGiveaways', () => {
 
   it('returns empty array if nothing expired', async () => {
     await seedGiveaway(); // future endTime
-    const res = await finalizeExpiredGiveaways();
+    const res = await finalizeExpiredGiveaways([GID]);
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.data).toHaveLength(0);
   });

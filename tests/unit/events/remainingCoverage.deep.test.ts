@@ -1,7 +1,7 @@
 export {};
 /**
  * Deep tests to cover remaining low-coverage files:
- * logRoleUpdate, logMessageDelete, logMessageEdit, musicButtons, musicPlayer,
+ * logRoleUpdate, logMessageDelete, logMessageEdit,
  * tempChannel, emoji, help, EventHandler, monthlyStatsFlush, xpFlush,
  * deleteTempChannel, logInviteCreate, logRoleCreate, logRoleDelete,
  * logThreadCreate, logThreadDelete, logThreadUpdate, reactionRoleRemove,
@@ -17,8 +17,8 @@ jest.mock('../../../src/utils/logger', () => ({
 
 jest.mock('../../../src/config/constants/colors', () => ({
   COLORS: {
-    DEFAULT: 0, ERROR: 0xff0000, MUSIC: 0x00ff00, MUSIC_SUCCESS: 0x00ff00,
-    MUSIC_PAUSE: 0xffff00, JOIN: 0x00ff00, LEAVE: 0xff0000,
+    DEFAULT: 0, ERROR: 0xff0000,
+    JOIN: 0x00ff00, LEAVE: 0xff0000,
     GIVEAWAY: 0xff00ff, TWITCH: 0x9146ff,
   },
 }));
@@ -67,22 +67,7 @@ jest.mock('../../../src/services/suggestionService', () => ({
   deleteSuggestionByMessageId: mockDeleteSuggestion,
 }));
 
-/* ─── Music player mock ─── */
-const mockGetMusicPlayer = jest.fn();
-jest.mock('../../../src/services/musicPlayer', () => ({
-  getMusicPlayer: mockGetMusicPlayer,
-  QueueMetadata: {},
-  createProgressBar: jest.fn(),
-  canUseMusic: jest.fn(),
-  canPlayInChannel: jest.fn(),
-  initializeMusicPlayer: jest.fn(),
-}));
-
 /* ─── Model mocks ─── */
-jest.mock('../../../src/models/MusicConfig', () => ({
-  MusicConfigModel: { findOne: jest.fn() },
-}));
-
 const mockTempChannelFind = jest.fn();
 const mockTempChannelFindOneAndUpdate = jest.fn();
 jest.mock('../../../src/models/TempChannelConfiguration', () => ({
@@ -331,228 +316,6 @@ describe('logMessageEdit', () => {
   it('handles null author', async () => {
     await logMsgEdit(makeMsg({ content: 'old', author: null }), makeMsg({ content: 'new', author: null }), {});
     expect(mockSendLog).toHaveBeenCalled();
-  });
-});
-
-/* ═══════════════════════════════════════════════════════════════════
-   musicButtons
-   ═══════════════════════════════════════════════════════════════════ */
-describe('musicButtons', () => {
-  const musicButtons = require('../../../src/events/interactionCreate/musicButtons').default;
-
-  function makeInteraction(customId: string, overrides: any = {}) {
-    return {
-      isButton: () => true,
-      customId,
-      guild: { id: 'g1', afkChannelId: 'afk1' },
-      member: { voice: { channel: { id: 'vc1' } } },
-      replied: false,
-      deferred: false,
-      reply: jest.fn().mockResolvedValue(undefined),
-      ...overrides,
-    };
-  }
-
-  it('ignores non-button interactions', async () => {
-    await musicButtons({ isButton: () => false });
-    expect(mockGetMusicPlayer).not.toHaveBeenCalled();
-  });
-
-  it('ignores non-music buttons', async () => {
-    await musicButtons(makeInteraction('some_other_button'));
-    expect(mockGetMusicPlayer).not.toHaveBeenCalled();
-  });
-
-  it('ignores when no guild', async () => {
-    await musicButtons(makeInteraction('music_pause', { guild: null }));
-    expect(mockGetMusicPlayer).not.toHaveBeenCalled();
-  });
-
-  it('returns when no player', async () => {
-    mockGetMusicPlayer.mockReturnValue(null);
-    await musicButtons(makeInteraction('music_pause'));
-  });
-
-  it('replies error when not in voice channel', async () => {
-    mockGetMusicPlayer.mockReturnValue({ nodes: { get: () => null } });
-    const btn = makeInteraction('music_pause', {
-      member: { voice: { channel: null } },
-    });
-    await musicButtons(btn);
-    expect(btn.reply).toHaveBeenCalled();
-  });
-
-  it('replies error when in AFK channel', async () => {
-    mockGetMusicPlayer.mockReturnValue({ nodes: { get: () => null } });
-    const btn = makeInteraction('music_pause', {
-      member: { voice: { channel: { id: 'afk1' } } },
-    });
-    await musicButtons(btn);
-    expect(btn.reply).toHaveBeenCalled();
-  });
-
-  it('replies error when different voice channel', async () => {
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: { get: () => ({ channel: { id: 'other_vc' }, currentTrack: {} }) },
-    });
-    const btn = makeInteraction('music_pause');
-    await musicButtons(btn);
-    expect(btn.reply).toHaveBeenCalled();
-  });
-
-  it('replies error when nothing playing', async () => {
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: { get: () => ({ channel: null, currentTrack: null }) },
-    });
-    const btn = makeInteraction('music_pause');
-    await musicButtons(btn);
-    expect(btn.reply).toHaveBeenCalled();
-  });
-
-  it('handles music_pause (paused → resume)', async () => {
-    const mockResume = jest.fn();
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: {
-        get: () => ({
-          channel: { id: 'vc1' },
-          currentTrack: { title: 'Song' },
-          node: { isPaused: () => true, resume: mockResume, pause: jest.fn() },
-        }),
-      },
-    });
-    const btn = makeInteraction('music_pause');
-    await musicButtons(btn);
-    expect(mockResume).toHaveBeenCalled();
-    expect(btn.reply).toHaveBeenCalled();
-  });
-
-  it('handles music_pause (playing → pause)', async () => {
-    const mockPause = jest.fn();
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: {
-        get: () => ({
-          channel: { id: 'vc1' },
-          currentTrack: { title: 'Song' },
-          node: { isPaused: () => false, resume: jest.fn(), pause: mockPause },
-        }),
-      },
-    });
-    const btn = makeInteraction('music_pause');
-    await musicButtons(btn);
-    expect(mockPause).toHaveBeenCalled();
-  });
-
-  it('handles music_skip', async () => {
-    const mockSkip = jest.fn();
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: {
-        get: () => ({
-          channel: { id: 'vc1' },
-          currentTrack: { title: 'Song' },
-          node: { skip: mockSkip },
-        }),
-      },
-    });
-    const btn = makeInteraction('music_skip');
-    await musicButtons(btn);
-    expect(mockSkip).toHaveBeenCalled();
-  });
-
-  it('handles music_prev with history', async () => {
-    const mockPrevious = jest.fn().mockResolvedValue(undefined);
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: {
-        get: () => ({
-          channel: { id: 'vc1' },
-          currentTrack: { title: 'Song' },
-          history: { isEmpty: () => false, previous: mockPrevious },
-        }),
-      },
-    });
-    const btn = makeInteraction('music_prev');
-    await musicButtons(btn);
-    expect(mockPrevious).toHaveBeenCalled();
-  });
-
-  it('handles music_prev without history', async () => {
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: {
-        get: () => ({
-          channel: { id: 'vc1' },
-          currentTrack: { title: 'Song' },
-          history: { isEmpty: () => true },
-        }),
-      },
-    });
-    const btn = makeInteraction('music_prev');
-    await musicButtons(btn);
-    expect(btn.reply).toHaveBeenCalled();
-  });
-
-  it('handles music_stop', async () => {
-    const mockDelete = jest.fn();
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: {
-        get: () => ({
-          channel: { id: 'vc1' },
-          currentTrack: { title: 'Song' },
-          metadata: { nowPlayingMessage: { editable: true, edit: jest.fn().mockResolvedValue(undefined) } },
-          delete: mockDelete,
-        }),
-      },
-    });
-    const btn = makeInteraction('music_stop');
-    await musicButtons(btn);
-    expect(mockDelete).toHaveBeenCalled();
-  });
-
-  it('handles music_loop toggle on', async () => {
-    const mockSetRepeat = jest.fn();
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: {
-        get: () => ({
-          channel: { id: 'vc1' },
-          currentTrack: { title: 'Song' },
-          repeatMode: 0,
-          setRepeatMode: mockSetRepeat,
-        }),
-      },
-    });
-    const btn = makeInteraction('music_loop');
-    await musicButtons(btn);
-    expect(mockSetRepeat).toHaveBeenCalledWith(1);
-  });
-
-  it('handles music_loop toggle off', async () => {
-    const mockSetRepeat = jest.fn();
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: {
-        get: () => ({
-          channel: { id: 'vc1' },
-          currentTrack: { title: 'Song' },
-          repeatMode: 1,
-          setRepeatMode: mockSetRepeat,
-        }),
-      },
-    });
-    const btn = makeInteraction('music_loop');
-    await musicButtons(btn);
-    expect(mockSetRepeat).toHaveBeenCalledWith(0);
-  });
-
-  it('catches errors in switch', async () => {
-    mockGetMusicPlayer.mockReturnValue({
-      nodes: {
-        get: () => ({
-          channel: { id: 'vc1' },
-          currentTrack: { title: 'Song' },
-          node: { isPaused: () => { throw new Error('boom'); } },
-        }),
-      },
-    });
-    const btn = makeInteraction('music_pause');
-    await musicButtons(btn);
-    expect(btn.reply).toHaveBeenCalled();
   });
 });
 

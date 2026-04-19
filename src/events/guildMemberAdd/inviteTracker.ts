@@ -62,10 +62,19 @@ export default async function run(member: GuildMember, _client: Client): Promise
       }
     }
 
-    // Build message from template or default
-    let message = config.joinMessage || '';
-    if (message) {
-      message = replaceVariables(message, member, inviterId, inviteCode, statsText, activeCount);
+    // Pick the right template based on join scenario
+    const isVanity = inviteCode != null && guild.vanityURLCode != null && inviteCode === guild.vanityURLCode;
+    let template = '';
+    if (isVanity) {
+      template = config.joinMessageVanity || '';
+    } else if (inviterId) {
+      template = config.joinMessage || '';
+    } else {
+      template = config.joinMessageUnknown || '';
+    }
+
+    if (template) {
+      const message = replaceVariables(template, member, inviterId, inviteCode, statsText, activeCount);
       await logChannel.send(message);
     } else {
       // Default embed
@@ -77,9 +86,11 @@ export default async function run(member: GuildMember, _client: Client): Promise
         })
         .setDescription(
           `📥 <@${member.id}> dołączył/a do serwera!\n` +
-          (inviterId
-            ? `📨 Zaproszony/a przez: <@${inviterId}> (kod: \`${inviteCode ?? '?'}\`)\n`
-            : '📨 Zaproszenie: *nieznane*\n') +
+          (isVanity
+            ? `📨 Dołączył/a używając niestandardowego zaproszenia \`${inviteCode}\`\n`
+            : inviterId
+              ? `📨 Zaproszony/a przez: <@${inviterId}> (kod: \`${inviteCode ?? '?'}\`)\n`
+              : '📨 Zaproszenie: *nieznane*\n') +
           (joinResult.data.fake ? '⚠️ Konto młodsze niż 7 dni — oznaczone jako fałszywe.\n' : '') +
           (statsText ? `📊 Statystyki zapraszającego: ${statsText}` : ''),
         )

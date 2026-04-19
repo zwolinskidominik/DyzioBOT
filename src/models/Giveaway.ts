@@ -34,6 +34,9 @@ class Giveaway {
   @prop({ type: () => String })
   public pingRoleId?: string;
 
+  @prop({ type: () => String })
+  public imageUrl?: string;
+
   @prop({ default: true, type: () => Boolean })
   public active!: boolean;
 
@@ -51,6 +54,9 @@ class Giveaway {
 
   @prop({ default: false, type: () => Boolean })
   public finalized!: boolean;
+
+  @prop({ type: () => [String], default: [] })
+  public winners!: string[];
 }
 
 export const GiveawayModel = getModelForClass(Giveaway);

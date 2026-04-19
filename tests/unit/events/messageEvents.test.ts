@@ -1,6 +1,6 @@
 /**
  * Tests for message-related events:
- * - messageCreate/createSuggestions, musicCommands, trackXp
+ * - messageCreate/createSuggestions, trackXp
  * - messageDelete/logMessageDelete
  * - messageReactionAdd/reactionRoleAdd
  * - messageReactionRemove/reactionRoleRemove
@@ -43,18 +43,7 @@ jest.mock('../../../src/config/bot', () => ({
 }));
 
 jest.mock('../../../src/config/constants/colors', () => ({
-  COLORS: { DEFAULT: 0, MUSIC: 0x00ff00, MUSIC_PAUSE: 0xffff00, MUSIC_SUCCESS: 0x00ff00 },
-}));
-
-jest.mock('../../../src/services/musicPlayer', () => ({
-  getMusicPlayer: jest.fn().mockReturnValue(null),
-  canUseMusic: jest.fn().mockResolvedValue({ allowed: false, reason: 'disabled' }),
-  canPlayInChannel: jest.fn().mockResolvedValue({ allowed: true }),
-  QueueMetadata: {},
-}));
-
-jest.mock('../../../src/models/MusicConfig', () => ({
-  MusicConfigModel: { findOne: jest.fn().mockResolvedValue(null) },
+  COLORS: { DEFAULT: 0 },
 }));
 
 jest.mock('../../../src/services/xpService', () => ({
@@ -106,46 +95,6 @@ describe('messageCreate / createSuggestions', () => {
     // isSuggestionChannel returns false so no suggestion created
     const { createSuggestion } = require('../../../src/services/suggestionService');
     expect(createSuggestion).not.toHaveBeenCalled();
-  });
-});
-
-/* ── messageCreate / musicCommands ────────────────────────── */
-
-describe('messageCreate / musicCommands', () => {
-  let run: any;
-  beforeAll(async () => {
-    run = (await import('../../../src/events/messageCreate/musicCommands')).default;
-  });
-  beforeEach(() => jest.clearAllMocks());
-
-  it('ignores non-prefix messages', async () => {
-    const msg = mockMessage({ content: 'hello world' });
-    await run(msg);
-    expect(msg.reply).not.toHaveBeenCalled();
-  });
-
-  it('ignores bot messages', async () => {
-    const msg = mockMessage({ content: '!play test' });
-    msg.author.bot = true;
-    await run(msg);
-    expect(msg.reply).not.toHaveBeenCalled();
-  });
-
-  it('ignores non-music commands', async () => {
-    const msg = mockMessage({ content: '!ping' });
-    await run(msg);
-    expect(msg.reply).not.toHaveBeenCalled();
-  });
-
-  it('replies when player not initialized', async () => {
-    const msg = mockMessage({ content: '!play test' });
-    msg.member = mockGuildMember();
-    msg.member.roles = { cache: new Collection() };
-    const { getMusicPlayer } = require('../../../src/services/musicPlayer');
-    getMusicPlayer.mockReturnValue(null);
-
-    await run(msg);
-    expect(msg.reply).toHaveBeenCalledWith('❌ Odtwarzacz muzyki nie jest zainicjalizowany.');
   });
 });
 

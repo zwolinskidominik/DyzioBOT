@@ -15,6 +15,12 @@ class InviteTrackerConfig {
   public joinMessage!: string;
 
   @prop({ type: () => String, default: '' })
+  public joinMessageUnknown!: string;
+
+  @prop({ type: () => String, default: '' })
+  public joinMessageVanity!: string;
+
+  @prop({ type: () => String, default: '' })
   public leaveMessage!: string;
 }
 

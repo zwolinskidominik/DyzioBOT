@@ -1,6 +1,6 @@
 /**
  * Deep tests for interactionCreate event handlers:
- * voiceControl, musicButtons, ticketSystem, giveawayHandler
+ * voiceControl, ticketSystem, giveawayHandler
  */
 
 /* ───────────── Mocks ───────────── */
@@ -90,14 +90,6 @@ jest.mock('../../../src/services/giveawayService', () => ({
   getGiveaway: mockGetGiveaway,
 }));
 
-const mockGetMusicPlayer = jest.fn();
-jest.mock('../../../src/services/musicPlayer', () => ({
-  getMusicPlayer: mockGetMusicPlayer,
-  canUseMusic: jest.fn().mockResolvedValue({ allowed: true }),
-  canPlayInChannel: jest.fn().mockResolvedValue({ allowed: true }),
-  QueueMetadata: {},
-}));
-
 jest.mock('../../../src/utils/channelHelpers', () => ({
   safeSetChannelName: jest.fn().mockResolvedValue(undefined),
 }));
@@ -177,7 +169,6 @@ jest.mock('discord.js', () => {
 
 import voiceControlRun from '../../../src/events/interactionCreate/voiceControl';
 import { createControlPanelButtons } from '../../../src/events/interactionCreate/voiceControl';
-import musicButtonsRun from '../../../src/events/interactionCreate/musicButtons';
 import ticketSystemRun from '../../../src/events/interactionCreate/ticketSystem';
 import giveawayHandlerRun from '../../../src/events/interactionCreate/giveawayHandler';
 
@@ -371,128 +362,6 @@ describe('voiceControl', () => {
   it('handles voice_transfer_select', async () => {
     const interaction = makeSelectInteraction('voice_transfer_select', ['user2']);
     await voiceControlRun(interaction as any);
-  });
-});
-
-/* ═══════════════════════════════════════════════════════════════════
-   musicButtons
-   ═══════════════════════════════════════════════════════════════════ */
-describe('musicButtons', () => {
-  const mockQueue = {
-    node: {
-      isPaused: jest.fn().mockReturnValue(false),
-      pause: jest.fn(),
-      resume: jest.fn(),
-      skip: jest.fn(),
-      volume: 50,
-    },
-    currentTrack: { title: 'Test Track', author: 'Author' },
-    history: { isEmpty: jest.fn().mockReturnValue(false), previous: jest.fn().mockResolvedValue(undefined) },
-    repeatMode: 0,
-    setRepeatMode: jest.fn(),
-    delete: jest.fn(),
-    metadata: { nowPlayingMessage: null },
-  };
-
-  const mockPlayer = {
-    nodes: { get: jest.fn().mockReturnValue(mockQueue) },
-  };
-
-  const makeButtonInteraction = (customId: string, inVoice = true) => ({
-    isButton: () => true,
-    customId,
-    guild: {
-      id: 'g1',
-      members: { me: { voice: { channel: inVoice ? { id: 'vc1' } : null } } },
-      afkChannelId: 'afk1',
-    },
-    member: {
-      voice: { channel: inVoice ? { id: 'vc1' } : null },
-    },
-    user: { id: 'u1' },
-    reply: jest.fn().mockResolvedValue(undefined),
-    replied: false,
-    deferred: false,
-  });
-
-  beforeEach(() => {
-    mockGetMusicPlayer.mockReturnValue(mockPlayer);
-    mockQueue.node.isPaused.mockReturnValue(false);
-    mockQueue.repeatMode = 0;
-    mockQueue.currentTrack = { title: 'Test Track', author: 'Author' };
-    mockQueue.history.isEmpty.mockReturnValue(false);
-  });
-
-  it('returns early for non-music button', async () => {
-    const interaction = makeButtonInteraction('other_button');
-    await musicButtonsRun(interaction as any);
-    expect(interaction.reply).not.toHaveBeenCalled();
-  });
-
-  it('returns early when user not in voice', async () => {
-    const interaction = makeButtonInteraction('music_pause', false);
-    await musicButtonsRun(interaction as any);
-  });
-
-  it('pauses when playing', async () => {
-    const interaction = makeButtonInteraction('music_pause');
-    await musicButtonsRun(interaction as any);
-    expect(mockQueue.node.pause).toHaveBeenCalled();
-    expect(interaction.reply).toHaveBeenCalled();
-  });
-
-  it('resumes when paused', async () => {
-    mockQueue.node.isPaused.mockReturnValue(true);
-    const interaction = makeButtonInteraction('music_pause');
-    await musicButtonsRun(interaction as any);
-    expect(mockQueue.node.resume).toHaveBeenCalled();
-  });
-
-  it('skips track', async () => {
-    const interaction = makeButtonInteraction('music_skip');
-    await musicButtonsRun(interaction as any);
-    expect(mockQueue.node.skip).toHaveBeenCalled();
-    expect(interaction.reply).toHaveBeenCalled();
-  });
-
-  it('stops playback', async () => {
-    const interaction = makeButtonInteraction('music_stop');
-    await musicButtonsRun(interaction as any);
-    expect(mockQueue.delete).toHaveBeenCalled();
-    expect(interaction.reply).toHaveBeenCalled();
-  });
-
-  it('goes to previous track', async () => {
-    const interaction = makeButtonInteraction('music_prev');
-    await musicButtonsRun(interaction as any);
-    expect(mockQueue.history.previous).toHaveBeenCalled();
-  });
-
-  it('shows error when no previous track', async () => {
-    mockQueue.history.isEmpty.mockReturnValue(true);
-    const interaction = makeButtonInteraction('music_prev');
-    await musicButtonsRun(interaction as any);
-    expect(interaction.reply).toHaveBeenCalled();
-  });
-
-  it('toggles loop on', async () => {
-    mockQueue.repeatMode = 0;
-    const interaction = makeButtonInteraction('music_loop');
-    await musicButtonsRun(interaction as any);
-    expect(mockQueue.setRepeatMode).toHaveBeenCalledWith(1);
-  });
-
-  it('toggles loop off', async () => {
-    mockQueue.repeatMode = 1;
-    const interaction = makeButtonInteraction('music_loop');
-    await musicButtonsRun(interaction as any);
-    expect(mockQueue.setRepeatMode).toHaveBeenCalledWith(0);
-  });
-
-  it('handles missing queue', async () => {
-    mockPlayer.nodes.get.mockReturnValue(null);
-    const interaction = makeButtonInteraction('music_pause');
-    await musicButtonsRun(interaction as any);
   });
 });
 
@@ -768,7 +637,7 @@ describe('giveawayHandler', () => {
   });
 
   it('handles empty participants list', async () => {
-    mockGetActiveGiveaway.mockResolvedValue({
+    mockGetGiveaway.mockResolvedValue({
       ok: true,
       data: { giveawayId: 'g1', guildId: 'guild1', participants: [], winnersCount: 1 },
     });

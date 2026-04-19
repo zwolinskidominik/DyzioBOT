@@ -1,8 +1,8 @@
-/**
- * Deep tests for tempChannel (voiceStateUpdate) and musicCommands (messageCreate).
+﻿/**
+ * Deep tests for tempChannel (voiceStateUpdate).
  */
 
-/* ───────────── tempChannel mocks ───────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ tempChannel mocks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const mockTCSGetMonitoredChannels = jest.fn();
 const mockTCSSaveTempChannel = jest.fn();
 const mockTCSDeleteTempChannel = jest.fn();
@@ -43,24 +43,7 @@ jest.mock('../../../src/events/interactionCreate/voiceControl', () => ({
 }));
 
 jest.mock('../../../src/config/constants/colors', () => ({
-  COLORS: { DEFAULT: 0, ERROR: 0xff0000, MUSIC: 0x00ff00, MUSIC_PAUSE: 0xfff, MUSIC_SUCCESS: 0x0f0 },
-}));
-
-/* ───────────── musicCommands mocks ───────────── */
-const mockGetMusicPlayer = jest.fn();
-const mockCanUseMusic = jest.fn();
-const mockCanPlayInChannel = jest.fn();
-
-jest.mock('../../../src/services/musicPlayer', () => ({
-  getMusicPlayer: mockGetMusicPlayer,
-  canUseMusic: mockCanUseMusic,
-  canPlayInChannel: mockCanPlayInChannel,
-}));
-
-jest.mock('../../../src/models/MusicConfig', () => ({
-  MusicConfigModel: {
-    findOne: jest.fn().mockResolvedValue(null),
-  },
+  COLORS: { DEFAULT: 0, ERROR: 0xff0000 },
 }));
 
 jest.mock('discord.js', () => {
@@ -89,7 +72,6 @@ jest.mock('discord.js', () => {
 });
 
 import tempChannelRun from '../../../src/events/voiceStateUpdate/tempChannel';
-import musicCommandsRun from '../../../src/events/messageCreate/musicCommands';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -101,14 +83,12 @@ beforeEach(() => {
   mockTCSDeleteTempChannel.mockResolvedValue({ ok: true });
   mockTCSGetTempChannel.mockResolvedValue({ ok: false });
   mockTCSSetControlMessageId.mockResolvedValue({ ok: true });
-  mockCanUseMusic.mockResolvedValue({ allowed: true });
-  mockCanPlayInChannel.mockResolvedValue({ allowed: true });
 });
 
-/* ═══════════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    tempChannel
-   ═══════════════════════════════════════════════════════════════════ */
-describe('tempChannel – run', () => {
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+describe('tempChannel â€“ run', () => {
   function makeVoiceState(overrides: any = {}) {
     const defaults = {
       channelId: null,
@@ -229,7 +209,7 @@ describe('tempChannel – run', () => {
       channel: { id: 'tempCh1', members: new Map() },
       member: { id: 'u2', user: { id: 'u2', bot: false } },
     });
-    // Channel not in cache → already deleted path
+    // Channel not in cache â†’ already deleted path
     oldState.guild.channels.cache = new Map();
     const newState = makeVoiceState({ channelId: null });
     await tempChannelRun(oldState as any, newState as any);
@@ -265,397 +245,5 @@ describe('tempChannel – run', () => {
     const newState = makeVoiceState({ channelId: 'monCh1' });
     // Should not throw
     await expect(tempChannelRun(oldState as any, newState as any)).resolves.toBeUndefined();
-  });
-});
-
-/* ═══════════════════════════════════════════════════════════════════
-   musicCommands
-   ═══════════════════════════════════════════════════════════════════ */
-describe('musicCommands – handleMusicCommands', () => {
-  const mockQueue = {
-    node: {
-      isPaused: jest.fn().mockReturnValue(false),
-      pause: jest.fn(),
-      resume: jest.fn(),
-      skip: jest.fn(),
-      play: jest.fn().mockResolvedValue(undefined),
-      volume: 50,
-      setVolume: jest.fn(),
-      createProgressBar: jest.fn().mockReturnValue('▬▬▬▬▬▬▬▬'),
-    },
-    currentTrack: { title: 'Song', author: 'Artist', duration: '3:42', durationMS: 222_000, url: 'http://x', thumbnail: 'thumb', requestedBy: { username: 'u1' } },
-    tracks: {
-      size: 2,
-      toArray: jest.fn().mockReturnValue([
-        { title: 'Song2', author: 'A2', duration: '2:00', url: 'u2' },
-        { title: 'Song3', author: 'A3', duration: '3:00', url: 'u3' },
-      ]),
-      shuffle: jest.fn(),
-    },
-    history: { isEmpty: jest.fn().mockReturnValue(false), previous: jest.fn() },
-    isPlaying: jest.fn().mockReturnValue(true),
-    repeatMode: 0,
-    setRepeatMode: jest.fn(),
-    delete: jest.fn(),
-    addTrack: jest.fn(),
-    connect: jest.fn().mockResolvedValue(undefined),
-    connection: true,
-    channel: { id: 'vc1' },
-    metadata: { nowPlayingMessage: null },
-  };
-
-  const mockPlayer = {
-    nodes: {
-      get: jest.fn().mockReturnValue(mockQueue),
-      create: jest.fn().mockReturnValue(mockQueue),
-    },
-    search: jest.fn(),
-  };
-
-  function makeMessage(content: string, inVoice = true) {
-    return {
-      content,
-      author: { id: 'u1', bot: false, username: 'TestUser' },
-      guild: {
-        id: 'g1',
-        afkChannelId: 'afkCh',
-        members: { me: { voice: { channel: { id: 'vc1' } } } },
-      },
-      member: {
-        voice: { channel: inVoice ? { id: 'vc1' } : null },
-        roles: { cache: { map: jest.fn().mockReturnValue(['role1']) } },
-      },
-      channel: { id: 'ch1' },
-      client: { user: { id: 'bot1' } },
-      reply: jest.fn().mockResolvedValue({ edit: jest.fn().mockResolvedValue(undefined), delete: jest.fn().mockResolvedValue(undefined) }),
-    };
-  }
-
-  beforeEach(() => {
-    mockGetMusicPlayer.mockReturnValue(mockPlayer);
-    mockPlayer.nodes.get.mockReturnValue(mockQueue);
-    mockPlayer.nodes.create.mockReturnValue(mockQueue);
-    mockQueue.node.isPaused.mockReturnValue(false);
-    mockQueue.node.createProgressBar.mockReturnValue('▬▬▬▬▬▬▬▬');
-    mockQueue.tracks.toArray.mockReturnValue([
-      { title: 'Song2', author: 'A2', duration: '2:00', url: 'u2' },
-      { title: 'Song3', author: 'A3', duration: '3:00', url: 'u3' },
-    ]);
-    mockQueue.history.isEmpty.mockReturnValue(false);
-    mockQueue.isPlaying.mockReturnValue(true);
-    mockQueue.repeatMode = 0;
-    mockQueue.currentTrack = { title: 'Song', author: 'Artist', duration: '3:42', durationMS: 222_000, url: 'http://x', thumbnail: 'thumb', requestedBy: { username: 'u1' } };
-    mockQueue.tracks.size = 2;
-    mockQueue.connection = true;
-  });
-
-  it('ignores non-prefixed messages', async () => {
-    const msg = makeMessage('hello');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).not.toHaveBeenCalled();
-  });
-
-  it('ignores bot messages', async () => {
-    const msg = makeMessage('!play song');
-    msg.author.bot = true;
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).not.toHaveBeenCalled();
-  });
-
-  it('ignores non-guild messages', async () => {
-    const msg = makeMessage('!play song');
-    (msg as any).guild = null;
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).not.toHaveBeenCalled();
-  });
-
-  it('ignores non-music commands', async () => {
-    const msg = makeMessage('!hello');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).not.toHaveBeenCalled();
-  });
-
-  it('responds when player not initialized', async () => {
-    mockGetMusicPlayer.mockReturnValue(null);
-    const msg = makeMessage('!play song');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('zainicjalizowany'));
-  });
-
-  it('responds when music not allowed', async () => {
-    mockCanUseMusic.mockResolvedValue({ allowed: false, reason: 'No permission' });
-    const msg = makeMessage('!play song');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('No permission'));
-  });
-
-  it('handles !pause', async () => {
-    const msg = makeMessage('!pause');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.node.pause).toHaveBeenCalled();
-  });
-
-  it('handles !pause when nothing playing', async () => {
-    mockPlayer.nodes.get.mockReturnValue(null);
-    const msg = makeMessage('!pause');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('odtwarzane'));
-  });
-
-  it('handles !resume', async () => {
-    mockQueue.node.isPaused.mockReturnValue(true);
-    const msg = makeMessage('!resume');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.node.resume).toHaveBeenCalled();
-  });
-
-  it('handles !resume when not paused', async () => {
-    mockQueue.node.isPaused.mockReturnValue(false);
-    const msg = makeMessage('!resume');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('wstrzymane'));
-  });
-
-  it('handles !resume when no queue', async () => {
-    mockPlayer.nodes.get.mockReturnValue(null);
-    const msg = makeMessage('!resume');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('odtwarzane'));
-  });
-
-  it('handles !skip', async () => {
-    const msg = makeMessage('!skip');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.node.skip).toHaveBeenCalled();
-  });
-
-  it('handles !skip when nothing playing', async () => {
-    mockQueue.isPlaying.mockReturnValue(false);
-    const msg = makeMessage('!skip');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('odtwarzane'));
-  });
-
-  it('handles !stop', async () => {
-    const msg = makeMessage('!stop');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.delete).toHaveBeenCalled();
-  });
-
-  it('handles !stop when no queue', async () => {
-    mockPlayer.nodes.get.mockReturnValue(null);
-    const msg = makeMessage('!stop');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('odtwarzane'));
-  });
-
-  it('handles !queue', async () => {
-    const msg = makeMessage('!queue');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
-  });
-
-  it('handles !queue (alias !q)', async () => {
-    const msg = makeMessage('!q');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalled();
-  });
-
-  it('handles !queue when empty', async () => {
-    mockPlayer.nodes.get.mockReturnValue(null);
-    const msg = makeMessage('!queue');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('pusta'));
-  });
-
-  it('handles !nowplaying', async () => {
-    const msg = makeMessage('!nowplaying');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
-  });
-
-  it('handles !np alias', async () => {
-    const msg = makeMessage('!np');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalled();
-  });
-
-  it('handles !nowplaying when no track', async () => {
-    mockQueue.currentTrack = null as any;
-    const msg = makeMessage('!nowplaying');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('odtwarzane'));
-  });
-
-  it('handles !volume without args (shows current)', async () => {
-    const msg = makeMessage('!volume');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalled();
-  });
-
-  it('handles !vol alias', async () => {
-    const msg = makeMessage('!vol');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalled();
-  });
-
-  it('handles !volume with valid value', async () => {
-    const msg = makeMessage('!volume 75');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.node.setVolume).toHaveBeenCalledWith(75);
-  });
-
-  it('handles !volume with invalid value', async () => {
-    const msg = makeMessage('!volume abc');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('0 do 100'));
-  });
-
-  it('handles !volume out of range', async () => {
-    const msg = makeMessage('!volume 150');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('0 do 100'));
-  });
-
-  it('handles !volume when no queue', async () => {
-    mockPlayer.nodes.get.mockReturnValue(null);
-    const msg = makeMessage('!volume 50');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('odtwarzane'));
-  });
-
-  it('handles !shuffle', async () => {
-    const msg = makeMessage('!shuffle');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.tracks.shuffle).toHaveBeenCalled();
-  });
-
-  it('handles !shuffle when empty', async () => {
-    mockQueue.tracks.size = 0;
-    const msg = makeMessage('!shuffle');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('pusta'));
-  });
-
-  it('handles !loop toggle on', async () => {
-    mockQueue.repeatMode = 0;
-    const msg = makeMessage('!loop');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.setRepeatMode).toHaveBeenCalledWith(1);
-  });
-
-  it('handles !loop toggle off', async () => {
-    mockQueue.repeatMode = 1;
-    const msg = makeMessage('!loop');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.setRepeatMode).toHaveBeenCalledWith(0);
-  });
-
-  it('handles !loop when no queue', async () => {
-    mockPlayer.nodes.get.mockReturnValue(null);
-    const msg = makeMessage('!loop');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('odtwarzane'));
-  });
-
-  it('handles !loopq toggle on', async () => {
-    mockQueue.repeatMode = 0;
-    const msg = makeMessage('!loopq');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.setRepeatMode).toHaveBeenCalledWith(2);
-  });
-
-  it('handles !loopq toggle off', async () => {
-    mockQueue.repeatMode = 2;
-    const msg = makeMessage('!loopq');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.setRepeatMode).toHaveBeenCalledWith(0);
-  });
-
-  it('handles !mhelp', async () => {
-    const msg = makeMessage('!mhelp');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
-  });
-
-  it('handles !musichelp alias', async () => {
-    const msg = makeMessage('!musichelp');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalled();
-  });
-
-  it('handles !play without voice channel', async () => {
-    const msg = makeMessage('!play test', false);
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('kanale głosowym'));
-  });
-
-  it('handles !play on AFK channel', async () => {
-    const msg = makeMessage('!play test');
-    msg.member.voice.channel = { id: 'afkCh' } as any;
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalled();
-  });
-
-  it('handles !play without query', async () => {
-    const msg = makeMessage('!play');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('Podaj'));
-  });
-
-  it('handles !play channel not allowed', async () => {
-    mockCanPlayInChannel.mockResolvedValue({ allowed: false, reason: 'Wrong channel' });
-    const msg = makeMessage('!play test');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('Wrong channel'));
-  });
-
-  it('handles !play with search results (single track)', async () => {
-    mockPlayer.search.mockResolvedValue({
-      hasTracks: () => true,
-      playlist: null,
-      tracks: [{
-        title: 'Found Song', author: 'A', duration: '3:00', durationMS: 180_000,
-        url: 'http://y', thumbnail: 'th',
-      }],
-    });
-    mockQueue.connection = null as any;
-    mockQueue.isPlaying.mockReturnValue(false);
-    const msg = makeMessage('!play test song');
-    await musicCommandsRun(msg as any);
-    expect(mockQueue.addTrack).toHaveBeenCalled();
-    expect(mockQueue.node.play).toHaveBeenCalled();
-  });
-
-  it('handles !play with no results', async () => {
-    mockPlayer.search.mockResolvedValue({ hasTracks: () => false, tracks: [] });
-    const msg = makeMessage('!play nonexistent');
-    await musicCommandsRun(msg as any);
-    // The reply would be the "searching" message, then edited to "not found"
-  });
-
-  it('handles !p alias for play', async () => {
-    const msg = makeMessage('!p', false);
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalled();
-  });
-
-  it('handles error in command execution', async () => {
-    mockPlayer.nodes.get.mockImplementation(() => { throw new Error('Unexpected'); });
-    const msg = makeMessage('!pause');
-    await musicCommandsRun(msg as any);
-    expect(msg.reply).toHaveBeenCalledWith(expect.stringContaining('błąd'));
-  });
-
-  it('handles !stop with editable nowPlayingMessage', async () => {
-    const editableMeta = {
-      nowPlayingMessage: { editable: true, edit: jest.fn().mockResolvedValue(undefined) },
-    };
-    const queueWithMeta = { ...mockQueue, metadata: editableMeta };
-    mockPlayer.nodes.get.mockReturnValue(queueWithMeta);
-    const msg = makeMessage('!stop');
-    await musicCommandsRun(msg as any);
-    expect(editableMeta.nowPlayingMessage.edit).toHaveBeenCalledWith({ components: [] });
-    expect(queueWithMeta.delete).toHaveBeenCalled();
   });
 });

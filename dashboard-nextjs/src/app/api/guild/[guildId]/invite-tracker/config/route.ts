@@ -30,6 +30,8 @@ export async function GET(
       enabled: (config as any)?.enabled ?? false,
       logChannelId: (config as any)?.logChannelId || null,
       joinMessage: (config as any)?.joinMessage || '',
+      joinMessageUnknown: (config as any)?.joinMessageUnknown || '',
+      joinMessageVanity: (config as any)?.joinMessageVanity || '',
       leaveMessage: (config as any)?.leaveMessage || '',
     });
   } catch (error) {
@@ -52,7 +54,7 @@ export async function POST(
     const { guildId } = await params;
     const body = await req.json();
 
-    const { enabled, logChannelId, joinMessage, leaveMessage } = body;
+    const { enabled, logChannelId, joinMessage, joinMessageUnknown, joinMessageVanity, leaveMessage } = body;
 
     const updatedConfig = await InviteTrackerConfig.findOneAndUpdate(
       { guildId },
@@ -61,6 +63,8 @@ export async function POST(
         enabled: enabled ?? false,
         logChannelId: logChannelId || null,
         joinMessage: joinMessage || '',
+        joinMessageUnknown: joinMessageUnknown || '',
+        joinMessageVanity: joinMessageVanity || '',
         leaveMessage: leaveMessage || '',
       },
       { upsert: true, new: true },
@@ -80,6 +84,8 @@ export async function POST(
       enabled: (updatedConfig as any)?.enabled ?? false,
       logChannelId: (updatedConfig as any)?.logChannelId || null,
       joinMessage: (updatedConfig as any)?.joinMessage || '',
+      joinMessageUnknown: (updatedConfig as any)?.joinMessageUnknown || '',
+      joinMessageVanity: (updatedConfig as any)?.joinMessageVanity || '',
       leaveMessage: (updatedConfig as any)?.leaveMessage || '',
     });
   } catch (error) {

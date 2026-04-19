@@ -3,9 +3,6 @@ import { GiveawayConfigModel } from '../models/GiveawayConfig';
 import type { IGiveaway } from '../interfaces/Models';
 import { ServiceResult, ok, fail } from '../types/serviceResult';
 import { randomUUID } from 'crypto';
-import { parseRawDurationMs } from '../utils/parseDuration';
-
-export { parseRawDurationMs as parseDuration };
 
 /* ── Types ────────────────────────────────────────────────────── */
 
@@ -16,9 +13,10 @@ export interface CreateGiveawayInput {
   prize: string;
   description: string;
   winnersCount: number;
-  durationMs: number;
+  endTime: Date;
   hostId: string;
   pingRoleId?: string;
+  imageUrl?: string;
   roleMultipliers?: Record<string, number>;
 }
 
@@ -33,6 +31,7 @@ export interface GiveawayData {
   endTime: Date;
   hostId: string;
   pingRoleId?: string;
+  imageUrl?: string;
   active: boolean;
   participants: string[];
   roleMultipliers?: Record<string, number>;
@@ -43,8 +42,9 @@ export interface EditGiveawayInput {
   prize?: string;
   description?: string;
   winnersCount?: number;
-  durationMs?: number;
+  endTime?: Date;
   pingRoleId?: string;
+  imageUrl?: string;
 }
 
 export interface DeleteResult {
@@ -87,6 +87,7 @@ export interface FinalizedEntry {
   prize: string;
   description: string;
   hostId: string;
+  imageUrl?: string;
   participants: string[];
   winnersCount: number;
   endTime: Date;
@@ -228,6 +229,7 @@ function toGiveawayData(doc: any): GiveawayData {
     endTime: doc.endTime as Date,
     hostId: doc.hostId as string,
     pingRoleId: doc.pingRoleId as string | undefined,
+    imageUrl: doc.imageUrl as string | undefined,
     active: doc.active as boolean,
     participants: doc.participants as string[],
     roleMultipliers,
@@ -240,14 +242,13 @@ function toGiveawayData(doc: any): GiveawayData {
 export async function createGiveaway(
   input: CreateGiveawayInput,
 ): Promise<ServiceResult<GiveawayData>> {
-  const { durationMs, ...rest } = input;
+  const { endTime, ...rest } = input;
 
-  if (isNaN(durationMs) || durationMs <= 0) {
-    return fail('INVALID_DURATION', 'Czas trwania musi być większy niż 0');
+  if (!(endTime instanceof Date) || isNaN(endTime.getTime()) || endTime.getTime() <= Date.now()) {
+    return fail('INVALID_END_TIME', 'Data zakończenia musi być w przyszłości');
   }
 
   const giveawayId = randomUUID();
-  const endTime = new Date(Date.now() + durationMs);
 
   const data: IGiveaway = {
     ...rest,
@@ -268,7 +269,7 @@ export async function editGiveaway(
   guildId: string,
   changes: EditGiveawayInput,
 ): Promise<ServiceResult<GiveawayData>> {
-  if (!changes.prize && !changes.description && !changes.winnersCount && !changes.durationMs && !changes.pingRoleId) {
+  if (!changes.prize && !changes.description && !changes.winnersCount && !changes.endTime && !changes.pingRoleId && changes.imageUrl === undefined) {
     return fail('NO_CHANGES', 'Nie podano żadnych wartości do edycji');
   }
 
@@ -278,13 +279,14 @@ export async function editGiveaway(
   if (changes.prize) giveaway.prize = changes.prize;
   if (changes.description) giveaway.description = changes.description;
   if (changes.winnersCount) giveaway.winnersCount = changes.winnersCount;
-  if (changes.durationMs) {
-    if (changes.durationMs <= 0) {
-      return fail('INVALID_DURATION', 'Czas trwania musi być większy niż 0');
+  if (changes.endTime) {
+    if (changes.endTime.getTime() <= Date.now()) {
+      return fail('INVALID_END_TIME', 'Data zakończenia musi być w przyszłości');
     }
-    giveaway.endTime = new Date(Date.now() + changes.durationMs);
+    giveaway.endTime = changes.endTime;
   }
   if (changes.pingRoleId) giveaway.pingRoleId = changes.pingRoleId;
+  if (changes.imageUrl !== undefined) giveaway.imageUrl = changes.imageUrl || undefined;
 
   await giveaway.save();
   return ok(toGiveawayData(giveaway.toObject()));
@@ -311,9 +313,11 @@ export async function endGiveaway(
 
   giveaway.active = false;
   giveaway.finalized = true;
-  await giveaway.save();
 
   const winnerIds = pickWinnerIds(giveaway.participants, giveaway.winnersCount);
+  (giveaway as any).winners = winnerIds;
+  await giveaway.save();
+
   return ok({ giveaway: toGiveawayData(giveaway.toObject()), winnerIds });
 }
 
@@ -371,6 +375,13 @@ export async function rerollGiveaway(
   if (giveaway.participants.length === 0) return fail('NO_PARTICIPANTS', 'Brak uczestników giveawayu');
 
   const winnerIds = pickWinnerIds(giveaway.participants, giveaway.winnersCount);
+
+  // Update winners in DB on reroll
+  await GiveawayModel.updateOne(
+    { giveawayId, guildId },
+    { $set: { winners: winnerIds } },
+  );
+
   return ok({ giveaway: toGiveawayData(giveaway), winnerIds });
 }
 
@@ -396,24 +407,30 @@ export async function listActiveGiveaways(
   return ok(sorted);
 }
 
-export async function finalizeExpiredGiveaways(): Promise<ServiceResult<FinalizedEntry[]>> {
+export async function finalizeExpiredGiveaways(guildIds: string[]): Promise<ServiceResult<FinalizedEntry[]>> {
   const finalized: FinalizedEntry[] = [];
+
+  if (!guildIds.length) return ok(finalized);
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const now = new Date();
+    // Only finalize giveaways for guilds this bot instance actually serves.
+    // This prevents a second bot instance sharing the same DB from stealing
+    // giveaways it cannot edit (guild not in its cache).
     const giveaway = await GiveawayModel.findOneAndUpdate(
-      { finalized: false, endTime: { $lte: now } },
-      { active: false },
-      { returnDocument: 'after', sort: { endTime: 1 } },
+      { finalized: false, endTime: { $lte: now }, guildId: { $in: guildIds } },
+      { $set: { active: false, finalized: true } },
+      { returnDocument: 'before', sort: { endTime: 1 } },
     );
     if (!giveaway) break;
 
     const winnerIds = pickWinnerIds(giveaway.participants, giveaway.winnersCount);
 
+    // Persist winners
     await GiveawayModel.updateOne(
-      { _id: giveaway._id, finalized: false },
-      { $set: { finalized: true } },
+      { _id: giveaway._id },
+      { $set: { winners: winnerIds } },
     );
 
     finalized.push({
@@ -424,6 +441,7 @@ export async function finalizeExpiredGiveaways(): Promise<ServiceResult<Finalize
       prize: giveaway.prize,
       description: giveaway.description,
       hostId: giveaway.hostId,
+      imageUrl: giveaway.imageUrl,
       participants: giveaway.participants,
       winnersCount: giveaway.winnersCount,
       endTime: giveaway.endTime,

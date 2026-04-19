@@ -29,7 +29,6 @@ const mockDeleteGiveaway = jest.fn();
 const mockEndGiveaway = jest.fn();
 const mockListActiveGiveaways = jest.fn();
 const mockRerollGiveaway = jest.fn();
-const mockGaParseDuration = jest.fn();
 const mockGetAdditionalNote = jest.fn();
 jest.mock('../../../src/services/giveawayService', () => ({
   createGiveaway: mockCreateGiveaway,
@@ -38,7 +37,6 @@ jest.mock('../../../src/services/giveawayService', () => ({
   endGiveaway: mockEndGiveaway,
   listActiveGiveaways: mockListActiveGiveaways,
   rerollGiveaway: mockRerollGiveaway,
-  parseDuration: mockGaParseDuration,
   getAdditionalNote: mockGetAdditionalNote,
 }));
 
@@ -386,7 +384,7 @@ describe('giveaway command', () => {
     interaction.options.getSubcommand = jest.fn().mockReturnValue('create');
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
       if (name === 'nagroda') return 'Nitro';
-      if (name === 'czas_trwania') return '1d';
+      if (name === 'data_zakonczenia') return '25.12.2026 20:00';
       if (name === 'opis') return 'Win nitro!';
       return null;
     });
@@ -395,7 +393,6 @@ describe('giveaway command', () => {
       return null;
     });
     interaction.options.getRole = jest.fn().mockReturnValue(null);
-    mockGaParseDuration.mockReturnValue(86400000);
     mockCreateGiveaway.mockResolvedValue({
       ok: true,
       data: { giveawayId: 'g1' },
@@ -520,13 +517,12 @@ describe('giveaway command', () => {
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
       if (name === 'id') return 'g1';
       if (name === 'nagroda') return 'New Prize';
-      if (name === 'czas_trwania') return '2d';
+      if (name === 'data_zakonczenia') return '25.12.2026 20:00';
       if (name === 'opis') return 'Updated';
       return null;
     });
     interaction.options.getInteger = jest.fn().mockReturnValue(2);
     interaction.options.getRole = jest.fn().mockReturnValue(null);
-    mockGaParseDuration.mockReturnValue(172800000);
     mockEditGiveaway.mockResolvedValue({
       ok: true,
       data: {
@@ -553,7 +549,7 @@ describe('giveaway command', () => {
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
       if (name === 'nagroda') return 'Nitro';
       if (name === 'opis') return 'Win!';
-      if (name === 'czas_trwania') return '1d';
+      if (name === 'data_zakonczenia') return '25.12.2026 20:00';
       return null;
     });
     interaction.options.getInteger = jest.fn().mockImplementation((name: string) => {
@@ -561,7 +557,6 @@ describe('giveaway command', () => {
       return null;
     });
     interaction.options.getRole = jest.fn().mockReturnValue(null);
-    mockGaParseDuration.mockReturnValue(86400000);
     mockCreateGiveaway.mockResolvedValue({
       ok: false,
       message: 'Max giveaways reached',

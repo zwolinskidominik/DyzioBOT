@@ -17,7 +17,6 @@ import {
   endGiveaway,
   listActiveGiveaways,
   rerollGiveaway,
-  parseDuration,
   getAdditionalNote,
 } from '../../services/giveawayService';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
@@ -44,8 +43,8 @@ export const data = new SlashCommandBuilder()
       )
       .addStringOption((option) =>
         option
-          .setName('czas_trwania')
-          .setDescription("Czas trwania giveawayu (np. '5 days 4 hours 2 minutes')")
+          .setName('data_zakonczenia')
+          .setDescription("Data zakończenia giveawayu (format: DD.MM.YYYY HH:mm)")
           .setRequired(true)
       )
       .addRoleOption((option) =>
@@ -63,6 +62,12 @@ export const data = new SlashCommandBuilder()
           .setDescription('Mnożnik dla powyższej roli (domyślnie 2)')
           .setMinValue(2)
           .setMaxValue(10)
+          .setRequired(false)
+      )
+      .addAttachmentOption((option) =>
+        option
+          .setName('zdjecie')
+          .setDescription('Zdjęcie do embeda (opcjonalnie)')
           .setRequired(false)
       )
   )
@@ -87,14 +92,26 @@ export const data = new SlashCommandBuilder()
       )
       .addStringOption((option) =>
         option
-          .setName('czas_trwania')
-          .setDescription("Nowy czas trwania giveawayu (np. '5 days 4 hours 2 minutes')")
+          .setName('data_zakonczenia')
+          .setDescription("Nowa data zakończenia giveawayu (format: DD.MM.YYYY HH:mm)")
           .setRequired(false)
       )
       .addRoleOption((option) =>
         option
           .setName('ping')
           .setDescription('Nowa rola do pingowania (opcjonalnie)')
+          .setRequired(false)
+      )
+      .addAttachmentOption((option) =>
+        option
+          .setName('zdjecie')
+          .setDescription('Nowe zdjęcie do embeda (opcjonalnie)')
+          .setRequired(false)
+      )
+      .addBooleanOption((option) =>
+        option
+          .setName('usun_zdjecie')
+          .setDescription('Usuń zdjęcie z embeda')
           .setRequired(false)
       )
   )
@@ -180,26 +197,57 @@ function getTimestamp(date: Date): number {
   return Math.floor(date.getTime() / 1000);
 }
 
+/**
+ * Parse a date string in "DD.MM.YYYY HH:mm" format.
+ * Returns a Date object or undefined if the format is invalid.
+ */
+function parseEndDate(input: string): Date | undefined {
+  const match = input.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  if (!match) return undefined;
+
+  const [, dayStr, monthStr, yearStr, hourStr, minuteStr] = match;
+  const day = parseInt(dayStr, 10);
+  const month = parseInt(monthStr, 10) - 1; // JS months are 0-indexed
+  const year = parseInt(yearStr, 10);
+  const hour = parseInt(hourStr, 10);
+  const minute = parseInt(minuteStr, 10);
+
+  if (month < 0 || month > 11 || day < 1 || day > 31 || hour > 23 || minute > 59) return undefined;
+
+  const date = new Date(year, month, day, hour, minute, 0, 0);
+  // Validate that Date constructor didn't overflow (e.g. 31.02 → 03.03)
+  if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) return undefined;
+
+  return date;
+}
+
 async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const prize = interaction.options.getString('nagroda', true);
   const description = interaction.options.getString('opis', true);
   const winnersCount = interaction.options.getInteger('liczba_wygranych', true);
-  const durationStr = interaction.options.getString('czas_trwania', true);
+  const endDateStr = interaction.options.getString('data_zakonczenia', true);
   const pingRole = interaction.options.getRole('ping');
   const multiplierRole = interaction.options.getRole('mnoznik_roli');
   const multiplier = interaction.options.getInteger('mnoznik') || 2;
+  const imageAttachment = interaction.options.getAttachment('zdjecie');
+  const imageUrl = imageAttachment?.url || undefined;
 
-  const durationMs = parseDuration(durationStr);
-  if (isNaN(durationMs) || durationMs <= 0) {
+  const endTime = parseEndDate(endDateStr);
+  if (!endTime) {
     await interaction.editReply({
-      embeds: [createErrorEmbed("Podaj poprawny czas trwania giveawayu (np. '5 days 4 hours 2 minutes').")],
+      embeds: [createErrorEmbed("Podaj poprawną datę zakończenia w formacie DD.MM.YYYY HH:mm (np. '25.12.2026 20:00').")],
+    });
+    return;
+  }
+  if (endTime.getTime() <= Date.now()) {
+    await interaction.editReply({
+      embeds: [createErrorEmbed('Data zakończenia musi być w przyszłości.')],
     });
     return;
   }
 
-  const endTime = new Date(Date.now() + durationMs);
   const timestamp = getTimestamp(endTime);
 
   const additionalNote = await getAdditionalNote(interaction.guild!.id);
@@ -209,6 +257,7 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
     description: `### ${prize}\n${description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
     footerText: `Giveaway`,
     color: COLORS.GIVEAWAY,
+    image: imageUrl,
   });
 
   const {
@@ -247,9 +296,10 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
     prize,
     description,
     winnersCount,
-    durationMs,
+    endTime,
     hostId: interaction.user.id,
     pingRoleId: pingRole ? pingRole.id : undefined,
+    imageUrl,
     roleMultipliers,
   });
 
@@ -266,6 +316,7 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
     description: `### ${prize}\n${description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
     footerText: `Giveaway ID: ${ga.giveawayId}`,
     color: COLORS.GIVEAWAY,
+    image: imageUrl,
   });
 
   const realJoinButton = new ButtonBuilder()
@@ -299,23 +350,36 @@ async function handleEditGiveaway(interaction: ChatInputCommandInteraction): Pro
   const newPrize = interaction.options.getString('nagroda');
   const newDescription = interaction.options.getString('opis');
   const newWinners = interaction.options.getInteger('liczba_wygranych');
-  const newDurationStr = interaction.options.getString('czas_trwania');
+  const newEndDateStr = interaction.options.getString('data_zakonczenia');
   const newPingRole = interaction.options.getRole('ping');
+  const newImageAttachment = interaction.options.getAttachment('zdjecie');
+  const removeImage = interaction.options.getBoolean('usun_zdjecie') ?? false;
+  const newImageUrl = newImageAttachment ? newImageAttachment.url : removeImage ? '' : undefined;
 
-  const durationMs = newDurationStr ? parseDuration(newDurationStr) : undefined;
-  if (durationMs !== undefined && (!durationMs || durationMs <= 0)) {
-    await interaction.editReply({
-      embeds: [createErrorEmbed("Podaj poprawny czas trwania giveawayu (np. '5 days 4 hours 2 minutes').")],
-    });
-    return;
+  let newEndTime: Date | undefined;
+  if (newEndDateStr) {
+    newEndTime = parseEndDate(newEndDateStr);
+    if (!newEndTime) {
+      await interaction.editReply({
+        embeds: [createErrorEmbed("Podaj poprawną datę zakończenia w formacie DD.MM.YYYY HH:mm (np. '25.12.2026 20:00').")],
+      });
+      return;
+    }
+    if (newEndTime.getTime() <= Date.now()) {
+      await interaction.editReply({
+        embeds: [createErrorEmbed('Data zakończenia musi być w przyszłości.')],
+      });
+      return;
+    }
   }
 
   const result = await editGiveaway(giveawayId, interaction.guild!.id, {
     prize: newPrize ?? undefined,
     description: newDescription ?? undefined,
     winnersCount: newWinners ?? undefined,
-    durationMs,
+    endTime: newEndTime,
     pingRoleId: newPingRole?.id,
+    imageUrl: newImageUrl,
   });
 
   if (!result.ok) {
@@ -342,6 +406,7 @@ async function handleEditGiveaway(interaction: ChatInputCommandInteraction): Pro
         description: `### ${ga.prize}\n${ga.description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${ga.hostId}>\n**Zwycięzcy:** ${ga.winnersCount}`,
         footerText: `Giveaway ID: ${ga.giveawayId}`,
         color: COLORS.GIVEAWAY,
+        image: ga.imageUrl,
       });
       await giveawayMessage.edit({ embeds: [updatedEmbed] });
     }
@@ -435,12 +500,27 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
     description: `### ${ga.prize}\n${ga.description}\n\n**Zakończony:** <t:${timestamp}:f>\n**Host:** <@${ga.hostId}>\n**Uczestnicy:** ${participantsCount}\n**Zwycięzcy:** ${winnersText}`,
     footerText: `Giveaway ID: ${ga.giveawayId}`,
     color: COLORS.GIVEAWAY_ENDED,
+    image: ga.imageUrl,
   });
+
+  const {
+    emojis: {
+      giveaway: { list: listEmoji },
+    },
+  } = getBotConfig(interaction.client.application!.id);
+
+  const participantsButton = new ButtonBuilder()
+    .setCustomId(`giveaway_count_${ga.giveawayId}`)
+    .setLabel(`Uczestnicy (${new Set(ga.participants).size})`)
+    .setEmoji(listEmoji)
+    .setStyle(ButtonStyle.Secondary);
+
+  const endedRow = new ActionRowBuilder<ButtonBuilder>().addComponents(participantsButton);
 
   await giveawayMessage.edit({
     content: '### 🎉 🎉 Giveaway zakończony 🎉 🎉',
     embeds: [updatedEmbed],
-    components: [],
+    components: [endedRow],
   });
 
   {
@@ -544,12 +624,27 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction): P
     description: `### ${ga.prize}\n${ga.description}\n\n**Zakończony:** <t:${timestamp}:f>\n**Host:** <@${ga.hostId}>\n**Uczestnicy:** ${ga.participants.length}\n**Zwycięzcy (reroll):** ${winnersText}`,
     footerText: `Giveaway ID: ${ga.giveawayId}`,
     color: COLORS.GIVEAWAY_ENDED,
+    image: ga.imageUrl,
   });
+
+  const {
+    emojis: {
+      giveaway: { list: rerollListEmoji },
+    },
+  } = getBotConfig(interaction.client.application!.id);
+
+  const rerollParticipantsButton = new ButtonBuilder()
+    .setCustomId(`giveaway_count_${ga.giveawayId}`)
+    .setLabel(`Uczestnicy (${new Set(ga.participants).size})`)
+    .setEmoji(rerollListEmoji)
+    .setStyle(ButtonStyle.Secondary);
+
+  const rerollRow = new ActionRowBuilder<ButtonBuilder>().addComponents(rerollParticipantsButton);
 
   await giveawayMessage.edit({
     content: '### 🎉 🎉 Giveaway zakończony 🎉 🎉',
     embeds: [updatedEmbed],
-    components: [],
+    components: [rerollRow],
   });
 
   {

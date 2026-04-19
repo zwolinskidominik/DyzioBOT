@@ -27,6 +27,8 @@ describe('getConfig', () => {
     expect(res.data.enabled).toBe(false);
     expect(res.data.logChannelId).toBeNull();
     expect(res.data.joinMessage).toBe('');
+    expect(res.data.joinMessageUnknown).toBe('');
+    expect(res.data.joinMessageVanity).toBe('');
     expect(res.data.leaveMessage).toBe('');
   });
 
@@ -36,6 +38,8 @@ describe('getConfig', () => {
       enabled: true,
       logChannelId: 'ch-1',
       joinMessage: 'Welcome {user}!',
+      joinMessageUnknown: 'Unknown joiner',
+      joinMessageVanity: 'Vanity join',
       leaveMessage: 'Bye {user}!',
     });
 
@@ -45,6 +49,8 @@ describe('getConfig', () => {
     expect(res.data.enabled).toBe(true);
     expect(res.data.logChannelId).toBe('ch-1');
     expect(res.data.joinMessage).toBe('Welcome {user}!');
+    expect(res.data.joinMessageUnknown).toBe('Unknown joiner');
+    expect(res.data.joinMessageVanity).toBe('Vanity join');
   });
 });
 

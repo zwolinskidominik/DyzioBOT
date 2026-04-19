@@ -34,6 +34,8 @@ interface InviteConfig {
   enabled: boolean;
   logChannelId: string | null;
   joinMessage: string;
+  joinMessageUnknown: string;
+  joinMessageVanity: string;
   leaveMessage: string;
 }
 
@@ -109,6 +111,8 @@ export default function InviteTrackerPage() {
   const [enabled, setEnabled] = useState(false);
   const [logChannelId, setLogChannelId] = useState("");
   const [joinMessage, setJoinMessage] = useState("");
+  const [joinMessageUnknown, setJoinMessageUnknown] = useState("");
+  const [joinMessageVanity, setJoinMessageVanity] = useState("");
   const [leaveMessage, setLeaveMessage] = useState("");
 
   // Stats state
@@ -208,6 +212,8 @@ export default function InviteTrackerPage() {
           setEnabled(configData.enabled);
           setLogChannelId(configData.logChannelId || "");
           setJoinMessage(configData.joinMessage || "");
+          setJoinMessageUnknown(configData.joinMessageUnknown || "");
+          setJoinMessageVanity(configData.joinMessageVanity || "");
           setLeaveMessage(configData.leaveMessage || "");
         }
       } catch (err) {
@@ -232,6 +238,8 @@ export default function InviteTrackerPage() {
           enabled,
           logChannelId: logChannelId || null,
           joinMessage,
+          joinMessageUnknown,
+          joinMessageVanity,
           leaveMessage,
         }),
       });
@@ -241,6 +249,8 @@ export default function InviteTrackerPage() {
         setEnabled(data.enabled);
         setLogChannelId(data.logChannelId || "");
         setJoinMessage(data.joinMessage || "");
+        setJoinMessageUnknown(data.joinMessageUnknown || "");
+        setJoinMessageVanity(data.joinMessageVanity || "");
         setLeaveMessage(data.leaveMessage || "");
         toast.success("Konfiguracja Invite Trackera została zapisana.");
       } else {
@@ -398,14 +408,14 @@ export default function InviteTrackerPage() {
               )}
             </div>
 
-            {/* Join message template */}
+            {/* Join message template – known inviter */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
-                Wiadomość przy dołączeniu (opcjonalne)
+                Wiadomość przy dołączeniu — znany zapraszający (opcjonalne)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Niestandardowa wiadomość przy dołączeniu. Zostaw puste, aby użyć domyślnego embeda.
+                Szablon używany, gdy osoba zapraszająca jest znana. Zostaw puste, aby użyć domyślnego embeda.
               </p>
               {loading ? (
                 <Skeleton className="h-24 w-full" />
@@ -426,6 +436,70 @@ export default function InviteTrackerPage() {
                     Podgląd wiadomości
                   </Label>
                   <DiscordMessagePreview content={joinMessage} />
+                </div>
+              )}
+            </div>
+
+            {/* Join message template – unknown inviter */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4" />
+                Wiadomość przy dołączeniu — nieznany zapraszający (opcjonalne)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Szablon używany, gdy nie można ustalić kto zaprosił. Zostaw puste, aby użyć domyślnego embeda.
+              </p>
+              {loading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : (
+                <VariableInserter
+                  value={joinMessageUnknown}
+                  onChange={setJoinMessageUnknown}
+                  variables={INVITE_VARIABLES}
+                  rows={4}
+                  className="font-mono text-sm"
+                  placeholder="Zostaw puste, aby użyć domyślnego embeda..."
+                />
+              )}
+              {!loading && joinMessageUnknown && (
+                <div className="space-y-2 mt-2">
+                  <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Eye className="h-3.5 w-3.5" />
+                    Podgląd wiadomości
+                  </Label>
+                  <DiscordMessagePreview content={joinMessageUnknown} />
+                </div>
+              )}
+            </div>
+
+            {/* Join message template – vanity/custom link */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <LinkIcon className="h-4 w-4" />
+                Wiadomość przy dołączeniu — niestandardowy link (opcjonalne)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Szablon używany, gdy osoba dołączyła przez niestandardowy (vanity) link serwera. Zostaw puste, aby użyć domyślnego embeda.
+              </p>
+              {loading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : (
+                <VariableInserter
+                  value={joinMessageVanity}
+                  onChange={setJoinMessageVanity}
+                  variables={INVITE_VARIABLES}
+                  rows={4}
+                  className="font-mono text-sm"
+                  placeholder="Zostaw puste, aby użyć domyślnego embeda..."
+                />
+              )}
+              {!loading && joinMessageVanity && (
+                <div className="space-y-2 mt-2">
+                  <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Eye className="h-3.5 w-3.5" />
+                    Podgląd wiadomości
+                  </Label>
+                  <DiscordMessagePreview content={joinMessageVanity} />
                 </div>
               )}
             </div>

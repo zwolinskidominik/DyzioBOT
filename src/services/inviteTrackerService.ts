@@ -31,6 +31,8 @@ export async function getConfig(guildId: string): Promise<ServiceResult<{
   enabled: boolean;
   logChannelId: string | null;
   joinMessage: string;
+  joinMessageUnknown: string;
+  joinMessageVanity: string;
   leaveMessage: string;
 }>> {
   try {
@@ -39,6 +41,8 @@ export async function getConfig(guildId: string): Promise<ServiceResult<{
       enabled: config?.enabled ?? false,
       logChannelId: config?.logChannelId ?? null,
       joinMessage: config?.joinMessage ?? '',
+      joinMessageUnknown: config?.joinMessageUnknown ?? '',
+      joinMessageVanity: config?.joinMessageVanity ?? '',
       leaveMessage: config?.leaveMessage ?? '',
     });
   } catch (error) {
@@ -51,6 +55,8 @@ export async function updateConfig(guildId: string, data: {
   enabled?: boolean;
   logChannelId?: string | null;
   joinMessage?: string;
+  joinMessageUnknown?: string;
+  joinMessageVanity?: string;
   leaveMessage?: string;
 }): Promise<ServiceResult<{ updated: boolean }>> {
   try {

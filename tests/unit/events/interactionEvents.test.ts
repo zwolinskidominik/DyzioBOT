@@ -1,7 +1,7 @@
 /**
  * Tests for interaction-related events:
  * - giveawayHandler, handleSuggestions, monthlyStatsButtons
- * - musicButtons, ticketSystem, voiceControl
+ * - ticketSystem, voiceControl
  */
 
 /* ── mocks ───────────────────────────────────────────────── */
@@ -22,9 +22,6 @@ jest.mock('../../../src/config/constants/colors', () => ({
   COLORS: {
     GIVEAWAY: 0xff0000,
     GIVEAWAY_ENDED: 0x808080,
-    MUSIC: 0x00ff00,
-    MUSIC_PAUSE: 0xffff00,
-    MUSIC_SUCCESS: 0x00ff00,
     DEFAULT: 0x000000,
   },
 }));
@@ -69,11 +66,6 @@ jest.mock('../../../src/config/bot', () => ({
       monthlyStats: { upvote: '🔼', downvote: '🔽', whitedash: '➖' },
     },
   }),
-}));
-
-jest.mock('../../../src/services/musicPlayer', () => ({
-  getMusicPlayer: jest.fn().mockReturnValue(null),
-  QueueMetadata: {},
 }));
 
 jest.mock('../../../src/services/ticketService', () => ({
@@ -245,46 +237,6 @@ describe('interactionCreate / monthlyStatsButtons', () => {
 
     await run(interaction);
     expect(interaction.deferReply).toHaveBeenCalled();
-  });
-});
-
-/* ── musicButtons ─────────────────────────────────────────── */
-
-describe('interactionCreate / musicButtons', () => {
-  let run: any;
-  beforeAll(async () => {
-    run = (await import('../../../src/events/interactionCreate/musicButtons')).default;
-  });
-  beforeEach(() => jest.clearAllMocks());
-
-  it('ignores non-button interactions', async () => {
-    const interaction = mockButtonInteraction({ customId: 'music_pause' });
-    interaction.isButton = jest.fn().mockReturnValue(false);
-    await run(interaction);
-    expect(interaction.reply).not.toHaveBeenCalled();
-  });
-
-  it('ignores non-music customIds', async () => {
-    const interaction = mockButtonInteraction({ customId: 'other_button' });
-    await run(interaction);
-    expect(interaction.reply).not.toHaveBeenCalled();
-  });
-
-  it('returns when no guild', async () => {
-    const interaction = mockButtonInteraction({ customId: 'music_pause', guild: null });
-    await run(interaction);
-    expect(interaction.reply).not.toHaveBeenCalled();
-  });
-
-  it('returns when no player', async () => {
-    const interaction = mockButtonInteraction({ customId: 'music_pause' });
-    interaction.guild = mockGuild();
-    const member = mockGuildMember();
-    member.voice = { channel: { id: 'vc-1' } };
-    interaction.member = member;
-    await run(interaction);
-    // getMusicPlayer returns null, so no action
-    expect(interaction.reply).not.toHaveBeenCalled();
   });
 });
 

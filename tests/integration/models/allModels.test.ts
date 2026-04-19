@@ -19,7 +19,6 @@ import { LevelConfigModel } from '../../../src/models/LevelConfig';
 import { LogConfigurationModel } from '../../../src/models/LogConfiguration';
 import { MonthlyStatsModel } from '../../../src/models/MonthlyStats';
 import { MonthlyStatsConfigModel } from '../../../src/models/MonthlyStatsConfig';
-import { MusicConfigModel } from '../../../src/models/MusicConfig';
 import { QuestionModel } from '../../../src/models/Question';
 import { QuestionConfigurationModel } from '../../../src/models/QuestionConfiguration';
 import { ReactionRoleModel } from '../../../src/models/ReactionRole';
@@ -220,21 +219,6 @@ describe('Model integration tests', () => {
       const doc = await MonthlyStatsConfigModel.create({ guildId: GID });
       expect(doc.enabled).toBe(false);
       expect(doc.topCount).toBe(10);
-    });
-  });
-
-  /* ── MusicConfig ────────────────────────────────── */
-  describe('MusicConfigModel', () => {
-    it('creates with defaults', async () => {
-      const doc = await MusicConfigModel.create({ guildId: GID });
-      expect(doc.enabled).toBe(true);
-      expect(doc.defaultVolume).toBe(50);
-      expect(doc.maxQueueSize).toBe(100);
-      expect(doc.announceSongs).toBe(true);
-      expect(doc.leaveOnEmpty).toBe(true);
-      expect(doc.leaveOnEnd).toBe(true);
-      expect(doc.leaveTimeout).toBe(300);
-      expect(doc.allowedChannels).toEqual([]);
     });
   });
 

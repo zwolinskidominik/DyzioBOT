@@ -41,9 +41,45 @@ export default async function run(interaction: ButtonInteraction, client: Client
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+    // For 'count' action, allow viewing participants on ended giveaways too
+    if (action === 'count') {
+      const anyGiveawayResult = await getGiveaway(giveawayId, interaction.guild!.id);
+      if (!anyGiveawayResult.ok) {
+        await interaction.editReply({ content: 'Ten giveaway nie został znaleziony.' });
+        return;
+      }
+      await handleShowParticipants(interaction, anyGiveawayResult.data);
+      return;
+    }
+
     const giveawayResult = await getActiveGiveaway(giveawayId, interaction.guild!.id);
 
     if (!giveawayResult.ok) {
+      // If the giveaway is no longer active, fix the buttons on the original message
+      if (giveawayResult.code === 'NOT_ACTIVE') {
+        try {
+          const endedResult = await getGiveaway(giveawayId, interaction.guild!.id);
+          if (endedResult.ok) {
+            const {
+              emojis: {
+                giveaway: { list: listEmoji },
+              },
+            } = getBotConfig(client.user!.id);
+
+            const participantsButton = new ButtonBuilder()
+              .setCustomId(`giveaway_count_${giveawayId}`)
+              .setLabel(`Uczestnicy (${new Set(endedResult.data.participants).size})`)
+              .setEmoji(listEmoji)
+              .setStyle(ButtonStyle.Secondary);
+
+            const endedRow = new ActionRowBuilder<ButtonBuilder>().addComponents(participantsButton);
+            await interaction.message.edit({ components: [endedRow] });
+          }
+        } catch (fixErr) {
+          logger.warn(`Nie udało się naprawić przycisków zakończonego giveaway ${giveawayId}: ${fixErr}`);
+        }
+      }
+
       await interaction.editReply({
         content: giveawayResult.code === 'NOT_ACTIVE'
           ? 'Ten giveaway został już zakończony.'

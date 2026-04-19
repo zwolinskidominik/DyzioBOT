@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, Home, Cake, Hand, Trophy, UserPlus, UserCheck, Lightbulb, Ticket, HelpCircle, Tv, Smile, FileText, BarChart3, Activity, Radio, ScrollText, Gamepad2, Music, Gift, ShieldAlert, Star } from "lucide-react";
+import { ChevronDown, Home, Cake, Hand, Trophy, UserPlus, UserCheck, Lightbulb, Ticket, HelpCircle, Tv, Smile, FileText, BarChart3, Activity, Radio, ScrollText, Gamepad2, Music, Gift, ShieldAlert, Star, Dices, Puzzle, PartyPopper } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { prefetchGuildData } from "@/lib/cache";
 
@@ -33,8 +33,11 @@ const modules = [
   { id: "stream-config", name: "Powiadomienia Twitch", icon: Tv, href: "/stream-config" },
   { id: "suggestions", name: "Sugestie", icon: Lightbulb, href: "/suggestions" },
   { id: "tournament", name: "Turniej CS2", icon: Gamepad2, href: "/tournament" },
+  { id: "hangman", name: "Wisielec", icon: Dices, href: "/hangman" },
+  { id: "wordle", name: "Wordle", icon: Puzzle, href: "/wordle" },
   { id: "tickets", name: "Tickety", icon: Ticket, href: "/tickets" },
   { id: "giveaway", name: "Giveaway", icon: Gift, href: "/giveaway" },
+  { id: "wrapped", name: "Server Wrapped", icon: PartyPopper, href: "/wrapped" },
   { id: "reaction-roles", name: "Role za reakcje", icon: Smile, href: "/reaction-roles" },
   { id: "anti-spam", name: "Anti-Spam", icon: ShieldAlert, href: "/anti-spam" },
   { id: "invite-tracker", name: "Invite Tracker", icon: UserCheck, href: "/invite-tracker" },

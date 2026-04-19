@@ -50,6 +50,7 @@ jest.mock('../../../src/config/bot', () => ({
   getBotConfig: jest.fn().mockReturnValue({
     emojis: {
       monthlyStats: { crown: '👑', up: '📈', down: '📉', same: '➡️', new: '🆕', mic: '🎤' },
+      giveaway: { list: '📋' },
     },
   }),
 }));
@@ -436,6 +437,7 @@ describe('giveawayScheduler', () => {
     mockFinalizeExpiredGiveaways.mockResolvedValue({
       ok: true,
       data: [{
+        giveawayId: 'gw1',
         guildId: 'g1',
         channelId: 'ch1',
         messageId: 'msg1',
@@ -466,7 +468,7 @@ describe('giveawayScheduler', () => {
     const client = makeClient([guild]);
     mockFinalizeExpiredGiveaways.mockResolvedValue({
       ok: true,
-      data: [{ guildId: 'g1', channelId: 'ch1', messageId: 'msg1', winnerIds: [], participants: [], endTime: new Date() }],
+      data: [{ giveawayId: 'gw2', guildId: 'g1', channelId: 'ch1', messageId: 'msg1', winnerIds: [], participants: [], endTime: new Date() }],
     });
     await giveawayScheduler(client as any);
     await cronCallbacks[cronCallbacks.length - 1]();
@@ -475,7 +477,7 @@ describe('giveawayScheduler', () => {
   it('handles guild not found', async () => {
     mockFinalizeExpiredGiveaways.mockResolvedValue({
       ok: true,
-      data: [{ guildId: 'unknown', channelId: 'ch1', messageId: 'msg1', winnerIds: [], participants: [], endTime: new Date() }],
+      data: [{ giveawayId: 'gw3', guildId: 'unknown', channelId: 'ch1', messageId: 'msg1', winnerIds: [], participants: [], endTime: new Date() }],
     });
     const client = makeClient();
     await giveawayScheduler(client as any);
@@ -496,7 +498,7 @@ describe('giveawayScheduler', () => {
     const client = makeClient([guild]);
     mockFinalizeExpiredGiveaways.mockResolvedValue({
       ok: true,
-      data: [{ guildId: 'g1', channelId: 'ch1', messageId: 'msg1', winnerIds: ['u1'], participants: ['u1'], endTime: new Date() }],
+      data: [{ giveawayId: 'gw4', guildId: 'g1', channelId: 'ch1', messageId: 'msg1', winnerIds: ['u1'], participants: ['u1'], endTime: new Date() }],
     });
     await giveawayScheduler(client as any);
     await cronCallbacks[cronCallbacks.length - 1]();
@@ -519,7 +521,7 @@ describe('giveawayScheduler', () => {
     const client = makeClient([guild]);
     mockFinalizeExpiredGiveaways.mockResolvedValue({
       ok: true,
-      data: [{ guildId: 'g1', channelId: 'ch1', messageId: 'msg1', winnerIds: ['u1'], participants: ['u1'], endTime: new Date() }],
+      data: [{ giveawayId: 'gw5', guildId: 'g1', channelId: 'ch1', messageId: 'msg1', winnerIds: ['u1'], participants: ['u1'], endTime: new Date() }],
     });
     await giveawayScheduler(client as any);
     await cronCallbacks[cronCallbacks.length - 1]();

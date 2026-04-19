@@ -124,6 +124,12 @@ const InviteTrackerConfigSchema = new mongoose.Schema({
 }, { collection: 'invitetrackerconfigs' });
 const InviteTrackerModuleConfig = mongoose.models.InviteTrackerModuleConfig || mongoose.model('InviteTrackerModuleConfig', InviteTrackerConfigSchema);
 
+const WrappedConfigSchema = new mongoose.Schema({
+  guildId: String,
+  enabled: Boolean,
+}, { collection: 'wrappedconfigs' });
+const WrappedModuleConfig = mongoose.models.WrappedModuleConfig || mongoose.model('WrappedModuleConfig', WrappedConfigSchema);
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -155,6 +161,7 @@ export async function GET(
       giveaway,
       music,
       antiSpam,
+      wrapped,
     ] = await Promise.all([
       BirthdayConfig.findOne({ guildId }).lean(),
       GreetingsConfig.findOne({ guildId }).lean(),
@@ -173,6 +180,7 @@ export async function GET(
       GiveawayConfig.findOne({ guildId }).lean(),
       MusicConfig.findOne({ guildId }).lean(),
       AntiSpamModuleConfig.findOne({ guildId }).lean(),
+      WrappedModuleConfig.findOne({ guildId }).lean(),
     ]);
 
     const disboard = await DisboardModuleConfig.findOne({ guildId }).lean();
@@ -198,6 +206,7 @@ export async function GET(
       "anti-spam": (antiSpam as any)?.enabled === true,
       disboard: (disboard as any)?.enabled === true,
       "invite-tracker": (inviteTracker as any)?.enabled === true,
+      wrapped: (wrapped as any)?.enabled === true,
     };
 
     return NextResponse.json(status);

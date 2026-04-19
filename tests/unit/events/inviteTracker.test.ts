@@ -111,14 +111,14 @@ describe('clientReady/inviteCache', () => {
 
 describe('guildMemberAdd/inviteTracker', () => {
   it('does nothing when module is disabled', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: false, logChannelId: null, joinMessage: '', leaveMessage: '' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: false, logChannelId: null, joinMessage: '', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
     const member = makeMember();
     await inviteTrackerJoin(member as any, {} as any);
     expect(mockRecordJoin).not.toHaveBeenCalled();
   });
 
   it('records join when enabled', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: null, joinMessage: '', leaveMessage: '' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: null, joinMessage: '', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
     mockDetectUsedInvite.mockResolvedValue({ code: 'abc123', inviterId: 'inviter-1' });
     mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inviter-1', fake: false } });
 
@@ -134,7 +134,7 @@ describe('guildMemberAdd/inviteTracker', () => {
   });
 
   it('sends default embed to log channel', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '', leaveMessage: '' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
     mockDetectUsedInvite.mockResolvedValue({ code: 'abc', inviterId: 'inv-1' });
     mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', fake: false } });
     mockGetInviterStats.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', total: 5, active: 3, left: 1, fake: 1 } });
@@ -149,7 +149,7 @@ describe('guildMemberAdd/inviteTracker', () => {
   });
 
   it('sends custom join message when configured', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: 'Witaj {user}! Zaproszony przez {inviter}', leaveMessage: '' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: 'Witaj {user}! Zaproszony przez {inviter}', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
     mockDetectUsedInvite.mockResolvedValue({ code: 'abc', inviterId: 'inv-1' });
     mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', fake: false } });
     mockGetInviterStats.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', total: 1, active: 1, left: 0, fake: 0 } });
@@ -162,7 +162,7 @@ describe('guildMemberAdd/inviteTracker', () => {
   });
 
   it('replaces {activeCount} with the number of active invites', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '{user} zaproszony przez {inviter}, ma {activeCount} zaproszeń!', leaveMessage: '' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '{user} zaproszony przez {inviter}, ma {activeCount} zaproszeń!', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
     mockDetectUsedInvite.mockResolvedValue({ code: 'xyz', inviterId: 'inv-2' });
     mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inv-2', fake: false } });
     mockGetInviterStats.mockResolvedValue({ ok: true, data: { inviterId: 'inv-2', total: 340, active: 334, left: 4, fake: 2 } });
@@ -181,7 +181,7 @@ describe('guildMemberAdd/inviteTracker', () => {
   });
 
   it('handles null invite detection gracefully', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '', leaveMessage: '' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
     mockDetectUsedInvite.mockResolvedValue(null);
     mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: null, fake: false } });
 
@@ -193,20 +193,69 @@ describe('guildMemberAdd/inviteTracker', () => {
       inviteCode: null,
     }));
   });
+
+  it('sends joinMessageUnknown when inviter is unknown', async () => {
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: 'known', joinMessageUnknown: '{username} dołączył, ale nie wiadomo kto zaprosił', joinMessageVanity: '', leaveMessage: '' } });
+    mockDetectUsedInvite.mockResolvedValue(null);
+    mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: null, fake: false } });
+
+    const member = makeMember();
+    await inviteTrackerJoin(member as any, {} as any);
+
+    const logChannel = member.guild.channels.cache.get('log-ch');
+    expect(logChannel!.send).toHaveBeenCalledWith('TestUser dołączył, ale nie wiadomo kto zaprosił');
+  });
+
+  it('sends joinMessageVanity when vanity URL is used', async () => {
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: 'known', joinMessageUnknown: 'unknown', joinMessageVanity: '{username} dołączył przez vanity {inviteCode}', leaveMessage: '' } });
+    mockDetectUsedInvite.mockResolvedValue({ code: 'myserver', inviterId: null });
+    mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: null, fake: false } });
+
+    const member = makeMember({
+      guild: {
+        id: 'guild-1',
+        name: 'Test Server',
+        memberCount: 100,
+        vanityURLCode: 'myserver',
+        invites: { fetch: jest.fn().mockResolvedValue(new Map()) },
+        channels: {
+          cache: new Map([['log-ch', { id: 'log-ch', send: jest.fn() }]]),
+        },
+      },
+    });
+    await inviteTrackerJoin(member as any, {} as any);
+
+    const logChannel = member.guild.channels.cache.get('log-ch');
+    expect(logChannel!.send).toHaveBeenCalledWith('TestUser dołączył przez vanity myserver');
+  });
+
+  it('falls back to default embed when joinMessageUnknown is empty', async () => {
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: 'known', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
+    mockDetectUsedInvite.mockResolvedValue(null);
+    mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: null, fake: false } });
+
+    const member = makeMember();
+    await inviteTrackerJoin(member as any, {} as any);
+
+    const logChannel = member.guild.channels.cache.get('log-ch');
+    expect(logChannel!.send).toHaveBeenCalledWith(expect.objectContaining({
+      embeds: expect.any(Array),
+    }));
+  });
 });
 
 /* ── guildMemberRemove/inviteTracker.ts ───────────────────────── */
 
 describe('guildMemberRemove/inviteTracker', () => {
   it('does nothing when module is disabled', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: false, logChannelId: null, joinMessage: '', leaveMessage: '' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: false, logChannelId: null, joinMessage: '', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
     const member = makeMember();
     await inviteTrackerLeave(member as any, {} as any);
     expect(mockRecordLeave).not.toHaveBeenCalled();
   });
 
   it('records leave and sends embed', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '', leaveMessage: '' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
     mockRecordLeave.mockResolvedValue({ ok: true, data: { inviterId: 'inviter-1' } });
     mockGetInviterStats.mockResolvedValue({ ok: true, data: { inviterId: 'inviter-1', total: 3, active: 2, left: 1, fake: 0 } });
 
@@ -222,7 +271,7 @@ describe('guildMemberRemove/inviteTracker', () => {
   });
 
   it('sends custom leave message', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '', leaveMessage: '{user} opuścił {server}!' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: 'log-ch', joinMessage: '', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '{user} opuścił {server}!' } });
     mockRecordLeave.mockResolvedValue({ ok: true, data: { inviterId: null } });
 
     const member = makeMember();
@@ -233,7 +282,7 @@ describe('guildMemberRemove/inviteTracker', () => {
   });
 
   it('skips log when no log channel configured', async () => {
-    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: null, joinMessage: '', leaveMessage: '' } });
+    mockGetConfig.mockResolvedValue({ ok: true, data: { enabled: true, logChannelId: null, joinMessage: '', joinMessageUnknown: '', joinMessageVanity: '', leaveMessage: '' } });
     mockRecordLeave.mockResolvedValue({ ok: true, data: { inviterId: null } });
 
     const member = makeMember();

@@ -10,7 +10,7 @@ describe('COLORS constants', () => {
     const expectedKeys = [
       'CS2_MIX', 'DEFAULT', 'BIRTHDAY', 'EMBED', 'ERROR', 'FACEIT',
       'FORTUNE', 'FORTUNE_ADD', 'GIVEAWAY', 'GIVEAWAY_ENDED', 'JOIN',
-      'LEAVE', 'MEME', 'MUSIC', 'MUSIC_PAUSE', 'MUSIC_SUCCESS',
+      'LEAVE', 'MEME',
       'TICKET', 'TICKET_REPORT', 'TICKET_PARTNERSHIP', 'TICKET_IDEA',
       'TICKET_REWARD', 'TWITCH', 'WARN', 'WARNINGS_LIST',
     ];
@@ -30,6 +30,5 @@ describe('COLORS constants', () => {
     // but we can still verify values at runtime.
     expect(COLORS.DEFAULT).toBe('#4C4C54');
     expect(COLORS.ERROR).toBe('#E74D3C');
-    expect(COLORS.MUSIC).toBe('#5865F2');
   });
 });

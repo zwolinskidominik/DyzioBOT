@@ -5,7 +5,6 @@ import flushXp, { startXpFlushScheduler } from './events/clientReady/xpFlush';
 import { startMonthlyStatsFlushScheduler } from './events/clientReady/monthlyStatsFlush';
 import xpCache from './cache/xpCache';
 import { flushMonthlyStats } from './cache/monthlyStatsCache';
-import { initializeMusicPlayer } from './services/musicPlayer';
 import logger from './utils/logger';
 import { env } from './config';
 import mongoose from 'mongoose';
@@ -49,7 +48,6 @@ mongoose
         await xpCache.setClient(client);
         startXpFlushScheduler();
         startMonthlyStatsFlushScheduler();
-        await initializeMusicPlayer(client);
         logger.info(`${client.user.tag} jest online.`);
       })
       .catch((err) => logger.error(`❌ Nie udało się zalogować: ${err}`));
