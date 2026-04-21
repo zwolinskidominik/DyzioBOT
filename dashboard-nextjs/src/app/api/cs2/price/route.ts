@@ -44,10 +44,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse price from string like "1,23 zł" to number
-    const lowestPrice = data.lowest_price?.replace('zł', '').replace(',', '.').trim() || '0';
-    const medianPrice = data.median_price?.replace('zł', '').replace(',', '.').trim() || '0';
-    
-    const price = parseFloat(lowestPrice) || parseFloat(medianPrice) || 0;
+    // Use median_price (based on recent sales) as primary — more representative than lowest_price (single cheapest listing)
+    const medianPrice = data.median_price?.replace(/[^\d,]/g, '').replace(',', '.').trim() || '0';
+    const lowestPrice = data.lowest_price?.replace(/[^\d,]/g, '').replace(',', '.').trim() || '0';
+
+    const price = parseFloat(medianPrice) || parseFloat(lowestPrice) || 0;
 
     return NextResponse.json({
       success: true,
