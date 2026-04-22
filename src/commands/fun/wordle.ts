@@ -112,8 +112,8 @@ export const data = new SlashCommandBuilder()
   .setDescription('Zagraj w Wordle! Odgadnij ukryte polskie słowo.')
   .addIntegerOption((o) =>
     o.setName('litery')
-      .setDescription('Liczba liter w słowie (domyślnie 5, zakres 4–11)')
-      .setMinValue(4).setMaxValue(11).setRequired(false),
+      .setDescription('Liczba liter w słowie (domyślnie 5, zakres 5–7)')
+      .setMinValue(5).setMaxValue(7).setRequired(false),
   );
 
 export const options = { cooldown: 5 };

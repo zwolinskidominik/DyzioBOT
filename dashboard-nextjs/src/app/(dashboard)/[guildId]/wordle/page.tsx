@@ -52,17 +52,12 @@ interface WordleData {
 /* ── Constants ─────────────────────────────────────────────── */
 
 const POLISH_REGEX = /^[a-ząćęłńóśźż]+$/;
-const ALL_LENGTHS = [4, 5, 6, 7, 8, 9, 10, 11];
+const ALL_LENGTHS = [5, 6, 7];
 
 const LENGTH_LABELS: Record<number, string> = {
-  4: "4-literowe",
   5: "5-literowe (standard)",
   6: "6-literowe",
   7: "7-literowe",
-  8: "8-literowe",
-  9: "9-literowe",
-  10: "10-literowe",
-  11: "11-literowe",
 };
 
 const cardStyle = {

@@ -5,8 +5,8 @@ import dbConnect from '@/lib/mongodb';
 import WordleWord from '@/models/WordleWord';
 
 const POLISH_REGEX = /^[a-ząćęłńóśźż]+$/;
-const MIN_LEN = 4;
-const MAX_LEN = 11;
+const MIN_LEN = 5;
+const MAX_LEN = 7;
 
 /* ── GET — return all words grouped by length ─────────────── */
 export async function GET(

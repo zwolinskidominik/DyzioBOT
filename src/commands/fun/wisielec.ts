@@ -83,12 +83,12 @@ export async function pickRandomWord(): Promise<{ word: string; category: Hangma
 
 export function getWordDisplay(word: string, guessed: Set<string>): string {
   return [...word]
-    .map((ch) => (ch === ' ' ? '   ' : guessed.has(ch) ? `**${ch.toUpperCase()}**` : '\\_'))
+    .map((ch) => (/\s/.test(ch) ? '\u00A0\u00A0\u00A0\u00A0\u00A0' : guessed.has(ch) ? `**${ch.toUpperCase()}**` : '\\_'))
     .join(' ');
 }
 
 export function isWordGuessed(word: string, guessed: Set<string>): boolean {
-  return [...word].every((ch) => ch === ' ' || guessed.has(ch));
+  return [...word].every((ch) => /\s/.test(ch) || guessed.has(ch));
 }
 
 function getStageImage(wrongGuesses: number): AttachmentBuilder {

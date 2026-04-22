@@ -102,12 +102,12 @@ describe('getWordDisplay', () => {
 
   it('shows spaces as gaps in multi-word phrases', () => {
     const display = getWordDisplay('dom kot', new Set(['d', 'o', 'k']));
-    expect(display).toBe('**D** **O** \\_     **K** **O** \\_');
+    expect(display).toBe('**D** **O** \\_ \u00A0\u00A0\u00A0\u00A0\u00A0 **K** **O** \\_');
   });
 
   it('reveals full multi-word phrase', () => {
     const display = getWordDisplay('dom kot', new Set(['d', 'o', 'm', 'k', 't']));
-    expect(display).toBe('**D** **O** **M**     **K** **O** **T**');
+    expect(display).toBe('**D** **O** **M** \u00A0\u00A0\u00A0\u00A0\u00A0 **K** **O** **T**');
   });
 });
 
