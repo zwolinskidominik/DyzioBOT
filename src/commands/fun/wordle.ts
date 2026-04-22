@@ -387,7 +387,6 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   activeUsers.add(userId);
   const guesses: GuessRow[] = [];
   const submittedGuesses = new Set<string>();
-  let processingGuess = false;
   const row = makeButtons(userId);
 
   const { resource: replyResource } = await interaction.reply({
@@ -429,14 +428,6 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
     if (btn.customId !== `wordle_guess_${userId}`) return;
 
-    // Zapobiegaj podwójnemu wywołaniu modala — jeśli już przetwarzamy zgadywanie,
-    // odrzuć kolejne kliknięcie (Discord wymaga odpowiedzi w 3s, więc deferUpdate).
-    if (processingGuess) {
-      try { await btn.deferUpdate(); } catch { /* ignore */ }
-      return;
-    }
-    processingGuess = true;
-
     await btn.showModal(makeModal(userId, length));
 
     let modalInter;
@@ -446,7 +437,6 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
         filter: (i) => i.user.id === userId && i.customId === `wordle_modal_${userId}`,
       });
     } catch {
-      processingGuess = false;
       return;
     }
 
@@ -454,26 +444,24 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     if (!/^[a-ząćęłńóśźż]+$/.test(rawInput)) {
       await modalInter.reply({ content: '❌ Używaj tylko polskich liter (bez q, v, x)!', flags: MessageFlags.Ephemeral });
-      processingGuess = false;
       return;
     }
     if (rawInput.length !== length) {
       await modalInter.reply({ content: `❌ Słowo musi mieć dokładnie ${length} liter!`, flags: MessageFlags.Ephemeral });
-      processingGuess = false;
       return;
     }
 
     // Zapobiegaj zgłaszaniu tego samego słowa kilka razy (marnuje próbę).
+    // To także obsługuje przypadek, gdy dwa równoległe `awaitModalSubmit` rozwiążą się
+    // tym samym submitem — pierwszy doda słowo, drugi wykryje duplikat.
     if (submittedGuesses.has(rawInput)) {
       await modalInter.reply({ content: `❌ To słowo już zgadywałeś w tej grze!`, flags: MessageFlags.Ephemeral });
-      processingGuess = false;
       return;
     }
 
     const valid = await isPolishWord(rawInput);
     if (!valid) {
       await modalInter.reply({ content: `❌ Słowo **${rawInput.toUpperCase()}** nie istnieje w słowniku języka polskiego!`, flags: MessageFlags.Ephemeral });
-      processingGuess = false;
       return;
     }
 
@@ -498,7 +486,6 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
         components: [row],
       });
     }
-    processingGuess = false;
   });
 
   collector.on('end', async (_, reason) => {
