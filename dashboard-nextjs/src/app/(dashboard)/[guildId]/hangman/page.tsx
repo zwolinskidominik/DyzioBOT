@@ -100,9 +100,9 @@ export default function HangmanBrowserPage() {
   const [editError, setEditError] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await fetchWithAuth(`/api/guild/${guildId}/hangman`);
       if (!response.ok) throw new Error("Failed to fetch hangman data");
       const result = await response.json();
@@ -112,7 +112,7 @@ export default function HangmanBrowserPage() {
         err instanceof Error ? err.message : "Nie udało się załadować danych"
       );
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [guildId]);
 
@@ -172,8 +172,10 @@ export default function HangmanBrowserPage() {
         return;
       }
       setNewWordInputs((prev) => ({ ...prev, [categoryName]: "" }));
-      await fetchData();
-      wordInputRefs.current[categoryName]?.focus();
+      await fetchData(true);
+      requestAnimationFrame(() => {
+        wordInputRefs.current[categoryName]?.focus();
+      });
     } catch {
       setWordErrors((prev) => ({
         ...prev,

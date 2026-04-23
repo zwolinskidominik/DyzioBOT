@@ -95,9 +95,9 @@ export default function WordlePage() {
 
   /* ── Data fetching ─────────────────────────────────────────── */
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetchWithAuth(`/api/guild/${guildId}/wordle`);
       if (!res.ok) throw new Error("Nie udało się pobrać danych");
       const result = await res.json();
@@ -107,7 +107,7 @@ export default function WordlePage() {
         err instanceof Error ? err.message : "Nie udało się załadować danych"
       );
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [guildId]);
 
@@ -198,8 +198,10 @@ export default function WordlePage() {
         return;
       }
       setNewWordInputs((prev) => ({ ...prev, [length]: "" }));
-      await fetchData();
-      wordInputRefs.current[length]?.focus();
+      await fetchData(true);
+      requestAnimationFrame(() => {
+        wordInputRefs.current[length]?.focus();
+      });
     } catch {
       setWordErrors((prev) => ({ ...prev, [length]: "Błąd połączenia" }));
     } finally {
