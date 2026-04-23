@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -84,6 +84,7 @@ export default function WordlePage() {
   const [newWordInputs, setNewWordInputs] = useState<Record<number, string>>({});
   const [wordErrors, setWordErrors]        = useState<Record<number, string>>({});
   const [savingWord, setSavingWord]        = useState<number | null>(null);
+  const wordInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -198,6 +199,7 @@ export default function WordlePage() {
       }
       setNewWordInputs((prev) => ({ ...prev, [length]: "" }));
       await fetchData();
+      wordInputRefs.current[length]?.focus();
     } catch {
       setWordErrors((prev) => ({ ...prev, [length]: "Błąd połączenia" }));
     } finally {
@@ -271,7 +273,7 @@ export default function WordlePage() {
         </div>
         <p className="text-muted-foreground text-sm ml-7">
           Zarządzaj polskimi słowami do gry /wordle. Słowa są podzielone na
-          kategorie według liczby liter (4–11).
+          kategorie według liczby liter (5–7).
         </p>
       </SlideIn>
 
@@ -288,7 +290,7 @@ export default function WordlePage() {
               </CardTitle>
             </CardHeader>
           </Card>
-          {[5, 6, 4, 7].map((len) => {
+          {ALL_LENGTHS.map((len) => {
             const cat = allCategories.find((c) => c.length === len);
             return (
               <Card key={len} style={cardStyle}>
@@ -409,6 +411,9 @@ export default function WordlePage() {
                         {/* Add word row */}
                         <div className="flex gap-2">
                           <Input
+                            ref={(el) => {
+                              wordInputRefs.current[category.length] = el;
+                            }}
                             placeholder={`Dodaj ${category.length}-literowe słowo...`}
                             value={newWordInputs[category.length] ?? ""}
                             onChange={(e) =>

@@ -22,7 +22,11 @@ export async function GET(
     await params;
     await dbConnect();
 
-    const words = await WordleWord.find().lean().sort({ length: 1, word: 1 });
+    const words = await WordleWord.find({
+      length: { $gte: MIN_LEN, $lte: MAX_LEN },
+    })
+      .lean()
+      .sort({ length: 1, word: 1 });
 
     // Group by length
     const grouped: Record<number, string[]> = {};

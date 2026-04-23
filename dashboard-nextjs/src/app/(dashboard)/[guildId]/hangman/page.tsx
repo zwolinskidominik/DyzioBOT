@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -74,6 +74,7 @@ export default function HangmanBrowserPage() {
   const [newWordInputs, setNewWordInputs] = useState<Record<string, string>>({});
   const [wordErrors, setWordErrors] = useState<Record<string, string>>({});
   const [savingWord, setSavingWord] = useState<string | null>(null);
+  const wordInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Add category state
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -172,6 +173,7 @@ export default function HangmanBrowserPage() {
       }
       setNewWordInputs((prev) => ({ ...prev, [categoryName]: "" }));
       await fetchData();
+      wordInputRefs.current[categoryName]?.focus();
     } catch {
       setWordErrors((prev) => ({
         ...prev,
@@ -562,6 +564,9 @@ export default function HangmanBrowserPage() {
                         {/* Add word input */}
                         <div className="flex gap-2 mb-3">
                           <Input
+                            ref={(el) => {
+                              wordInputRefs.current[category.name] = el;
+                            }}
                             placeholder="Dodaj nowe słowo..."
                             value={newWordInputs[category.name] || ""}
                             onChange={(e) =>
