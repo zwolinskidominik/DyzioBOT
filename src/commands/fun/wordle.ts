@@ -387,6 +387,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   activeUsers.add(userId);
   const guesses: GuessRow[] = [];
   const submittedGuesses = new Set<string>();
+  const processedSubmits = new Set<string>();
   const row = makeButtons(userId);
 
   const { resource: replyResource } = await interaction.reply({
@@ -439,6 +440,14 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     } catch {
       return;
     }
+
+    // Każdy modal-submit ma unikalne id. Jeśli kilka równoległych `awaitModalSubmit`
+    // rozwiąże się tym samym submitem (po wielokrotnym kliknięciu "Zgadnij słowo"),
+    // tylko PIERWSZY ma prawo go przetworzyć — pozostałe cicho odrzucamy.
+    if (processedSubmits.has(modalInter.id)) {
+      return;
+    }
+    processedSubmits.add(modalInter.id);
 
     const rawInput = modalInter.fields.getTextInputValue('wordle_input').trim().toLowerCase();
 
