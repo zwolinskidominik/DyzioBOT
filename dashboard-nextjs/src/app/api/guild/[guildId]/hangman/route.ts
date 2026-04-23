@@ -122,6 +122,46 @@ export async function POST(
       return NextResponse.json({ success: true, category: cat.toObject() });
     }
 
+    if (action === "editCategory") {
+      const { categoryName, newName, newEmoji } = body;
+      if (!categoryName || !newName || !newEmoji) {
+        return NextResponse.json(
+          { error: "Wymagane: categoryName, newName, newEmoji" },
+          { status: 400 }
+        );
+      }
+
+      const trimmedName = String(newName).trim();
+      const trimmedEmoji = String(newEmoji).trim();
+      if (!trimmedName || !trimmedEmoji) {
+        return NextResponse.json(
+          { error: "Nazwa i emoji nie mogą być puste" },
+          { status: 400 }
+        );
+      }
+
+      const cat = await HangmanCategory.findOne({ name: categoryName });
+      if (!cat) {
+        return NextResponse.json({ error: "Nie znaleziono kategorii" }, { status: 404 });
+      }
+
+      if (trimmedName !== categoryName) {
+        const conflict = await HangmanCategory.findOne({ name: trimmedName });
+        if (conflict) {
+          return NextResponse.json(
+            { error: "Kategoria o tej nazwie już istnieje" },
+            { status: 409 }
+          );
+        }
+      }
+
+      cat.name = trimmedName;
+      cat.emoji = trimmedEmoji;
+      await cat.save();
+
+      return NextResponse.json({ success: true, category: cat.toObject() });
+    }
+
     if (action === "removeCategory") {
       const { categoryName } = body;
       if (!categoryName) {

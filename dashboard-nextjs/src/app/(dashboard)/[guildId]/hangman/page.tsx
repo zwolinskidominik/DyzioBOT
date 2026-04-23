@@ -35,6 +35,7 @@ import {
   Plus,
   X,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -88,6 +89,15 @@ export default function HangmanBrowserPage() {
     word?: string;
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Edit category state
+  const [editCategory, setEditCategory] = useState<{
+    originalName: string;
+    name: string;
+    emoji: string;
+  } | null>(null);
+  const [editError, setEditError] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -225,6 +235,48 @@ export default function HangmanBrowserPage() {
       setCategoryError("Błąd połączenia");
     } finally {
       setSavingCategory(false);
+    }
+  };
+
+  const handleEditCategory = async () => {
+    if (!editCategory) return;
+    const trimmedName = editCategory.name.trim();
+    const trimmedEmoji = editCategory.emoji.trim();
+    if (!trimmedName || !trimmedEmoji) {
+      setEditError("Podaj nazwę i emoji");
+      return;
+    }
+    setSavingEdit(true);
+    setEditError("");
+    try {
+      const res = await fetchWithAuth(`/api/guild/${guildId}/hangman`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "editCategory",
+          categoryName: editCategory.originalName,
+          newName: trimmedName,
+          newEmoji: trimmedEmoji,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setEditError(json.error || "Błąd");
+        return;
+      }
+      setExpandedCategories((prev) => {
+        if (!prev.has(editCategory.originalName)) return prev;
+        const next = new Set(prev);
+        next.delete(editCategory.originalName);
+        next.add(trimmedName);
+        return next;
+      });
+      setEditCategory(null);
+      await fetchData();
+    } catch {
+      setEditError("Błąd połączenia");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -476,6 +528,21 @@ export default function HangmanBrowserPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="text-muted-foreground hover:text-foreground shrink-0"
+                      onClick={() => {
+                        setEditError("");
+                        setEditCategory({
+                          originalName: category.name,
+                          name: category.name,
+                          emoji: category.emoji,
+                        });
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="mr-3 text-muted-foreground hover:text-destructive shrink-0"
                       onClick={() =>
                         setDeleteConfirm({
@@ -614,6 +681,60 @@ export default function HangmanBrowserPage() {
               </Button>
               <Button onClick={handleAddCategory} disabled={savingCategory}>
                 {savingCategory ? "Dodawanie..." : "Dodaj kategorię"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit category dialog */}
+        <Dialog
+          open={editCategory !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditCategory(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edytuj kategorię</DialogTitle>
+              <DialogDescription>
+                Zmień nazwę lub emoji kategorii. Słowa pozostają bez zmian.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Nazwa</label>
+                <Input
+                  placeholder="np. Przyroda"
+                  value={editCategory?.name ?? ""}
+                  onChange={(e) =>
+                    setEditCategory((prev) =>
+                      prev ? { ...prev, name: e.target.value } : prev
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Emoji</label>
+                <Input
+                  placeholder="np. 🌿"
+                  value={editCategory?.emoji ?? ""}
+                  onChange={(e) =>
+                    setEditCategory((prev) =>
+                      prev ? { ...prev, emoji: e.target.value } : prev
+                    )
+                  }
+                />
+              </div>
+              {editError && (
+                <p className="text-xs text-destructive">{editError}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditCategory(null)}>
+                Anuluj
+              </Button>
+              <Button onClick={handleEditCategory} disabled={savingEdit}>
+                {savingEdit ? "Zapisywanie..." : "Zapisz"}
               </Button>
             </DialogFooter>
           </DialogContent>
