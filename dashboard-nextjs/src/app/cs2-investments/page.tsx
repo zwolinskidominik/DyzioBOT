@@ -300,9 +300,14 @@ export default function CS2InvestmentsPage() {
   };
 
   // Calculate statistics
+  // Steam Market pobiera ~15% prowizji (5% Steam fee + 10% game fee dla CS2),
+  // więc sprzedający otrzymuje cena_brutto / 1.15 (~86.96%).
+  const STEAM_FEE_DIVISOR = 1.15;
   const totalInvested = items.reduce((sum, item) => sum + (item.buyPrice * item.quantity), 0);
   const currentValue = items.reduce((sum, item) => sum + (item.currentPrice * item.quantity), 0);
+  const currentValueNet = currentValue / STEAM_FEE_DIVISOR;
   const totalProfit = currentValue - totalInvested;
+  const totalProfitNet = currentValueNet - totalInvested;
   const profitPercentage = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
 
   // Prepare chart data
@@ -594,7 +599,7 @@ export default function CS2InvestmentsPage() {
         </Dialog>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
           <Card className="bg-slate-900/50 border-slate-800/50">
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
@@ -615,6 +620,21 @@ export default function CS2InvestmentsPage() {
                   <p className="text-lg font-bold text-white">{currentValue.toFixed(2)} zł</p>
                 </div>
                 <Package className="h-4 w-4 text-emerald-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900/50 border-slate-800/50" title="Wartość po odliczeniu ~15% prowizji Steam Market">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-400">Wartość netto (-15%)</p>
+                  <p className="text-lg font-bold text-white">{currentValueNet.toFixed(2)} zł</p>
+                  <p className={`text-xs mt-0.5 ${totalProfitNet >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {totalProfitNet >= 0 ? '+' : ''}{totalProfitNet.toFixed(2)} zł
+                  </p>
+                </div>
+                <Package className="h-4 w-4 text-amber-400" />
               </div>
             </CardContent>
           </Card>
