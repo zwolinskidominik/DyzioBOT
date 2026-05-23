@@ -60,6 +60,9 @@ class GuildDataCache {
 
 export const guildCache = new GuildDataCache();
 
+// Tracks in-flight prefetch promises to prevent duplicate concurrent requests.
+const inflightPrefetch = new Map<string, Promise<void>>();
+
 export async function fetchGuildData<T>(
   guildId: string,
   type: 'channels' | 'roles' | 'members',
@@ -109,16 +112,10 @@ export async function fetchGuildData<T>(
   return data;
 }
 
-export async function prefetchGuildData(
+async function _doPrefetch(
   guildId: string,
-  types: Array<'channels' | 'roles' | 'members'>
+  uncachedTypes: Array<'channels' | 'roles' | 'members'>
 ): Promise<void> {
-  const uncachedTypes = types.filter(type => !guildCache.get(guildId, type));
-  
-  if (uncachedTypes.length === 0) {
-    return;
-  }
-
   const bulkTypes = uncachedTypes.filter(t => t === 'channels' || t === 'roles');
   const memberType = uncachedTypes.find(t => t === 'members');
 
@@ -153,4 +150,20 @@ export async function prefetchGuildData(
   }
 
   await Promise.allSettled(promises);
+}
+
+export function prefetchGuildData(
+  guildId: string,
+  types: Array<'channels' | 'roles' | 'members'>
+): void {
+  const uncachedTypes = types.filter(type => !guildCache.get(guildId, type));
+  if (uncachedTypes.length === 0) return;
+
+  const inflightKey = `${guildId}:${uncachedTypes.sort().join(',')}`;
+  if (inflightPrefetch.has(inflightKey)) return;
+
+  const promise = _doPrefetch(guildId, uncachedTypes).finally(() => {
+    inflightPrefetch.delete(inflightKey);
+  });
+  inflightPrefetch.set(inflightKey, promise);
 }

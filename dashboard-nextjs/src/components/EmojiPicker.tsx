@@ -1096,10 +1096,10 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
           <TabsList className="w-full grid grid-cols-3 rounded-none border-b">
             <TabsTrigger value="unicode">Standardowe</TabsTrigger>
             <TabsTrigger value="custom">
-              Serwera {customEmojis.length > 0 && `(${customEmojis.length})`}
+              Serwer {customEmojis.length > 0 && `(${customEmojis.length})`}
             </TabsTrigger>
             <TabsTrigger value="bot">
-              Bota {botEmojis.length > 0 && `(${botEmojis.length})`}
+              Bot {botEmojis.length > 0 && `(${botEmojis.length})`}
             </TabsTrigger>
           </TabsList>
 

@@ -44,6 +44,18 @@ export async function GET(
           statusText: response.statusText,
           error: errorData
         });
+
+        // On 429 try to serve stale cache before giving up
+        if (response.status === 429) {
+          const stale = await getFromCache<any>('members', guildId, true);
+          if (stale) return NextResponse.json(stale, { headers: { 'X-Cache': 'stale' } });
+          const retryAfter = errorData?.retry_after ?? 1;
+          return NextResponse.json(
+            { error: "Rate limited by Discord", retry_after: retryAfter },
+            { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfter)) } }
+          );
+        }
+
         throw new Error(`Failed to fetch members: ${response.status} ${response.statusText}`);
       }
 
