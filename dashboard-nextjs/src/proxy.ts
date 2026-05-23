@@ -91,7 +91,6 @@ export default withAuth(
 );
 
 export const config = {
-  runtime: "nodejs", // Node.js runtime — enables ioredis (stable in Next.js 16, no experimental flag needed)
   matcher: [
     "/((?!$|api/auth|api/health|_next/static|_next/image|deezy\\.png|favicon).*)",
   ],
