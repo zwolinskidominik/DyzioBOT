@@ -31,6 +31,7 @@ interface BotEmoji {
 interface EmojiPickerProps {
   onEmojiSelect: (emoji: string) => void;
   buttonText?: string;
+  hideTabs?: Array<"custom" | "bot">;
 }
 
 interface EmojiWithName {
@@ -1003,7 +1004,7 @@ const unicodeEmojis: Record<string, EmojiWithName[]> = {
   ],
 };
 
-export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" }: EmojiPickerProps) {
+export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji", hideTabs = [] }: EmojiPickerProps) {
   const { customEmojis, loading, fetchEmojis } = useEmojis();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -1093,14 +1094,18 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="w-full grid grid-cols-3 rounded-none border-b">
+          <TabsList className={`w-full grid rounded-none border-b grid-cols-${3 - hideTabs.length}`}>
             <TabsTrigger value="unicode">Standardowe</TabsTrigger>
-            <TabsTrigger value="custom">
-              Serwer {customEmojis.length > 0 && `(${customEmojis.length})`}
-            </TabsTrigger>
-            <TabsTrigger value="bot">
-              Bot {botEmojis.length > 0 && `(${botEmojis.length})`}
-            </TabsTrigger>
+            {!hideTabs.includes("custom") && (
+              <TabsTrigger value="custom">
+                Serwer {customEmojis.length > 0 && `(${customEmojis.length})`}
+              </TabsTrigger>
+            )}
+            {!hideTabs.includes("bot") && (
+              <TabsTrigger value="bot">
+                Bot {botEmojis.length > 0 && `(${botEmojis.length})`}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="unicode" className="m-0">

@@ -694,6 +694,7 @@ export default function QOTDPage() {
                     onChange={(e) => setNewReactions(e.target.value)}
                   />
                   <EmojiPicker
+                    hideTabs={["custom"]}
                     onEmojiSelect={(emoji) => {
                       const input = reactionsInputRef.current;
                       if (!input) {
@@ -898,6 +899,7 @@ export default function QOTDPage() {
                                 placeholder="👍, 👎, 🤔"
                               />
                               <EmojiPicker
+                                hideTabs={["custom"]}
                                 onEmojiSelect={(emoji) => {
                                   const input = editReactionsInputRef.current;
                                   if (!input) {
@@ -1110,6 +1112,7 @@ export default function QOTDPage() {
                                       placeholder="👍, 👎, 🤔"
                                     />
                                     <EmojiPicker
+                                      hideTabs={["custom"]}
                                       onEmojiSelect={(emoji) => {
                                         const input = editReactionsInputRef.current;
                                         if (!input) {
