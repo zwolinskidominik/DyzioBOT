@@ -336,7 +336,8 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
               {group.label && (
                 <button
                   onClick={() => toggleGroup(group.id)}
-                  className="w-full flex items-center gap-1 px-3 pt-3 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                  className="w-full flex items-center gap-1 px-3 pt-3 pb-1 text-[10px] font-semibold tracking-widest hover:text-muted-foreground transition-colors"
+                  style={{ color: "rgb(242 244 251)" }}
                 >
                   <ChevronRight
                     className={`w-3 h-3 transition-transform duration-200 ${isCollapsed ? "" : "rotate-90"}`}
