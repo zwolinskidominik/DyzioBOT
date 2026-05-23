@@ -46,15 +46,15 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-  // State and PKCE cookies must be SameSite=None so they survive Cloudflare's
-  // intermediate JS challenge page inserted before the OAuth callback redirect.
-  // Session token stays SameSite=Lax (auto-configured via NEXTAUTH_URL=https://).
+  // State and PKCE cookies: SameSite=Lax is correct for direct VPS setup
+  // (no Cloudflare proxy). Top-level OAuth redirects send Lax cookies fine.
+  // Secure=true enforced via __Secure- prefix (NEXTAUTH_URL=https://).
   cookies: {
     state: {
       name: "__Secure-next-auth.state",
       options: {
         httpOnly: true,
-        sameSite: "none" as const,
+        sameSite: "lax" as const,
         path: "/",
         secure: true,
         maxAge: 900,
@@ -64,7 +64,7 @@ export const authOptions: NextAuthOptions = {
       name: "__Secure-next-auth.pkce.code_verifier",
       options: {
         httpOnly: true,
-        sameSite: "none" as const,
+        sameSite: "lax" as const,
         path: "/",
         secure: true,
         maxAge: 900,
