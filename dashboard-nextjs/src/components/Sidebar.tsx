@@ -8,7 +8,7 @@ import Image from "next/image";
 import {
   ChevronDown, ChevronRight, Home, Cake, Hand, Trophy, UserPlus, UserCheck,
   Lightbulb, Ticket, HelpCircle, Tv, Smile, FileText, BarChart3, Activity,
-  Radio, ScrollText, Gamepad2, Gift, ShieldAlert, Star, Dices, Puzzle, PartyPopper, Plus,
+  Radio, ScrollText, Gamepad2, Gift, ShieldAlert, Star, Dices, Puzzle, PartyPopper, Plus, SmilePlus,
 } from "lucide-react";
 import { prefetchGuildData } from "@/lib/cache";
 import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
@@ -97,6 +97,7 @@ const moduleGroups: ModuleGroup[] = [
     modules: [
       { id: "audit-logs", name: "Logi Systemowe", icon: ScrollText, href: "/audit-logs" },
       { id: "disboard", name: "Disboard", icon: Star, href: "/disboard", ownerOnly: true, ownerGuildOnly: true },
+      { id: "bot-emojis", name: "Emoji Bota", icon: SmilePlus, href: "/bot-emojis", ownerOnly: true, ownerGuildOnly: true },
     ],
   },
 ];
