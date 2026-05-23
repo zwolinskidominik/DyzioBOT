@@ -21,15 +21,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SlideIn } from "@/components/ui/animated";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -499,36 +497,42 @@ export default function BotEmojisPage() {
         </div>
 
         {/* Delete confirmation dialog */}
-        <AlertDialog
+        <Dialog
           open={deleteTarget !== null}
           onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
         >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Usuń emoji</AlertDialogTitle>
-              <AlertDialogDescription>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Usuń emoji</DialogTitle>
+              <DialogDescription>
                 Czy na pewno chcesz usunąć emoji{" "}
                 <span className="font-semibold">:{deleteTarget?.name}:</span>?
                 Tej operacji nie można cofnąć. Emoji przestanie być dostępne we
                 wszystkich modułach bota.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
-              <AlertDialogAction
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                Anuluj
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="bg-destructive hover:bg-destructive/90"
               >
                 {deleting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   "Usuń"
                 )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
