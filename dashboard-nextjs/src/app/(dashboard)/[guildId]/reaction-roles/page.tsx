@@ -128,16 +128,12 @@ export default function ReactionRolesPage() {
       return;
     }
 
-    const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
-    const emojiMatches = currentEmoji.match(emojiRegex);
-    
-    if (!emojiMatches || emojiMatches.length === 0) {
+    const isCustomEmoji = /^<a?:\w+:\d+>$/.test(currentEmoji.trim());
+    const unicodeEmojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)$/u;
+    const isUnicodeEmoji = unicodeEmojiRegex.test(currentEmoji.trim());
+
+    if (!isCustomEmoji && !isUnicodeEmoji) {
       toast.error("Wprowadź prawidłowe emoji");
-      return;
-    }
-    
-    if (emojiMatches.length > 1) {
-      toast.error("Maksymalnie jedno emoji");
       return;
     }
 
