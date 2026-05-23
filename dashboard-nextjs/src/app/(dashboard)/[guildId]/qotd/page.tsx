@@ -124,13 +124,12 @@ export default function QOTDPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [channelsData, rolesData, configRes, questionsRes, usedQuestionsRes, botEmojisRes, appEmojisRes] = await Promise.all([
+        const [channelsData, rolesData, configRes, questionsRes, usedQuestionsRes, appEmojisRes] = await Promise.all([
           fetchGuildData<Channel[]>(guildId, 'channels', `/api/guild/${guildId}/channels`),
           fetchGuildData<Role[]>(guildId, 'roles', `/api/guild/${guildId}/roles`),
           fetchWithAuth(`/api/guild/${guildId}/qotd/config`),
           fetchWithAuth(`/api/guild/${guildId}/qotd/questions`),
           fetchWithAuth(`/api/guild/${guildId}/qotd/questions?disabled=true`),
-          fetchWithAuth(`/api/discord/bot-emojis`).catch(() => null),
           fetch(`/api/bot-emojis/list`).catch(() => null),
         ]);
 
@@ -160,22 +159,12 @@ export default function QOTDPage() {
         }
         setLoadingUsed(false);
 
-        if (botEmojisRes && botEmojisRes.ok) {
-          const { emojiIds } = await botEmojisRes.json();
-          const ids = new Set<string>(emojiIds);
-          if (appEmojisRes && appEmojisRes.ok) {
-            const appEmojis: { id: string }[] = await appEmojisRes.json();
-            for (const e of appEmojis) ids.add(e.id);
-          }
-          setBotEmojiIds(ids);
+        if (appEmojisRes && appEmojisRes.ok) {
+          const appEmojis: { id: string }[] = await appEmojisRes.json();
+          setBotEmojiIds(new Set(appEmojis.map((e) => e.id)));
         } else {
-          // API failed — use application emojis only if available
-          const ids = new Set<string>();
-          if (appEmojisRes && appEmojisRes.ok) {
-            const appEmojis: { id: string }[] = await appEmojisRes.json();
-            for (const e of appEmojis) ids.add(e.id);
-          }
-          setBotEmojiIds(ids);
+          // Endpoint niedostępny — pusty Set (flaguj wszystkie custom emoji)
+          setBotEmojiIds(new Set());
         }
       } catch (error) {
         console.error("Error loading QOTD data:", error);
@@ -1029,8 +1018,8 @@ export default function QOTDPage() {
                                 <span>Reakcje:</span>
                                 <EmojiList emojis={question.reactions} size={16} />
                                 {hasExternalEmoji(question.reactions, botEmojiIds) && (
-                                  <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-orange-500/15 text-orange-400 border border-orange-500/30">
-                                    zewnętrzne emoji
+                                  <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/20 text-red-400 border border-red-500/40">
+                                    ⚠️ emoji z serwera
                                   </span>
                                 )}
                               </div>
@@ -1218,11 +1207,11 @@ export default function QOTDPage() {
                                   <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
                                     <span>Reakcje:</span>
                                     <EmojiList emojis={question.reactions} size={16} />
-                                    {hasExternalEmoji(question.reactions, botEmojiIds) && (
-                                      <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-orange-500/15 text-orange-400 border border-orange-500/30">
-                                        zewnętrzne emoji
-                                      </span>
-                                    )}
+                                {hasExternalEmoji(question.reactions, botEmojiIds) && (
+                                  <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/20 text-red-400 border border-red-500/40">
+                                    ⚠️ emoji z serwera
+                                  </span>
+                                )}
                                   </div>
                                 )}
                               </div>
