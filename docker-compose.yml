@@ -5,6 +5,11 @@ services:
       dockerfile: Dockerfile.bot
     container_name: deezybot
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - .env
     networks:
@@ -22,6 +27,11 @@ services:
         NEXT_PUBLIC_DISCORD_CLIENT_ID: "1119327417237000285"
     container_name: deezybot-dashboard
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - dashboard-nextjs/.env.local
     environment:
