@@ -22,6 +22,12 @@ interface CustomEmoji {
   guildName: string;
 }
 
+interface BotEmoji {
+  id: string;
+  name: string;
+  animated: boolean;
+}
+
 interface EmojiPickerProps {
   onEmojiSelect: (emoji: string) => void;
   buttonText?: string;
@@ -1001,6 +1007,28 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
   const { customEmojis, loading, fetchEmojis } = useEmojis();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("unicode");
+
+  const [botEmojis, setBotEmojis] = useState<BotEmoji[]>([]);
+  const [botEmojisLoading, setBotEmojisLoading] = useState(false);
+  const [botEmojisLoaded, setBotEmojisLoaded] = useState(false);
+
+  const fetchBotEmojis = async () => {
+    if (botEmojisLoaded || botEmojisLoading) return;
+    setBotEmojisLoading(true);
+    try {
+      const res = await fetch("/api/bot-emojis/list");
+      if (res.ok) {
+        const data: BotEmoji[] = await res.json();
+        setBotEmojis(data);
+        setBotEmojisLoaded(true);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setBotEmojisLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -1008,7 +1036,12 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
     }
   }, [open, fetchEmojis]);
 
-  const handleEmojiClick = (emoji: string | CustomEmoji) => {
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === "bot") fetchBotEmojis();
+  };
+
+  const handleEmojiClick = (emoji: string | CustomEmoji | BotEmoji) => {
     if (typeof emoji === "string") {
       onEmojiSelect(emoji);
     } else {
@@ -1017,6 +1050,10 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
     }
     setOpen(false);
   };
+
+  const filteredBotEmojis = botEmojis.filter((e) =>
+    e.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   const filteredCustomEmojis = customEmojis.filter((emoji) =>
     emoji.name.toLowerCase().includes(search.toLowerCase())
@@ -1055,11 +1092,14 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
           </div>
         </div>
 
-        <Tabs defaultValue="unicode" className="w-full">
-          <TabsList className="w-full grid grid-cols-2 rounded-none border-b">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="w-full grid grid-cols-3 rounded-none border-b">
             <TabsTrigger value="unicode">Standardowe</TabsTrigger>
             <TabsTrigger value="custom">
-              Niestandardowe {customEmojis.length > 0 && `(${customEmojis.length})`}
+              Serwera {customEmojis.length > 0 && `(${customEmojis.length})`}
+            </TabsTrigger>
+            <TabsTrigger value="bot">
+              Bota {botEmojis.length > 0 && `(${botEmojis.length})`}
             </TabsTrigger>
           </TabsList>
 
@@ -1139,6 +1179,45 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="bot" className="m-0">
+            <ScrollArea className="h-[300px]">
+              {botEmojisLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-sm text-muted-foreground">Ładowanie emoji bota...</p>
+                </div>
+              ) : filteredBotEmojis.length === 0 ? (
+                <div className="flex items-center justify-center h-full p-4">
+                  <p className="text-sm text-muted-foreground text-center">
+                    {botEmojis.length === 0
+                      ? "Brak emoji bota"
+                      : "Nie znaleziono emoji"}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3">
+                  <div className="grid grid-cols-6 gap-1">
+                    {filteredBotEmojis.map((emoji) => {
+                      const ext = emoji.animated ? "gif" : "png";
+                      const url = `https://cdn.discordapp.com/emojis/${emoji.id}.${ext}?size=64`;
+                      return (
+                        <button
+                          key={emoji.id}
+                          type="button"
+                          onClick={() => handleEmojiClick(emoji)}
+                          className="w-12 h-12 flex items-center justify-center hover:bg-accent rounded transition-colors"
+                          title={emoji.name}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt={emoji.name} className="w-8 h-8 object-contain" />
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </ScrollArea>
