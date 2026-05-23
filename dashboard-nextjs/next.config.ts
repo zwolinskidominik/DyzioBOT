@@ -9,10 +9,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  experimental: {
-    // Allows middleware to run in Node.js runtime (needed for ioredis rate limiting)
-    nodeMiddleware: true,
-  },
   async headers() {
     return [
       {
