@@ -97,7 +97,7 @@ const moduleGroups: ModuleGroup[] = [
     modules: [
       { id: "audit-logs", name: "Logi Systemowe", icon: ScrollText, href: "/audit-logs" },
       { id: "disboard", name: "Disboard", icon: Star, href: "/disboard", ownerOnly: true, ownerGuildOnly: true },
-      { id: "bot-emojis", name: "Emoji Bota", icon: SmilePlus, href: "/bot-emojis", ownerOnly: true, ownerGuildOnly: true },
+      { id: "bot-emojis", name: "Emoji Bota", icon: SmilePlus, href: "/bot-emojis", ownerOnly: true },
     ],
   },
 ];

@@ -87,14 +87,14 @@ export default function BotEmojisPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isOwner = status !== "loading" && OWNER_IDS.includes(currentUserId ?? "");
-  const isOwnerGuild = (OWNER_GUILD_IDS as readonly string[]).includes(guildId);
+  const resourceGuildId = OWNER_GUILD_IDS[0];
 
   /* ── Data fetching ── */
 
   const fetchEmojis = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchWithAuth(`/api/bot-emojis/manage?guildId=${guildId}`);
+      const res = await fetchWithAuth(`/api/bot-emojis/manage?guildId=${resourceGuildId}`);
       if (!res.ok) throw new Error(await res.text());
       const data: DiscordEmoji[] = await res.json();
       setEmojis(data);
@@ -106,8 +106,8 @@ export default function BotEmojisPage() {
   }, [guildId]);
 
   useEffect(() => {
-    if (isOwner && isOwnerGuild) fetchEmojis();
-  }, [isOwner, isOwnerGuild, fetchEmojis]);
+    if (isOwner) fetchEmojis();
+  }, [isOwner, fetchEmojis]);
 
   /* ── File pick ── */
 
@@ -151,7 +151,7 @@ export default function BotEmojisPage() {
       const res = await fetchWithAuth("/api/bot-emojis/manage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: emojiName, image: imageData, guildId }),
+        body: JSON.stringify({ name: emojiName, image: imageData, guildId: resourceGuildId }),
       });
 
       if (!res.ok) {
@@ -180,7 +180,7 @@ export default function BotEmojisPage() {
     setDeleting(true);
     try {
       const res = await fetchWithAuth(
-        `/api/bot-emojis/manage?emojiId=${deleteTarget.id}&guildId=${guildId}`,
+        `/api/bot-emojis/manage?emojiId=${deleteTarget.id}&guildId=${resourceGuildId}`,
         { method: "DELETE" }
       );
       if (!res.ok && res.status !== 204) {
@@ -222,17 +222,7 @@ export default function BotEmojisPage() {
     );
   }
 
-  if (!isOwnerGuild) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
-        <div className="text-6xl">⚠️</div>
-        <h1 className="text-2xl font-bold">Niedozwolony serwer</h1>
-        <p className="text-muted-foreground text-center">
-          Zarządzanie emoji bota jest dostępne tylko na serwerach zasobów bota.
-        </p>
-      </div>
-    );
-  }
+
 
   /* ── Filtered list ── */
 
@@ -378,7 +368,7 @@ export default function BotEmojisPage() {
               <CardHeader>
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <CardTitle className="text-xl">
-                    Emoji serwera
+                    Emoji bota
                   </CardTitle>
                   <div className="flex gap-2 text-sm text-muted-foreground">
                     <Badge variant="outline">{staticCount} statyczne</Badge>
