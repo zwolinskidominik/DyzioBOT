@@ -3,8 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { LogIn, ChevronDown } from "lucide-react";
+import { LogIn, LayoutDashboard, ChevronDown } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 
 interface Language {
@@ -15,6 +16,9 @@ interface Language {
 }
 
 export default function Navbar() {
+  const { status } = useSession();
+  const isLoggedIn = status === "authenticated";
+
   const [langOpen, setLangOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState("pl");
   const langDropdownRef = useRef<HTMLDivElement>(null);
@@ -115,14 +119,23 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Login Button */}
-          <Button
-            onClick={() => signIn("discord")}
-            className="btn-gradient shadow-lg shadow-bot-primary/30 hover:scale-105"
-          >
-            <LogIn className="mr-2 w-4 h-4" />
-            Zaloguj się
-          </Button>
+          {/* Login / Dashboard Button */}
+          {isLoggedIn ? (
+            <Button asChild className="btn-gradient shadow-lg shadow-bot-primary/30 hover:scale-105">
+              <Link href="/guilds">
+                <LayoutDashboard className="mr-2 w-4 h-4" />
+                Moje serwery
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              onClick={() => signIn("discord", { callbackUrl: "/guilds" })}
+              className="btn-gradient shadow-lg shadow-bot-primary/30 hover:scale-105"
+            >
+              <LogIn className="mr-2 w-4 h-4" />
+              Zaloguj się
+            </Button>
+          )}
         </div>
       </div>
     </nav>

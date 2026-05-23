@@ -46,5 +46,30 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
+  // State and PKCE cookies must be SameSite=None so they survive Cloudflare's
+  // intermediate JS challenge page inserted before the OAuth callback redirect.
+  // Session token stays SameSite=Lax (auto-configured via NEXTAUTH_URL=https://).
+  cookies: {
+    state: {
+      name: "__Secure-next-auth.state",
+      options: {
+        httpOnly: true,
+        sameSite: "none" as const,
+        path: "/",
+        secure: true,
+        maxAge: 900,
+      },
+    },
+    pkceCodeVerifier: {
+      name: "__Secure-next-auth.pkce.code_verifier",
+      options: {
+        httpOnly: true,
+        sameSite: "none" as const,
+        path: "/",
+        secure: true,
+        maxAge: 900,
+      },
+    },
+  },
   secret: process.env.NEXTAUTH_SECRET,
 };
