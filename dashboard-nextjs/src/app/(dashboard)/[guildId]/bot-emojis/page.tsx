@@ -81,8 +81,6 @@ export default function BotEmojisPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageData, setImageData] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<DiscordEmoji | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -169,30 +167,6 @@ export default function BotEmojisPage() {
       toast.error("Błąd połączenia");
     } finally {
       setUploading(false);
-    }
-  };
-
-  /* ── Delete ── */
-
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      const res = await fetchWithAuth(
-        `/api/bot-emojis/manage?emojiId=${deleteTarget.id}`,
-        { method: "DELETE" }
-      );
-      if (!res.ok && res.status !== 204) {
-        toast.error("Nie udało się usunąć emoji");
-        return;
-      }
-      toast.success(`Emoji :${deleteTarget.name}: zostało usunięte`);
-      setDeleteTarget(null);
-      await fetchEmojis();
-    } catch {
-      toast.error("Błąd połączenia");
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -463,19 +437,6 @@ export default function BotEmojisPage() {
                             </Badge>
                           )}
                         </div>
-
-                        {/* Delete button */}
-                        {!emoji.managed && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 p-0"
-                            onClick={() => setDeleteTarget(emoji)}
-                            title="Usuń emoji"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                          </Button>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -485,43 +446,6 @@ export default function BotEmojisPage() {
           </SlideIn>
         </div>
 
-        {/* Delete confirmation dialog */}
-        <Dialog
-          open={deleteTarget !== null}
-          onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Usuń emoji</DialogTitle>
-              <DialogDescription>
-                Czy na pewno chcesz usunąć emoji{" "}
-                <span className="font-semibold">:{deleteTarget?.name}:</span>?
-                Tej operacji nie można cofnąć. Emoji przestanie być dostępne we
-                wszystkich modułach bota.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
-              >
-                Anuluj
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmDelete}
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  "Usuń"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
