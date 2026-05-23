@@ -58,8 +58,16 @@ describe("hasCustomEmoji", () => {
 describe("hasExternalEmoji", () => {
   const botIds = new Set(["111", "222", "333"]);
 
-  it("returns false when botEmojiIds is empty (not loaded yet)", () => {
-    expect(hasExternalEmoji(["<:pepega:999>"], new Set())).toBe(false);
+  it("returns false when botEmojiIds is null (not loaded yet)", () => {
+    expect(hasExternalEmoji(["<:pepega:999>"], null)).toBe(false);
+  });
+
+  it("returns true when botEmojiIds is empty Set (API failed) and there are custom emojis", () => {
+    expect(hasExternalEmoji(["<:pepega:999>"], new Set())).toBe(true);
+  });
+
+  it("returns false when botEmojiIds is empty Set and reactions are unicode only", () => {
+    expect(hasExternalEmoji(["👍", "👎"], new Set())).toBe(false);
   });
 
   it("returns false when all custom emojis are from bot guilds", () => {

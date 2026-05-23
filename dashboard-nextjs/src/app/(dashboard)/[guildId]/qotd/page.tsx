@@ -95,7 +95,7 @@ export default function QOTDPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCustomEmojiOnly, setShowCustomEmojiOnly] = useState(false);
-  const [botEmojiIds, setBotEmojiIds] = useState<ReadonlySet<string>>(new Set());
+  const [botEmojiIds, setBotEmojiIds] = useState<ReadonlySet<string> | null>(null);
 
   const [usedQuestions, setUsedQuestions] = useState<Question[]>([]);
   const [loadingUsed, setLoadingUsed] = useState(true);
@@ -162,6 +162,9 @@ export default function QOTDPage() {
         if (botEmojisRes && botEmojisRes.ok) {
           const { emojiIds } = await botEmojisRes.json();
           setBotEmojiIds(new Set<string>(emojiIds));
+        } else {
+          // API failed or unavailable — empty set triggers conservative fallback in hasExternalEmoji
+          setBotEmojiIds(new Set());
         }
       } catch (error) {
         console.error("Error loading QOTD data:", error);

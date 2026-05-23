@@ -83,12 +83,19 @@ export function getCustomEmojiId(emoji: string): string | null {
 /**
  * Returns true if the reactions array contains at least one custom Discord emoji
  * whose ID is NOT in the provided set of known bot emoji IDs.
- * Falls back to hasCustomEmoji() when botEmojiIds is empty (not yet loaded).
+ *
+ * - null  → list not loaded yet, return false (avoid flicker on initial render)
+ * - empty Set → list failed to load or bot has no emojis, conservatively flag all custom emojis
+ * - non-empty Set → flag only emojis whose IDs are not in the set
  */
-export function hasExternalEmoji(reactions: string[], botEmojiIds: ReadonlySet<string>): boolean {
-  if (botEmojiIds.size === 0) {
-    // Bot emoji list not loaded yet — don't flag anything
+export function hasExternalEmoji(reactions: string[], botEmojiIds: ReadonlySet<string> | null): boolean {
+  if (botEmojiIds === null) {
+    // Still loading — don't flag anything yet
     return false;
+  }
+  if (botEmojiIds.size === 0) {
+    // List loaded but empty (API failed or bot has no custom emojis) — flag all custom emojis
+    return hasCustomEmoji(reactions);
   }
   return reactions.some((r) => {
     const id = getCustomEmojiId(r);
