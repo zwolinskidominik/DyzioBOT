@@ -124,13 +124,14 @@ export default function QOTDPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [channelsData, rolesData, configRes, questionsRes, usedQuestionsRes, botEmojisRes] = await Promise.all([
+        const [channelsData, rolesData, configRes, questionsRes, usedQuestionsRes, botEmojisRes, appEmojisRes] = await Promise.all([
           fetchGuildData<Channel[]>(guildId, 'channels', `/api/guild/${guildId}/channels`),
           fetchGuildData<Role[]>(guildId, 'roles', `/api/guild/${guildId}/roles`),
           fetchWithAuth(`/api/guild/${guildId}/qotd/config`),
           fetchWithAuth(`/api/guild/${guildId}/qotd/questions`),
           fetchWithAuth(`/api/guild/${guildId}/qotd/questions?disabled=true`),
           fetchWithAuth(`/api/discord/bot-emojis`).catch(() => null),
+          fetch(`/api/bot-emojis/list`).catch(() => null),
         ]);
 
         const textChannels = channelsData.filter(
@@ -161,10 +162,20 @@ export default function QOTDPage() {
 
         if (botEmojisRes && botEmojisRes.ok) {
           const { emojiIds } = await botEmojisRes.json();
-          setBotEmojiIds(new Set<string>(emojiIds));
+          const ids = new Set<string>(emojiIds);
+          if (appEmojisRes && appEmojisRes.ok) {
+            const appEmojis: { id: string }[] = await appEmojisRes.json();
+            for (const e of appEmojis) ids.add(e.id);
+          }
+          setBotEmojiIds(ids);
         } else {
-          // API failed or unavailable — empty set triggers conservative fallback in hasExternalEmoji
-          setBotEmojiIds(new Set());
+          // API failed — use application emojis only if available
+          const ids = new Set<string>();
+          if (appEmojisRes && appEmojisRes.ok) {
+            const appEmojis: { id: string }[] = await appEmojisRes.json();
+            for (const e of appEmojis) ids.add(e.id);
+          }
+          setBotEmojiIds(ids);
         }
       } catch (error) {
         console.error("Error loading QOTD data:", error);
@@ -234,6 +245,15 @@ export default function QOTDPage() {
         .map((r) => r.trim())
         .filter((r) => r);
 
+      const invalidCustom = reactions.filter((r) => {
+        const m = r.match(/^<a?:(\w+):(\d+)>$/);
+        return m && !botEmojiIds?.has(m[2]);
+      });
+      if (invalidCustom.length > 0) {
+        toast.error("Można używać tylko standardowych emoji lub emoji bota");
+        return;
+      }
+
       const response = await fetchWithAuth(`/api/guild/${guildId}/qotd/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -270,6 +290,15 @@ export default function QOTDPage() {
         .map((r) => r.trim())
         .filter((r) => r);
 
+      const invalidCustom = reactions.filter((r) => {
+        const m = r.match(/^<a?:(\w+):(\d+)>$/);
+        return m && !botEmojiIds?.has(m[2]);
+      });
+      if (invalidCustom.length > 0) {
+        toast.error("Można używać tylko standardowych emoji lub emoji bota");
+        return;
+      }
+
       const response = await fetchWithAuth(`/api/guild/${guildId}/qotd/questions`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -282,7 +311,7 @@ export default function QOTDPage() {
 
       if (response.ok) {
         const updatedQuestion = await response.json();
-        setQuestions(questions.map((q) => 
+        setQuestions(questions.map((q) =>
           q.questionId === questionId ? updatedQuestion : q
         ));
         setEditingId(null);
@@ -329,6 +358,16 @@ export default function QOTDPage() {
         .split(",")
         .map((r) => r.trim())
         .filter((r) => r);
+
+      const invalidCustom = reactions.filter((r) => {
+        const m = r.match(/^<a?:(\w+):(\d+)>$/);
+        return m && !botEmojiIds?.has(m[2]);
+      });
+      if (invalidCustom.length > 0) {
+        toast.error("Można używać tylko standardowych emoji lub emoji bota");
+        return;
+      }
+
       const response = await fetchWithAuth(`/api/guild/${guildId}/qotd/questions`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
