@@ -29,11 +29,17 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
+      // Reject protocol-relative URLs (//domain) — open redirect protection
+      if (url.startsWith("//")) return `${baseUrl}/guilds`;
       if (url === baseUrl || url === `${baseUrl}/`) {
         return `${baseUrl}/guilds`;
       }
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (new URL(url).origin === baseUrl) return url;
+      try {
+        if (new URL(url).origin === baseUrl) return url;
+      } catch {
+        return `${baseUrl}/guilds`;
+      }
       return baseUrl;
     },
   },
