@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Send, ArrowLeft, Plus, Trash2, Hash, Smile, Pencil, RefreshCw, Save } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Plus, Trash2, Hash, Smile, Pencil, RefreshCw, Save, Search } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import EmojiPicker from "@/components/EmojiPicker";
@@ -66,6 +66,7 @@ export default function ReactionRolesPage() {
   const [enabled, setEnabled] = useState(true);
   const [editingPanel, setEditingPanel] = useState<ReactionRole | null>(null);
   const [resending, setResending] = useState<string | null>(null);
+  const [roleSearch, setRoleSearch] = useState("");
 
   useEffect(() => {
     if (guildId) {
@@ -513,16 +514,39 @@ export default function ReactionRolesPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="role">Rola</Label>
-                    <Select value={currentRoleId} onValueChange={setCurrentRoleId}>
+                    <Select value={currentRoleId} onValueChange={(v) => { setCurrentRoleId(v); setRoleSearch(""); }}>
                       <SelectTrigger id="role">
                         <SelectValue placeholder="Wybierz rolę..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
+                        <div className="p-2 border-b">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                            <Input
+                              placeholder="Szukaj roli..."
+                              value={roleSearch}
+                              onChange={(e) => setRoleSearch(e.target.value)}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              className="h-8 pl-7 text-sm"
+                            />
+                          </div>
+                        </div>
+                        {(() => {
+                          const filtered = roles.filter(r =>
+                            r.name.toLowerCase().includes(roleSearch.toLowerCase())
+                          );
+                          return filtered.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              Nie znaleziono roli
+                            </div>
+                          ) : (
+                            filtered.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                {role.name}
+                              </SelectItem>
+                            ))
+                          );
+                        })()}
                       </SelectContent>
                     </Select>
                   </div>
