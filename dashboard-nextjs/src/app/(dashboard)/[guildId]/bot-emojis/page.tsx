@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
-import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
+import { OWNER_IDS } from "@/lib/owner";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import {
   Card,
@@ -87,14 +87,13 @@ export default function BotEmojisPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isOwner = status !== "loading" && OWNER_IDS.includes(currentUserId ?? "");
-  const resourceGuildId = OWNER_GUILD_IDS[0];
 
   /* ── Data fetching ── */
 
   const fetchEmojis = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchWithAuth(`/api/bot-emojis/manage?guildId=${resourceGuildId}`);
+      const res = await fetchWithAuth(`/api/bot-emojis/manage`);
       if (!res.ok) throw new Error(await res.text());
       const data: DiscordEmoji[] = await res.json();
       setEmojis(data);
@@ -151,7 +150,7 @@ export default function BotEmojisPage() {
       const res = await fetchWithAuth("/api/bot-emojis/manage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: emojiName, image: imageData, guildId: resourceGuildId }),
+        body: JSON.stringify({ name: emojiName, image: imageData }),
       });
 
       if (!res.ok) {
@@ -180,7 +179,7 @@ export default function BotEmojisPage() {
     setDeleting(true);
     try {
       const res = await fetchWithAuth(
-        `/api/bot-emojis/manage?emojiId=${deleteTarget.id}&guildId=${resourceGuildId}`,
+        `/api/bot-emojis/manage?emojiId=${deleteTarget.id}`,
         { method: "DELETE" }
       );
       if (!res.ok && res.status !== 204) {

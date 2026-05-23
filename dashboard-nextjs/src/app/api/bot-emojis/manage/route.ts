@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
-import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
+import { OWNER_IDS } from "@/lib/owner";
 import redis from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
-const BOT_EMOJIS_CACHE_KEY = "discord:bot-emojis";
-const GUILD_EMOJIS_CACHE_PREFIX = "discord:guild-emojis:";
-const GUILD_EMOJIS_CACHE_TTL = 60; // 60s — short TTL, management page needs fresh data
-
+const APP_EMOJIS_CACHE_KEY = "discord:app-emojis";
+const APP_EMOJIS_CACHE_TTL = 60;
 interface DiscordEmoji {
   id: string;
   name: string;
@@ -30,30 +28,25 @@ async function ownerGuard(request: NextRequest): Promise<NextResponse | null> {
   return null;
 }
 
-function isOwnerGuild(guildId: string): boolean {
-  return (OWNER_GUILD_IDS as readonly string[]).includes(guildId);
+function getAppCredentials(): { appId: string; botToken: string } | null {
+  const appId = process.env.DISCORD_CLIENT_ID;
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  if (!appId || !botToken) return null;
+  return { appId, botToken };
 }
 
 export async function GET(request: NextRequest) {
   const guard = await ownerGuard(request);
   if (guard) return guard;
 
-  const { searchParams } = new URL(request.url);
-  const guildId = searchParams.get("guildId");
-
-  if (!guildId || !isOwnerGuild(guildId)) {
-    return NextResponse.json({ error: "Invalid guild" }, { status: 400 });
-  }
-
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) {
-    return NextResponse.json({ error: "Bot token not configured" }, { status: 500 });
+  const creds = getAppCredentials();
+  if (!creds) {
+    return NextResponse.json({ error: "Bot credentials not configured" }, { status: 500 });
   }
 
   // Try short-lived Redis cache
-  const cacheKey = `${GUILD_EMOJIS_CACHE_PREFIX}${guildId}`;
   try {
-    const cached = await redis.get(cacheKey);
+    const cached = await redis.get(APP_EMOJIS_CACHE_KEY);
     if (cached) return NextResponse.json(JSON.parse(cached));
   } catch {
     // Redis unavailable — proceed to Discord API
@@ -63,10 +56,13 @@ export async function GET(request: NextRequest) {
   const timeout = setTimeout(() => controller.abort(), 5000);
   let response: Response;
   try {
-    response = await fetch(`https://discord.com/api/v10/guilds/${guildId}/emojis`, {
-      headers: { Authorization: `Bot ${botToken}` },
-      signal: controller.signal,
-    });
+    response = await fetch(
+      `https://discord.com/api/v10/applications/${creds.appId}/emojis`,
+      {
+        headers: { Authorization: `Bot ${creds.botToken}` },
+        signal: controller.signal,
+      }
+    );
   } catch {
     return NextResponse.json({ error: "Discord API unreachable" }, { status: 502 });
   } finally {
@@ -80,10 +76,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const emojis: DiscordEmoji[] = await response.json();
+  // Application emojis endpoint returns { items: Emoji[] }
+  const data = await response.json() as { items: DiscordEmoji[] };
+  const emojis = data.items ?? [];
 
   try {
-    await redis.setex(cacheKey, GUILD_EMOJIS_CACHE_TTL, JSON.stringify(emojis));
+    await redis.setex(APP_EMOJIS_CACHE_KEY, APP_EMOJIS_CACHE_TTL, JSON.stringify(emojis));
   } catch {
     // Redis unavailable — skip caching
   }
@@ -94,6 +92,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const guard = await ownerGuard(request);
   if (guard) return guard;
+
+  const creds = getAppCredentials();
+  if (!creds) {
+    return NextResponse.json({ error: "Bot credentials not configured" }, { status: 500 });
+  }
 
   let body: unknown;
   try {
@@ -106,17 +109,12 @@ export async function POST(request: NextRequest) {
     typeof body !== "object" ||
     body === null ||
     !("name" in body) ||
-    !("image" in body) ||
-    !("guildId" in body)
+    !("image" in body)
   ) {
-    return NextResponse.json({ error: "Missing name, image or guildId" }, { status: 400 });
+    return NextResponse.json({ error: "Missing name or image" }, { status: 400 });
   }
 
-  const { name, image, guildId } = body as { name: string; image: string; guildId: string };
-
-  if (!isOwnerGuild(guildId)) {
-    return NextResponse.json({ error: "Invalid guild" }, { status: 400 });
-  }
+  const { name, image } = body as { name: string; image: string };
 
   // Discord emoji name: 2–32 alphanumeric + underscores
   if (typeof name !== "string" || !/^[a-zA-Z0-9_]{2,32}$/.test(name)) {
@@ -138,19 +136,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Obraz jest za duży (max 256 KB)" }, { status: 400 });
   }
 
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) {
-    return NextResponse.json({ error: "Bot token not configured" }, { status: 500 });
-  }
-
-  const discordRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/emojis`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bot ${botToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ name, image }),
-  });
+  const discordRes = await fetch(
+    `https://discord.com/api/v10/applications/${creds.appId}/emojis`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${creds.botToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, image }),
+    }
+  );
 
   if (!discordRes.ok) {
     const err = await discordRes.json().catch(() => ({})) as Record<string, unknown>;
@@ -162,10 +158,9 @@ export async function POST(request: NextRequest) {
 
   const emoji: DiscordEmoji = await discordRes.json();
 
-  // Invalidate caches
+  // Invalidate cache
   try {
-    await redis.del(`${GUILD_EMOJIS_CACHE_PREFIX}${guildId}`);
-    await redis.del(BOT_EMOJIS_CACHE_KEY);
+    await redis.del(APP_EMOJIS_CACHE_KEY);
   } catch {
     // Redis unavailable — skip
   }
@@ -177,28 +172,23 @@ export async function DELETE(request: NextRequest) {
   const guard = await ownerGuard(request);
   if (guard) return guard;
 
+  const creds = getAppCredentials();
+  if (!creds) {
+    return NextResponse.json({ error: "Bot credentials not configured" }, { status: 500 });
+  }
+
   const { searchParams } = new URL(request.url);
   const emojiId = searchParams.get("emojiId");
-  const guildId = searchParams.get("guildId");
 
-  if (!emojiId || !guildId) {
-    return NextResponse.json({ error: "Missing emojiId or guildId" }, { status: 400 });
-  }
-
-  if (!isOwnerGuild(guildId)) {
-    return NextResponse.json({ error: "Invalid guild" }, { status: 400 });
-  }
-
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) {
-    return NextResponse.json({ error: "Bot token not configured" }, { status: 500 });
+  if (!emojiId) {
+    return NextResponse.json({ error: "Missing emojiId" }, { status: 400 });
   }
 
   const discordRes = await fetch(
-    `https://discord.com/api/v10/guilds/${guildId}/emojis/${emojiId}`,
+    `https://discord.com/api/v10/applications/${creds.appId}/emojis/${emojiId}`,
     {
       method: "DELETE",
-      headers: { Authorization: `Bot ${botToken}` },
+      headers: { Authorization: `Bot ${creds.botToken}` },
     }
   );
 
@@ -209,10 +199,9 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  // Invalidate caches
+  // Invalidate cache
   try {
-    await redis.del(`${GUILD_EMOJIS_CACHE_PREFIX}${guildId}`);
-    await redis.del(BOT_EMOJIS_CACHE_KEY);
+    await redis.del(APP_EMOJIS_CACHE_KEY);
   } catch {
     // Redis unavailable — skip
   }
