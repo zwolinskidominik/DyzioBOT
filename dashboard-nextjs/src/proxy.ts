@@ -43,6 +43,22 @@ function getClientIP(req: NextRequest): string {
 // ---------------------------------------------------------------------------
 export default withAuth(
   async function middleware(req: NextRequest) {
+    // Block external Server Action probing (scanners sending Next-Action: x/test/1/dx)
+    // Legitimate browser requests always include an Origin matching our own host.
+    const nextAction = req.headers.get("Next-Action");
+    if (nextAction !== null) {
+      const origin = req.headers.get("Origin");
+      const host = req.headers.get("Host");
+      const allowedOrigins = [
+        process.env.NEXTAUTH_URL,
+        host ? `https://${host}` : null,
+        host ? `http://${host}` : null,
+      ].filter(Boolean);
+      if (!origin || !allowedOrigins.includes(origin)) {
+        return new NextResponse(null, { status: 403 });
+      }
+    }
+
     if (req.nextUrl.pathname.startsWith("/api/")) {
       const ip = getClientIP(req);
       const isWrite = ["POST", "PATCH", "PUT", "DELETE"].includes(req.method);
