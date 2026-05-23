@@ -18,6 +18,7 @@ import {
   listActiveGiveaways,
   rerollGiveaway,
   getAdditionalNote,
+  getMultipliersNote,
 } from '../../services/giveawayService';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
@@ -250,11 +251,17 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
 
   const timestamp = getTimestamp(endTime);
 
+  let roleMultipliers: Record<string, number> | undefined;
+  if (multiplierRole && multiplier > 1) {
+    roleMultipliers = { [multiplierRole.id]: multiplier };
+  }
+
   const additionalNote = await getAdditionalNote(interaction.guild!.id);
+  const multipliersNote = await getMultipliersNote(interaction.guild!.id, roleMultipliers);
 
   // Build placeholder embed + buttons, then send message to get messageId
   const placeholderEmbed = createBaseEmbed({
-    description: `### ${prize}\n${description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
+    description: `### ${prize}\n${description}${additionalNote}${multipliersNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
     footerText: `Giveaway`,
     color: COLORS.GIVEAWAY,
     image: imageUrl,
@@ -284,11 +291,6 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
   const channel = interaction.channel as TextChannel;
   const giveawayMessage = await channel.send({ content, embeds: [placeholderEmbed], components: [row] });
 
-  let roleMultipliers: Record<string, number> | undefined;
-  if (multiplierRole && multiplier > 1) {
-    roleMultipliers = { [multiplierRole.id]: multiplier };
-  }
-
   const result = await createGiveaway({
     guildId: interaction.guild!.id,
     channelId: interaction.channel!.id,
@@ -313,7 +315,7 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
 
   // Update message with real giveaway ID in buttons + footer
   const realEmbed = createBaseEmbed({
-    description: `### ${prize}\n${description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
+    description: `### ${prize}\n${description}${additionalNote}${multipliersNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${interaction.user.id}>\n**Zwycięzcy:** ${winnersCount}`,
     footerText: `Giveaway ID: ${ga.giveawayId}`,
     color: COLORS.GIVEAWAY,
     image: imageUrl,
@@ -401,9 +403,10 @@ async function handleEditGiveaway(interaction: ChatInputCommandInteraction): Pro
 
     if (giveawayMessage) {
       const additionalNote = await getAdditionalNote(interaction.guild!.id);
+      const multipliersNote = await getMultipliersNote(interaction.guild!.id, ga.roleMultipliers);
       const timestamp = getTimestamp(ga.endTime);
       const updatedEmbed = createBaseEmbed({
-        description: `### ${ga.prize}\n${ga.description}${additionalNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${ga.hostId}>\n**Zwycięzcy:** ${ga.winnersCount}`,
+        description: `### ${ga.prize}\n${ga.description}${additionalNote}${multipliersNote}\n\n**Koniec:** <t:${timestamp}:R> (<t:${timestamp}:f>)\n**Host:** <@${ga.hostId}>\n**Zwycięzcy:** ${ga.winnersCount}`,
         footerText: `Giveaway ID: ${ga.giveawayId}`,
         color: COLORS.GIVEAWAY,
         image: ga.imageUrl,

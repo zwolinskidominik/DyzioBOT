@@ -1,7 +1,7 @@
 import type { IBotConfig } from '../interfaces/BotConfig';
 
 const BOT_ASSETS: Record<string, IBotConfig> = {
-  // Main Bot - Dyzio
+  // Main Bot - Deezy
   '1119327417237000285': {
     emojis: {
       next: '<:Next:1371143709672083608>',

@@ -47,14 +47,14 @@ export default function Navbar() {
         {/* Logo & Name */}
         <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <Image
-            src="/dyzio.png"
-            alt="DyzioBOT"
+            src="/deezy.png"
+            alt="Deezy"
             width={40}
             height={40}
             className="rounded-full"
           />
           <span className="text-xl font-bold bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
-            DyzioBOT
+            Deezy
           </span>
         </Link>
 

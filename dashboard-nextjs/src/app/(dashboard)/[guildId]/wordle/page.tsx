@@ -2,6 +2,8 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useSession } from "next-auth/react";
+import { OWNER_IDS } from "@/lib/owner";
 import {
   Card,
   CardContent,
@@ -71,6 +73,18 @@ const cardStyle = {
 export default function WordlePage() {
   const params = useParams();
   const guildId = params.guildId as string;
+  const { data: session, status } = useSession();
+  const currentUserId = (session?.user as { id?: string })?.id;
+
+  if (status !== 'loading' && !OWNER_IDS.includes(currentUserId ?? '')) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
+        <p className="text-4xl">🔒</p>
+        <h2 className="text-xl font-semibold">Brak dostępu</h2>
+        <p className="text-muted-foreground text-sm">Ten moduł jest dostępny wyłącznie dla właściciela bota.</p>
+      </div>
+    );
+  }
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

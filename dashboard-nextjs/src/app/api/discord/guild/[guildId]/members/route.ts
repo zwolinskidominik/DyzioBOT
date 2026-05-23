@@ -14,7 +14,7 @@ export async function GET(
 
     const { guildId } = await params;
 
-    const cached = getFromCache<any>('members', guildId);
+    const cached = await getFromCache<any>('members', guildId);
     if (cached) {
       return NextResponse.json(cached, {
         headers: {
@@ -57,7 +57,7 @@ export async function GET(
         nickname: member.nick,
       }));
 
-      setInCache('members', guildId, simplifiedMembers);
+      await setInCache('members', guildId, simplifiedMembers);
 
       return NextResponse.json(simplifiedMembers, {
         headers: {

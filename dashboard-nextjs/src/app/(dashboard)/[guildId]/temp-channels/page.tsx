@@ -346,22 +346,20 @@ export default function TempChannelsPage() {
                           return (
                             <div
                               key={tempChannel._id}
-                              className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/50"
+                              className="flex items-center justify-between gap-2 p-3 rounded-lg bg-background/50 border border-border/50"
                             >
-                              <div className="flex items-center gap-3">
-                                <Mic className="w-4 h-4 text-muted-foreground" />
-                                <div>
-                                  <p className="text-sm font-medium">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <Mic className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">
                                     {channel?.name || 'Kanał usunięty'}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">
+                                  <p className="text-xs text-muted-foreground truncate">
                                     Właściciel: {ownerMention}
                                   </p>
                                 </div>
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                ID: {tempChannel.channelId}
-                              </div>
+
                             </div>
                           );
                         })}

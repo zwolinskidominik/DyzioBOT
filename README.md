@@ -1,4 +1,4 @@
-﻿# DyzioBOT
+﻿# Deezy
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org/)
@@ -123,8 +123,8 @@ Advanced Discord bot with comprehensive dashboard, moderation tools, community f
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/zwolinskidominik/DyzioBOT.git
-   cd DyzioBOT
+   git clone https://github.com/zwolinskidominik/Deezy.git
+   cd Deezy
    ```
 
 2. **Install bot dependencies:**
@@ -166,7 +166,7 @@ Advanced Discord bot with comprehensive dashboard, moderation tools, community f
    TOKEN=your_discord_bot_token
    CLIENT_ID=your_discord_application_id
    GUILD_ID=your_main_guild_id
-   MONGODB_URI=mongodb://localhost:27017/dyziobot
+   MONGODB_URI=mongodb://localhost:27017/deezybot
 
    # Development mode (optional)
    DEV_GUILD_IDS=123456789,987654321
@@ -193,7 +193,7 @@ Advanced Discord bot with comprehensive dashboard, moderation tools, community f
 
    ```env
    # Required
-   MONGODB_URI=mongodb://localhost:27017/dyziobot
+   MONGODB_URI=mongodb://localhost:27017/deezybot
    NEXTAUTH_SECRET=your_random_secret_key_here
    NEXTAUTH_URL=http://localhost:3000
 
@@ -220,7 +220,7 @@ Advanced Discord bot with comprehensive dashboard, moderation tools, community f
 
 ## 🎨 Dashboard
 
-DyzioBOT includes a modern web dashboard built with Next.js 15 for easy server management.
+Deezy includes a modern web dashboard built with Next.js 15 for easy server management.
 
 ### Features
 
@@ -301,7 +301,7 @@ npm run check:types
 
 ## 🐳 Docker Deployment
 
-DyzioBOT includes Docker support for easy deployment with both the bot and dashboard.
+Deezy includes Docker support for easy deployment with both the bot and dashboard.
 
 ### Prerequisites
 
@@ -353,8 +353,8 @@ For production deployment, the recommended workflow is:
 
    ```bash
    # Clone repository
-   git clone https://github.com/zwolinskidominik/DyzioBOT.git
-   cd DyzioBOT
+   git clone https://github.com/zwolinskidominik/Deezy.git
+   cd Deezy
 
    # Configure environment variables
    nano .env
@@ -406,7 +406,7 @@ After deployment:
 ##  📁 Project Structure
 
 ```text
-DyzioBOT/
+Deezy/                        # root folder
 ├── src/                      # Bot source code
 │   ├── commands/             # Command implementations
 │   │   ├── admin/            # Admin-only commands (giveaway, config, setup, xp)

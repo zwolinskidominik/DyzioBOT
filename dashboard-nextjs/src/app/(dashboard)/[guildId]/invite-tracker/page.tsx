@@ -415,7 +415,7 @@ export default function InviteTrackerPage() {
                 Wiadomość przy dołączeniu — znany zapraszający (opcjonalne)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Szablon używany, gdy osoba zapraszająca jest znana. Zostaw puste, aby użyć domyślnego embeda.
+                Szablon używany, gdy osoba zapraszająca jest znana.
               </p>
               {loading ? (
                 <Skeleton className="h-24 w-full" />
@@ -447,7 +447,7 @@ export default function InviteTrackerPage() {
                 Wiadomość przy dołączeniu — nieznany zapraszający (opcjonalne)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Szablon używany, gdy nie można ustalić kto zaprosił. Zostaw puste, aby użyć domyślnego embeda.
+                Szablon używany, gdy nie można ustalić kto zaprosił.
               </p>
               {loading ? (
                 <Skeleton className="h-24 w-full" />
@@ -479,7 +479,7 @@ export default function InviteTrackerPage() {
                 Wiadomość przy dołączeniu — niestandardowy link (opcjonalne)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Szablon używany, gdy osoba dołączyła przez niestandardowy (vanity) link serwera. Zostaw puste, aby użyć domyślnego embeda.
+                Szablon używany, gdy osoba dołączyła przez niestandardowy (vanity) link serwera.
               </p>
               {loading ? (
                 <Skeleton className="h-24 w-full" />
@@ -511,7 +511,7 @@ export default function InviteTrackerPage() {
                 Wiadomość przy opuszczeniu (opcjonalne)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Niestandardowa wiadomość przy opuszczeniu serwera. Zostaw puste, aby użyć domyślnego embeda.
+                Niestandardowa wiadomość przy opuszczeniu serwera.
               </p>
               {loading ? (
                 <Skeleton className="h-24 w-full" />

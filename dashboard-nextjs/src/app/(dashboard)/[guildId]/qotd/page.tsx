@@ -24,16 +24,19 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, Hash, HelpCircle, Loader2, Save, ArrowLeft, Calendar, Pencil, Search } from "lucide-react";
+import { Trash2, Plus, Hash, HelpCircle, Loader2, Save, ArrowLeft, Calendar, Pencil, Search, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import EmojiPicker from "@/components/EmojiPicker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
+import { useSession } from "next-auth/react";
 import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
-import { EmojiList } from "@/components/EmojiDisplay";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmojiList, hasExternalEmoji } from "@/components/EmojiDisplay";
+import { OWNER_IDS } from "@/lib/owner";
 
 const qotdSchema = z.object({
   enabled: z.boolean().default(true),
@@ -68,6 +71,9 @@ export default function QOTDPage() {
   const params = useParams();
   const router = useRouter();
   const guildId = params.guildId as string;
+  const { data: session, status } = useSession();
+  const currentUserId = (session?.user as { id?: string })?.id;
+  const isOwner = status !== 'loading' && OWNER_IDS.includes(currentUserId ?? '');
 
   const [channels, setChannels] = useState<Channel[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -88,6 +94,13 @@ export default function QOTDPage() {
   const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCustomEmojiOnly, setShowCustomEmojiOnly] = useState(false);
+  const [botEmojiIds, setBotEmojiIds] = useState<ReadonlySet<string>>(new Set());
+
+  const [usedQuestions, setUsedQuestions] = useState<Question[]>([]);
+  const [loadingUsed, setLoadingUsed] = useState(true);
+  const [usedSearchQuery, setUsedSearchQuery] = useState("");
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const {
     register,
@@ -111,11 +124,13 @@ export default function QOTDPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [channelsData, rolesData, configRes, questionsRes] = await Promise.all([
+        const [channelsData, rolesData, configRes, questionsRes, usedQuestionsRes, botEmojisRes] = await Promise.all([
           fetchGuildData<Channel[]>(guildId, 'channels', `/api/guild/${guildId}/channels`),
           fetchGuildData<Role[]>(guildId, 'roles', `/api/guild/${guildId}/roles`),
           fetchWithAuth(`/api/guild/${guildId}/qotd/config`),
           fetchWithAuth(`/api/guild/${guildId}/qotd/questions`),
+          fetchWithAuth(`/api/guild/${guildId}/qotd/questions?disabled=true`),
+          fetchWithAuth(`/api/discord/bot-emojis`).catch(() => null),
         ]);
 
         const textChannels = channelsData.filter(
@@ -137,6 +152,17 @@ export default function QOTDPage() {
           const questionsData = await questionsRes.json();
           setQuestions(questionsData);
         }
+
+        if (usedQuestionsRes.ok) {
+          const usedData = await usedQuestionsRes.json();
+          setUsedQuestions(usedData);
+        }
+        setLoadingUsed(false);
+
+        if (botEmojisRes && botEmojisRes.ok) {
+          const { emojiIds } = await botEmojisRes.json();
+          setBotEmojiIds(new Set<string>(emojiIds));
+        }
       } catch (error) {
         console.error("Error loading QOTD data:", error);
         setError("Nie udało się załadować danych QOTD. Sprawdź połączenie z internetem i spróbuj ponownie.");
@@ -147,6 +173,29 @@ export default function QOTDPage() {
 
     fetchData();
   }, [guildId, reset]);
+
+  const handleRestoreQuestion = async (questionId: string) => {
+    setRestoringId(questionId);
+    try {
+      const response = await fetchWithAuth(`/api/guild/${guildId}/qotd/questions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId, disabled: false }),
+      });
+      if (response.ok) {
+        const restored = await response.json();
+        setUsedQuestions((prev) => prev.filter((q) => q.questionId !== questionId));
+        setQuestions((prev) => [...prev, { ...restored, disabled: false }]);
+        toast.success("Pytanie przywrócone do puli aktywnych!");
+      } else {
+        toast.error("Nie udało się przywrócić pytania");
+      }
+    } catch {
+      toast.error("Nie udało się przywrócić pytania");
+    } finally {
+      setRestoringId(null);
+    }
+  };
 
   const onSubmit = async (data: QOTDFormData) => {
     setSaving(true);
@@ -264,6 +313,39 @@ export default function QOTDPage() {
     } catch (error) {
       console.error("Error deleting question:", error);
       toast.error("Nie udało się usunąć pytania");
+    }
+  };
+
+  const handleEditUsedQuestion = async (questionId: string) => {
+    if (!editContent.trim()) {
+      toast.error("Treść pytania jest wymagana");
+      return;
+    }
+    try {
+      const reactions = editReactions
+        .split(",")
+        .map((r) => r.trim())
+        .filter((r) => r);
+      const response = await fetchWithAuth(`/api/guild/${guildId}/qotd/questions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId, content: editContent, reactions }),
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        setUsedQuestions((prev) =>
+          prev.map((q) => (q.questionId === questionId ? { ...updated, disabled: true } : q))
+        );
+        setEditingId(null);
+        setEditContent("");
+        setEditReactions("");
+        toast.success("Pytanie zostało zaktualizowane!");
+      } else {
+        toast.error("Nie udało się zaktualizować pytania");
+      }
+    } catch (error) {
+      console.error("Error updating used question:", error);
+      toast.error("Nie udało się zaktualizować pytania");
     }
   };
 
@@ -557,8 +639,8 @@ export default function QOTDPage() {
         </Card>
         </SlideIn>
 
-        {/* Questions Management */}
-        <SlideIn direction="up" delay={200}>
+        {/* Questions Management — owner only */}
+        {isOwner && <SlideIn direction="up" delay={200}>
           <Card
             className="backdrop-blur"
             style={{
@@ -666,15 +748,31 @@ export default function QOTDPage() {
               </Button>
             </div>
 
-            {/* Questions list */}
+            {/* Questions tabs: Aktywne / Użyte */}
+            <Tabs defaultValue="active">
+              <TabsList className="mb-4">
+                <TabsTrigger value="active">
+                  Aktywne ({questions.length})
+                </TabsTrigger>
+                <TabsTrigger value="used">
+                  Użyte ({usedQuestions.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="active">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-lg">
                   Aktualne pytania ({
-                    searchQuery.trim() 
-                      ? questions.filter(q => q.content.toLowerCase().includes(searchQuery.toLowerCase())).length 
-                      : questions.length
+                    questions.filter((q) => {
+                      const matchSearch = !searchQuery.trim() || q.content.toLowerCase().includes(searchQuery.toLowerCase());
+                      const matchCustom = !showCustomEmojiOnly || hasExternalEmoji(q.reactions, botEmojiIds);
+                      return matchSearch && matchCustom;
+                    }).length
                   })
+                  {showCustomEmojiOnly && (
+                    <span className="text-sm font-normal text-orange-400 ml-2">• zewnętrzne emoji</span>
+                  )}
                   {searchQuery.trim() && <span className="text-sm font-normal text-muted-foreground ml-2">(wyniki dla: "{searchQuery}")</span>}
                 </h3>
                 {questions.length > 0 && (
@@ -708,15 +806,27 @@ export default function QOTDPage() {
               </div>
               
               {questions.length > 0 && (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Szukaj w pytaniach..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 w-full"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Szukaj w pytaniach..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 w-full"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant={showCustomEmojiOnly ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowCustomEmojiOnly((v) => !v)}
+                    title="Pokaż tylko pytania z emoji z zewnętrznych serwerów (bot może nie móc ich użyć)"
+                    className={showCustomEmojiOnly ? "btn-gradient shrink-0" : "shrink-0"}
+                  >
+                    🔗 Zewnętrzne
+                  </Button>
                 </div>
               )}
               
@@ -735,12 +845,12 @@ export default function QOTDPage() {
                 <div className="space-y-2">
                   {(() => {
                     const filtered = questions.filter((question) => {
-                      if (!searchQuery.trim()) return true;
-                      const query = searchQuery.toLowerCase();
-                      return question.content.toLowerCase().includes(query);
+                      const matchSearch = !searchQuery.trim() || question.content.toLowerCase().includes(searchQuery.toLowerCase());
+                      const matchCustom = !showCustomEmojiOnly || hasExternalEmoji(question.reactions, botEmojiIds);
+                      return matchSearch && matchCustom;
                     });
 
-                    if (filtered.length === 0 && searchQuery.trim()) {
+                    if (filtered.length === 0 && (searchQuery.trim() || showCustomEmojiOnly)) {
                       return (
                         <div className="text-center py-12 px-4">
                           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4">
@@ -748,7 +858,7 @@ export default function QOTDPage() {
                           </div>
                           <h3 className="font-semibold mb-2">Brak wyników</h3>
                           <p className="text-sm text-muted-foreground">
-                            Nie znaleziono pytań pasujących do "{searchQuery}"
+                            Nie znaleziono pytań pasujących do wybranych filtrów
                           </p>
                         </div>
                       );
@@ -871,9 +981,14 @@ export default function QOTDPage() {
                           <div className="flex-1 space-y-1">
                             <p className="text-sm">{question.content}</p>
                             {question.reactions.length > 0 && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
                                 <span>Reakcje:</span>
                                 <EmojiList emojis={question.reactions} size={16} />
+                                {hasExternalEmoji(question.reactions, botEmojiIds) && (
+                                  <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                                    zewnętrzne emoji
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -908,9 +1023,206 @@ export default function QOTDPage() {
               )}
               </div>
             </div>
+              </TabsContent>
+
+              <TabsContent value="used">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-lg">
+                      Użyte pytania ({
+                        usedQuestions.filter((q) =>
+                          !usedSearchQuery.trim() || q.content.toLowerCase().includes(usedSearchQuery.toLowerCase())
+                        ).length
+                      })
+                    </h3>
+                  </div>
+
+                  {usedQuestions.length > 0 && (
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Szukaj w użytych pytaniach..."
+                        value={usedSearchQuery}
+                        onChange={(e) => setUsedSearchQuery(e.target.value)}
+                        className="pl-9 w-full"
+                      />
+                    </div>
+                  )}
+
+                  {loadingUsed ? (
+                    <div className="space-y-2">
+                      {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+                    </div>
+                  ) : usedQuestions.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-3 opacity-50" />
+                      <p className="text-sm text-muted-foreground">
+                        Brak użytych pytań. Pojawią się tutaj po tym jak bot je wywoła.
+                      </p>
+                    </div>
+                  ) : (() => {
+                    const filtered = usedQuestions.filter((q) =>
+                      !usedSearchQuery.trim() || q.content.toLowerCase().includes(usedSearchQuery.toLowerCase())
+                    );
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="text-center py-8">
+                          <p className="text-sm text-muted-foreground">
+                            Nie znaleziono pytań pasujących do filtrów
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="space-y-2">
+                        {filtered.map((question) => (
+                        <div
+                            key={question.questionId}
+                            className="p-3 rounded-lg bg-background/50 border border-transparent opacity-70 hover:opacity-90 transition-opacity"
+                          >
+                            {editingId === question.questionId ? (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-used-content-${question.questionId}`}>Treść pytania</Label>
+                                  <Textarea
+                                    id={`edit-used-content-${question.questionId}`}
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`edit-used-reactions-${question.questionId}`}>Reakcje</Label>
+                                  <div className="mb-2 flex items-center gap-1 flex-wrap">
+                                    <span className="text-xs text-muted-foreground">Podgląd:</span>
+                                    <EmojiList emojis={editReactions.split(",").map(r => r.trim()).filter(r => r)} size={18} />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      ref={editReactionsInputRef}
+                                      id={`edit-used-reactions-${question.questionId}`}
+                                      value={editReactions}
+                                      onChange={(e) => setEditReactions(e.target.value)}
+                                      placeholder="👍, 👎, 🤔"
+                                    />
+                                    <EmojiPicker
+                                      onEmojiSelect={(emoji) => {
+                                        const input = editReactionsInputRef.current;
+                                        if (!input) {
+                                          setEditReactions(prev => prev ? `${prev}, ${emoji}` : emoji);
+                                          return;
+                                        }
+                                        const cursorPos = input.selectionStart || 0;
+                                        const textBefore = editReactions.substring(0, cursorPos);
+                                        const textAfter = editReactions.substring(cursorPos);
+                                        let newValue = "";
+                                        let cursorOffset = 0;
+                                        if (!textBefore && !textAfter) {
+                                          newValue = emoji; cursorOffset = emoji.length;
+                                        } else if (!textBefore) {
+                                          newValue = emoji + ", " + textAfter; cursorOffset = emoji.length;
+                                        } else if (textBefore.trimEnd().endsWith(',')) {
+                                          const needsSpace = !textBefore.endsWith(' ');
+                                          newValue = textBefore + (needsSpace ? ' ' : '') + emoji + (textAfter ? ", " + textAfter : "");
+                                          cursorOffset = textBefore.length + (needsSpace ? 1 : 0) + emoji.length;
+                                        } else if (!textAfter) {
+                                          newValue = textBefore + ", " + emoji; cursorOffset = textBefore.length + 2 + emoji.length;
+                                        } else {
+                                          newValue = textBefore + ", " + emoji + ", " + textAfter; cursorOffset = textBefore.length + 2 + emoji.length;
+                                        }
+                                        setEditReactions(newValue);
+                                        setTimeout(() => {
+                                          input.setSelectionRange(cursorOffset, cursorOffset);
+                                          input.focus();
+                                        }, 0);
+                                      }}
+                                      buttonText="Emoji"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => handleEditUsedQuestion(question.questionId)}
+                                    className="btn-gradient hover:scale-105"
+                                  >
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Zapisz
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingId(null);
+                                      setEditContent("");
+                                      setEditReactions("");
+                                    }}
+                                  >
+                                    Anuluj
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1 space-y-1">
+                                <p className="text-sm">{question.content}</p>
+                                {question.reactions.length > 0 && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+                                    <span>Reakcje:</span>
+                                    <EmojiList emojis={question.reactions} size={16} />
+                                    {hasExternalEmoji(question.reactions, botEmojiIds) && (
+                                      <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                                        zewnętrzne emoji
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingId(question.questionId);
+                                    setEditContent(question.content);
+                                    setEditReactions(question.reactions.join(", "));
+                                  }}
+                                  title="Edytuj pytanie"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRestoreQuestion(question.questionId)}
+                                  disabled={restoringId === question.questionId}
+                                  title="Przywróć pytanie do puli aktywnych"
+                                >
+                                  {restoringId === question.questionId ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <RotateCcw className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
-        </SlideIn>
+        </SlideIn>}
       </div>
     </div>
   );

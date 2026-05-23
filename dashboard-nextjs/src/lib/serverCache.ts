@@ -1,66 +1,80 @@
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
+import redis from "./redis";
+
+// ---------------------------------------------------------------------------
+// Redis-backed server cache for Discord API responses.
+// Survives deploys/restarts. Shared across all server processes.
+//
+// Keys:
+//   discord:{type}:{guildId}        — fresh entry, TTL = FRESH_TTL
+//   discord:stale:{type}:{guildId}  — stale fallback, TTL = STALE_TTL
+// ---------------------------------------------------------------------------
+
+const FRESH_TTL = {
+  channels: 300,  // 5 min
+  roles:    300,
+  members:  300,
+  guild:    300,
+} as const;
+
+const STALE_TTL = {
+  channels: 1800, // 30 min — returned when Discord API is down
+  roles:    1800,
+  members:  1800,
+  guild:    1800,
+} as const;
+
+type CacheType = keyof typeof FRESH_TTL;
+
+function key(type: CacheType, guildId: string, stale = false): string {
+  return stale
+    ? `discord:stale:${type}:${guildId}`
+    : `discord:${type}:${guildId}`;
 }
 
-const serverCache = new Map<string, CacheEntry<any>>();
+export async function getFromCache<T>(
+  type: CacheType,
+  guildId: string,
+  allowStale = false,
+): Promise<T | null> {
+  try {
+    const raw = await redis.get(key(type, guildId));
+    if (raw) return JSON.parse(raw) as T;
 
-const CACHE_TTL = {
-  channels: 5 * 60 * 1000,
-  roles: 5 * 60 * 1000,
-  members: 5 * 60 * 1000,
-  guild: 5 * 60 * 1000,
-};
-
-export function getCacheKey(type: string, guildId: string): string {
-  return `${type}:${guildId}`;
-}
-
-export function getFromCache<T>(type: keyof typeof CACHE_TTL, guildId: string, allowStale: boolean = false): T | null {
-  const key = getCacheKey(type, guildId);
-  const entry = serverCache.get(key);
-
-  if (!entry) return null;
-
-  const ttl = CACHE_TTL[type];
-  const age = Date.now() - entry.timestamp;
-
-  if (age > ttl) {
     if (allowStale) {
-      return entry.data as T;
+      const staleRaw = await redis.get(key(type, guildId, true));
+      if (staleRaw) return JSON.parse(staleRaw) as T;
     }
-    serverCache.delete(key);
-    return null;
+  } catch {
+    // Redis unavailable — treat as cache miss
   }
-
-  return entry.data as T;
+  return null;
 }
 
-export function setInCache<T>(type: keyof typeof CACHE_TTL, guildId: string, data: T): void {
-  const key = getCacheKey(type, guildId);
-  serverCache.set(key, {
-    data,
-    timestamp: Date.now(),
-  });
-}
-
-export function invalidateCache(type: keyof typeof CACHE_TTL, guildId: string): void {
-  const key = getCacheKey(type, guildId);
-  serverCache.delete(key);
-}
-
-export function clearCache(): void {
-  serverCache.clear();
-}
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of serverCache.entries()) {
-    const type = key.split(':')[0] as keyof typeof CACHE_TTL;
-    const ttl = CACHE_TTL[type] || 5 * 60 * 1000;
-    
-    if (now - entry.timestamp > ttl) {
-      serverCache.delete(key);
-    }
+export async function setInCache<T>(
+  type: CacheType,
+  guildId: string,
+  data: T,
+): Promise<void> {
+  try {
+    const serialized = JSON.stringify(data);
+    // Write both keys atomically via pipeline
+    await redis
+      .pipeline()
+      .setex(key(type, guildId), FRESH_TTL[type], serialized)
+      .setex(key(type, guildId, true), STALE_TTL[type], serialized)
+      .exec();
+  } catch {
+    // Redis unavailable — skip caching, not fatal
   }
-}, 60 * 1000);
+}
+
+export async function invalidateCache(
+  type: CacheType,
+  guildId: string,
+): Promise<void> {
+  try {
+    await redis.del(key(type, guildId), key(type, guildId, true));
+  } catch {
+    // ignore
+  }
+}

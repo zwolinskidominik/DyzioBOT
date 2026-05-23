@@ -3,12 +3,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.bot
-    container_name: dyziobot
+    container_name: deezybot
     restart: unless-stopped
     env_file:
       - .env
     networks:
-      - dyziobot-network
+      - deezybot-network
     volumes:
       - ./logs:/app/logs
       - ./cookies.txt:/app/cookies.txt:ro
@@ -20,19 +20,36 @@ services:
       dockerfile: ../Dockerfile.dashboard
       args:
         NEXT_PUBLIC_DISCORD_CLIENT_ID: "1119327417237000285"
-    container_name: dyziobot-dashboard
+    container_name: deezybot-dashboard
     restart: unless-stopped
     env_file:
       - dashboard-nextjs/.env.local
+    environment:
+      REDIS_URL: redis://redis:6379
     networks:
-      - dyziobot-network
+      - deezybot-network
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
       - ./assets:/assets:ro
+    depends_on:
+      - redis
+
+  # Redis — session cache, rate limiting (upgrade from in-memory when scaling)
+  redis:
+    image: redis:7-alpine
+    container_name: deezybot-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    networks:
+      - deezybot-network
+    volumes:
+      - redis-data:/data
+    # Not exposed externally — only accessible within deezybot-network
 
 networks:
-  dyziobot-network:
+  deezybot-network:
 
 volumes:
   yt-dlp-cache:
+  redis-data:

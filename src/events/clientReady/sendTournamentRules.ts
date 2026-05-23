@@ -3,6 +3,7 @@ import logger from '../../utils/logger';
 import { getGuildConfig } from '../../config/guild';
 import { schedule, ScheduledTask } from 'node-cron';
 import { CRON } from '../../config/constants/cron';
+import { OWNER_GUILD_IDS } from '../../config/constants/owner';
 import { TournamentConfigModel } from '../../models/TournamentConfig';
 
 /** Map guildId → { task, cronExpression } for active tournament schedules. */
@@ -33,7 +34,7 @@ export default async function run(client: Client): Promise<void> {
  * - Re-creates tasks when the cron expression changes.
  */
 async function syncSchedules(client: Client): Promise<void> {
-  const configs = await TournamentConfigModel.find().lean();
+  const configs = await TournamentConfigModel.find({ guildId: { $in: OWNER_GUILD_IDS } }).lean();
 
   const enabledGuildIds = new Set<string>();
 

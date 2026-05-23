@@ -38,9 +38,12 @@ export async function GET(
     }
 
     await connectDB();
-    
-    const questions = await Question.find({ disabled: { $ne: true } });
-    
+
+    const { searchParams } = new URL(request.url);
+    const showDisabled = searchParams.get('disabled') === 'true';
+    const filter = showDisabled ? { disabled: true } : { disabled: { $ne: true } };
+    const questions = await Question.find(filter).sort({ _id: showDisabled ? -1 : 1 });
+
     return NextResponse.json(questions);
   } catch (error) {
     console.error('Error fetching questions:', error);
@@ -94,18 +97,32 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { questionId, content, reactions } = body;
+    const { questionId, content, reactions, disabled } = body;
 
     if (!questionId) {
       return NextResponse.json({ error: 'Question ID is required' }, { status: 400 });
     }
 
+    await connectDB();
+
+    // Restore action: only flip disabled flag
+    if (disabled === false) {
+      const question = await Question.findOneAndUpdate(
+        { questionId },
+        { disabled: false },
+        { new: true }
+      );
+      if (!question) {
+        return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+      }
+      return NextResponse.json(question.toObject());
+    }
+
+    // Regular update: content + reactions
     if (!content || content.trim() === '') {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
     }
 
-    await connectDB();
-    
     const question = await Question.findOneAndUpdate(
       { questionId },
       { 

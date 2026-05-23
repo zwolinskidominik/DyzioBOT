@@ -336,7 +336,7 @@ export default function TicketsPage() {
                           {categories.find((cat) => cat.id === config.categoryId)?.name}
                         </span>
                       ) : (
-                        <span className="text-destructive">Kategoria nie znaleziona (może została usunięta)</span>
+                        <span className="text-destructive text-xs">Kategoria usunięta</span>
                       )}
                     </p>
                   </div>
@@ -351,7 +351,7 @@ export default function TicketsPage() {
                           {channels.find((ch) => ch.id === config.panelChannelId)?.name}
                         </span>
                       ) : (
-                        <span className="text-destructive">Kanał nie znaleziony (może został usunięty)</span>
+                        <span className="text-destructive text-xs">Kanał usunięty</span>
                       )}
                     </p>
                   </div>
@@ -423,16 +423,14 @@ export default function TicketsPage() {
               <div className="space-y-2">
                 {stats.map((stat, index) => (
                   <SlideIn key={stat._id} direction="up" delay={index * 50}>
-                  <div
-                    className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border hover:bg-background/70 hover:shadow-lg hover:shadow-bot-primary/15 hover:scale-[1.02] hover:border-bot-primary/30 transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-bot-primary/10 text-bot-primary font-bold text-sm">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border hover:bg-background/70 hover:shadow-lg hover:shadow-bot-primary/15 hover:scale-[1.02] hover:border-bot-primary/30 transition-all duration-300">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-bot-primary/10 text-bot-primary font-bold text-sm flex-shrink-0">
                         #{index + 1}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{getMemberDisplay(stat.userId)}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <span className="font-medium truncate">{getMemberDisplay(stat.userId)}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

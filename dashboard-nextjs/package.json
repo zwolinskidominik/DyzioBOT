@@ -1,9 +1,10 @@
 {
-  "name": "dyziobot-dashboard",
+  "name": "deezybot-dashboard",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "predev": "node -e \"require('fs').rmSync('.next', {recursive:true,force:true})\"",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -25,6 +26,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^11.15.0",
+    "ioredis": "^5.10.1",
     "lucide-react": "^0.468.0",
     "mongoose": "^8.9.3",
     "next": "^16.1.6",

@@ -2,6 +2,8 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -30,6 +32,8 @@ interface TournamentConfig {
 export default function TournamentPage() {
   const params = useParams();
   const guildId = params.guildId as string;
+  const { data: session, status } = useSession();
+  const currentUserId = (session?.user as { id?: string })?.id;
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,6 +168,16 @@ export default function TournamentPage() {
     setLoading(true);
     window.location.reload();
   };
+
+  if (status !== 'loading' && (!OWNER_IDS.includes(currentUserId ?? '') || !OWNER_GUILD_IDS.includes(guildId))) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
+        <p className="text-4xl">🔒</p>
+        <h2 className="text-xl font-semibold">Brak dostępu</h2>
+        <p className="text-muted-foreground text-sm">Ten moduł jest dostępny wyłącznie dla właściciela bota na jego serwerach.</p>
+      </div>
+    );
+  }
 
   if (error) {
     return (

@@ -18,7 +18,7 @@ export default function LoginPage() {
             <LogIn className="w-10 h-10 text-white" />
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
-            DyzioBot Dashboard
+            Deezy Dashboard
           </CardTitle>
           <CardDescription>
             Zaloguj się przez Discord, aby zarządzać swoim botem

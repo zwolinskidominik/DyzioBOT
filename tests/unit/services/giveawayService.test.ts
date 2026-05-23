@@ -402,10 +402,10 @@ describe('getAdditionalNote', () => {
     await GiveawayConfigModel.create({
       guildId: GID,
       enabled: true,
-      additionalNote: 'Powered by DyzioBOT',
+      additionalNote: 'Powered by Deezy',
     });
 
     const note = await getAdditionalNote(GID);
-    expect(note).toBe('\n\nPowered by DyzioBOT');
+    expect(note).toBe('\n\nPowered by Deezy');
   });
 });

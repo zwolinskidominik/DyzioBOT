@@ -207,6 +207,17 @@ export async function getAdditionalNote(guildId: string): Promise<string> {
   return '';
 }
 
+export async function getMultipliersNote(
+  guildId: string,
+  perGiveaway?: Record<string, number>,
+): Promise<string> {
+  const merged = await getMergedMultipliers(guildId, perGiveaway);
+  const entries = Object.entries(merged);
+  if (entries.length === 0) return '';
+  const lines = entries.map(([roleId, mult]) => `<@&${roleId}> ×${mult}`).join(', ');
+  return `\n🎲 **Mnożniki:** ${lines}`;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toGiveawayData(doc: any): GiveawayData {
   const raw = doc as Record<string, unknown>;

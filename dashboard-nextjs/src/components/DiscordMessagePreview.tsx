@@ -261,7 +261,7 @@ interface DiscordMessagePreviewProps {
 
 export function DiscordMessagePreview({
   content,
-  botName = "DyzioBOT",
+  botName = "Deezy",
   avatarUrl,
   roles = {},
   users = {},

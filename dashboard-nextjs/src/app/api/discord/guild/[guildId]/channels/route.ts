@@ -14,7 +14,7 @@ export async function GET(
 
     const { guildId } = await params;
 
-    const cached = getFromCache<any>('channels', guildId);
+    const cached = await getFromCache<any>('channels', guildId);
     if (cached) {
       return NextResponse.json(cached, {
         headers: {
@@ -49,7 +49,7 @@ export async function GET(
 
       const channels = await response.json();
       
-      setInCache('channels', guildId, channels);
+      await setInCache('channels', guildId, channels);
       
       return NextResponse.json(channels, {
         headers: {

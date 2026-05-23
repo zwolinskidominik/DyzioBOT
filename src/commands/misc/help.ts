@@ -169,7 +169,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       const pageCommands = ALL_COMMANDS.slice(start, end);
 
       const embed = createBaseEmbed({
-        title: '📚 Lista komend - Dyzio BOT',
+        title: '📚 Lista komend - Deezy',
         description:
           '**Legenda:**\n' +
           '`<parametr>` - wymagany\n' +

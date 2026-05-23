@@ -32,6 +32,45 @@ async function connectDB() {
   await mongoose.connect(process.env.MONGODB_URI!);
 }
 
+const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+async function addReactionToMessage(
+  channelId: string,
+  messageId: string,
+  emoji: string,
+  retried = false,
+): Promise<boolean> {
+  let emojiEncoded: string;
+  const customEmojiMatch = emoji.match(/<a?:([^:]+):(\d+)>/);
+  if (customEmojiMatch) {
+    emojiEncoded = `${customEmojiMatch[1]}:${customEmojiMatch[2]}`;
+  } else {
+    // Strip variation selector U+FE0F — Discord API expects the base codepoint
+    const normalized = emoji.replace(/\uFE0F/g, '');
+    emojiEncoded = encodeURIComponent(normalized || emoji);
+  }
+
+  const response = await fetch(
+    `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${emojiEncoded}/@me`,
+    {
+      method: 'PUT',
+      headers: { 'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+    }
+  );
+
+  if (response.status === 429 && !retried) {
+    const data = await response.json().catch(() => ({}));
+    const waitMs = Math.ceil((data.retry_after ?? 1) * 1000);
+    await delay(waitMs);
+    return addReactionToMessage(channelId, messageId, emoji, true);
+  }
+
+  if (!response.ok) {
+    console.error(`Failed to add reaction ${emoji} (${response.status})`);
+  }
+  return response.ok;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -107,32 +146,8 @@ export async function POST(
     const messageId = messageData.id;
 
     for (const reaction of reactions) {
-      try {
-        let emojiEncoded = reaction.emoji;
-        
-        const customEmojiMatch = reaction.emoji.match(/<a?:([^:]+):(\d+)>/);
-        if (customEmojiMatch) {
-          emojiEncoded = `${customEmojiMatch[1]}:${customEmojiMatch[2]}`;
-        } else {
-          emojiEncoded = encodeURIComponent(reaction.emoji);
-        }
-        
-        const reactionResponse = await fetch(
-          `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${emojiEncoded}/@me`,
-          {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-            },
-          }
-        );
-        
-        if (!reactionResponse.ok) {
-          console.error(`Failed to add reaction ${reaction.emoji}:`, reactionResponse.status);
-        }
-      } catch (error) {
-        console.error('Failed to add reaction:', error);
-      }
+      await addReactionToMessage(channelId, messageId, reaction.emoji);
+      await delay(300);
     }
 
     const reactionRole = await ReactionRole.create({
@@ -146,6 +161,95 @@ export async function POST(
     return NextResponse.json(reactionRole.toObject());
   } catch (error) {
     console.error('Error creating reaction role:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ guildId: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { guildId } = await params;
+    const body = await request.json();
+    const { messageId, channelId, title, reactions } = body;
+
+    if (!messageId) {
+      return NextResponse.json({ error: 'Missing messageId' }, { status: 400 });
+    }
+
+    await connectDB();
+
+    const existing = await ReactionRole.findOne({ guildId, messageId });
+    if (!existing) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const targetChannelId = channelId || existing.channelId;
+    const finalTitle = title !== undefined ? title : existing.title;
+    const finalReactions = reactions || existing.reactions;
+
+    // Try to delete old Discord message (silent fail)
+    await fetch(
+      `https://discord.com/api/v10/channels/${existing.channelId}/messages/${messageId}`,
+      {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      }
+    ).catch(() => {});
+
+    await delay(500);
+
+    // Send new message
+    const embed = {
+      title: finalTitle || 'Wybierz swoją rolę',
+      description: finalReactions.map((r: any) =>
+        `${r.emoji} - <@&${r.roleId}>${r.description ? ` • ${r.description}` : ''}`
+      ).join('\n'),
+      color: 0x5865F2,
+      footer: { text: 'Kliknij reakcję, aby otrzymać rolę!' },
+    };
+
+    const messageResponse = await fetch(
+      `https://discord.com/api/v10/channels/${targetChannelId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ embeds: [embed] }),
+      }
+    );
+
+    if (!messageResponse.ok) {
+      const errorText = await messageResponse.text();
+      console.error('Failed to send new message:', messageResponse.status, errorText);
+      return NextResponse.json({ error: 'Failed to send message to Discord' }, { status: 500 });
+    }
+
+    const messageData = await messageResponse.json();
+    const newMessageId = messageData.id;
+
+    for (const reaction of finalReactions) {
+      await addReactionToMessage(targetChannelId, newMessageId, reaction.emoji);
+      await delay(300);
+    }
+
+    existing.channelId = targetChannelId;
+    existing.messageId = newMessageId;
+    if (title !== undefined) existing.title = finalTitle || undefined;
+    if (reactions) existing.reactions = finalReactions;
+    await existing.save();
+
+    return NextResponse.json(existing.toObject());
+  } catch (error) {
+    console.error('Error updating reaction role:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

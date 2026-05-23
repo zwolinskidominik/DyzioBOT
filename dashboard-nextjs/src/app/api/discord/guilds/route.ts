@@ -1,9 +1,9 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
+import redis from "@/lib/redis";
 
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 60000;
+const CACHE_TTL_SECONDS = 60;
 
 export async function GET() {
   try {
@@ -13,10 +13,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const cacheKey = `guilds-${session.user?.id}`;
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return NextResponse.json(cached.data);
+    const cacheKey = `guilds:${session.user?.id}`;
+
+    // Try Redis cache first
+    let staleData: any = null;
+    try {
+      const raw = await redis.get(cacheKey);
+      if (raw) return NextResponse.json(JSON.parse(raw));
+      // Keep stale for 429 fallback (separate key with longer TTL)
+      const staleRaw = await redis.get(`${cacheKey}:stale`);
+      if (staleRaw) staleData = JSON.parse(staleRaw);
+    } catch {
+      // Redis unavailable — proceed without cache
     }
 
     const response = await fetch("https://discord.com/api/v10/users/@me/guilds", {
@@ -29,11 +37,11 @@ export async function GET() {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Discord API error:", response.status, errorText);
-      
-      if (response.status === 429 && cached) {
-        return NextResponse.json(cached.data);
+
+      if (response.status === 429 && staleData) {
+        return NextResponse.json(staleData);
       }
-      
+
       return NextResponse.json(
         { error: "Failed to fetch guilds from Discord" },
         { status: response.status }
@@ -69,7 +77,17 @@ export async function GET() {
       hasBot: botGuildIds.includes(guild.id),
     }));
 
-    cache.set(cacheKey, { data: guildsWithBotStatus, timestamp: Date.now() });
+    // Store in Redis (fresh + stale)
+    try {
+      const serialized = JSON.stringify(guildsWithBotStatus);
+      await redis
+        .pipeline()
+        .setex(cacheKey, CACHE_TTL_SECONDS, serialized)
+        .setex(`${cacheKey}:stale`, CACHE_TTL_SECONDS * 30, serialized)
+        .exec();
+    } catch {
+      // Redis unavailable — skip caching
+    }
 
     return NextResponse.json(guildsWithBotStatus);
   } catch (error) {

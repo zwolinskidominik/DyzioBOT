@@ -202,7 +202,7 @@ export default function VariableInserter({
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
         data-placeholder={placeholder}
-        className={`w-full px-3 py-2 rounded-md border border-bot-blue/30 bg-background/50 focus:outline-none focus:ring-2 focus:ring-bot-primary/50 focus:border-bot-primary transition-all overflow-y-auto ${className}`}
+        className={`relative w-full px-3 py-2 rounded-md border border-bot-blue/30 bg-background/50 focus:outline-none focus:ring-2 focus:ring-bot-primary/50 focus:border-bot-primary transition-all overflow-y-auto ${className}`}
         style={{ minHeight }}
       />
       

@@ -163,6 +163,15 @@ span[role="img"],
   scrollbar-color: hsl(var(--muted)) hsl(var(--background));
 }
 
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Fade-in and slide-in animations */
 @keyframes fade-in {
   from {

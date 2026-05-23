@@ -1,6 +1,6 @@
 /**
  * Format milliseconds as a clock string (H:MM:SS or M:SS).
- * Used by music player and extractors for track durations.
+ * Used for track durations and time formatting.
  */
 export function formatClock(ms: number): string {
   const seconds = Math.floor((ms / 1000) % 60);

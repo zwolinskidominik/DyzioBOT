@@ -1,6 +1,7 @@
 import { Client, TextChannel, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import cron from 'node-cron';
 import logger from '../../utils/logger';
+import { OWNER_GUILD_IDS } from '../../config/constants/owner';
 import { collectWrappedData, renderWrappedCanvas } from '../../services/serverWrappedService';
 import { WrappedConfigModel } from '../../models/WrappedConfig';
 import { LevelModel } from '../../models/Level';
@@ -32,6 +33,7 @@ export default function run(client: Client): void {
     '0 12 11 11 *',
     async () => {
       for (const guild of client.guilds.cache.values()) {
+        if (!OWNER_GUILD_IDS.includes(guild.id as any)) continue;
         try {
           const wrappedConfig = await WrappedConfigModel.findOne({
             guildId: guild.id,

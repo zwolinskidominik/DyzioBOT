@@ -26,8 +26,8 @@ export default async function run(
 
     if (!reactionRoleData) return;
 
-    const emoji = reaction.emoji.toString();
-    const mapping = reactionRoleData.reactions.find((r) => r.emoji === emoji);
+    const emoji = reaction.emoji.toString().replace(/\uFE0F/g, '');
+    const mapping = reactionRoleData.reactions.find((r) => r.emoji.replace(/\uFE0F/g, '') === emoji);
 
     if (!mapping) return;
 

@@ -1,6 +1,7 @@
 import { Client, TextChannel, ChannelType } from 'discord.js';
 import { schedule } from 'node-cron';
 import { CRON } from '../../config/constants/cron';
+import { OWNER_GUILD_IDS } from '../../config/constants/owner';
 import { DisboardConfigModel, DEFAULT_DISBOARD_MESSAGE } from '../../models/DisboardConfig';
 import logger from '../../utils/logger';
 
@@ -32,7 +33,7 @@ export default async function run(client: Client): Promise<void> {
     CRON.DISBOARD_REMINDER_CHECK,
     async () => {
       try {
-        const configs = await DisboardConfigModel.find({ enabled: true }).lean();
+        const configs = await DisboardConfigModel.find({ enabled: true, guildId: { $in: OWNER_GUILD_IDS } }).lean();
         if (!configs.length) return;
 
         const now = new Date();

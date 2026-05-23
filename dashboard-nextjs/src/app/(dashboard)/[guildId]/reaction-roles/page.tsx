@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Send, ArrowLeft, Plus, Trash2, Hash, Smile } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Plus, Trash2, Hash, Smile, Pencil, RefreshCw, Save } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import EmojiPicker from "@/components/EmojiPicker";
@@ -64,6 +64,8 @@ export default function ReactionRolesPage() {
   const [currentRoleId, setCurrentRoleId] = useState("");
   const [currentDescription, setCurrentDescription] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [editingPanel, setEditingPanel] = useState<ReactionRole | null>(null);
+  const [resending, setResending] = useState<string | null>(null);
 
   useEffect(() => {
     if (guildId) {
@@ -221,10 +223,76 @@ export default function ReactionRolesPage() {
       if (!response.ok) throw new Error("Failed to delete reaction role");
 
       toast.success("Wiadomość została usunięta");
+      if (editingPanel?.messageId === messageId) handleCancelEdit();
       await fetchReactionRoles();
     } catch (error) {
       console.error("Error deleting reaction role:", error);
       toast.error("Nie udało się usunąć wiadomości");
+    }
+  };
+
+  const handleEdit = (rr: ReactionRole) => {
+    setEditingPanel(rr);
+    setSelectedChannelId(rr.channelId);
+    setTitle(rr.title || "");
+    setReactions([...rr.reactions]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPanel(null);
+    setSelectedChannelId("");
+    setTitle("");
+    setReactions([]);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingPanel || reactions.length === 0) return;
+
+    setSaving(true);
+    try {
+      const response = await fetchWithAuth(`/api/guild/${guildId}/reaction-roles`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId: editingPanel.messageId,
+          channelId: selectedChannelId || editingPanel.channelId,
+          title: title || undefined,
+          reactions,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update reaction role");
+
+      toast.success("Panel zaktualizowany i ponownie wysłany!");
+      handleCancelEdit();
+      await fetchReactionRoles();
+    } catch (error) {
+      console.error("Error updating reaction role:", error);
+      toast.error("Nie udało się zaktualizować panelu");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResend = async (rr: ReactionRole) => {
+    setResending(rr.messageId);
+    try {
+      const response = await fetchWithAuth(`/api/guild/${guildId}/reaction-roles`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: rr.messageId }),
+      });
+
+      if (!response.ok) throw new Error("Failed to resend");
+
+      toast.success("Panel wysłany ponownie!");
+      await fetchReactionRoles();
+    } catch (error) {
+      console.error("Error resending reaction role:", error);
+      toast.error("Nie udało się wysłać panelu ponownie");
+    } finally {
+      setResending(null);
     }
   };
 
@@ -360,9 +428,13 @@ export default function ReactionRolesPage() {
             <CardHeader>
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-2xl flex items-center gap-2">
-                  <Plus className="w-6 h-6" />
+                  {editingPanel ? (
+                    <Pencil className="w-6 h-6" />
+                  ) : (
+                    <Plus className="w-6 h-6" />
+                  )}
                   <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
-                    Role za reakcje
+                    {editingPanel ? "Edytuj panel" : "Role za reakcje"}
                   </span>
                 </CardTitle>
                 <Switch
@@ -373,7 +445,9 @@ export default function ReactionRolesPage() {
                 />
               </div>
               <CardDescription>
-                Dodaj wiadomość z reakcjami, które przypisują role użytkownikom
+                {editingPanel
+                  ? "Zmodyfikuj konfigurację — stara wiadomość zostanie usunięta i wysłana nowa"
+                  : "Dodaj wiadomość z reakcjami, które przypisują role użytkownikom"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
@@ -500,24 +574,41 @@ export default function ReactionRolesPage() {
                 </div>
               )}
 
-              {/* Send Button */}
-              <Button 
-                onClick={handleSend} 
-                disabled={saving || !selectedChannelId || reactions.length === 0}
-                className="w-full"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                    Wysyłanie...
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 w-4 h-4" />
-                    Wyślij wiadomość
-                  </>
+              {/* Send / Save Button */}
+              <div className="flex flex-col gap-2">
+                {editingPanel && (
+                  <Button
+                    onClick={handleCancelEdit}
+                    variant="outline"
+                    className="w-full"
+                    disabled={saving}
+                  >
+                    Anuluj edycję
+                  </Button>
                 )}
-              </Button>
+                <Button
+                  onClick={editingPanel ? handleUpdate : handleSend}
+                  disabled={saving || !selectedChannelId || reactions.length === 0}
+                  className="w-full"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                      {editingPanel ? "Zapisywanie..." : "Wysyłanie..."}
+                    </>
+                  ) : editingPanel ? (
+                    <>
+                      <Save className="mr-2 w-4 h-4" />
+                      Zapisz zmiany
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 w-4 h-4" />
+                      Wyślij wiadomość
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardContent>
           </Card>
           </SlideIn>
@@ -561,13 +652,38 @@ export default function ReactionRolesPage() {
                           {getChannelName(rr.channelId)}
                         </div>
                       </div>
-                      <Button
-                        onClick={() => handleDelete(rr.messageId)}
-                        variant="destructive"
-                        size="sm"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-1.5">
+                        <Button
+                          onClick={() => handleResend(rr)}
+                          variant="outline"
+                          size="sm"
+                          disabled={resending === rr.messageId || editingPanel?._id === rr._id}
+                          title="Wyślij ponownie"
+                        >
+                          {resending === rr.messageId ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4" />
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => handleEdit(rr)}
+                          variant="outline"
+                          size="sm"
+                          disabled={editingPanel?._id === rr._id}
+                          title="Edytuj"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => handleDelete(rr.messageId)}
+                          variant="destructive"
+                          size="sm"
+                          title="Usuń"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                     
                     <div className="space-y-2">

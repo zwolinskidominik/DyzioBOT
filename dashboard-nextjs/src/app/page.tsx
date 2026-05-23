@@ -41,7 +41,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              DyzioBot to kompleksowe rozwiązanie zaufane przez tysiące serwerów. 
+              Deezy to kompleksowe rozwiązanie zaufane przez tysiące serwerów. 
               Łatwy w konfiguracji, potężny w możliwościach - wszystko czego potrzebujesz 
               do zarządzania i rozwijania swojej społeczności.
             </p>
@@ -88,13 +88,13 @@ export default function HomePage() {
         {/* Features Section */}
         <section id="features" className="container mx-auto px-4 py-20">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
                 Funkcje bota
               </span>
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Odkryj wszystkie możliwości, które DyzioBot oferuje dla Twojego serwera Discord
+              Odkryj wszystkie możliwości, które Deezy oferuje dla Twojego serwera Discord
             </p>
           </div>
 
@@ -164,12 +164,12 @@ export default function HomePage() {
 
         {/* CTA Section */}
         <section className="container mx-auto px-4 py-20">
-          <div className="max-w-4xl mx-auto text-center space-y-6 p-12 rounded-2xl border border-bot-blue/30 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-2xl shadow-bot-primary/10">
+          <div className="max-w-4xl mx-auto text-center space-y-6 p-6 sm:p-12 rounded-2xl border border-bot-blue/30 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-2xl shadow-bot-primary/10">
             <h2 className="text-3xl md:text-4xl font-bold">
               Gotowy, aby ulepszyć swój serwer?
             </h2>
             <p className="text-muted-foreground text-lg">
-              Dołącz do tysięcy serwerów, które już korzystają z DyzioBot
+              Dołącz do tysięcy serwerów, które już korzystają z Deezy
             </p>
             <Button
               asChild
@@ -177,7 +177,7 @@ export default function HomePage() {
               className="btn-gradient shadow-2xl shadow-bot-primary/40 text-base px-8 hover:shadow-bot-primary/60 hover:scale-105"
             >
               <a href={inviteUrl} target="_blank" rel="noopener noreferrer">
-                Dodaj DyzioBot już teraz
+                Dodaj Deezy już teraz
                 <ArrowRight className="ml-2 w-5 h-5" />
               </a>
             </Button>
@@ -187,7 +187,7 @@ export default function HomePage() {
         {/* Footer */}
         <footer className="border-t border-bot-blue/20 py-8 backdrop-blur-sm">
           <div className="container mx-auto px-4 text-center text-muted-foreground">
-            <p>&copy; 2025 DyzioBot. Wszystkie prawa zastrzeżone.</p>
+            <p>&copy; 2025 Deezy. Wszystkie prawa zastrzeżone.</p>
           </div>
         </footer>
       </div>

@@ -399,7 +399,7 @@ export default function CS2InvestmentsPage() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/dyzio.png" alt="DyzioBot" className="w-10 h-10 rounded-full" />
+            <img src="/dyzio.png" alt="Deezy" className="w-10 h-10 rounded-full" />
             <div>
               <h1 className="text-xl font-bold text-white">
                 CS2 Investment Tracker

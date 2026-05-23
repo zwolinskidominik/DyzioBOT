@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import mongoose from 'mongoose';
+import { OWNER_IDS, OWNER_GUILD_IDS } from '@/lib/owner';
 
 const DEFAULT_MESSAGE =
   '### Cześć i czołem! <a:pepo_howody:1351311201614827583>  \n' +
@@ -45,6 +46,11 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const userId = (session.user as { id?: string })?.id ?? '';
+    if (!OWNER_IDS.includes(userId) || !OWNER_GUILD_IDS.includes(guildId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await connectDB();
 
     const config = await DisboardConfig.findOne({ guildId });
@@ -71,6 +77,11 @@ export async function POST(
     }
 
     const { guildId } = await params;
+    const userId = (session.user as { id?: string })?.id ?? '';
+    if (!OWNER_IDS.includes(userId) || !OWNER_GUILD_IDS.includes(guildId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { enabled, channelId, message } = body;
 

@@ -1042,7 +1042,7 @@ export default function EmojiPicker({ onEmojiSelect, buttonText = "Dodaj emoji" 
           {buttonText}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[450px] p-0" align="start">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[450px] max-w-[450px] p-0" align="start">
         <div className="p-3 border-b">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

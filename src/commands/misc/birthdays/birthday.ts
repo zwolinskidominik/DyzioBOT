@@ -142,7 +142,7 @@ async function replyWithNoBirthdayInfo(
           value:
             `- </birthday-remember:${REMEMBER_BIRTHDAY_COMMAND_ID}> 15-04\n` +
             `- </birthday-remember:${REMEMBER_BIRTHDAY_COMMAND_ID}> 13-09-2004\n` +
-            `- </birthday-set-user:${SET_USER_BIRTHDAY_COMMAND_ID}> 15-04-1994 \`@Dyzio\``,
+            `- </birthday-set-user:${SET_USER_BIRTHDAY_COMMAND_ID}> 15-04-1994 \`@Deezy\``,
         }),
     ],
   });

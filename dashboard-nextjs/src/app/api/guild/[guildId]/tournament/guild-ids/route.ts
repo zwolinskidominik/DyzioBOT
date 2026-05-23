@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
+import { OWNER_IDS, OWNER_GUILD_IDS } from '@/lib/owner';
 
 /**
  * Returns the hardcoded guild-level tournament identifiers
@@ -50,6 +51,11 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const userId = (session.user as { id?: string })?.id ?? '';
+    if (!OWNER_IDS.includes(userId) || !OWNER_GUILD_IDS.includes(guildId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const ids = GUILD_TOURNAMENT_IDS[guildId] ?? DEFAULTS;
 
     return NextResponse.json(ids);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface EmojiDisplayProps {
   emoji: string;
@@ -6,12 +6,28 @@ interface EmojiDisplayProps {
 }
 
 export function EmojiDisplay({ emoji, size = 20 }: EmojiDisplayProps) {
+  const [imgError, setImgError] = useState(false);
+
   // Discord custom emoji format: <:name:id> or <a:name:id>
   const discordEmojiRegex = /^<(a)?:([^:]+):(\d+)>$/;
   const match = emoji.match(discordEmojiRegex);
 
   if (match) {
     const [, animated, name, id] = match;
+
+    if (imgError) {
+      // Emoji deleted or bot has no access — show fallback
+      return (
+        <span
+          className="inline-block text-muted-foreground"
+          style={{ fontSize: size * 0.75 }}
+          title={`:${name}: (emoji niedostępne)`}
+        >
+          ❓
+        </span>
+      );
+    }
+
     const extension = animated ? 'gif' : 'png';
     const url = `https://cdn.discordapp.com/emojis/${id}.${extension}?size=${size * 2}&quality=lossless`;
 
@@ -22,6 +38,7 @@ export function EmojiDisplay({ emoji, size = 20 }: EmojiDisplayProps) {
         title={`:${name}:`}
         className="inline-block"
         style={{ width: size, height: size }}
+        onError={() => setImgError(true)}
       />
     );
   }
@@ -48,3 +65,34 @@ export function EmojiList({ emojis, size = 20, separator = ', ' }: EmojiListProp
     </>
   );
 }
+
+/** Returns true if any of the emoji strings is a Discord custom emoji (any <:name:id>) */
+export function hasCustomEmoji(reactions: string[]): boolean {
+  return reactions.some((r) => /^<a?:[^:]+:\d+>$/.test(r));
+}
+
+/**
+ * Extracts the snowflake ID from a Discord custom emoji string "<:name:id>" or "<a:name:id>".
+ * Returns null for unicode emoji.
+ */
+export function getCustomEmojiId(emoji: string): string | null {
+  const m = emoji.match(/^<a?:[^:]+:(\d+)>$/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Returns true if the reactions array contains at least one custom Discord emoji
+ * whose ID is NOT in the provided set of known bot emoji IDs.
+ * Falls back to hasCustomEmoji() when botEmojiIds is empty (not yet loaded).
+ */
+export function hasExternalEmoji(reactions: string[], botEmojiIds: ReadonlySet<string>): boolean {
+  if (botEmojiIds.size === 0) {
+    // Bot emoji list not loaded yet — don't flag anything
+    return false;
+  }
+  return reactions.some((r) => {
+    const id = getCustomEmojiId(r);
+    return id !== null && !botEmojiIds.has(id);
+  });
+}
+

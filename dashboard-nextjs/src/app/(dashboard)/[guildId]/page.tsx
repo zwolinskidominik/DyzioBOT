@@ -229,7 +229,7 @@ export default function GuildDashboard() {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Bot nie jest na serwerze</CardTitle>
             <CardDescription>
-              Aby zarządzać tym serwerem, musisz najpierw dodać DyzioBot
+              Aby zarządzać tym serwerem, musisz najpierw dodać Deezy
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -413,7 +413,7 @@ export default function SuggestionsPage() {
                       {channels.find((ch) => ch.id === config.suggestionChannelId)?.name}
                     </span>
                   ) : (
-                    <span className="text-destructive">Kanał nie znaleziony (może został usunięty)</span>
+                    <span className="text-destructive text-xs">Kanał usunięty</span>
                   )}
                 </p>
               </div>
@@ -449,8 +449,8 @@ export default function SuggestionsPage() {
         >
           <CardHeader>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="min-w-0">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
                       Wszystkie Sugestie ({
@@ -466,9 +466,9 @@ export default function SuggestionsPage() {
                   </CardDescription>
                 </div>
                 {suggestions.length > 0 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="w-48">
+                      <SelectTrigger className="w-full sm:w-48">
                         <SelectValue placeholder="Sortuj..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -574,12 +574,13 @@ export default function SuggestionsPage() {
                     <div
                       className="p-4 rounded-lg bg-background/50 border border-transparent hover:bg-background/70 hover:shadow-lg hover:shadow-bot-primary/15 hover:border-bot-primary/30 transition-all duration-300"
                     >
-                    <div className="flex items-start gap-4">
+                    {/* Content row */}
+                    <div className="flex items-start gap-3 mb-2">
                       <input
                         type="checkbox"
                         checked={selectedSuggestions.has(suggestion.suggestionId)}
                         onChange={() => toggleSelectSuggestion(suggestion.suggestionId)}
-                        className="mt-1 h-4 w-4 rounded appearance-none border-2 border-gray-500/40 bg-gray-700/30 transition-all duration-200 cursor-pointer hover:border-bot-primary/60 hover:bg-gray-600/30 focus:outline-none focus:ring-2 focus:ring-bot-primary/40 checked:bg-bot-primary checked:border-bot-primary checked:hover:bg-bot-blue"
+                        className="mt-1 h-4 w-4 flex-shrink-0 rounded appearance-none border-2 border-gray-500/40 bg-gray-700/30 transition-all duration-200 cursor-pointer hover:border-bot-primary/60 hover:bg-gray-600/30 focus:outline-none focus:ring-2 focus:ring-bot-primary/40 checked:bg-bot-primary checked:border-bot-primary checked:hover:bg-bot-blue"
                         style={{
                           backgroundImage: selectedSuggestions.has(suggestion.suggestionId) 
                             ? "url(\"data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e\")"
@@ -589,40 +590,11 @@ export default function SuggestionsPage() {
                           backgroundRepeat: 'no-repeat'
                         }}
                       />
-                    <div className="flex flex-1 items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm break-words whitespace-pre-wrap">{suggestion.content}</p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          asChild
-                          className="h-8 w-8 p-0 hover:bg-bot-primary/10 hover:text-bot-primary"
-                          title="Skocz do wiadomości"
-                        >
-                          <a
-                            href={`https://discord.com/channels/${guildId}/${config?.suggestionChannelId}/${suggestion.messageId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSuggestion(suggestion.suggestionId)}
-                          className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-                          title="Usuń sugestię"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <p className="text-sm break-all whitespace-pre-wrap flex-1 min-w-0">{suggestion.content}</p>
                     </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground ml-8">
+
+                    {/* Votes + actions row */}
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground pl-7">
                       <div className="flex items-center gap-1">
                         <ThumbsUp className="w-4 h-4 text-green-500" />
                         <span>{suggestion.upvotes.length}</span>
@@ -631,8 +603,32 @@ export default function SuggestionsPage() {
                         <ThumbsDown className="w-4 h-4 text-red-500" />
                         <span>{suggestion.downvotes.length}</span>
                       </div>
-                      <div className="ml-auto text-xs">
-                        ID: {suggestion.suggestionId.slice(0, 8)}
+                      <div className="ml-auto flex items-center gap-1">
+                        <span className="text-xs mr-1">ID: {suggestion.suggestionId.slice(0, 8)}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="h-7 w-7 p-0 hover:bg-bot-primary/10 hover:text-bot-primary"
+                          title="Skocz do wiadomości"
+                        >
+                          <a
+                            href={`https://discord.com/channels/${guildId}/${config?.suggestionChannelId}/${suggestion.messageId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteSuggestion(suggestion.suggestionId)}
+                          className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                          title="Usuń sugestię"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
                     </div>
                   </div>

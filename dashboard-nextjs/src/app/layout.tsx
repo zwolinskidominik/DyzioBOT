@@ -7,11 +7,11 @@ import SessionProvider from "@/components/SessionProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DyzioBot Dashboard",
-  description: "Profesjonalny panel zarządzania botem Discord - DyzioBot",
+  title: "Deezy Dashboard",
+  description: "Profesjonalny panel zarządzania botem Discord - Deezy",
   icons: {
-    icon: "/dyzio.png",
-    apple: "/dyzio.png",
+    icon: "/deezy.png",
+    apple: "/deezy.png",
   },
 };
 

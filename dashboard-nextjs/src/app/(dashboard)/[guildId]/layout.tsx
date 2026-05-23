@@ -4,7 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut, Menu, X } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { EmojiProvider } from "@/components/EmojiContext";
@@ -24,6 +24,7 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
   const { data: session } = useSession();
   const [langOpen, setLangOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState("pl");
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const langDropdownRef = useRef<HTMLDivElement>(null);
@@ -53,27 +54,61 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
     };
   }, [userOpen, langOpen]);
 
+  // Lock body scroll + auto-close sidebar when viewport reaches lg
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setSidebarOpen(false);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full border-b border-bot-blue/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          {/* Logo & Name */}
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <Image
-              src="/dyzio.png"
-              alt="DyzioBOT"
-              width={40}
-              height={40}
-              className="rounded-full"
-            />
-            <span className="text-xl font-bold bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
-              DyzioBOT
-            </span>
-          </Link>
+      <nav className="sticky top-0 z-50 w-full border-b border-bot-blue/20" style={{ backgroundColor: '#1E2227' }}>
+        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+          {/* Hamburger (mobile) + Logo & Name */}
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden flex items-center justify-center w-10 h-10 rounded-md hover:bg-white/5 transition-colors flex-shrink-0"
+              aria-label={sidebarOpen ? "Zamknij menu" : "Otwórz menu"}
+              aria-expanded={sidebarOpen}
+            >
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-0">
+              <div className="relative flex-shrink-0">
+                <div
+                  className="absolute inset-0 rounded-full blur-md opacity-60"
+                  style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)", transform: "scale(1.4)" }}
+                  aria-hidden="true"
+                />
+                <Image
+                  src="/deezy.png"
+                  alt="Deezy"
+                  width={40}
+                  height={40}
+                  className="relative rounded-full"
+                />
+              </div>
+              <span className="hidden sm:inline text-xl font-bold bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent truncate">
+                Deezy
+              </span>
+            </Link>
+          </div>
 
           {/* Right side - Language & User */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Language Selector */}
             <div className="relative" ref={langDropdownRef}>
               <button
@@ -138,7 +173,7 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
                 >
                   <div className="relative">
                     <Image
-                      src={session.user.image || "/dyzio.png"}
+                      src={session.user.image || "/deezy.png"}
                       alt={session.user.name || "User"}
                       width={32}
                       height={32}
@@ -146,15 +181,15 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
                     />
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
                   </div>
-                  <span className="text-sm font-semibold text-foreground">{session.user.name}</span>
-                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${userOpen ? "rotate-180" : ""}`} />
+                  <span className="hidden sm:inline text-sm font-semibold text-foreground truncate max-w-[140px]">{session.user.name}</span>
+                  <ChevronDown className={`hidden sm:block w-4 h-4 text-muted-foreground transition-transform ${userOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {userOpen && (
                   <div className="absolute right-0 mt-2 w-56 rounded-lg border border-bot-blue/40 bg-gradient-to-br from-card via-card to-bot-blue/5 backdrop-blur-xl shadow-2xl shadow-bot-primary/20 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-2">
                       <div className="px-3 py-2 mb-1">
-                        <p className="text-xs font-bold text-white">DyzioBOT</p>
+                        <p className="text-xs font-bold text-white">Deezy</p>
                       </div>
                       <div className="h-px bg-gradient-to-r from-transparent via-bot-blue/30 to-transparent my-1"></div>
                       <button
@@ -175,8 +210,8 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
       
       {/* Main content with sidebar */}
       <div className="flex flex-1">
-        <Sidebar />
-        <main className="flex-1 ml-64 pl-4" style={{ backgroundColor: '#23272E' }}>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 lg:ml-[536px] min-w-0" style={{ backgroundColor: '#23272E' }}>
           <EmojiProvider>
             {children}
           </EmojiProvider>

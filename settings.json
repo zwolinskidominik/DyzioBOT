@@ -1,4 +1,7 @@
 {
   "editor.formatOnSave": true,
-  "prettier.requireConfig": true
+  "prettier.requireConfig": true,
+  "files.watcherExclude": {
+    "**/dashboard-nextjs/.next/**": true
+  }
 }

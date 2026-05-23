@@ -59,7 +59,7 @@ export async function GET(
 }
 
 async function fetchChannels(guildId: string) {
-  const cached = getFromCache<any>('channels', guildId);
+  const cached = await getFromCache<any>('channels', guildId);
   if (cached) return cached;
 
   const controller = new AbortController();
@@ -79,13 +79,13 @@ async function fetchChannels(guildId: string) {
     if (!response.ok) throw new Error(`Discord API error: ${response.status}`);
 
     const data = await response.json();
-    setInCache('channels', guildId, data);
+    await setInCache('channels', guildId, data);
     return data;
   } catch (error: any) {
     clearTimeout(timeoutId);
     console.error('Channels fetch error:', error.message);
     
-    const stale = getFromCache<any>('channels', guildId, true);
+    const stale = await getFromCache<any>('channels', guildId, true);
     if (stale) {
       console.log('Using stale cache for channels');
       return stale;
@@ -96,7 +96,7 @@ async function fetchChannels(guildId: string) {
 }
 
 async function fetchRoles(guildId: string) {
-  const cached = getFromCache<any>('roles', guildId);
+  const cached = await getFromCache<any>('roles', guildId);
   if (cached) return cached;
 
   const controller = new AbortController();
@@ -116,13 +116,13 @@ async function fetchRoles(guildId: string) {
     if (!response.ok) throw new Error(`Discord API error: ${response.status}`);
 
     const data = await response.json();
-    setInCache('roles', guildId, data);
+    await setInCache('roles', guildId, data);
     return data;
   } catch (error: any) {
     clearTimeout(timeoutId);
     console.error('Roles fetch error:', error.message);
     
-    const stale = getFromCache<any>('roles', guildId, true);
+    const stale = await getFromCache<any>('roles', guildId, true);
     if (stale) {
       console.log('Using stale cache for roles');
       return stale;
@@ -133,7 +133,7 @@ async function fetchRoles(guildId: string) {
 }
 
 async function fetchMembers(guildId: string) {
-  const cached = getFromCache<any>('members', guildId);
+  const cached = await getFromCache<any>('members', guildId);
   if (cached) return cached;
 
   const controller = new AbortController();
@@ -162,13 +162,13 @@ async function fetchMembers(guildId: string) {
       nickname: m.nick,
     }));
 
-    setInCache('members', guildId, simplified);
+    await setInCache('members', guildId, simplified);
     return simplified;
   } catch (error: any) {
     clearTimeout(timeoutId);
     console.error('Members fetch error:', error.message);
     
-    const stale = getFromCache<any>('members', guildId, true);
+    const stale = await getFromCache<any>('members', guildId, true);
     if (stale) {
       console.log('Using stale cache for members');
       return stale;

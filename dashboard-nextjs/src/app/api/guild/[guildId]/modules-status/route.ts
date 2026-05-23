@@ -13,121 +13,115 @@ async function connectDB() {
 const BirthdayConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'birthdayconfigurations' });
+}, { collection: 'birthdayconfigurations', strict: false });
 const BirthdayConfig = mongoose.models.BirthdayConfig || mongoose.model('BirthdayConfig', BirthdayConfigSchema);
 
 const GreetingsConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'greetingsconfigurations' });
+}, { collection: 'greetingsconfigurations', strict: false });
 const GreetingsConfig = mongoose.models.GreetingsConfig || mongoose.model('GreetingsConfig', GreetingsConfigSchema);
 
 const LevelConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'levelconfigs' });
+}, { collection: 'levelconfigs', strict: false });
 const LevelConfig = mongoose.models.LevelConfig || mongoose.model('LevelConfig', LevelConfigSchema);
 
 const MonthlyStatsConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'monthlystatsconfigs' });
+}, { collection: 'monthlystatsconfigs', strict: false });
 const MonthlyStatsConfig = mongoose.models.MonthlyStatsConfig || mongoose.model('MonthlyStatsConfig', MonthlyStatsConfigSchema);
 
 const ChannelStatsSchema = new mongoose.Schema({
   guildId: String,
   channels: Object,
-}, { collection: 'channelstats' });
+}, { collection: 'channelstats', strict: false });
 const ChannelStats = mongoose.models.ChannelStats || mongoose.model('ChannelStats', ChannelStatsSchema);
 
 const TempChannelConfigSchema = new mongoose.Schema({
   guildId: String,
   channelIds: [String],
-}, { collection: 'tempchannelconfigurations' });
+}, { collection: 'tempchannelconfigurations', strict: false });
 const TempChannelConfig = mongoose.models.TempChannelConfig || mongoose.model('TempChannelConfig', TempChannelConfigSchema);
 
 const AutoRoleSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'autoroles' });
+}, { collection: 'autoroles', strict: false });
 const AutoRole = mongoose.models.AutoRole || mongoose.model('AutoRole', AutoRoleSchema);
 
 const QuestionConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'questionconfigurations' });
+}, { collection: 'questionconfigurations', strict: false });
 const QuestionConfig = mongoose.models.QuestionConfig || mongoose.model('QuestionConfig', QuestionConfigSchema);
 
 const SuggestionConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'suggestionconfigurations' });
+}, { collection: 'suggestionconfigurations', strict: false });
 const SuggestionConfig = mongoose.models.SuggestionConfig || mongoose.model('SuggestionConfig', SuggestionConfigSchema);
 
 const TicketConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'ticketconfigs' });
+}, { collection: 'ticketconfigs', strict: false });
 const TicketConfig = mongoose.models.TicketConfig || mongoose.model('TicketConfig', TicketConfigSchema);
 
 const StreamConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'streamconfigurations' });
+}, { collection: 'streamconfigurations', strict: false });
 const StreamConfig = mongoose.models.StreamConfig || mongoose.model('StreamConfig', StreamConfigSchema);
 
 const ReactionRoleSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'reactionroles' });
+}, { collection: 'reactionroles', strict: false });
 const ReactionRole = mongoose.models.ReactionRole || mongoose.model('ReactionRole', ReactionRoleSchema);
 
 const LogConfigurationSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'logconfigurations' });
+}, { collection: 'logconfigurations', strict: false });
 const LogConfiguration = mongoose.models.LogConfiguration || mongoose.model('LogConfiguration', LogConfigurationSchema);
 
 const TournamentConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'tournamentconfigs' });
+}, { collection: 'tournamentconfigs', strict: false });
 const TournamentConfig = mongoose.models.TournamentConfig || mongoose.model('TournamentConfig', TournamentConfigSchema);
 
 const GiveawayConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'giveawayconfigs' });
+}, { collection: 'giveawayconfigs', strict: false });
 const GiveawayConfig = mongoose.models.GiveawayConfig || mongoose.model('GiveawayConfig', GiveawayConfigSchema);
-
-const MusicConfigSchema = new mongoose.Schema({
-  guildId: String,
-  enabled: Boolean,
-}, { collection: 'musicconfigs' });
-const MusicConfig = mongoose.models.MusicConfig || mongoose.model('MusicConfig', MusicConfigSchema);
 
 const AntiSpamConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'antispamconfigs' });
+}, { collection: 'antispamconfigs', strict: false });
 const AntiSpamModuleConfig = mongoose.models.AntiSpamModuleConfig || mongoose.model('AntiSpamModuleConfig', AntiSpamConfigSchema);
 
 const DisboardConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'disboardconfigs' });
+}, { collection: 'disboardconfigs', strict: false });
 const DisboardModuleConfig = mongoose.models.DisboardModuleConfig || mongoose.model('DisboardModuleConfig', DisboardConfigSchema);
 
 const InviteTrackerConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'invitetrackerconfigs' });
+}, { collection: 'invitetrackerconfigs', strict: false });
 const InviteTrackerModuleConfig = mongoose.models.InviteTrackerModuleConfig || mongoose.model('InviteTrackerModuleConfig', InviteTrackerConfigSchema);
 
 const WrappedConfigSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
-}, { collection: 'wrappedconfigs' });
+}, { collection: 'wrappedconfigs', strict: false });
 const WrappedModuleConfig = mongoose.models.WrappedModuleConfig || mongoose.model('WrappedModuleConfig', WrappedConfigSchema);
 
 export async function GET(
@@ -159,7 +153,6 @@ export async function GET(
       logs,
       tournament,
       giveaway,
-      music,
       antiSpam,
       wrapped,
     ] = await Promise.all([
@@ -178,7 +171,6 @@ export async function GET(
       LogConfiguration.findOne({ guildId }).lean(),
       TournamentConfig.findOne({ guildId }).lean(),
       GiveawayConfig.findOne({ guildId }).lean(),
-      MusicConfig.findOne({ guildId }).lean(),
       AntiSpamModuleConfig.findOne({ guildId }).lean(),
       WrappedModuleConfig.findOne({ guildId }).lean(),
     ]);
@@ -194,7 +186,6 @@ export async function GET(
       "channel-stats": !!((channelStats as any)?.channels && Object.keys((channelStats as any).channels).some((key: string) => (channelStats as any).channels[key]?.channelId)),
       "temp-channels": !!((tempChannels as any)?.channelIds && Array.isArray((tempChannels as any).channelIds) && (tempChannels as any).channelIds.length > 0),
       autoroles: (autoRole as any)?.enabled === true,
-      music: (music as any)?.enabled === true,
       qotd: (qotd as any)?.enabled === true,
       suggestions: (suggestions as any)?.enabled === true,
       tickets: (tickets as any)?.enabled === true,
