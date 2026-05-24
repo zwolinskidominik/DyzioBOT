@@ -25,6 +25,17 @@ interface AppEmoji {
   animated: boolean;
 }
 
+// ── name aliases ─────────────────────────────────────────────────────────────
+// Mapowanie: stara nazwa emoji z serwera → nowa nazwa w emoji aplikacji
+
+const NAME_ALIASES: Record<string, string> = {
+  xemoji00_yes: 'checkmark2',
+  xemoji01_no: 'crossmark2',
+  cat01_yes: 'cat_yes',
+  cat02_no: 'cat_no',
+  xemoji21_aliendance: 'alien_dance',
+};
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const CUSTOM_RE = /^<(a)?:([^:]+):(\d+)>$/;
@@ -113,8 +124,9 @@ async function main() {
         continue;
       }
 
-      // Szukamy odpowiednika w emoji aplikacji po nazwie
-      const match = byName.get(parsed.name.toLowerCase());
+      // Szukamy odpowiednika w emoji aplikacji po nazwie (z aliasami)
+      const lookupName = NAME_ALIASES[parsed.name.toLowerCase()] ?? parsed.name.toLowerCase();
+      const match = byName.get(lookupName);
 
       if (match) {
         const newFmt = formatEmoji(match);
@@ -151,8 +163,9 @@ async function main() {
     console.log('   (https://discord.com/developers/applications) i uruchom skrypt ponownie.');
   }
 
-  await mongoose.disconnect();
+  await mongoose.disconnect().catch(() => undefined);
   console.log('\n🔌 Rozłączono z MongoDB.');
+  process.exit(0);
 }
 
 main().catch((err) => {
