@@ -34,6 +34,8 @@ const NAME_ALIASES: Record<string, string> = {
   cat01_yes: 'cat_yes',
   cat02_no: 'cat_no',
   xemoji21_aliendance: 'alien_dance',
+  pingu_yes: 'yes',
+  pingu_no: 'no',
 };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
