@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -199,7 +199,7 @@ export default function GuildDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8">
+        <div className="w-full">
           <Skeleton className="h-10 w-48 mb-4" />
           <div className="flex items-center gap-4 mb-8">
             <Skeleton className="w-16 h-16 rounded-full" />
@@ -253,19 +253,10 @@ export default function GuildDashboard() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8">
+      <div className="w-full">
         {/* Header */}
         <SlideIn direction="up">
           <div className="mb-8">
-            <Link
-              href="/guilds"
-              className="inline-flex items-center gap-2 px-4 py-2 mb-4 rounded-lg bg-gradient-to-r from-bot-blue/10 to-bot-primary/10 hover:from-bot-blue/20 hover:to-bot-primary/20 border border-bot-blue/30 hover:border-bot-blue/50 transition-all group"
-            >
-              <svg className="w-4 h-4 text-bot-light group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span className="text-sm font-medium text-foreground">Wszystkie serwery</span>
-            </Link>
             <div className="flex items-center gap-4">
               {getGuildIcon(guild) ? (
                 <Image src={getGuildIcon(guild)!} alt={guild.name} width={64} height={64} className="rounded-full shadow-lg shadow-bot-primary/20" />
@@ -275,7 +266,7 @@ export default function GuildDashboard() {
                 </div>
               )}
               <div>
-                <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold mb-1 text-white/90">
                   Panel główny - {guild.name}
                 </h1>
                 <p className="text-muted-foreground">Przegląd aktywności serwera</p>

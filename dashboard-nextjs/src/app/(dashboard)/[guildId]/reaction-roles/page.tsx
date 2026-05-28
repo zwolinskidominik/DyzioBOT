@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, Send, ArrowLeft, Plus, Trash2, Hash, Smile, Pencil, RefreshCw, Save, Search } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -67,6 +68,7 @@ export default function ReactionRolesPage() {
   const [editingPanel, setEditingPanel] = useState<ReactionRole | null>(null);
   const [resending, setResending] = useState<string | null>(null);
   const [roleSearch, setRoleSearch] = useState("");
+  const [rolePopoverOpen, setRolePopoverOpen] = useState(false);
 
   useEffect(() => {
     if (guildId) {
@@ -160,6 +162,7 @@ export default function ReactionRolesPage() {
 
     setCurrentEmoji("");
     setCurrentRoleId("");
+    setRoleSearch("");
     setCurrentDescription("");
   };
 
@@ -309,16 +312,23 @@ export default function ReactionRolesPage() {
     window.location.reload();
   };
 
+  const selectedRole = roles.find((role) => role.id === currentRoleId);
+  const normalizedRoleSearch = roleSearch.trim().toLowerCase();
+  const filteredRoles = normalizedRoleSearch
+    ? roles.filter((role) => role.name.toLowerCase().includes(normalizedRoleSearch))
+    : roles;
+  const roleInputValue = roleSearch || selectedRole?.name || "";
+
+  const handleRoleSelect = (role: Role) => {
+    setCurrentRoleId(role.id);
+    setRoleSearch(role.name);
+    setRolePopoverOpen(false);
+  };
+
   if (error) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
+        <div className="w-full">
           <ErrorState
             title="Nie udało się załadować reaction-roles"
             message={error}
@@ -332,13 +342,12 @@ export default function ReactionRolesPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
           <Card
             className="backdrop-blur mb-6"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -372,7 +381,6 @@ export default function ReactionRolesPage() {
           <Card
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -401,15 +409,8 @@ export default function ReactionRolesPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-        <SlideIn direction="left">
-        <Button asChild variant="outline" className="mb-6">
-          <Link href={`/${guildId}`}>
-            <ArrowLeft className="mr-2 w-4 h-4" />
-            Powrót do panelu
-          </Link>
-        </Button>
-        </SlideIn>
+      <div className="w-full">
+
 
         <div className="space-y-6">
           {/* Create New Reaction Role */}
@@ -417,7 +418,6 @@ export default function ReactionRolesPage() {
           <Card
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -426,11 +426,11 @@ export default function ReactionRolesPage() {
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-2xl flex items-center gap-2">
                   {editingPanel ? (
-                    <Pencil className="w-6 h-6" />
+                    <Pencil className="w-6 h-6 text-bot-primary" />
                   ) : (
-                    <Plus className="w-6 h-6" />
+                    <Plus className="w-6 h-6 text-bot-primary" />
                   )}
-                  <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                  <span className="text-white/90">
                     {editingPanel ? "Edytuj panel" : "Role za reakcje"}
                   </span>
                 </CardTitle>
@@ -510,41 +510,73 @@ export default function ReactionRolesPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="role">Rola</Label>
-                    <Select value={currentRoleId} onValueChange={(v) => { setCurrentRoleId(v); setRoleSearch(""); }}>
-                      <SelectTrigger id="role">
-                        <SelectValue placeholder="Wybierz rolę..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <div className="p-2 border-b">
-                          <div className="relative">
-                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                            <Input
-                              placeholder="Szukaj roli..."
-                              value={roleSearch}
-                              onChange={(e) => setRoleSearch(e.target.value)}
-                              onKeyDown={(e) => e.stopPropagation()}
-                              className="h-8 pl-7 text-sm"
-                            />
-                          </div>
+                    <Popover
+                      open={rolePopoverOpen}
+                      onOpenChange={(open) => {
+                        setRolePopoverOpen(open);
+                        if (open) setRoleSearch("");
+                      }}
+                    >
+                      <PopoverTrigger asChild>
+                        <div className="relative">
+                          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            id="role"
+                            role="combobox"
+                            aria-expanded={rolePopoverOpen}
+                            aria-controls="reaction-role-options"
+                            placeholder="Wybierz rolę..."
+                            value={roleInputValue}
+                            onFocus={(event) => {
+                              setRolePopoverOpen(true);
+                              event.currentTarget.select();
+                            }}
+                            onChange={(event) => {
+                              setRoleSearch(event.target.value);
+                              setCurrentRoleId("");
+                              setRolePopoverOpen(true);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" && filteredRoles[0]) {
+                                event.preventDefault();
+                                handleRoleSelect(filteredRoles[0]);
+                              }
+                            }}
+                            className="pl-9"
+                          />
                         </div>
-                        {(() => {
-                          const filtered = roles.filter(r =>
-                            r.name.toLowerCase().includes(roleSearch.toLowerCase())
-                          );
-                          return filtered.length === 0 ? (
+                      </PopoverTrigger>
+                      <PopoverContent
+                        id="reaction-role-options"
+                        align="start"
+                        onOpenAutoFocus={(event) => event.preventDefault()}
+                        className="w-[var(--radix-popover-trigger-width)] p-1"
+                      >
+                        <div className="max-h-64 overflow-y-auto overscroll-contain">
+                          {filteredRoles.length === 0 ? (
                             <div className="py-6 text-center text-sm text-muted-foreground">
                               Nie znaleziono roli
                             </div>
                           ) : (
-                            filtered.map((role) => (
-                              <SelectItem key={role.id} value={role.id}>
-                                {role.name}
-                              </SelectItem>
+                            filteredRoles.map((role) => (
+                              <button
+                                key={role.id}
+                                type="button"
+                                onClick={() => handleRoleSelect(role)}
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+                              >
+                                <span
+                                  className="h-2.5 w-2.5 rounded-full border border-white/20"
+                                  style={{ backgroundColor: role.color ? `#${role.color.toString(16).padStart(6, "0")}` : "transparent" }}
+                                  aria-hidden="true"
+                                />
+                                <span className="min-w-0 truncate">{role.name}</span>
+                              </button>
                             ))
-                          );
-                        })()}
-                      </SelectContent>
-                    </Select>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="space-y-2">
@@ -638,7 +670,6 @@ export default function ReactionRolesPage() {
           <Card
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}

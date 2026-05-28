@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { quickAuthCheck } from "@/lib/auth";
 import { getFromCache, setInCache } from "@/lib/serverCache";
+import { toSortedDiscordRoles } from "@/lib/discordOrdering";
 
 export async function GET(
   request: Request,
@@ -14,9 +15,9 @@ export async function GET(
 
     const { guildId } = await params;
 
-    const cached = await getFromCache<any>('roles', guildId);
+    const cached = await getFromCache<unknown>('roles', guildId);
     if (cached) {
-      return NextResponse.json(cached, {
+      return NextResponse.json(toSortedDiscordRoles(cached), {
         headers: {
           'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
           'CDN-Cache-Control': 'public, s-maxage=300',
@@ -41,7 +42,7 @@ export async function GET(
         throw new Error(`Failed to fetch roles: ${response.status}`);
       }
 
-      const roles = await response.json();
+      const roles = toSortedDiscordRoles(await response.json());
       
       await setInCache('roles', guildId, roles);
       

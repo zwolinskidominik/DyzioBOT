@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -271,13 +271,7 @@ export default function BirthdaysPage() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
+        <div className="w-full">
           <ErrorState
             title="Nie udało się załadować urodzin"
             message={error}
@@ -291,13 +285,12 @@ export default function BirthdaysPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
           <Card
             className="backdrop-blur mb-6"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -332,7 +325,6 @@ export default function BirthdaysPage() {
           <Card
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -364,15 +356,8 @@ export default function BirthdaysPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-6xl">
-        <SlideIn direction="left">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
-        </SlideIn>
+      <div className="w-full">
+
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
@@ -382,7 +367,6 @@ export default function BirthdaysPage() {
           <Card 
             className="backdrop-blur mb-6"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -390,8 +374,8 @@ export default function BirthdaysPage() {
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
               <CardTitle className="text-2xl flex items-center gap-2">
-                <span>🎂</span>
-                <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                <Cake className="w-6 h-6 text-bot-primary" />
+                <span className="text-white/90">
                   Konfiguracja Urodzin
                 </span>
               </CardTitle>
@@ -526,14 +510,13 @@ export default function BirthdaysPage() {
           <Card 
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
           >
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
-              <Calendar className="w-6 h-6" />
+              <Calendar className="w-6 h-6 text-bot-primary" />
               <span>Zapisane urodziny</span>
             </CardTitle>
             <CardDescription>
@@ -701,7 +684,6 @@ export default function BirthdaysPage() {
         <div>
           <SlideIn direction="up" delay={300}>
             <Card className="backdrop-blur sticky top-4" style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}>

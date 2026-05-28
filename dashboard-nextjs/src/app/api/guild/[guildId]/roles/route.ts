@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { toSortedDiscordRoles } from "@/lib/discordOrdering";
 
 export async function GET(
   request: Request,
@@ -31,11 +32,10 @@ export async function GET(
       );
     }
 
-    const roles = await response.json();
+    const roles = toSortedDiscordRoles(await response.json());
     
     const filteredRoles = roles
-      .filter((role: any) => role.name !== "@everyone")
-      .sort((a: any, b: any) => b.position - a.position);
+      .filter((role) => role.name !== "@everyone");
     
     return NextResponse.json(filteredRoles);
   } catch (error) {

@@ -3,8 +3,7 @@
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { ChevronDown, LogOut, Menu, X } from "lucide-react";
+import { ChevronDown, LayoutDashboard, LogOut, Menu, X } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { EmojiProvider } from "@/components/EmojiContext";
@@ -72,10 +71,12 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
   }, [sidebarOpen]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="fixed left-0 top-0 z-10 flex h-screen w-screen grow overflow-hidden bg-dark-800 transition-all [padding-left:var(--dashboard-sidebar-gutter)]">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="relative flex max-w-screen max-w-full grow flex-col overflow-hidden bg-dark-700 lg:max-w-[calc(100vw-var(--dashboard-sidebar-width)-var(--dashboard-sidebar-gutter))]">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 w-full border-b border-bot-blue/20" style={{ backgroundColor: '#1E2227' }}>
-        <div className="container mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
+      <nav className="z-40 w-full shrink-0 bg-dark-900">
+        <div className="flex h-20 w-full items-center justify-between gap-2 px-3 sm:px-6">
           {/* Hamburger (mobile) + Logo & Name */}
           <div className="flex items-center gap-2 min-w-0">
             <button
@@ -86,19 +87,14 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-0">
+            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-0 lg:hidden">
               <div className="relative flex-shrink-0">
-                <div
-                  className="absolute inset-0 rounded-full blur-md opacity-60"
-                  style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)", transform: "scale(1.4)" }}
-                  aria-hidden="true"
-                />
                 <Image
                   src="/deezy.png"
                   alt="Deezy"
                   width={40}
                   height={40}
-                  className="relative rounded-full"
+                  className="rounded-full"
                 />
               </div>
               <span className="hidden sm:inline text-xl font-bold bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent truncate">
@@ -192,6 +188,14 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
                         <p className="text-xs font-bold text-white">Deezy</p>
                       </div>
                       <div className="h-px bg-gradient-to-r from-transparent via-bot-blue/30 to-transparent my-1"></div>
+                      <Link
+                        href="/guilds"
+                        onClick={() => setUserOpen(false)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-bot-blue/10 transition-all group border border-transparent hover:border-bot-blue/20"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-bot-light group-hover:text-bot-primary transition-colors" />
+                        <span className="text-sm font-medium text-foreground group-hover:text-white transition-colors">Moje serwery</span>
+                      </Link>
                       <button
                         onClick={() => signOut({ callbackUrl: "/" })}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-red-500/10 transition-all group border border-transparent hover:border-red-500/20"
@@ -207,14 +211,13 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
           </div>
         </div>
       </nav>
-      
-      {/* Main content with sidebar */}
-      <div className="flex flex-1">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 lg:ml-[536px] min-w-0" style={{ backgroundColor: '#23272E' }}>
-          <EmojiProvider>
-            {children}
-          </EmojiProvider>
+
+        <main className="relative flex flex-1 overflow-y-auto bg-dark-700 px-6 py-0 lg:px-10 lg:py-10">
+          <div className="min-h-full w-full max-w-[1540px]">
+            <EmojiProvider>
+              {children}
+            </EmojiProvider>
+          </div>
         </main>
       </div>
     </div>

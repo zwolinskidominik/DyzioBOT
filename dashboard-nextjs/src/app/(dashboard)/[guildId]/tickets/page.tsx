@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Send, ArrowLeft, Ticket, Hash, User } from "lucide-react";
+import { Loader2, Send, ArrowLeft, Ticket, Hash, User, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -175,13 +175,7 @@ export default function TicketsPage() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
+        <div className="w-full">
           <ErrorState
             title="Nie udało się załadować ticketów"
             message={error}
@@ -195,13 +189,12 @@ export default function TicketsPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
           <Card
             className="backdrop-blur mb-6"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -226,7 +219,6 @@ export default function TicketsPage() {
           <Card
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -258,22 +250,14 @@ export default function TicketsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-        <SlideIn direction="left">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
-        </SlideIn>
+      <div className="w-full">
+
 
         {/* Configuration Card */}
         <SlideIn direction="up" delay={100}>
         <Card
           className="backdrop-blur mb-6"
           style={{
-            backgroundColor: 'rgba(189, 189, 189, .05)',
             boxShadow: '0 0 10px #00000026',
             border: '1px solid transparent'
           }}
@@ -281,8 +265,8 @@ export default function TicketsPage() {
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
               <CardTitle className="text-2xl flex items-center gap-2">
-                <Ticket className="w-6 h-6" />
-                <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                <Ticket className="w-6 h-6 text-bot-primary" />
+                <span className="text-white/90">
                   Konfiguracja Ticketów
                 </span>
               </CardTitle>
@@ -361,7 +345,10 @@ export default function TicketsPage() {
 
             {/* Info Box */}
             <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-4">
-              <p className="text-sm font-medium mb-2">💡 Jak to działa?</p>
+              <p className="mb-2 flex items-center gap-2 text-sm font-medium">
+                <Lightbulb className="h-4 w-4 text-bot-primary" />
+                <span>Jak to działa?</span>
+              </p>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                 <li>Użytkownicy mogą tworzyć tickety używając komendy lub przycisku</li>
                 <li>Każdy ticket to prywatny kanał w wybranej kategorii</li>
@@ -393,14 +380,13 @@ export default function TicketsPage() {
         <Card
           className="backdrop-blur"
           style={{
-            backgroundColor: 'rgba(189, 189, 189, .05)',
             boxShadow: '0 0 10px #00000026',
             border: '1px solid transparent'
           }}
         >
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
-              <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+              <span className="text-white/90">
                 Statystyki Ticketów
               </span>
             </CardTitle>

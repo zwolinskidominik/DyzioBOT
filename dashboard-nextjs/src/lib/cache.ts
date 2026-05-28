@@ -1,6 +1,7 @@
 "use client";
 
 import { fetchWithAuth } from './fetchWithAuth';
+import { toSortedDiscordChannels, toSortedDiscordRoles } from './discordOrdering';
 
 interface CacheEntry<T> {
   data: T;
@@ -60,6 +61,12 @@ class GuildDataCache {
 
 export const guildCache = new GuildDataCache();
 
+function normalizeGuildData<T>(type: 'channels' | 'roles' | 'members', data: unknown): T {
+  if (type === 'channels') return toSortedDiscordChannels(data) as T;
+  if (type === 'roles') return toSortedDiscordRoles(data) as T;
+  return data as T;
+}
+
 // Tracks in-flight prefetch promises to prevent duplicate concurrent requests.
 const inflightPrefetch = new Map<string, Promise<void>>();
 
@@ -70,7 +77,7 @@ export async function fetchGuildData<T>(
 ): Promise<T> {
   const cached = guildCache.get<T>(guildId, type);
   if (cached) {
-    return cached;
+    return normalizeGuildData<T>(type, cached);
   }
 
   if (type === 'channels' || type === 'roles') {
@@ -84,13 +91,13 @@ export async function fetchGuildData<T>(
         const bulkData = await bulkResponse.json();
         
         if (bulkData.channels) {
-          guildCache.set(guildId, 'channels', bulkData.channels);
+          guildCache.set(guildId, 'channels', toSortedDiscordChannels(bulkData.channels));
         }
         if (bulkData.roles) {
-          guildCache.set(guildId, 'roles', bulkData.roles);
+          guildCache.set(guildId, 'roles', toSortedDiscordRoles(bulkData.roles));
         }
         
-        return bulkData[type] as T;
+        return normalizeGuildData<T>(type, bulkData[type]);
       }
     } catch (error) {
       console.warn(`Bulk endpoint failed for ${type}`);
@@ -106,7 +113,7 @@ export async function fetchGuildData<T>(
     throw new Error(`Failed to fetch ${type}`);
   }
 
-  const data = await response.json();
+  const data = normalizeGuildData<T>(type, await response.json());
   guildCache.set(guildId, type, data);
   
   return data;
@@ -128,8 +135,8 @@ async function _doPrefetch(
       })
         .then(res => res.ok ? res.json() : null)
         .then(data => {
-          if (data?.channels) guildCache.set(guildId, 'channels', data.channels);
-          if (data?.roles) guildCache.set(guildId, 'roles', data.roles);
+          if (data?.channels) guildCache.set(guildId, 'channels', toSortedDiscordChannels(data.channels));
+          if (data?.roles) guildCache.set(guildId, 'roles', toSortedDiscordRoles(data.roles));
         })
         .catch(err => console.debug('Bulk prefetch failed:', err))
     );

@@ -67,6 +67,11 @@ const config = {
   				dark: '#2c2d33',
   				darker: '#1e1f22'
   			},
+  			dark: {
+  				'700': '#272934',
+  				'800': '#1F2129',
+  				'900': '#1E2227',
+  			},
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))',

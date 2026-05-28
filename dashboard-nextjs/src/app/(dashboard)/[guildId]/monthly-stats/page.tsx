@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -171,7 +171,7 @@ export default function MonthlyStatsPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-48 mb-6" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
@@ -214,22 +214,14 @@ export default function MonthlyStatsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-6xl">
-        <SlideIn direction="left">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
-        </SlideIn>
+      <div className="w-full">
+
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Configuration Section */}
           <div className="lg:col-span-2">
             <SlideIn direction="up" delay={100}>
               <Card className="backdrop-blur" style={{
-                backgroundColor: 'rgba(189, 189, 189, .05)',
                 boxShadow: '0 0 10px #00000026',
                 border: '1px solid transparent'
               }}>
@@ -237,7 +229,7 @@ export default function MonthlyStatsPage() {
                   <div className="flex items-center justify-between mb-2">
                     <CardTitle className="text-2xl flex items-center gap-2">
                       <BarChart3 className="w-6 h-6 text-bot-primary" />
-                      <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                      <span className="text-white/90">
                         Statystyki Miesięczne
                       </span>
                     </CardTitle>
@@ -354,7 +346,6 @@ export default function MonthlyStatsPage() {
           <div>
             <SlideIn direction="up" delay={200}>
               <Card className="backdrop-blur sticky top-4" style={{
-                backgroundColor: 'rgba(189, 189, 189, .05)',
                 boxShadow: '0 0 10px #00000026',
                 border: '1px solid transparent'
               }}>

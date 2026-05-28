@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
@@ -55,7 +55,6 @@ interface HangmanData {
 }
 
 const cardStyle = {
-  backgroundColor: "rgba(189, 189, 189, .05)",
   boxShadow: "0 0 10px #00000026",
   border: "1px solid transparent",
 };
@@ -348,7 +347,7 @@ export default function HangmanBrowserPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
+        <div className="w-full">
           <Skeleton className="h-8 w-64 mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Skeleton className="h-24" />
@@ -369,7 +368,7 @@ export default function HangmanBrowserPage() {
   if (error || !data) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
+        <div className="w-full">
           <ErrorState
             title="Błąd ładowania"
             message={error || "Nie udało się załadować danych wisielca"}
@@ -382,7 +381,7 @@ export default function HangmanBrowserPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-6xl">
+      <div className="w-full">
         {/* Header */}
         <SlideIn delay={0}>
           <div className="flex items-center gap-3 mb-6">
@@ -394,7 +393,7 @@ export default function HangmanBrowserPage() {
             </Link>
             <Gamepad2 className="w-7 h-7 text-bot-primary" />
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-white/90">
                 Wisielec — Zarządzanie Słowami
               </h1>
               <p className="text-sm text-muted-foreground">

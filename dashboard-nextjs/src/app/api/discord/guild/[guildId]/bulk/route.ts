@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { quickAuthCheck } from "@/lib/auth";
 import { getFromCache, setInCache } from "@/lib/serverCache";
+import { toSortedDiscordChannels, toSortedDiscordRoles } from "@/lib/discordOrdering";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -28,7 +29,7 @@ export async function GET(
       include.includes('members') ? fetchMembers(guildId) : Promise.resolve(null),
     ]);
 
-    const response: any = {};
+    const response: Record<string, unknown> = {};
 
     if (include.includes('channels')) {
       const channelsResult = results[0];
@@ -59,8 +60,8 @@ export async function GET(
 }
 
 async function fetchChannels(guildId: string) {
-  const cached = await getFromCache<any>('channels', guildId);
-  if (cached) return cached;
+  const cached = await getFromCache<unknown>('channels', guildId);
+  if (cached) return toSortedDiscordChannels(cached);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -78,17 +79,18 @@ async function fetchChannels(guildId: string) {
 
     if (!response.ok) throw new Error(`Discord API error: ${response.status}`);
 
-    const data = await response.json();
+    const data = toSortedDiscordChannels(await response.json());
     await setInCache('channels', guildId, data);
     return data;
-  } catch (error: any) {
+  } catch (error) {
     clearTimeout(timeoutId);
-    console.error('Channels fetch error:', error.message);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Channels fetch error:', message);
     
-    const stale = await getFromCache<any>('channels', guildId, true);
+    const stale = await getFromCache<unknown>('channels', guildId, true);
     if (stale) {
       console.log('Using stale cache for channels');
-      return stale;
+      return toSortedDiscordChannels(stale);
     }
     
     throw error;
@@ -96,8 +98,8 @@ async function fetchChannels(guildId: string) {
 }
 
 async function fetchRoles(guildId: string) {
-  const cached = await getFromCache<any>('roles', guildId);
-  if (cached) return cached;
+  const cached = await getFromCache<unknown>('roles', guildId);
+  if (cached) return toSortedDiscordRoles(cached);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -115,17 +117,18 @@ async function fetchRoles(guildId: string) {
 
     if (!response.ok) throw new Error(`Discord API error: ${response.status}`);
 
-    const data = await response.json();
+    const data = toSortedDiscordRoles(await response.json());
     await setInCache('roles', guildId, data);
     return data;
-  } catch (error: any) {
+  } catch (error) {
     clearTimeout(timeoutId);
-    console.error('Roles fetch error:', error.message);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Roles fetch error:', message);
     
-    const stale = await getFromCache<any>('roles', guildId, true);
+    const stale = await getFromCache<unknown>('roles', guildId, true);
     if (stale) {
       console.log('Using stale cache for roles');
-      return stale;
+      return toSortedDiscordRoles(stale);
     }
     
     throw error;

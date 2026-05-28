@@ -1,12 +1,13 @@
 import { GuildMember, AttachmentBuilder } from 'discord.js';
 import { GreetingsConfigurationModel } from '../../models/GreetingsConfiguration';
+import { GreetingGifStateModel } from '../../models/GreetingGifState';
 import { COLORS } from '../../config/constants/colors';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 import fs from 'fs';
 import path from 'path';
 
-function getRandomLobbyGif(): { attachment: AttachmentBuilder; name: string } | null {
+async function getRandomLobbyGif(guildId: string): Promise<{ attachment: AttachmentBuilder; name: string } | null> {
   try {
     const gifsDir = path.join(process.cwd(), 'assets', 'lobby');
     
@@ -15,7 +16,15 @@ function getRandomLobbyGif(): { attachment: AttachmentBuilder; name: string } | 
       return null;
     }
 
-    const gifFiles = fs.readdirSync(gifsDir).filter(file => file.toLowerCase().endsWith('.gif'));
+    const disabledStates = await GreetingGifStateModel
+      .find({ guildId, disabled: true })
+      .select('fileName')
+      .lean();
+    const disabledFiles = new Set(disabledStates.map((state) => state.fileName));
+
+    const gifFiles = fs
+      .readdirSync(gifsDir)
+      .filter((file) => file.toLowerCase().endsWith('.gif') && !disabledFiles.has(file));
     
     if (gifFiles.length === 0) {
       logger.warn(`Brak plików GIF w folderze assets/lobby`);
@@ -53,7 +62,7 @@ export default async function run(member: GuildMember): Promise<void> {
       return;
     }
 
-    const gifData = getRandomLobbyGif();
+    const gifData = await getRandomLobbyGif(guild.id);
     const avatar = member.user.displayAvatarURL({ extension: 'png', size: 256 });
 
     const rulesChannelId = config.rulesChannelId || 'CHANNEL_ID_REGULAMIN';

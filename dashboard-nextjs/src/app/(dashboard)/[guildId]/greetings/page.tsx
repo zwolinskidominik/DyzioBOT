@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, ArrowLeft, Hash, Upload, Trash2, Image as ImageIcon, Eye } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Hash, Upload, Trash2, Image as ImageIcon, Eye, EyeOff, Hand } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +21,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { fetchGuildData } from "@/lib/cache";
 import { SlideIn } from "@/components/ui/animated";
 import VariableInserter from "@/components/VariableInserter";
+import { OWNER_IDS } from "@/lib/owner";
 
 const DEFAULT_WELCOME_MESSAGE = `### Witaj {user} na {server}
 
@@ -63,6 +65,7 @@ interface GifFile {
 export default function GreetingsPage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session, status } = useSession();
   const guildId = params.guildId as string;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +74,8 @@ export default function GreetingsPage() {
   const [gifs, setGifs] = useState<GifFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [previewGif, setPreviewGif] = useState<string | null>(null);
+  const currentUserId = session?.user.id;
+  const isOwner = status !== "loading" && OWNER_IDS.includes(currentUserId ?? "");
 
   const form = useForm<GreetingsFormData>({
     resolver: zodResolver(greetingsSchema),
@@ -199,7 +204,11 @@ export default function GreetingsPage() {
   };
 
   const handleDeleteGif = async (gifName: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć ten GIF?")) return;
+    const message = isOwner
+      ? "Czy na pewno chcesz trwale usunąć ten GIF?"
+      : "Czy na pewno chcesz ukryć ten GIF z rotacji powitań na tym serwerze?";
+
+    if (!confirm(message)) return;
 
     try {
       const response = await fetch(`/api/guild/${guildId}/greetings/gifs?name=${gifName}`, {
@@ -210,8 +219,10 @@ export default function GreetingsPage() {
         throw new Error("Failed to delete GIF");
       }
 
+      const result = await response.json();
+
       setGifs(gifs.filter(g => g.name !== gifName));
-      toast.success("GIF został usunięty!");
+      toast.success(result.mode === "hard" ? "GIF został usunięty!" : "GIF został ukryty z rotacji!");
     } catch (error) {
       toast.error("Nie udało się usunąć GIF-a");
     }
@@ -226,13 +237,7 @@ export default function GreetingsPage() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
+        <div className="w-full">
           <ErrorState
             title="Nie udało się załadować greetings"
             message={error}
@@ -246,13 +251,12 @@ export default function GreetingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
           <Card
             className="backdrop-blur mb-6"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -293,7 +297,6 @@ export default function GreetingsPage() {
           <Card
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -318,15 +321,8 @@ export default function GreetingsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-5xl">
-        <SlideIn direction="left">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
-        </SlideIn>
+      <div className="w-full">
+
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Main Configuration */}
@@ -334,7 +330,6 @@ export default function GreetingsPage() {
           <Card 
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -342,8 +337,8 @@ export default function GreetingsPage() {
             <CardHeader>
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-2xl flex items-center gap-2">
-                  <span>👋</span>
-                  <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                  <Hand className="w-6 h-6 text-bot-primary" />
+                  <span className="text-white/90">
                     Konfiguracja Greetings
                   </span>
                 </CardTitle>
@@ -590,14 +585,13 @@ export default function GreetingsPage() {
         <Card 
           className="backdrop-blur mt-6"
           style={{
-            backgroundColor: 'rgba(189, 189, 189, .05)',
             boxShadow: '0 0 10px #00000026',
             border: '1px solid transparent'
           }}
         >
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
-              <ImageIcon className="w-6 h-6" />
+              <ImageIcon className="w-6 h-6 text-bot-primary" />
               <span>Zarządzaj GIF-ami powitalnymi</span>
             </CardTitle>
             <CardDescription>
@@ -652,15 +646,26 @@ export default function GreetingsPage() {
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDeleteGif(gif.name)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {isOwner ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteGif(gif.name)}
+                          title="Usuń trwale"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleDeleteGif(gif.name)}
+                          title="Ukryj z rotacji"
+                        >
+                          <EyeOff className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
-                    <p className="text-xs text-center p-2 truncate">{gif.name}</p>
                   </div>
                   </SlideIn>
                 ))}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -35,6 +35,21 @@ export default function GuildsPage() {
     }
   }, [status]);
 
+  useEffect(() => {
+    const handleBotInviteComplete = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== "deezy:bot-invite-complete") return;
+
+      fetchGuilds();
+    };
+
+    window.addEventListener("message", handleBotInviteComplete);
+
+    return () => {
+      window.removeEventListener("message", handleBotInviteComplete);
+    };
+  }, []);
+
   const fetchGuilds = async () => {
     try {
       const response = await fetch("/api/discord/guilds");
@@ -56,6 +71,50 @@ export default function GuildsPage() {
     return null;
   };
 
+  const buildInviteUrl = (guildId: string) => {
+    const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID ?? "";
+    const callbackUrl = `${window.location.origin}/bot-invite/callback`;
+    const inviteUrl = new URL("https://discord.com/oauth2/authorize");
+
+    inviteUrl.searchParams.set("client_id", clientId);
+    inviteUrl.searchParams.set("permissions", "8");
+    inviteUrl.searchParams.set("scope", "bot applications.commands");
+    inviteUrl.searchParams.set("guild_id", guildId);
+    inviteUrl.searchParams.set("disable_guild_select", "true");
+    inviteUrl.searchParams.set("redirect_uri", callbackUrl);
+    inviteUrl.searchParams.set("response_type", "code");
+    inviteUrl.searchParams.set("state", `bot_invite:${guildId}`);
+
+    return inviteUrl.toString();
+  };
+
+  const openBotInvitePopup = (guildId: string) => {
+    const popupWidth = 540;
+    const popupHeight = 760;
+    const popupLeft = window.screenX + Math.max(0, (window.outerWidth - popupWidth) / 2);
+    const popupTop = window.screenY + Math.max(0, (window.outerHeight - popupHeight) / 2);
+    const inviteUrl = buildInviteUrl(guildId);
+    const popup = window.open(
+      inviteUrl,
+      "deezy-bot-invite",
+      `popup=yes,width=${popupWidth},height=${popupHeight},left=${Math.round(popupLeft)},top=${Math.round(popupTop)},resizable=yes,scrollbars=yes`,
+    );
+
+    if (!popup) {
+      window.location.href = inviteUrl;
+      return;
+    }
+
+    popup.focus();
+
+    const closeWatcher = window.setInterval(() => {
+      if (!popup.closed) return;
+
+      window.clearInterval(closeWatcher);
+      fetchGuilds();
+    }, 800);
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -72,7 +131,7 @@ export default function GuildsPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold mb-2 text-white/90">
               Wybierz serwer
             </h1>
             <p className="text-muted-foreground">
@@ -99,14 +158,12 @@ export default function GuildsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {guilds.map((guild) => {
               const hasBot = guild.hasBot !== false;
-              const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID ?? "";
-              const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands&guild_id=${guild.id}`;
               
               return (
                 <Card
                   key={guild.id}
                   className={`hover:shadow-xl hover:shadow-bot-primary/10 transition-all cursor-pointer hover:scale-[1.02] ${!hasBot ? "opacity-80 hover:opacity-100" : ""} border-bot-blue/30 hover:border-bot-primary/50 bg-card/50 backdrop-blur`}
-                  onClick={() => hasBot ? router.push(`/${guild.id}`) : window.open(inviteUrl, "_blank")}
+                  onClick={() => hasBot ? router.push(`/${guild.id}`) : openBotInvitePopup(guild.id)}
                 >
                   <CardHeader className="pb-4">
                     <div className="flex flex-col items-center gap-4 text-center">
@@ -141,7 +198,14 @@ export default function GuildsPage() {
                         Zarządzaj
                       </Button>
                     ) : (
-                      <Button className="w-full bg-bot-blue/20 hover:bg-bot-blue/30 text-bot-light border border-bot-blue/40" size="sm">
+                      <Button
+                        className="w-full bg-bot-blue/20 hover:bg-bot-blue/30 text-bot-light border border-bot-blue/40"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openBotInvitePopup(guild.id);
+                        }}
+                      >
                         Dodaj bota
                       </Button>
                     )}

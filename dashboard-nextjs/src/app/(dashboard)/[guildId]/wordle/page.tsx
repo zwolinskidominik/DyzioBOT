@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
@@ -63,7 +63,6 @@ const LENGTH_LABELS: Record<number, string> = {
 };
 
 const cardStyle = {
-  backgroundColor: "rgba(189, 189, 189, .05)",
   boxShadow: "0 0 10px #00000026",
   border: "1px solid transparent",
 };
@@ -283,7 +282,7 @@ export default function WordlePage() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div className="flex items-center gap-2">
-            <Puzzle className="w-6 h-6 text-green-500" />
+            <Puzzle className="w-6 h-6 text-bot-primary" />
             <h1 className="text-2xl font-bold">Wordle</h1>
           </div>
         </div>

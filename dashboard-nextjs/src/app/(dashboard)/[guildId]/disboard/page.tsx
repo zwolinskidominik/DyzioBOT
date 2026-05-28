@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -17,6 +17,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
 import { Textarea } from "@/components/ui/textarea";
 import { DiscordMessagePreview } from "@/components/DiscordMessagePreview";
+import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 
 const DEFAULT_MESSAGE =
   '### Cześć i czołem! <a:pepo_howody:1351311201614827583>  \n' +
@@ -84,7 +85,7 @@ export default function DisboardPage() {
         ]);
 
         if (channelsRes.ok) {
-          const channelsData = await channelsRes.json();
+          const channelsData = toSortedDiscordChannels(await channelsRes.json()) as Channel[];
           const textChannels = channelsData.filter(
             (ch: Channel) => ch.type === 0 || ch.type === 5,
           );
@@ -173,7 +174,7 @@ export default function DisboardPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full">
         <ErrorState
           title="Błąd ładowania"
           message={error}
@@ -184,7 +185,7 @@ export default function DisboardPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-3xl">
+    <div className="w-full">
       <SlideIn>
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">

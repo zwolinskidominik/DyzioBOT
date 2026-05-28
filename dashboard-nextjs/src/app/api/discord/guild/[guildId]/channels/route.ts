@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { quickAuthCheck } from "@/lib/auth";
 import { getFromCache, setInCache } from "@/lib/serverCache";
+import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 
 export async function GET(
   request: Request,
@@ -14,9 +15,9 @@ export async function GET(
 
     const { guildId } = await params;
 
-    const cached = await getFromCache<any>('channels', guildId);
+    const cached = await getFromCache<unknown>('channels', guildId);
     if (cached) {
-      return NextResponse.json(cached, {
+      return NextResponse.json(toSortedDiscordChannels(cached), {
         headers: {
           'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
           'CDN-Cache-Control': 'public, s-maxage=300',
@@ -47,7 +48,7 @@ export async function GET(
         throw new Error(`Failed to fetch channels: ${response.status} ${response.statusText}`);
       }
 
-      const channels = await response.json();
+      const channels = toSortedDiscordChannels(await response.json());
       
       await setInCache('channels', guildId, channels);
       

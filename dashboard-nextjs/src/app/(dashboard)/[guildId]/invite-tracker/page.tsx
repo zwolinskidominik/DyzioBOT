@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 import VariableInserter from "@/components/VariableInserter";
 import { DiscordMessagePreview } from "@/components/DiscordMessagePreview";
 import Link from "next/link";
@@ -193,7 +194,7 @@ export default function InviteTrackerPage() {
         ]);
 
         if (channelsRes.ok) {
-          const channelsData = await channelsRes.json();
+          const channelsData = toSortedDiscordChannels(await channelsRes.json()) as Channel[];
           const textChannels = channelsData.filter(
             (ch: Channel) => ch.type === 0 || ch.type === 5,
           );
@@ -269,7 +270,7 @@ export default function InviteTrackerPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full">
         <ErrorState
           title="Błąd ładowania"
           message={error}
@@ -280,7 +281,7 @@ export default function InviteTrackerPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="w-full">
       <SlideIn>
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">

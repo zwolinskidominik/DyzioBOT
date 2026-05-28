@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -129,7 +129,7 @@ export default function WrappedPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-48 mb-6" />
           <Card className="backdrop-blur">
             <CardHeader>
@@ -152,19 +152,11 @@ export default function WrappedPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-        <SlideIn direction="left">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
-        </SlideIn>
+      <div className="w-full">
+
 
         <SlideIn direction="up" delay={100}>
           <Card className="backdrop-blur" style={{
-            backgroundColor: 'rgba(189, 189, 189, .05)',
             boxShadow: '0 0 10px #00000026',
             border: '1px solid transparent'
           }}>
@@ -172,7 +164,7 @@ export default function WrappedPage() {
               <div className="flex items-center justify-between mb-2">
                 <CardTitle className="text-2xl flex items-center gap-2">
                   <PartyPopper className="w-6 h-6 text-bot-primary" />
-                  <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                  <span className="text-white/90">
                     Server Wrapped
                   </span>
                 </CardTitle>

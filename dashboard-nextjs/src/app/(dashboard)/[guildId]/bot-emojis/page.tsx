@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
@@ -175,7 +175,7 @@ export default function BotEmojisPage() {
   if (status === "loading") {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           <Skeleton className="h-64 w-full" />
         </div>
@@ -210,15 +210,8 @@ export default function BotEmojisPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-        <SlideIn direction="left">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
-        </SlideIn>
+      <div className="w-full">
+
 
         <div className="space-y-6">
           {/* Upload card */}
@@ -226,15 +219,14 @@ export default function BotEmojisPage() {
             <Card
               className="backdrop-blur"
               style={{
-                backgroundColor: "rgba(189, 189, 189, .05)",
                 boxShadow: "0 0 10px #00000026",
                 border: "1px solid transparent",
               }}
             >
               <CardHeader>
                 <CardTitle className="text-2xl flex items-center gap-2">
-                  <SmilePlus className="w-6 h-6" />
-                  <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                  <SmilePlus className="w-6 h-6 text-bot-primary" />
+                  <span className="text-white/90">
                     Emoji Bota
                   </span>
                 </CardTitle>
@@ -333,7 +325,6 @@ export default function BotEmojisPage() {
             <Card
               className="backdrop-blur"
               style={{
-                backgroundColor: "rgba(189, 189, 189, .05)",
                 boxShadow: "0 0 10px #00000026",
                 border: "1px solid transparent",
               }}

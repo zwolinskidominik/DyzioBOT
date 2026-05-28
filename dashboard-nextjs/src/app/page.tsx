@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -89,7 +89,7 @@ export default function HomePage() {
         <section id="features" className="container mx-auto px-4 py-20">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+              <span className="text-white/90">
                 Funkcje bota
               </span>
             </h2>

@@ -201,19 +201,36 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 top-16 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
       <aside
-        className={`flex flex-col fixed left-0 top-16 bottom-0 z-40 transition-transform duration-300 ease-out w-[280px] lg:w-[536px] lg:pl-[280px] ${
+        className={`dashboard-sidebar absolute left-0 top-0 z-[50] m-0 flex h-screen w-[300px] min-w-[300px] transform flex-col overflow-y-auto overscroll-contain bg-dark-800 p-0 transition-all duration-200 ease-out no-scrollbar lg:relative ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
-        style={{ backgroundColor: "#1E2227", boxShadow: "inset -50px 0 50px 1px #1f252e" }}
+        } lg:!translate-x-0`}
       >
+      {/* Brand */}
+      <div className="h-20 px-5 flex items-center justify-center shrink-0">
+        <Link href="/" className="flex items-center gap-4 hover:opacity-85 transition-opacity min-w-0">
+          <div className="relative flex-shrink-0">
+            <Image
+              src="/deezy.png"
+              alt="Deezy"
+              width={42}
+              height={42}
+              className="rounded-full"
+            />
+          </div>
+          <span className="text-2xl font-bold text-white/90 truncate mt-1.5">
+            Deezy
+          </span>
+        </Link>
+      </div>
+
       {/* Guild Selector */}
-      <div className="px-2 pt-3 pb-1">
+        <div className="px-5 pt-3 pb-1 shrink-0">
         <div className="relative" ref={guildDropdownRef}>
           <button
             onClick={() => setGuildOpen(!guildOpen)}
@@ -226,12 +243,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                   <Image
                     src={getGuildIcon(currentGuild)!}
                     alt={currentGuild.name}
-                    width={32}
-                    height={32}
-                    className="rounded-full flex-shrink-0"
+                    width={28}
+                    height={28}
+                    className="w-7 h-7 rounded-full flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-discord-blurple flex items-center justify-center text-white font-bold flex-shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-discord-blurple flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                     {currentGuild.name.charAt(0)}
                   </div>
                 )}
@@ -261,12 +278,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                       <Image
                         src={getGuildIcon(currentGuild)!}
                         alt={currentGuild.name}
-                        width={32}
-                        height={32}
-                        className="rounded-full flex-shrink-0"
+                        width={28}
+                        height={28}
+                        className="w-7 h-7 rounded-full flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-discord-blurple flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-discord-blurple flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                         {currentGuild.name.charAt(0)}
                       </div>
                     )}
@@ -288,12 +305,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                         <Image
                           src={getGuildIcon(guild)!}
                           alt={guild.name}
-                          width={32}
-                          height={32}
-                          className="rounded-full flex-shrink-0"
+                          width={28}
+                          height={28}
+                          className="w-7 h-7 rounded-full flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-discord-blurple flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-discord-blurple flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                           {guild.name.charAt(0)}
                         </div>
                       )}
@@ -326,7 +343,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 pb-4 mt-6 overflow-y-auto no-scrollbar overscroll-contain space-y-3">
+    <nav className="px-5 pb-4 mt-6 space-y-3">
         {moduleGroups.map((group) => {
           const isCollapsed = collapsedGroups[group.id] ?? false;
 
@@ -361,15 +378,15 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                         href={modulePath}
                         onMouseEnter={handleModulePrefetch}
                         onClick={() => onClose?.()}
-                        className={`relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 ${
+                        className={`relative flex items-center gap-3 px-3 py-2 transition-all duration-150 ${
                           isActive
-                            ? "bg-bot-primary/15 text-white"
-                            : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                            ? "rounded bg-bot-primary/15 text-white"
+                            : "rounded-lg hover:bg-white/5 text-muted-foreground hover:text-foreground"
                         }`}
                       >
                         {isActive && (
                           <span
-                            className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-bot-primary"
+                            className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r-full bg-bot-primary"
                             aria-hidden="true"
                           />
                         )}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ export default function LoginPage() {
           <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-bot-light to-bot-primary flex items-center justify-center shadow-xl shadow-bot-primary/30">
             <LogIn className="w-10 h-10 text-white" />
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold text-white/90">
             Deezy Dashboard
           </CardTitle>
           <CardDescription>

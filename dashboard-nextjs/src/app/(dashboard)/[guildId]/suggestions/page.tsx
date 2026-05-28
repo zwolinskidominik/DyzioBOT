@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
+import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 
 interface Channel {
   id: string;
@@ -77,14 +78,13 @@ export default function SuggestionsPage() {
           channelsPromise = fetch(`/api/discord/guild/${guildId}/channels`);
         }
 
-        const [channelsRes, configRes, suggestionsRes] = await Promise.all([
+        const [channelsRes, configRes] = await Promise.all([
           channelsPromise,
           fetch(`/api/guild/${guildId}/suggestions/config`),
-          fetch(`/api/guild/${guildId}/suggestions/list`),
         ]);
 
         if (channelsRes.ok) {
-          const channelsData = await channelsRes.json();
+          const channelsData = toSortedDiscordChannels(await channelsRes.json()) as Channel[];
           const textChannels = channelsData.filter((ch: Channel) => ch.type === 0 || ch.type === 5);
           setChannels(textChannels);
           
@@ -103,10 +103,6 @@ export default function SuggestionsPage() {
           setSelectedChannelId(configData.suggestionChannelId || "");
         }
 
-        if (suggestionsRes.ok) {
-          const suggestionsData = await suggestionsRes.json();
-          setSuggestions(suggestionsData);
-        }
       } catch (error) {
         console.error("Error loading data:", error);
         setError("Nie udało się załadować danych sugestii. Sprawdź połączenie z internetem i spróbuj ponownie.");
@@ -251,13 +247,7 @@ export default function SuggestionsPage() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
+        <div className="w-full">
           <ErrorState
             title="Nie udało się załadować sugestii"
             message={error}
@@ -271,13 +261,12 @@ export default function SuggestionsPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
           <Card
             className="backdrop-blur mb-6"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -302,7 +291,6 @@ export default function SuggestionsPage() {
           <Card
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -337,22 +325,14 @@ export default function SuggestionsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-        <SlideIn direction="left">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
-        </SlideIn>
+      <div className="w-full">
+
 
         {/* Configuration Card */}
         <SlideIn direction="up" delay={100}>
           <Card
           className="backdrop-blur mb-6"
           style={{
-            backgroundColor: 'rgba(189, 189, 189, .05)',
             boxShadow: '0 0 10px #00000026',
             border: '1px solid transparent'
           }}
@@ -360,8 +340,8 @@ export default function SuggestionsPage() {
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
               <CardTitle className="text-2xl flex items-center gap-2">
-                <Lightbulb className="w-6 h-6" />
-                <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                <Lightbulb className="w-6 h-6 text-bot-primary" />
+                <span className="text-white/90">
                   Konfiguracja Sugestii
                 </span>
               </CardTitle>
@@ -437,208 +417,6 @@ export default function SuggestionsPage() {
         </Card>
         </SlideIn>
 
-        {/* Suggestions List */}
-        <SlideIn direction="up" delay={200}>
-          <Card
-          className="backdrop-blur"
-          style={{
-            backgroundColor: 'rgba(189, 189, 189, .05)',
-            boxShadow: '0 0 10px #00000026',
-            border: '1px solid transparent'
-          }}
-        >
-          <CardHeader>
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <div className="min-w-0">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
-                      Wszystkie Sugestie ({
-                        searchQuery.trim() 
-                          ? suggestions.filter(s => s.content.toLowerCase().includes(searchQuery.toLowerCase())).length 
-                          : suggestions.length
-                      })
-                    </span>
-                  </CardTitle>
-                  <CardDescription>
-                    Lista wszystkich sugestii zgłoszonych przez użytkowników
-                    {searchQuery.trim() && ` (wyniki dla: "${searchQuery}")`}
-                  </CardDescription>
-                </div>
-                {suggestions.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="Sortuj..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="upvotes">Najwięcej upvote'ów</SelectItem>
-                        <SelectItem value="downvotes">Najwięcej downvote'ów</SelectItem>
-                        <SelectItem value="total">Najwięcej głosów</SelectItem>
-                        <SelectItem value="newest">Najnowsze</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleSelectAll}
-                    >
-                      {selectedSuggestions.size === suggestions.length ? "Odznacz wszystkie" : "Zaznacz wszystkie"}
-                    </Button>
-                    {selectedSuggestions.size > 0 && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleBulkDelete}
-                        disabled={isDeleting}
-                      >
-                        {isDeleting ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="mr-2 h-4 w-4" />
-                        )}
-                        Usuń zaznaczone ({selectedSuggestions.size})
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              {suggestions.length > 0 && (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Szukaj w sugestiach..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 w-full"
-                  />
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {suggestions.length === 0 ? (
-              <div className="text-center py-16 px-4">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted/50 mb-4">
-                  <Lightbulb className="w-10 h-10 text-muted-foreground" />
-                </div>
-                <h3 className="font-semibold text-lg mb-2">Brak sugestii</h3>
-                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                  Użytkownicy mogą zgłaszać sugestie za pomocą komendy. Wszystkie zgłoszenia pojawią się tutaj.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {(() => {
-                  const filtered = [...suggestions].filter((suggestion) => {
-                    if (!searchQuery.trim()) return true;
-                    const query = searchQuery.toLowerCase();
-                    return suggestion.content.toLowerCase().includes(query);
-                  });
-
-                  if (filtered.length === 0 && searchQuery.trim()) {
-                    return (
-                      <div className="text-center py-16 px-4">
-                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted/50 mb-4">
-                          <Search className="w-10 h-10 text-muted-foreground" />
-                        </div>
-                        <h3 className="font-semibold text-lg mb-2">Brak wyników</h3>
-                        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                          Nie znaleziono sugestii pasujących do "{searchQuery}"
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  return filtered
-                  .sort((a, b) => {
-                    switch (sortBy) {
-                      case "upvotes":
-                        return b.upvotes.length - a.upvotes.length;
-                      case "downvotes":
-                        return b.downvotes.length - a.downvotes.length;
-                      case "total":
-                        return (b.upvotes.length + b.downvotes.length) - (a.upvotes.length + a.downvotes.length);
-                      case "newest":
-                        return parseInt(b.suggestionId) - parseInt(a.suggestionId);
-                      default:
-                        return 0;
-                    }
-                  })
-                  .map((suggestion, index) => (
-                  <SlideIn key={suggestion.suggestionId} direction="up" delay={index * 50}>
-                    <div
-                      className="p-4 rounded-lg bg-background/50 border border-transparent hover:bg-background/70 hover:shadow-lg hover:shadow-bot-primary/15 hover:border-bot-primary/30 transition-all duration-300"
-                    >
-                    {/* Content row */}
-                    <div className="flex items-start gap-3 mb-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedSuggestions.has(suggestion.suggestionId)}
-                        onChange={() => toggleSelectSuggestion(suggestion.suggestionId)}
-                        className="mt-1 h-4 w-4 flex-shrink-0 rounded appearance-none border-2 border-gray-500/40 bg-gray-700/30 transition-all duration-200 cursor-pointer hover:border-bot-primary/60 hover:bg-gray-600/30 focus:outline-none focus:ring-2 focus:ring-bot-primary/40 checked:bg-bot-primary checked:border-bot-primary checked:hover:bg-bot-blue"
-                        style={{
-                          backgroundImage: selectedSuggestions.has(suggestion.suggestionId) 
-                            ? "url(\"data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e\")"
-                            : 'none',
-                          backgroundSize: '100% 100%',
-                          backgroundPosition: 'center',
-                          backgroundRepeat: 'no-repeat'
-                        }}
-                      />
-                      <p className="text-sm break-all whitespace-pre-wrap flex-1 min-w-0">{suggestion.content}</p>
-                    </div>
-
-                    {/* Votes + actions row */}
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground pl-7">
-                      <div className="flex items-center gap-1">
-                        <ThumbsUp className="w-4 h-4 text-green-500" />
-                        <span>{suggestion.upvotes.length}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <ThumbsDown className="w-4 h-4 text-red-500" />
-                        <span>{suggestion.downvotes.length}</span>
-                      </div>
-                      <div className="ml-auto flex items-center gap-1">
-                        <span className="text-xs mr-1">ID: {suggestion.suggestionId.slice(0, 8)}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          asChild
-                          className="h-7 w-7 p-0 hover:bg-bot-primary/10 hover:text-bot-primary"
-                          title="Skocz do wiadomości"
-                        >
-                          <a
-                            href={`https://discord.com/channels/${guildId}/${config?.suggestionChannelId}/${suggestion.messageId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSuggestion(suggestion.suggestionId)}
-                          className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
-                          title="Usuń sugestię"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  </SlideIn>
-                ))})()}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        </SlideIn>
       </div>
     </div>
   );

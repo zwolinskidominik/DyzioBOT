@@ -6,7 +6,7 @@
   :root {
     --background: 225 6% 13%;
     --foreground: 0 0% 98%;
-    --card: 225 6% 16%;
+    --card: 228 14% 14%;
     --card-foreground: 0 0% 98%;
     --popover: 225 6% 13%;
     --popover-foreground: 0 0% 98%;
@@ -34,7 +34,7 @@
   .dark {
     --background: 225 6% 13%;
     --foreground: 0 0% 98%;
-    --card: 225 6% 16%;
+    --card: 228 14% 14%;
     --card-foreground: 0 0% 98%;
     --popover: 225 6% 13%;
     --popover-foreground: 0 0% 98%;
@@ -68,6 +68,17 @@
   }
 }
 
+:root {
+  --dashboard-sidebar-width: 300px;
+  --dashboard-sidebar-gutter: 0px;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --dashboard-sidebar-gutter: clamp(0px, calc((100vw - 1024px) * 0.34), 320px);
+  }
+}
+
 /* Reset emoji colors */
 span[role="img"],
 .emoji {
@@ -79,11 +90,19 @@ span[role="img"],
 .btn-gradient {
   background: linear-gradient(90deg, #6366f1, #4f46e5, #6366f1);
   background-size: 200% 100%;
-  transition: background-position 0.4s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  transition: background-position 0.4s ease, box-shadow 0.3s ease;
 }
 
 .btn-gradient:hover {
   background-position: 100% 0;
+}
+
+/* Dashboard no longer uses hover enlargement. Keep color/shadow hovers, neutralize scale-only transforms. */
+.hover\:scale-105:hover,
+.hover\:scale-110:hover,
+.hover\:scale-\[1\.02\]:hover,
+.group:hover .group-hover\:scale-110 {
+  transform: none !important;
 }
 
 /* Animated border spinner */

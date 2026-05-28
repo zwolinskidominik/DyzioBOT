@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Save, Trash2, ArrowLeft, Hash, Plus, Edit2, X, MessagesSquare } from 'lucide-react';
+import { Loader2, Save, Trash2, ArrowLeft, Hash, Plus, Edit2, X, MessagesSquare, Tv, Gamepad2, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -309,13 +309,7 @@ export default function StreamConfigPage() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
+        <div className="w-full">
           <ErrorState
             title="Nie udało się załadować konfiguracji streamów"
             message={error}
@@ -329,13 +323,12 @@ export default function StreamConfigPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
           <Card
             className="backdrop-blur mb-6"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -360,7 +353,6 @@ export default function StreamConfigPage() {
           <Card
             className="backdrop-blur"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -396,22 +388,14 @@ export default function StreamConfigPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-4xl">
-        <SlideIn direction="left">
-          <Button asChild variant="outline" className="mb-6">
-            <Link href={`/${guildId}`}>
-              <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do panelu
-            </Link>
-          </Button>
-        </SlideIn>
+      <div className="w-full">
+
 
         {/* Configuration Card */}
         <SlideIn direction="up" delay={100}>
         <Card
           className="backdrop-blur"
           style={{
-            backgroundColor: 'rgba(189, 189, 189, .05)',
             boxShadow: '0 0 10px #00000026',
             border: '1px solid transparent'
           }}
@@ -419,8 +403,8 @@ export default function StreamConfigPage() {
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
               <CardTitle className="text-2xl flex items-center gap-2">
-                <span>📺</span>
-                <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                <Tv className="w-6 h-6 text-bot-primary" />
+                <span className="text-white/90">
                   Konfiguracja Powiadomień Twitch
                 </span>
               </CardTitle>
@@ -477,7 +461,10 @@ export default function StreamConfigPage() {
             )}
 
             <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-4">
-              <p className="text-sm font-medium mb-2">💡 Jak to działa?</p>
+              <p className="mb-2 flex items-center gap-2 text-sm font-medium">
+                <Lightbulb className="h-4 w-4 text-bot-primary" />
+                <span>Jak to działa?</span>
+              </p>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                 <li>Wybierz kanał, na którym mają się pojawiać powiadomienia</li>
                 <li>Bot będzie automatycznie sprawdzać status streamerów</li>
@@ -512,15 +499,14 @@ export default function StreamConfigPage() {
         <Card
           className="backdrop-blur mt-6"
           style={{
-            backgroundColor: 'rgba(189, 189, 189, .05)',
             boxShadow: '0 0 10px #00000026',
             border: '1px solid transparent'
           }}
         >
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
-              <span>🎮</span>
-              <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+              <Gamepad2 className="w-6 h-6 text-bot-primary" />
+              <span className="text-white/90">
                 Streamerzy
               </span>
             </CardTitle>

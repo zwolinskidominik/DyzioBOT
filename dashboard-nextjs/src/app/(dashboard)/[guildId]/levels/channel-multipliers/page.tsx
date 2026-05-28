@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
+import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 
 interface Channel {
   id: string;
@@ -64,7 +65,7 @@ export default function ChannelMultipliersPage() {
         ]);
 
         if (channelsRes.ok) {
-          const channelsData = await channelsRes.json();
+          const channelsData = toSortedDiscordChannels(await channelsRes.json()) as Channel[];
           const textChannels = channelsData.filter((ch: Channel) => ch.type === 0 || ch.type === 2 || ch.type === 5);
           setChannels(textChannels);
           
@@ -166,7 +167,7 @@ export default function ChannelMultipliersPage() {
   if (error) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="w-full">
           <Button asChild variant="outline" className="mb-6">
             <Link href={`/${guildId}/levels`}>
               <ArrowLeft className="mr-2 w-4 h-4" />
@@ -186,13 +187,12 @@ export default function ChannelMultipliersPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
           <Card
             className="backdrop-blur mb-6"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
@@ -214,7 +214,7 @@ export default function ChannelMultipliersPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+      <div className="w-full">
         <SlideIn direction="left">
           <Button asChild variant="outline" className="mb-6">
             <Link href={`/${guildId}/levels`}>
@@ -228,15 +228,14 @@ export default function ChannelMultipliersPage() {
           <Card
             className="backdrop-blur mb-6"
             style={{
-              backgroundColor: 'rgba(189, 189, 189, .05)',
               boxShadow: '0 0 10px #00000026',
               border: '1px solid transparent'
             }}
           >
             <CardHeader>
               <CardTitle className="text-2xl flex items-center gap-2">
-                <TrendingUp className="w-6 h-6" />
-                <span className="bg-gradient-to-r from-bot-light to-bot-primary bg-clip-text text-transparent">
+                <TrendingUp className="w-6 h-6 text-bot-primary" />
+                <span className="text-white/90">
                   Mnożniki XP dla Kanałów
                 </span>
               </CardTitle>

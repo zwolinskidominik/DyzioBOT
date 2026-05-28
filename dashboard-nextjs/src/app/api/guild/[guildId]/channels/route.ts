@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 
 export async function GET(
   request: Request,
@@ -31,7 +32,7 @@ export async function GET(
       );
     }
 
-    const channels = await response.json();
+    const channels = toSortedDiscordChannels(await response.json());
     
     return NextResponse.json(channels);
   } catch (error) {
