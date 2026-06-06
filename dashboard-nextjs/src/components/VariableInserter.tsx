@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import { EmojiToolbarButton } from "@/components/greetings/FieldToolbar";
 
 interface Variable {
   name: string;
@@ -16,6 +17,13 @@ interface VariableInserterProps {
   placeholder?: string;
   rows?: number;
   className?: string;
+  containerClassName?: string;
+  toolbarClassName?: string;
+  variableButtonClassName?: string;
+  variableLabel?: string;
+  emojiPicker?: boolean;
+  emojiHideTabs?: Array<"custom" | "bot">;
+  unstyled?: boolean;
 }
 
 export default function VariableInserter({
@@ -25,6 +33,13 @@ export default function VariableInserter({
   placeholder,
   rows = 4,
   className = "",
+  containerClassName = "",
+  toolbarClassName = "",
+  variableButtonClassName = "",
+  variableLabel = "Wstaw zmienną:",
+  emojiPicker = false,
+  emojiHideTabs,
+  unstyled = false,
 }: VariableInserterProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isInternalChange, setIsInternalChange] = useState(false);
@@ -171,6 +186,33 @@ export default function VariableInserter({
     onChange(newText);
   };
 
+  const insertTextAtCursor = (text: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.focus();
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      const currentText = extractTextFromHtml(editor.innerHTML);
+      setIsInternalChange(true);
+      onChange(currentText + text);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    const node = document.createTextNode(text);
+    range.insertNode(node);
+    range.setStartAfter(node);
+    range.setEndAfter(node);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    setIsInternalChange(true);
+    const newText = extractTextFromHtml(editor.innerHTML);
+    onChange(newText);
+  };
+
   const handleInput = () => {
     if (!editorRef.current) return;
     setIsInternalChange(true);
@@ -193,27 +235,42 @@ export default function VariableInserter({
 
   const minHeight = `${rows * 1.5}rem`;
 
+  const baseEditorClass = unstyled
+    ? "relative w-full px-3 py-2 outline-none ring-0 transition-colors overflow-y-auto"
+    : "relative w-full px-3 py-2 rounded-md border border-bot-blue/30 bg-background/50 outline-none ring-0 focus:outline-none focus:ring-1 focus:ring-bot-primary/70 focus:ring-offset-0 focus:border-bot-primary transition-colors overflow-y-auto";
+
   return (
-    <div className="space-y-2">
-      <div
-        ref={editorRef}
-        contentEditable
-        onInput={handleInput}
-        onPaste={handlePaste}
-        onKeyDown={handleKeyDown}
-        data-placeholder={placeholder}
-        className={`relative w-full px-3 py-2 rounded-md border border-bot-blue/30 bg-background/50 outline-none ring-0 focus:outline-none focus:ring-1 focus:ring-bot-primary/70 focus:ring-offset-0 focus:border-bot-primary transition-colors overflow-y-auto ${className}`}
-        style={{ minHeight }}
-      />
-      
-      <div className="flex flex-wrap gap-2">
-        <span className="text-xs text-muted-foreground self-center">Wstaw zmienną:</span>
+    <div className={`space-y-2 ${containerClassName}`}>
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable
+          onInput={handleInput}
+          onPaste={handlePaste}
+          onKeyDown={handleKeyDown}
+          data-placeholder={placeholder}
+          className={`${baseEditorClass} ${emojiPicker ? "pr-9" : ""} ${className}`}
+          style={{ minHeight }}
+        />
+        {emojiPicker ? (
+          <div className="absolute right-1.5 top-1.5 z-10">
+            <EmojiToolbarButton
+              onInsert={insertTextAtCursor}
+              hideTabs={emojiHideTabs}
+              triggerClassName="hover:bg-transparent hover:scale-125"
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className={`flex flex-wrap gap-2 ${toolbarClassName}`}>
+        <span className="text-xs text-muted-foreground self-center">{variableLabel}</span>
         {variables.map((variable) => (
           <button
             key={variable.value}
             type="button"
             onClick={() => insertVariable(variable)}
-            className="group relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-bot-blue/10 hover:bg-bot-blue/20 border border-bot-blue/30 hover:border-bot-blue/50 transition-all text-xs font-medium text-bot-light hover:text-bot-primary"
+            className={`group relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-bot-blue/10 hover:bg-bot-blue/20 border border-bot-blue/30 hover:border-bot-blue/50 transition-all text-xs font-medium text-bot-light hover:text-bot-primary ${variableButtonClassName}`}
             title={variable.description}
           >
             <span>{variable.name}</span>

@@ -1,46 +1,23 @@
-import { GuildMember, AttachmentBuilder } from 'discord.js';
+import { GuildMember } from 'discord.js';
 import { GreetingsConfigurationModel } from '../../models/GreetingsConfiguration';
-import { GreetingGifStateModel } from '../../models/GreetingGifState';
-import { COLORS } from '../../config/constants/colors';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import {
+  GREETING_DEFAULT_COLORS,
+  buildGreetingMessage,
+} from '../../utils/greetingMessageBuilder';
 import logger from '../../utils/logger';
-import fs from 'fs';
-import path from 'path';
 
-async function getRandomLobbyGif(guildId: string): Promise<{ attachment: AttachmentBuilder; name: string } | null> {
-  try {
-    const gifsDir = path.join(process.cwd(), 'assets', 'lobby');
-    
-    if (!fs.existsSync(gifsDir)) {
-      logger.warn(`Folder assets/lobby nie istnieje`);
-      return null;
-    }
+const DEFAULT_WELCOME_MESSAGE =
+  `### Witaj {user} na {server}\n\n` +
+  `**Witamy na pokładzie!**\n` +
+  `Gratulacje, właśnie wbiłeś/aś do miejsca, w którym gry są poważniejsze niż życie… prawie.\n\n` +
+  `➔ Przeczytaj {rulesChannel}\n` +
+  `➔ Wybierz role {rolesChannel}\n` +
+  `➔ Przywitaj się z nami {chatChannel}\n\n` +
+  `**Rozgość się i znajdź ekipę do grania.**`;
 
-    const disabledStates = await GreetingGifStateModel
-      .find({ guildId, disabled: true })
-      .select('fileName')
-      .lean();
-    const disabledFiles = new Set(disabledStates.map((state) => state.fileName));
-
-    const gifFiles = fs
-      .readdirSync(gifsDir)
-      .filter((file) => file.toLowerCase().endsWith('.gif') && !disabledFiles.has(file));
-    
-    if (gifFiles.length === 0) {
-      logger.warn(`Brak plików GIF w folderze assets/lobby`);
-      return null;
-    }
-
-    const randomGif = gifFiles[Math.floor(Math.random() * gifFiles.length)];
-    const gifPath = path.join(gifsDir, randomGif);
-    const attachment = new AttachmentBuilder(gifPath, { name: 'welcome.gif' });
-    
-    return { attachment, name: 'welcome.gif' };
-  } catch (error) {
-    logger.error(`Błąd ładowania GIF z assets/lobby: ${error}`);
-    return null;
-  }
-}
+const DEFAULT_DM_MESSAGE =
+  `Cześć {username}, witaj na {server}!\n\n` +
+  `Zajrzyj na {rulesChannel}, dobierz role na {rolesChannel} i śmiało wskakuj na {chatChannel}.`;
 
 export default async function run(member: GuildMember): Promise<void> {
   try {
@@ -49,7 +26,7 @@ export default async function run(member: GuildMember): Promise<void> {
 
     const config = await GreetingsConfigurationModel.findOne({ guildId: guild.id });
     if (!config?.greetingsChannelId || !config.welcomeEnabled) return;
-    
+
     const channel = guild.channels.cache.get(config.greetingsChannelId);
     if (!channel || !('send' in channel)) return;
 
@@ -57,76 +34,47 @@ export default async function run(member: GuildMember): Promise<void> {
     if (!botMember) return;
 
     const permissions = channel.permissionsFor(botMember);
-    if (!permissions || !permissions.has(['SendMessages', 'EmbedLinks'])) {
-      logger.debug(`Bot nie ma uprawnień do wysyłania wiadomości w kanale ${channel.id}`);
+    const welcomeUsesEmbed = (config.welcomeMessageMode || 'embed') === 'embed';
+    if (!permissions?.has('SendMessages') || (welcomeUsesEmbed && !permissions.has('EmbedLinks'))) {
+      logger.debug('Bot cannot send welcome message in channel', { guildId: guild.id, channelId: channel.id });
       return;
     }
 
-    const gifData = await getRandomLobbyGif(guild.id);
-    const avatar = member.user.displayAvatarURL({ extension: 'png', size: 256 });
-
-    const rulesChannelId = config.rulesChannelId || 'CHANNEL_ID_REGULAMIN';
-    const chatChannelId = config.chatChannelId || 'CHANNEL_ID_CHAT';
-
-    const defaultMessage = 
-      `### Witaj {user} na {server}\n\n` +
-      `**Witamy na pokładzie!**\n` +
-      `Gratulacje, właśnie wbiłeś/aś do miejsca, w którym gry są poważniejsze niż życie… prawie.\n\n` +
-      `➔ Przeczytaj {rulesChannel}\n` +
-      `➔ Wybierz role <id:customize>\n` +
-      `➔ Przywitaj się z nami {chatChannel}\n\n` +
-      `**Rozgość się i znajdź ekipę do grania.**`;
-
-    let message = (config.welcomeMessage && config.welcomeMessage.trim()) || defaultMessage;
-    
-    message = message
-      .replace(/{user}/g, `<@${member.user.id}>`)
-      .replace(/{server}/g, member.guild.name)
-      .replace(/{memberCount}/g, member.guild.memberCount.toString())
-      .replace(/{username}/g, member.user.username)
-      .replace(/{rulesChannel}/g, `<#${rulesChannelId}>`)
-      .replace(/{rolesChannel}/g, `<id:customize>`)
-      .replace(/{chatChannel}/g, `<#${chatChannelId}>`);
-
-    const embed = createBaseEmbed({
-      color: COLORS.JOIN,
-      description: message,
-      thumbnail: avatar,
+    const welcomeMessage = await buildGreetingMessage({
+      member,
+      config,
+      moduleKey: 'welcome',
+      defaultMessage: DEFAULT_WELCOME_MESSAGE,
+      defaultTitle: 'Witaj na {server}',
+      defaultColor: GREETING_DEFAULT_COLORS.welcome,
+      mentionUser: true,
     });
 
-    if (gifData) {
-      embed.setImage(`attachment://${gifData.name}`);
-      await channel.send({ 
-        content: `<@${member.user.id}>`, 
-        embeds: [embed], 
-        files: [gifData.attachment] 
-      });
-    } else {
-      await channel.send({ content: `<@${member.user.id}>`, embeds: [embed] });
+    if (welcomeMessage.payload.files && !permissions.has('AttachFiles')) {
+      logger.debug('Bot cannot attach welcome assets in channel', { guildId: guild.id, channelId: channel.id });
+      return;
     }
 
-    if (config.dmEnabled && message) {
+    await channel.send(welcomeMessage.payload);
+
+    if (config.dmEnabled) {
       try {
-        const dmMessage = message
-          .replace(/{user}/g, member.user.username)
-          .replace(/### /g, '**')
-          .replace(/<@\d+>/g, member.user.username);
-        
-        await member.send({
-          embeds: [
-            createBaseEmbed({
-              color: COLORS.JOIN,
-              title: `Witaj na ${member.guild.name}!`,
-              description: dmMessage,
-              thumbnail: member.guild.iconURL({ size: 256 }) || undefined,
-            })
-          ]
+        const dmMessage = await buildGreetingMessage({
+          member,
+          config,
+          moduleKey: 'dm',
+          defaultMessage: DEFAULT_DM_MESSAGE,
+          defaultTitle: 'Witaj na {server}',
+          defaultColor: GREETING_DEFAULT_COLORS.dm,
+          directMessage: true,
         });
+
+        await member.send(dmMessage.payload);
       } catch (dmError) {
-        logger.debug(`Nie można wysłać DM do ${member.user.tag}: ${dmError}`);
+        logger.debug('Cannot send greeting DM to member', { guildId: guild.id, userId: member.user.id, error: dmError });
       }
     }
   } catch (error) {
-    logger.error(`Błąd w welcomeCard.ts przy userId=${member?.user?.id}: ${error}`);
+    logger.error('Failed to handle welcome card', { userId: member?.user?.id, error });
   }
 }

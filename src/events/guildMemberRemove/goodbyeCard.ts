@@ -1,8 +1,12 @@
 import { GuildMember } from 'discord.js';
 import { GreetingsConfigurationModel } from '../../models/GreetingsConfiguration';
-import { COLORS } from '../../config/constants/colors';
-import { createBaseEmbed } from '../../utils/embedHelpers';
+import {
+  GREETING_DEFAULT_COLORS,
+  buildGreetingMessage,
+} from '../../utils/greetingMessageBuilder';
 import logger from '../../utils/logger';
+
+const DEFAULT_GOODBYE_MESSAGE = 'Dziękujemy za wspólnie spędzony czas. Do zobaczenia!';
 
 export default async function run(member: GuildMember): Promise<void> {
   try {
@@ -10,41 +14,38 @@ export default async function run(member: GuildMember): Promise<void> {
     if (!guild) return;
 
     const config = await GreetingsConfigurationModel.findOne({ guildId: guild.id });
-    if (!config?.greetingsChannelId || !config.goodbyeEnabled) return;
-    
-    const channel = guild.channels.cache.get(config.greetingsChannelId);
+    const channelId = config?.goodbyeChannelId || config?.greetingsChannelId;
+    if (!config || !channelId || !config.goodbyeEnabled) return;
+
+    const channel = guild.channels.cache.get(channelId);
     if (!channel || !('send' in channel)) return;
 
     const botMember = guild.members.cache.get(guild.client.user.id);
     if (!botMember) return;
 
     const permissions = channel.permissionsFor(botMember);
-    if (!permissions || !permissions.has(['SendMessages', 'EmbedLinks'])) {
-      logger.debug(`Bot nie ma uprawnień do wysyłania wiadomości w kanale ${channel.id}`);
+    const goodbyeUsesEmbed = (config.goodbyeMessageMode || 'embed') === 'embed';
+    if (!permissions?.has('SendMessages') || (goodbyeUsesEmbed && !permissions.has('EmbedLinks'))) {
+      logger.debug('Bot cannot send goodbye message in channel', { guildId: guild.id, channelId: channel.id });
       return;
     }
 
-    const avatar = member.user.displayAvatarURL({ size: 128 });
-
-    const defaultMessage = `Dziękujemy za wspólnie spędzony czas. Do zobaczenia! 👋`;
-
-    let message = (config.goodbyeMessage && config.goodbyeMessage.trim()) || defaultMessage;
-    
-    message = message
-      .replace(/{user}/g, member.user.tag)
-      .replace(/{server}/g, member.guild.name)
-      .replace(/{memberCount}/g, member.guild.memberCount.toString())
-      .replace(/{username}/g, member.user.username);
-
-    const embed = createBaseEmbed({
-      color: COLORS.LEAVE,
-      description: message,
-      authorName: `${member.user.tag} opuścił/a serwer.`,
-      authorIcon: avatar,
+    const goodbyeMessage = await buildGreetingMessage({
+      member,
+      config,
+      moduleKey: 'goodbye',
+      defaultMessage: DEFAULT_GOODBYE_MESSAGE,
+      defaultTitle: 'Do zobaczenia, {username}',
+      defaultColor: GREETING_DEFAULT_COLORS.goodbye,
     });
 
-    await channel.send({ embeds: [embed] });
+    if (goodbyeMessage.payload.files && !permissions.has('AttachFiles')) {
+      logger.debug('Bot cannot attach goodbye assets in channel', { guildId: guild.id, channelId: channel.id });
+      return;
+    }
+
+    await channel.send(goodbyeMessage.payload);
   } catch (error) {
-    logger.error(`Błąd w goodbyeCard.ts przy userId=${member?.user?.id}: ${error}`);
+    logger.error('Failed to handle goodbye card', { userId: member?.user?.id, error });
   }
 }

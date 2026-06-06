@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { prefetchGuildData } from "@/lib/cache";
 import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
+import { useDirtyState } from "@/components/DirtyStateProvider";
 
 interface Guild {
   id: string;
@@ -114,6 +115,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
   const currentGuildId = params.guildId as string;
   const { data: session } = useSession();
   const currentUserId = (session?.user as { id?: string })?.id;
+  const { guardedNavigate } = useDirtyState();
 
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [guildOpen, setGuildOpen] = useState(false);
@@ -142,7 +144,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
   }, [guilds, currentGuildId]);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: globalThis.MouseEvent) => {
       if (guildDropdownRef.current && !guildDropdownRef.current.contains(event.target as Node)) {
         setGuildOpen(false);
       }
@@ -155,8 +157,9 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
     try {
       const response = await fetch("/api/discord/guilds");
       if (response.ok) {
-        const data = await response.json();
-        setGuilds(data.filter((g: Guild) => g.hasBot !== false));
+        const data: Guild[] = await response.json();
+        setCurrentGuild(data.find((guild) => guild.id === currentGuildId) ?? null);
+        setGuilds(data.filter((guild) => guild.hasBot !== false));
       }
     } catch (error) {
       console.error("Failed to fetch guilds:", error);
@@ -188,8 +191,24 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
 
   const handleGuildChange = (guildId: string) => {
     setGuildOpen(false);
-    onClose?.();
-    router.push(`/${guildId}`);
+    guardedNavigate(() => {
+      onClose?.();
+      router.push(`/${guildId}`);
+    }, "Masz niezapisane zmiany w tym module.");
+  };
+
+  const handleModuleNavigate = (event: ReactMouseEvent<HTMLAnchorElement>, href: string) => {
+    event.preventDefault();
+
+    if (pathname === href) {
+      onClose?.();
+      return;
+    }
+
+    guardedNavigate(() => {
+      onClose?.();
+      router.push(href);
+    }, "Zapisz albo anuluj zmiany przed zmianą modułu.");
   };
 
   const handleModulePrefetch = () => {
@@ -377,7 +396,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                         key={`${module.id}-${currentGuildId}`}
                         href={modulePath}
                         onMouseEnter={handleModulePrefetch}
-                        onClick={() => onClose?.()}
+                        onClick={(event) => handleModuleNavigate(event, modulePath)}
                         className={`relative flex items-center gap-3 px-3 py-2 transition-all duration-150 ${
                           isActive
                             ? "rounded bg-bot-primary/15 text-white"

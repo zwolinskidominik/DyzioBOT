@@ -1,12 +1,14 @@
 ﻿"use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Settings, LogOut, Crown } from "lucide-react";
+import { Loader2, Settings, Crown } from "lucide-react";
 import Image from "next/image";
+import { openBotInvitePopup } from "@/lib/botInvite";
+import { DashboardTopbar } from "@/components/DashboardTopbar";
 
 interface Guild {
   id: string;
@@ -71,65 +73,33 @@ export default function GuildsPage() {
     return null;
   };
 
-  const buildInviteUrl = (guildId: string) => {
-    const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID ?? "";
-    const callbackUrl = `${window.location.origin}/bot-invite/callback`;
-    const inviteUrl = new URL("https://discord.com/oauth2/authorize");
-
-    inviteUrl.searchParams.set("client_id", clientId);
-    inviteUrl.searchParams.set("permissions", "8");
-    inviteUrl.searchParams.set("scope", "bot applications.commands");
-    inviteUrl.searchParams.set("guild_id", guildId);
-    inviteUrl.searchParams.set("disable_guild_select", "true");
-    inviteUrl.searchParams.set("redirect_uri", callbackUrl);
-    inviteUrl.searchParams.set("response_type", "code");
-    inviteUrl.searchParams.set("state", `bot_invite:${guildId}`);
-
-    return inviteUrl.toString();
-  };
-
-  const openBotInvitePopup = (guildId: string) => {
-    const popupWidth = 540;
-    const popupHeight = 760;
-    const popupLeft = window.screenX + Math.max(0, (window.outerWidth - popupWidth) / 2);
-    const popupTop = window.screenY + Math.max(0, (window.outerHeight - popupHeight) / 2);
-    const inviteUrl = buildInviteUrl(guildId);
-    const popup = window.open(
-      inviteUrl,
-      "deezy-bot-invite",
-      `popup=yes,width=${popupWidth},height=${popupHeight},left=${Math.round(popupLeft)},top=${Math.round(popupTop)},resizable=yes,scrollbars=yes`,
-    );
-
-    if (!popup) {
-      window.location.href = inviteUrl;
-      return;
-    }
-
-    popup.focus();
-
-    const closeWatcher = window.setInterval(() => {
-      if (!popup.closed) return;
-
-      window.clearInterval(closeWatcher);
-      fetchGuilds();
-    }, 800);
+  const handleBotInvite = (guildId: string) => {
+    openBotInvitePopup(guildId, {
+      onComplete: fetchGuilds,
+      onClosed: fetchGuilds,
+    });
   };
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-discord-blurple mx-auto mb-4" />
-          <p className="text-muted-foreground">Ładowanie serwerów...</p>
+      <div className="min-h-screen bg-dark-700">
+        <DashboardTopbar />
+        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-discord-blurple" />
+            <p className="text-muted-foreground">Ładowanie serwerów...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-dark-700">
+      <DashboardTopbar />
+      <main className="p-4 md:p-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2 text-white/90">
               Wybierz serwer
@@ -138,10 +108,6 @@ export default function GuildsPage() {
               Zalogowano jako <span className="font-semibold text-bot-light">{session?.user?.name}</span>
             </p>
           </div>
-          <Button variant="outline" onClick={() => signOut({ callbackUrl: "/" })}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Wyloguj
-          </Button>
         </div>
 
         {guilds.length === 0 ? (
@@ -162,26 +128,28 @@ export default function GuildsPage() {
               return (
                 <Card
                   key={guild.id}
-                  className={`hover:shadow-xl hover:shadow-bot-primary/10 transition-all cursor-pointer hover:scale-[1.02] ${!hasBot ? "opacity-80 hover:opacity-100" : ""} border-bot-blue/30 hover:border-bot-primary/50 bg-card/50 backdrop-blur`}
-                  onClick={() => hasBot ? router.push(`/${guild.id}`) : openBotInvitePopup(guild.id)}
+                  className={`flex min-h-[244px] cursor-pointer flex-col border-bot-blue/30 bg-card/50 backdrop-blur transition-all hover:border-bot-primary/50 hover:shadow-xl hover:shadow-bot-primary/10 hover:scale-[1.02] ${!hasBot ? "opacity-80 hover:opacity-100" : ""}`}
+                  onClick={() => hasBot ? router.push(`/${guild.id}`) : handleBotInvite(guild.id)}
                 >
                   <CardHeader className="pb-4">
                     <div className="flex flex-col items-center gap-4 text-center">
-                      {getGuildIcon(guild) ? (
-                        <Image
-                          src={getGuildIcon(guild)!}
-                          alt={guild.name}
-                          width={80}
-                          height={80}
-                          className={`rounded-full ${!hasBot ? "grayscale" : ""}`}
-                        />
-                      ) : (
-                        <div className={`w-20 h-20 rounded-full ${!hasBot ? "bg-gray-500" : "bg-discord-blurple"} flex items-center justify-center text-white font-bold text-2xl`}>
-                          {guild.name.charAt(0)}
-                        </div>
-                      )}
-                      <div className="w-full">
-                        <CardTitle className="text-lg mb-1">{guild.name}</CardTitle>
+                      <div className="flex h-20 items-center justify-center">
+                        {getGuildIcon(guild) ? (
+                          <Image
+                            src={getGuildIcon(guild)!}
+                            alt={guild.name}
+                            width={80}
+                            height={80}
+                            className={`rounded-full ${!hasBot ? "grayscale" : ""}`}
+                          />
+                        ) : (
+                          <div className={`flex h-20 w-20 items-center justify-center rounded-full ${!hasBot ? "bg-gray-500" : "bg-discord-blurple"} text-2xl font-bold text-white`}>
+                            {guild.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex min-h-[52px] w-full flex-col items-center justify-start">
+                        <CardTitle className="mb-1 max-w-full truncate text-lg">{guild.name}</CardTitle>
                         {guild.owner && (
                           <div className="flex items-center justify-center gap-1 text-xs text-discord-yellow">
                             <Crown className="w-3 h-3" />
@@ -191,7 +159,7 @@ export default function GuildsPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-0">
+                  <CardContent className="mt-auto pt-0">
                     {hasBot ? (
                       <Button className="w-full btn-gradient" size="sm">
                         <Settings className="mr-2 h-4 w-4" />
@@ -203,7 +171,7 @@ export default function GuildsPage() {
                         size="sm"
                         onClick={(event) => {
                           event.stopPropagation();
-                          openBotInvitePopup(guild.id);
+                          handleBotInvite(guild.id);
                         }}
                       >
                         Dodaj bota
@@ -216,6 +184,7 @@ export default function GuildsPage() {
           </div>
         )}
       </div>
+      </main>
     </div>
   );
 }

@@ -54,6 +54,9 @@ const config = {
   			},
   			discord: {
   				blurple: '#5865F2',
+					embed: 'oklab(0.26239 0.00252313 -0.00890189)',
+					text: '#f2f3f5',
+					muted: '#b5bac1',
   				green: '#57F287',
   				yellow: '#FEE75C',
   				fuchsia: '#EB459E',
@@ -70,7 +73,7 @@ const config = {
   			dark: {
   				'700': '#272934',
   				'800': '#1F2129',
-  				'900': '#1E2227',
+				'900': '#17181E',
   			},
   			chart: {
   				'1': 'hsl(var(--chart-1))',

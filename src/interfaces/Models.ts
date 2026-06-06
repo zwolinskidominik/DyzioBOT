@@ -70,10 +70,51 @@ export interface IGiveaway {
 
 export interface IGreetingsConfiguration {
   guildId: string;
+  enabled?: boolean;
   greetingsChannelId: string;
+  goodbyeChannelId?: string;
   rulesChannelId?: string;
   rolesChannelId?: string;
   chatChannelId?: string;
+  welcomeEnabled?: boolean;
+  goodbyeEnabled?: boolean;
+  dmEnabled?: boolean;
+  welcomeMessageMode?: 'embed' | 'text';
+  welcomeMessage?: string;
+  welcomeTitleText?: string;
+  welcomeEmbedColor?: string;
+  welcomeHeaderText?: string;
+  welcomeFooterText?: string;
+  welcomeImageMode?: 'gifs' | 'custom' | 'none';
+  welcomeThumbnailMode?: 'avatar' | 'custom' | 'none';
+  welcomeThumbnailFile?: string;
+  welcomeCustomImageFile?: string;
+  welcomeHeaderIconFile?: string;
+  welcomeFooterIconFile?: string;
+  dmMessageMode?: 'embed' | 'text';
+  dmMessage?: string;
+  dmTitleText?: string;
+  dmEmbedColor?: string;
+  dmHeaderText?: string;
+  dmFooterText?: string;
+  dmImageMode?: 'gifs' | 'custom' | 'none';
+  dmThumbnailMode?: 'avatar' | 'custom' | 'none';
+  dmThumbnailFile?: string;
+  dmCustomImageFile?: string;
+  dmHeaderIconFile?: string;
+  dmFooterIconFile?: string;
+  goodbyeMessageMode?: 'embed' | 'text';
+  goodbyeMessage?: string;
+  goodbyeTitleText?: string;
+  goodbyeEmbedColor?: string;
+  goodbyeHeaderText?: string;
+  goodbyeFooterText?: string;
+  goodbyeImageMode?: 'gifs' | 'custom' | 'none';
+  goodbyeThumbnailMode?: 'avatar' | 'custom' | 'none';
+  goodbyeThumbnailFile?: string;
+  goodbyeCustomImageFile?: string;
+  goodbyeHeaderIconFile?: string;
+  goodbyeFooterIconFile?: string;
 }
 
 export interface IQuestion {

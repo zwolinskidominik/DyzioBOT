@@ -1,11 +1,88 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
-
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 30 * 60 * 1000;
+import { getCachedGuildFromList, type CachedDiscordGuild } from "@/lib/discordGuildCache";
 
 export const dynamic = 'force-dynamic';
+
+const FRESH_CACHE_MS = 10_000;
+const STALE_CACHE_MS = 30 * 60_000;
+
+interface DiscordGuildSummary {
+  id: string;
+  name: string;
+  icon: string | null;
+  permissions: string;
+}
+
+interface GuildAvailability extends DiscordGuildSummary {
+  hasBot: boolean;
+  transient?: boolean;
+}
+
+interface CacheEntry {
+  data: GuildAvailability;
+  timestamp: number;
+}
+
+const availabilityCache = new Map<string, CacheEntry>();
+
+function isDiscordGuildSummary(value: unknown): value is DiscordGuildSummary {
+  if (!value || typeof value !== "object") return false;
+  return (
+    "id" in value && typeof value.id === "string" &&
+    "name" in value && typeof value.name === "string" &&
+    "permissions" in value && typeof value.permissions === "string" &&
+    "icon" in value && (typeof value.icon === "string" || value.icon === null)
+  );
+}
+
+function noStoreResponse(body: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  headers.set("Cache-Control", "no-store");
+  return NextResponse.json(body, { ...init, headers });
+}
+
+function getCachedAvailability(cacheKey: string, maxAgeMs: number): GuildAvailability | null {
+  const cached = availabilityCache.get(cacheKey);
+  if (!cached) return null;
+
+  if (Date.now() - cached.timestamp > maxAgeMs) {
+    availabilityCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached.data;
+}
+
+function cacheAvailability(cacheKey: string, data: GuildAvailability): void {
+  availabilityCache.set(cacheKey, { data, timestamp: Date.now() });
+}
+
+function getRetryAfterSeconds(response: Response): string | null {
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter) return retryAfter;
+
+  return null;
+}
+
+async function readErrorText(response: Response): Promise<string> {
+  try {
+    return await response.text();
+  } catch {
+    return "";
+  }
+}
+
+function toAvailability(guild: CachedDiscordGuild | DiscordGuildSummary): GuildAvailability {
+  return {
+    id: guild.id,
+    name: guild.name,
+    icon: guild.icon,
+    permissions: guild.permissions,
+    hasBot: "hasBot" in guild ? guild.hasBot !== false : true,
+  };
+}
 
 export async function GET(
   request: Request,
@@ -19,15 +96,20 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const userId = session.user?.id ?? "unknown";
+    const cacheKey = `${userId}:${guildId}`;
+    const force = new URL(request.url).searchParams.get("force") === "1";
+    const fresh = getCachedAvailability(cacheKey, FRESH_CACHE_MS);
 
-    const cacheKey = `guild-${session.user?.id}-${guildId}`;
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return NextResponse.json(cached.data, {
-        headers: {
-          'Cache-Control': 'public, max-age=1800, stale-while-revalidate=3600',
-        },
-      });
+    if (fresh && !force) {
+      return noStoreResponse(fresh, { headers: { "X-Deezy-Cache": "fresh" } });
+    }
+
+    const cachedFromGuildList = getCachedGuildFromList(userId, guildId, FRESH_CACHE_MS);
+    if (cachedFromGuildList && !force) {
+      const result = toAvailability(cachedFromGuildList);
+      cacheAvailability(cacheKey, result);
+      return noStoreResponse(result, { headers: { "X-Deezy-Cache": "guild-list" } });
     }
 
     const response = await fetch("https://discord.com/api/v10/users/@me/guilds", {
@@ -37,24 +119,45 @@ export async function GET(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Discord API error:", response.status, errorText);
-      
-      if (response.status === 429 && cached) {
-        return NextResponse.json(cached.data);
+      const errorText = await readErrorText(response);
+
+      const stale = getCachedAvailability(cacheKey, STALE_CACHE_MS);
+      if (response.status === 429 && stale) {
+        return noStoreResponse(stale, {
+          headers: {
+            "Retry-After": getRetryAfterSeconds(response) ?? "1",
+            "X-Deezy-Cache": "stale",
+          },
+        });
       }
-      
-      return NextResponse.json(
-        { error: "Failed to fetch guilds from Discord" },
+
+      const guildListFallback = getCachedGuildFromList(userId, guildId, STALE_CACHE_MS);
+      if (response.status === 429 && guildListFallback) {
+        const result = toAvailability(guildListFallback);
+        cacheAvailability(cacheKey, result);
+        return noStoreResponse(result, {
+          headers: {
+            "Retry-After": getRetryAfterSeconds(response) ?? "1",
+            "X-Deezy-Cache": "guild-list-stale",
+          },
+        });
+      }
+
+      console.error("Discord API error:", response.status, errorText);
+
+      return noStoreResponse(
+        { error: "Failed to fetch guilds from Discord", transient: response.status === 429 },
         { status: response.status }
       );
     }
 
-    const guilds = await response.json();
-    const guild = guilds.find((g: any) => g.id === guildId);
+    const payload: unknown = await response.json();
+    const guilds = Array.isArray(payload) ? payload.filter(isDiscordGuildSummary) : [];
+    const guild = guilds.find((item) => item.id === guildId);
 
     if (!guild) {
-      return NextResponse.json({ error: "Guild not found" }, { status: 404 });
+      availabilityCache.delete(cacheKey);
+      return noStoreResponse({ error: "Guild not found" }, { status: 404 });
     }
 
     let hasBot = false;
@@ -65,23 +168,60 @@ export async function GET(
         },
       });
 
-      hasBot = botResponse.ok;
+      if (botResponse.ok) {
+        hasBot = true;
+      } else if (botResponse.status === 429) {
+        const stale = getCachedAvailability(cacheKey, STALE_CACHE_MS);
+        if (stale) {
+          return noStoreResponse(stale, {
+            headers: {
+              "Retry-After": getRetryAfterSeconds(botResponse) ?? "1",
+              "X-Deezy-Cache": "stale",
+            },
+          });
+        }
+
+        const guildListFallback = getCachedGuildFromList(userId, guildId, STALE_CACHE_MS);
+        if (guildListFallback) {
+          const result = toAvailability(guildListFallback);
+          cacheAvailability(cacheKey, result);
+          return noStoreResponse(result, {
+            headers: {
+              "Retry-After": getRetryAfterSeconds(botResponse) ?? "1",
+              "X-Deezy-Cache": "guild-list-stale",
+            },
+          });
+        }
+
+        return noStoreResponse(
+          { error: "Discord bot presence check rate limited", transient: true },
+          {
+            status: 503,
+            headers: { "Retry-After": getRetryAfterSeconds(botResponse) ?? "1" },
+          },
+        );
+      }
     } catch (err) {
       console.error("Failed to check bot presence:", err);
+
+      const stale = getCachedAvailability(cacheKey, STALE_CACHE_MS);
+      if (stale) {
+        return noStoreResponse(stale, { headers: { "X-Deezy-Cache": "stale" } });
+      }
+
+      return noStoreResponse(
+        { error: "Failed to verify bot presence", transient: true },
+        { status: 503 },
+      );
     }
 
-    const result = { ...guild, hasBot };
-    
-    cache.set(cacheKey, { data: result, timestamp: Date.now() });
+    const result: GuildAvailability = { ...guild, hasBot };
+    cacheAvailability(cacheKey, result);
 
-    return NextResponse.json(result, {
-      headers: {
-        'Cache-Control': 'public, max-age=1800, stale-while-revalidate=3600',
-      },
-    });
+    return noStoreResponse(result);
   } catch (error) {
     console.error("Error fetching guild:", error);
-    return NextResponse.json(
+    return noStoreResponse(
       { error: "Failed to fetch guild" },
       { status: 500 }
     );

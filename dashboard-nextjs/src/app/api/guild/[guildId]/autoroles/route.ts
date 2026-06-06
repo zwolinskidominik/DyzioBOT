@@ -5,7 +5,8 @@ import mongoose from "mongoose";
 
 const autoRoleSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
-  roleIds: { type: [String], default: [] },
+  userRoleIds: { type: [String], default: [] },
+  botRoleIds: { type: [String], default: [] },
   enabled: { type: Boolean, default: false },
 }, {
   collection: 'autoroles'

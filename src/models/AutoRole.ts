@@ -6,7 +6,10 @@ class AutoRole {
   public guildId!: string;
 
   @prop({ type: () => [String], default: [] })
-  public roleIds!: string[];
+  public userRoleIds!: string[];
+
+  @prop({ type: () => [String], default: [] })
+  public botRoleIds!: string[];
 
   @prop({ type: () => Boolean, default: false })
   public enabled!: boolean;

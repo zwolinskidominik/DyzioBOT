@@ -11,16 +11,13 @@ export default async function run(member: GuildMember): Promise<void> {
     }
 
     const autoRoleConfig = await AutoRoleModel.findOne({ guildId: guild.id });
-    if (!autoRoleConfig || !autoRoleConfig.roleIds.length) {
+    if (!autoRoleConfig || !autoRoleConfig.enabled) {
       return;
     }
 
-    const botRoleId = autoRoleConfig.roleIds[0];
-    const userRoleIds = autoRoleConfig.roleIds.slice(1);
-
     const roleIdsToAssign = user.bot
-      ? (botRoleId && botRoleId.trim() ? [botRoleId] : [])
-      : userRoleIds;
+      ? autoRoleConfig.botRoleIds ?? []
+      : autoRoleConfig.userRoleIds ?? [];
 
     if (!roleIdsToAssign.length) {
       return;

@@ -1,29 +1,18 @@
-﻿"use client";
+"use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Bot, ChevronDown, Plus, TriangleAlert, Trash2, User as UserIcon } from "lucide-react";
+import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, ArrowLeft, UserPlus, Trash2, Bot, User as UserIcon, Plus } from "lucide-react";
-import Link from "next/link";
-import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { toSortedDiscordRoles } from "@/lib/discordOrdering";
-
-const autoRoleSchema = z.object({
-  roleIds: z.array(z.string()).default([]),
-  enabled: z.boolean().default(true),
-});
-
-type AutoRoleFormData = z.infer<typeof autoRoleSchema>;
+import { cn } from "@/lib/utils";
+import { useDirtyState } from "@/components/DirtyStateProvider";
 
 interface Role {
   id: string;
@@ -32,151 +21,265 @@ interface Role {
   position: number;
 }
 
+type SettingsSection = "users" | "bots";
+
+function getRoleColor(color: number): string {
+  if (color === 0) return "#99AAB5";
+  return `#${color.toString(16).padStart(6, "0")}`;
+}
+
+function Mee6Switch({ className, ...props }: React.ComponentProps<typeof Switch>) {
+  return (
+    <Switch
+      className={cn(
+        "h-6 w-11 border-0 bg-[#636a80] shadow-none data-[state=checked]:bg-[#3b82f6] data-[state=unchecked]:bg-[#636a80] [&>span]:h-4 [&>span]:w-4 [&>span]:translate-x-1 [&>span]:bg-white [&>span]:shadow-none [&>span]:data-[state=checked]:translate-x-6 [&>span]:data-[state=unchecked]:translate-x-1",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+function SettingRow({
+  title,
+  description,
+  icon,
+  checked,
+  onCheckedChange,
+  isOpen = false,
+  onToggle,
+  children,
+}: {
+  title: string;
+  description?: string;
+  icon: React.ReactNode;
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
+  children?: React.ReactNode;
+}) {
+  const isExpandable = Boolean(children && onToggle);
+
+  return (
+    <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
+      <div className={cn("flex min-h-[68px] items-center gap-4 border border-transparent px-5 py-3 transition-colors", isOpen && "border-[#2f3341] bg-dark-800")}>
+        <button
+          type="button"
+          onClick={isExpandable ? onToggle : undefined}
+          className={cn("flex min-w-0 flex-1 items-center gap-3 text-left", isExpandable ? "cursor-pointer" : "cursor-default")}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-dark-900 text-[#aab2c8]">{icon}</span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold text-white/90">{title}</span>
+            {description ? <span className="mt-1 block truncate text-xs text-[#8d94a8]">{description}</span> : null}
+          </span>
+        </button>
+
+        {typeof checked === "boolean" && onCheckedChange ? <Mee6Switch checked={checked} onCheckedChange={onCheckedChange} /> : null}
+
+        {isExpandable ? (
+          <button type="button" onClick={onToggle} aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
+            <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+          </button>
+        ) : null}
+      </div>
+
+      {isOpen && children ? <div className="border-x border-b border-[#2f3341] bg-dark-800 p-5">{children}</div> : null}
+    </section>
+  );
+}
+
+function RoleBadge({ role, invalid, onRemove }: { role: Role; invalid?: boolean; onRemove: () => void }) {
+  const color = getRoleColor(role.color);
+  return (
+    <div className={cn(
+      "flex items-center gap-2 rounded-md border px-3 py-2 transition-colors",
+      invalid
+        ? "border-red-500/40 bg-red-500/10"
+        : "border-[#2f3341] bg-dark-900"
+    )}>
+      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+      <span className="min-w-0 truncate text-sm font-medium text-white/90">{role.name}</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-[#8d94a8] transition-colors hover:bg-red-500/20 hover:text-red-400"
+        aria-label={`Usuń rolę ${role.name}`}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function RoleAddSelect({
+  roles,
+  excludeIds,
+  onAdd,
+}: {
+  roles: Role[];
+  excludeIds: string[];
+  onAdd: (id: string) => void;
+}) {
+  const available = roles.filter((r) => !excludeIds.includes(r.id));
+  return (
+    <div className="w-full max-w-xs">
+      <Select value="" onValueChange={onAdd}>
+        <SelectTrigger className="h-9 border-dashed border-[#596276] bg-dark-900 text-[#8d94a8] hover:border-[#3b82f6] hover:text-white focus:ring-[#3b82f6]/50">
+          <div className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            <span>Dodaj rolę…</span>
+          </div>
+        </SelectTrigger>
+        <SelectContent className="border-[#2f3341] bg-dark-900">
+          {available.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-[#8d94a8]">Brak dostępnych ról</div>
+          ) : (
+            available.map((role) => (
+              <SelectItem key={role.id} value={role.id}>
+                <div className="flex items-center gap-2">
+                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: getRoleColor(role.color) }} />
+                  {role.name}
+                </div>
+              </SelectItem>
+            ))
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+interface SavedState {
+  enabled: boolean;
+  userRoleIds: string[];
+  botRoleIds: string[];
+}
+
 export default function AutoRolePage() {
   const params = useParams();
   const guildId = params.guildId as string;
+  const { registerDirtyController } = useDirtyState();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [selectedBotRole, setSelectedBotRole] = useState<string>("");
-  const [selectedUserRoles, setSelectedUserRoles] = useState<string[]>([]);
-  const [enabled, setEnabled] = useState<boolean>(true);
+  const [botMaxPosition, setBotMaxPosition] = useState<number>(0);
 
-  const form = useForm<AutoRoleFormData>({
-    resolver: zodResolver(autoRoleSchema),
-    defaultValues: {
-      roleIds: [],
-      enabled: true,
-    },
-  });
+  const [enabled, setEnabled] = useState(false);
+  const [userRoleIds, setUserRoleIds] = useState<string[]>([]);
+  const [botRoleIds, setBotRoleIds] = useState<string[]>([]);
+  const [openSections, setOpenSections] = useState<Record<SettingsSection, boolean>>({ users: true, bots: false });
 
-  const { handleSubmit, setValue } = form;
+  const savedRef = useRef<SavedState>({ enabled: false, userRoleIds: [], botRoleIds: [] });
+
+  const isDirty =
+    enabled !== savedRef.current.enabled ||
+    JSON.stringify(userRoleIds) !== JSON.stringify(savedRef.current.userRoleIds) ||
+    JSON.stringify(botRoleIds) !== JSON.stringify(savedRef.current.botRoleIds);
+
+  const rolePositionMap = new Map(roles.map((r) => [r.id, r.position]));
+  const invalidUserRoleIds = botMaxPosition > 0
+    ? userRoleIds.filter((id) => (rolePositionMap.get(id) ?? 0) >= botMaxPosition)
+    : [];
+  const invalidBotRoleIds = botMaxPosition > 0
+    ? botRoleIds.filter((id) => (rolePositionMap.get(id) ?? 0) >= botMaxPosition)
+    : [];
+  const hasInvalidRoles = invalidUserRoleIds.length > 0 || invalidBotRoleIds.length > 0;
+
+  const toggleSection = (section: SettingsSection) =>
+    setOpenSections((s) => ({ ...s, [section]: !s[section] }));
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        const cacheKey = `roles_${guildId}`;
-        const cached = localStorage.getItem(cacheKey);
-        let rolesPromise;
-        
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          const age = Date.now() - timestamp;
-          if (age < 60 * 1000) {
-            rolesPromise = Promise.resolve({ ok: true, json: () => Promise.resolve(data) });
-          } else {
-            rolesPromise = fetch(`/api/guild/${guildId}/roles`);
-          }
-        } else {
-          rolesPromise = fetch(`/api/guild/${guildId}/roles`);
-        }
-
-        const [rolesRes, configRes] = await Promise.all([
-          rolesPromise,
-          fetch(`/api/guild/${guildId}/autoroles`)
+        const [rolesRes, configRes, botPosRes] = await Promise.all([
+          fetchWithAuth(`/api/guild/${guildId}/roles`),
+          fetchWithAuth(`/api/guild/${guildId}/autoroles`),
+          fetchWithAuth(`/api/guild/${guildId}/bot-position`),
         ]);
 
         if (rolesRes.ok) {
-          const rolesData = toSortedDiscordRoles(await rolesRes.json()).map((role) => ({
-            id: role.id,
-            name: role.name,
-            color: typeof role.color === "number" ? role.color : 0,
-            position: role.position,
+          const sorted = toSortedDiscordRoles(await rolesRes.json()).map((r) => ({
+            id: r.id,
+            name: r.name,
+            color: typeof r.color === "number" ? r.color : 0,
+            position: r.position,
           }));
-          setRoles(rolesData);
-          
-          if (!cached || Date.now() - JSON.parse(cached).timestamp >= 60 * 1000) {
-            localStorage.setItem(cacheKey, JSON.stringify({
-              data: rolesData,
-              timestamp: Date.now()
-            }));
-          }
+          setRoles(sorted);
+        }
+
+        if (botPosRes.ok) {
+          const { botMaxPosition: pos } = await botPosRes.json();
+          setBotMaxPosition(pos ?? 0);
         }
 
         if (configRes.ok) {
           const config = await configRes.json();
-          if (config.roleIds && config.roleIds.length > 0) {
-            setSelectedBotRole(config.roleIds[0] || "");
-            setSelectedUserRoles(config.roleIds.slice(1) || []);
-          }
-          setEnabled(config.enabled !== undefined ? config.enabled : true);
+          const nextEnabled = config.enabled ?? false;
+          const nextUser = config.userRoleIds ?? [];
+          const nextBot = config.botRoleIds ?? [];
+          savedRef.current = { enabled: nextEnabled, userRoleIds: nextUser, botRoleIds: nextBot };
+          setEnabled(nextEnabled);
+          setUserRoleIds(nextUser);
+          setBotRoleIds(nextBot);
         }
-      } catch (error) {
-        setError("Nie udało się załadować danych autoroles. Sprawdź połączenie z internetem i spróbuj ponownie.");
+      } catch {
+        setError("Nie udało się załadować danych. Sprawdź połączenie i spróbuj ponownie.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [guildId]);
 
-  const onSubmit = async () => {
+  const handleSave = useCallback(async () => {
+    if (hasInvalidRoles) {
+      toast.error("Usuń role wyższe niż rola bota, zanim zapiszesz.");
+      return;
+    }
     setSaving(true);
     try {
-      const roleIds = [
-        selectedBotRole || "",
-        ...selectedUserRoles
-      ];
-
-      const response = await fetch(`/api/guild/${guildId}/autoroles`, {
+      const res = await fetchWithAuth(`/api/guild/${guildId}/autoroles`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ roleIds, enabled }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled, userRoleIds, botRoleIds }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save configuration");
-      }
-
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Błąd zapisu");
+      savedRef.current = { enabled, userRoleIds: [...userRoleIds], botRoleIds: [...botRoleIds] };
       toast.success("Konfiguracja została zapisana!");
-    } catch (error) {
-      toast.error("Nie udało się zapisać konfiguracji");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Nie udało się zapisać konfiguracji");
     } finally {
       setSaving(false);
     }
-  };
+  }, [botRoleIds, enabled, guildId, userRoleIds]);
 
-  const addUserRole = (roleId: string) => {
-    if (roleId && !selectedUserRoles.includes(roleId) && roleId !== selectedBotRole) {
-      setSelectedUserRoles([...selectedUserRoles, roleId]);
-    }
-  };
+  const handleCancel = useCallback(() => {
+    const s = savedRef.current;
+    setEnabled(s.enabled);
+    setUserRoleIds([...s.userRoleIds]);
+    setBotRoleIds([...s.botRoleIds]);
+  }, []);
 
-  const removeUserRole = (roleId: string) => {
-    setSelectedUserRoles(selectedUserRoles.filter(id => id !== roleId));
-  };
-
-  const getRoleColor = (color: number) => {
-    if (color === 0) return "#99AAB5";
-    return `#${color.toString(16).padStart(6, "0")}`;
-  };
-
-  const getRoleName = (roleId: string) => {
-    return roles.find(r => r.id === roleId)?.name || "Nieznana rola";
-  };
-
-  const handleRetry = () => {
-    setError(null);
-    setLoading(true);
-    window.location.reload();
-  };
+  useEffect(() => registerDirtyController({
+    id: `autoroles-${guildId}`,
+    isDirty,
+    isSaving: saving,
+    label: "Auto Role",
+    onSave: hasInvalidRoles ? () => { toast.error("Usuń role wyższe niż rola bota, zanim zapiszesz."); } : handleSave,
+    onCancel: handleCancel,
+  }), [guildId, isDirty, saving, hasInvalidRoles, handleSave, handleCancel, registerDirtyController]);
 
   if (error) {
     return (
       <div className="min-h-screen">
-        <div className="w-full">
-          <ErrorState
-            title="Nie udało się załadować autoroles"
-            message={error}
-            onRetry={handleRetry}
-          />
-        </div>
+        <ErrorState title="Nie udało się załadować Auto Role" message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />
       </div>
     );
   }
@@ -184,49 +287,12 @@ export default function AutoRolePage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="w-full">
-          <Skeleton className="h-10 w-40 mb-6" />
-          
-          <Card
-            className="backdrop-blur !bg-dark-800"
-            style={{
-              boxShadow: '0 0 10px #00000026',
-              border: '1px solid transparent'
-            }}
-          >
-            <CardHeader>
-              <Skeleton className="h-8 w-40 mb-2" />
-              <Skeleton className="h-4 w-96" />
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="w-11 h-6 rounded-full" />
-              </div>
-              
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              
-              <div className="space-y-4">
-                <Skeleton className="h-6 w-48" />
-                {[1, 2].map((i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Skeleton className="h-10 flex-1" />
-                    <Skeleton className="h-9 w-20" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Skeleton className="h-10 w-full mt-6" />
+        <div className="w-full space-y-5">
+          <div className="flex items-start justify-between gap-6 pb-2">
+            <div className="space-y-3"><Skeleton className="h-7 w-48" /><Skeleton className="h-4 w-96 max-w-full" /></div>
+            <div className="flex items-center gap-3"><Skeleton className="h-4 w-12" /><Skeleton className="h-5 w-9 rounded-full" /></div>
+          </div>
+          <div className="space-y-3">{[1, 2].map((i) => <Skeleton key={i} className="h-[68px] w-full rounded-md bg-dark-800" />)}</div>
         </div>
       </div>
     );
@@ -234,189 +300,97 @@ export default function AutoRolePage() {
 
   return (
     <div className="min-h-screen">
-      <div className="w-full">
+      <div className="w-full space-y-5">
+        <SlideIn direction="up" delay={100}>
+          <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 space-y-2">
+              <h1 className="text-2xl font-semibold text-white">Auto Role</h1>
+              <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
+                Automatycznie przypisuj role nowym członkom i botom zaraz po dołączeniu do serwera.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
+              <span>Aktywne</span>
+              <Mee6Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Włącz lub wyłącz auto role" />
+            </div>
+          </header>
+        </SlideIn>
 
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <SlideIn direction="up" delay={100}>
-          <Card 
-            className="backdrop-blur"
-            style={{
-              boxShadow: '0 0 10px #00000026',
-              border: '1px solid transparent'
-            }}
-          >
-            <CardHeader>
-              <div className="flex items-center justify-between mb-2">
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  <UserPlus className="w-6 h-6 text-bot-primary" />
-                  <span className="text-white/90">
-                    Auto Role
-                  </span>
-                </CardTitle>
-                <Switch
-                  checked={enabled}
-                  onCheckedChange={setEnabled}
-                  className="data-[state=checked]:bg-bot-primary"
-                  style={{ transform: 'scale(1.5)' }}
-                />
-              </div>
-              <CardDescription>
-                Automatyczne przypisywanie ról nowym członkom i botom
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Bot Role */}
-              <div className="space-y-2">
-                <Label htmlFor="botRole" className="flex items-center gap-2">
-                  <Bot className="w-4 h-4" />
-                  Rola dla botów
-                </Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={selectedBotRole}
-                    onValueChange={setSelectedBotRole}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue>
-                        {selectedBotRole ? (
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: getRoleColor(roles.find(r => r.id === selectedBotRole)?.color || 0) }}
-                            />
-                            {getRoleName(selectedBotRole)}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Wybierz rolę...</span>
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role.id} value={role.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: getRoleColor(role.color) }}
-                            />
-                            {role.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedBotRole && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setSelectedBotRole("")}
-                      className="shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Ta rola zostanie automatycznie przypisana nowym botom dołączającym do serwera. Pozostaw puste jeśli nie chcesz przypisywać roli botom.
-                </p>
-              </div>
-
-              {/* User Roles */}
-              <div className="space-y-2">
-                <Label htmlFor="userRoles" className="flex items-center gap-2">
-                  <UserIcon className="w-4 h-4" />
-                  Role dla użytkowników
-                </Label>
-                
-                {/* Selected Roles List */}
-                {selectedUserRoles.length > 0 && (
-                  <div className="space-y-2 mb-3">
-                    {selectedUserRoles.map((roleId, index) => {
-                      const role = roles.find(r => r.id === roleId);
+        <SlideIn direction="up" delay={150}>
+          <div className="space-y-3">
+            <SettingRow
+              title="Role użytkowników"
+              description="Przypisywane automatycznie każdemu nowemu użytkownikowi"
+              icon={<UserIcon className="h-5 w-5" />}
+              isOpen={openSections.users}
+              onToggle={() => toggleSection("users")}
+            >
+              <div className="space-y-3">
+                {userRoleIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {userRoleIds.map((id) => {
+                      const role = roles.find((r) => r.id === id);
                       if (!role) return null;
-                      
                       return (
-                        <SlideIn key={roleId} direction="up" delay={index * 50}>
-                        <div 
-                          className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border hover:bg-background/70 hover:shadow-lg hover:shadow-bot-primary/15 hover:scale-[1.02] hover:border-bot-primary/30 transition-all duration-300"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: getRoleColor(role.color) }}
-                            />
-                            <span className="font-medium">{role.name}</span>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeUserRole(roleId)}
-                            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        </SlideIn>
+                        <RoleBadge key={id} role={role} invalid={invalidUserRoleIds.includes(id)} onRemove={() => setUserRoleIds((prev) => prev.filter((rid) => rid !== id))} />
                       );
                     })}
                   </div>
-                )}
-
-                {/* Add Role Select */}
-                <div className="relative">
-                  <Select
-                    value=""
-                    onValueChange={addUserRole}
-                  >
-                    <SelectTrigger className="w-full border-dashed hover:bg-accent/50">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Plus className="w-4 h-4" />
-                        <span>Dodaj rolę...</span>
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles
-                        .filter(role => !selectedUserRoles.includes(role.id) && role.id !== selectedBotRole)
-                        .map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
-                                style={{ backgroundColor: getRoleColor(role.color) }}
-                              />
-                              {role.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Te role zostaną automatycznie przypisane nowym użytkownikom dołączającym do serwera
-                </p>
-              </div>
-
-              <Button type="submit" disabled={saving} className="btn-gradient hover:scale-105 w-full">
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                    Zapisywanie...
-                  </>
                 ) : (
-                  <>
-                    <Save className="mr-2 w-4 h-4" />
-                    Zapisz konfigurację
-                  </>
+                  <p className="text-xs text-[#8d94a8]">Brak przypisanych ról użytkowników. Dodaj poniżej.</p>
                 )}
-              </Button>
-            </CardContent>
-          </Card>
+                <RoleAddSelect
+                  roles={roles}
+                  excludeIds={[...userRoleIds, ...botRoleIds]}
+                  onAdd={(id) => setUserRoleIds((prev) => [...prev, id])}
+                />
+              </div>
+            </SettingRow>
+
+            <SettingRow
+              title="Role botów"
+              description="Opcjonalnie — przypisywane tylko nowym botom"
+              icon={<Bot className="h-5 w-5" />}
+              isOpen={openSections.bots}
+              onToggle={() => toggleSection("bots")}
+            >
+              <div className="space-y-3">
+                {botRoleIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {botRoleIds.map((id) => {
+                      const role = roles.find((r) => r.id === id);
+                      if (!role) return null;
+                      return (
+                        <RoleBadge key={id} role={role} invalid={invalidBotRoleIds.includes(id)} onRemove={() => setBotRoleIds((prev) => prev.filter((rid) => rid !== id))} />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#8d94a8]">Brak przypisanych ról botów. Zostaw puste, jeśli nie chcesz przypisywać roli botom.</p>
+                )}
+                <RoleAddSelect
+                  roles={roles}
+                  excludeIds={[...userRoleIds, ...botRoleIds]}
+                  onAdd={(id) => setBotRoleIds((prev) => [...prev, id])}
+                />
+              </div>
+            </SettingRow>
+          </div>
+        </SlideIn>
+
+        {hasInvalidRoles ? (
+          <SlideIn direction="up" delay={0}>
+            <div className="flex items-start gap-3 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                Nie mogę nadać jednej z wybranych ról — jest ona wyżej niż moja rola na serwerze.
+                Przesuń rolę Deezy wyżej niż zaznaczone role lub usuń je z listy.
+              </span>
+            </div>
           </SlideIn>
-        </form>
+        ) : null}
       </div>
     </div>
   );
 }
+
