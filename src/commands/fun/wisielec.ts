@@ -20,6 +20,8 @@ import {
   HangmanCategory,
 } from '../../config/constants/hangmanWords';
 import { HangmanCategoryModel } from '../../models/HangmanCategory';
+import { recordGame } from '../../services/hangmanStatsService';
+import logger from '../../utils/logger';
 
 /* ── Constants ────────────────────────────────────────────── */
 
@@ -275,6 +277,13 @@ function startGameCollector(message: Message, state: GameState): void {
         files: [attachment],
         components: [buildReplayRow()],
       });
+
+      // Record stats (fire-and-forget — don't block the game)
+      recordGame(i.guildId!, state.authorId, {
+        won,
+        wrongGuesses: state.wrongGuesses,
+        totalLetters: state.guessedLetters.size,
+      }).catch((err) => logger.error(`[wisielec] recordGame solo failed: ${err}`));
 
       startReplayCollector(message, state.authorId, state.authorTag);
       return;
@@ -847,7 +856,17 @@ function startDuelCollectors(
         await scoreboardMessage.edit({ embeds: [scoreEmbed], components: [rematchRow] });
       } catch { /* ignore */ }
 
-      // Disable opponent's keyboard
+      // Record stats for both players
+      recordGame(scoreboardMessage.guild!.id, duel.playerA.playerId, {
+        won: duel.playerA.won,
+        wrongGuesses: duel.playerA.wrongGuesses,
+        totalLetters: duel.playerA.letterCount,
+      }).catch((err) => logger.error(`[wisielec] recordGame duelA-1 failed: ${err}`));
+      recordGame(scoreboardMessage.guild!.id, duel.playerB.playerId, {
+        won: duel.playerB.won,
+        wrongGuesses: duel.playerB.wrongGuesses,
+        totalLetters: duel.playerB.letterCount,
+      }).catch((err) => logger.error(`[wisielec] recordGame duelB-1 failed: ${err}`));
       const oppPrefix = isA ? 'b' : 'a';
       const oppRows = buildDuelKeyboardRows(opponent, duel.word, true, opponent.page, oppPrefix);
       const oppEndEmbed = buildDuelEndEmbed(duel, opponent, me);
@@ -1188,6 +1207,18 @@ function startRematchCollectors(
       const oppRows = buildDuelKeyboardRows(opponent, duel.word, true, opponent.page, oppPrefix);
       const oppEndEmbed = buildDuelEndEmbed(duel, opponent, me);
       try { await oppMessage.edit({ embeds: [oppEndEmbed], files: [getStageImage(opponent.wrongGuesses)], components: oppRows }); } catch { /* ignore */ }
+
+      // Record stats for both players
+      recordGame(scoreboardMessage.guild!.id, duel.playerA.playerId, {
+        won: duel.playerA.won,
+        wrongGuesses: duel.playerA.wrongGuesses,
+        totalLetters: duel.playerA.letterCount,
+      }).catch((err) => logger.error(`[wisielec] recordGame duelA-2 failed: ${err}`));
+      recordGame(scoreboardMessage.guild!.id, duel.playerB.playerId, {
+        won: duel.playerB.won,
+        wrongGuesses: duel.playerB.wrongGuesses,
+        totalLetters: duel.playerB.letterCount,
+      }).catch((err) => logger.error(`[wisielec] recordGame duelB-2 failed: ${err}`));
 
       startDuelRematchCollector(scoreboardMessage, duel);
       return;

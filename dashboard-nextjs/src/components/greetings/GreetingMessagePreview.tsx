@@ -42,6 +42,53 @@ export function renderGreetingMessagePreview(message: string): string {
     .replace(/^###\s*/gm, "");
 }
 
+/** Discord-style pill for user/role mentions and channel mentions in the preview. */
+function MentionChip({ kind, children }: { kind: "mention" | "channel"; children: React.ReactNode }) {
+  return (
+    <span
+      className="rounded-[3px] font-medium"
+      style={{ backgroundColor: "rgba(88, 101, 242, 0.3)", color: "#c9cdfb" }}
+    >
+      {kind === "channel" ? "#" : "@"}
+      {children}
+    </span>
+  );
+}
+
+const RICH_VARIABLE_MAP: Record<string, { text: string; chip: "mention" | "channel" | null }> = {
+  "{user}": { text: "NowyUzytkownik", chip: "mention" },
+  "{username}": { text: "NowyUzytkownik", chip: null },
+  "{server}": { text: "GameZone", chip: null },
+  "{memberCount}": { text: "1 337", chip: null },
+  "{rulesChannel}": { text: "regulamin", chip: "channel" },
+  "{rolesChannel}": { text: "role", chip: "channel" },
+  "{chatChannel}": { text: "czat", chip: "channel" },
+};
+
+const RICH_VARIABLE_PATTERN = new RegExp(
+  `(${Object.keys(RICH_VARIABLE_MAP)
+    .map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|")})`,
+  "g"
+);
+
+/** Same substitution as renderGreetingMessagePreview, but mentions/channels render as Discord-style chips. */
+function renderGreetingRichText(text: string): React.ReactNode {
+  const clean = text.replace(/^###\s*/gm, "");
+  if (!clean) return null;
+
+  return clean.split(RICH_VARIABLE_PATTERN).map((part, index) => {
+    const mapped = RICH_VARIABLE_MAP[part];
+    if (!mapped) return <span key={index}>{part}</span>;
+    if (!mapped.chip) return <span key={index}>{mapped.text}</span>;
+    return (
+      <MentionChip key={index} kind={mapped.chip}>
+        {mapped.text}
+      </MentionChip>
+    );
+  });
+}
+
 interface GreetingMessagePreviewProps {
   messageMode: GreetingMessageMode;
   titleText: string;
@@ -84,7 +131,7 @@ export function GreetingMessagePreview({
         className="w-[432px] max-w-full rounded-md bg-dark-900 p-3 text-left text-[14px] leading-[20px] text-discord-text transition-colors hover:bg-[#1b1d24]"
         style={{ fontFamily: DISCORD_FONT_FAMILY }}
       >
-        <p className="whitespace-pre-line break-words">{renderedMessage}</p>
+        <p className="whitespace-pre-line break-words">{renderGreetingRichText(message)}</p>
       </button>
     );
   }
@@ -107,16 +154,16 @@ export function GreetingMessagePreview({
             {hasHeader ? (
               <div className="flex items-center gap-2 text-[12px] leading-4 text-discord-muted">
                 {headerIconUrl ? <img src={headerIconUrl} alt="Ikona headera" className="h-8 w-8 rounded-[3px] object-cover" /> : null}
-                <span>{renderedHeader}</span>
+                <span>{renderGreetingRichText(headerText)}</span>
               </div>
             ) : null}
 
             {renderedTitle.trim().length > 0 ? (
-              <p className={cn("font-semibold text-white text-base leading-5", hasHeader && "mt-2")}>{renderedTitle}</p>
+              <p className={cn("font-semibold text-white text-base leading-5", hasHeader && "mt-2")}>{renderGreetingRichText(titleText)}</p>
             ) : null}
 
             <p className={cn("whitespace-pre-line break-words text-[14px] leading-[18px] text-discord-text", renderedTitle.trim().length > 0 && "mt-2")}>
-              {renderedMessage}
+              {renderGreetingRichText(message)}
             </p>
           </div>
 
@@ -132,7 +179,7 @@ export function GreetingMessagePreview({
         {hasFooter ? (
           <div className="mt-4 flex items-center gap-2 text-[12px] leading-4 text-discord-muted">
             {footerIconUrl ? <img src={footerIconUrl} alt="Ikona footera" className="h-8 w-8 rounded-[3px] object-cover" /> : null}
-            <span>{renderedFooter}</span>
+            <span>{renderGreetingRichText(footerText)}</span>
           </div>
         ) : null}
       </div>

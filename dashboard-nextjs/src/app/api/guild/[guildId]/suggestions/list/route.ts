@@ -62,6 +62,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { guildId } = await params;
     const { searchParams } = new URL(request.url);
     const suggestionId = searchParams.get('suggestionId');
 
@@ -70,8 +71,10 @@ export async function DELETE(
     }
 
     await connectDB();
-    
-    await Suggestion.findOneAndDelete({ suggestionId });
+
+    // Scope by guildId too — without this, any authenticated dashboard user could
+    // delete a suggestion belonging to any other guild by guessing its suggestionId.
+    await Suggestion.findOneAndDelete({ suggestionId, guildId });
     
     return NextResponse.json({ success: true });
   } catch (error) {

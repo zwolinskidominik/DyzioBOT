@@ -76,6 +76,15 @@ export class LevelConfig {
 
   @prop({ type: () => [String], default: [] })
   public ignoredRoles!: string[];
+
+  @prop({ type: () => String, default: '#3b82f6' })
+  public cardThemeColor!: string;
+
+  @prop({ default: true, type: () => Boolean })
+  public showRankBadge!: boolean;
+
+  @prop({ default: true, type: () => Boolean })
+  public removePreviousRewards!: boolean;
 }
 
 export const LevelConfigModel = getModelForClass(LevelConfig);

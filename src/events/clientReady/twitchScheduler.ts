@@ -197,7 +197,7 @@ async function checkStreams(client: Client): Promise<void> {
   const streamersResult = await getActiveStreamers();
   if (!streamersResult.ok) return;
   const streamers = streamersResult.data;
-  const channelCfg = await StreamConfigurationModel.find<StreamConfigurationDocument>()
+  const channelCfg = await StreamConfigurationModel.find<StreamConfigurationDocument>({ enabled: true })
     .lean()
     .exec();
 

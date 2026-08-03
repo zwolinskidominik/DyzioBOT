@@ -10,14 +10,19 @@ export default async function run(channel: GuildChannel): Promise<void> {
 
     const tempChannelConfig = await TempChannelConfigurationModel.findOne({
       guildId: channel.guild.id,
-      channelIds: channel.id,
+      $or: [{ channelIds: channel.id }, { 'creators.channelId': channel.id }],
     });
 
     if (tempChannelConfig) {
       logger.info(`Usuwanie kanału kreatora z konfiguracji: ${channel.name} (${channel.id})`);
       await TempChannelConfigurationModel.findOneAndUpdate(
         { guildId: channel.guild.id },
-        { $pull: { channelIds: channel.id } }
+        {
+          $pull: {
+            channelIds: channel.id,
+            creators: { channelId: channel.id },
+          },
+        }
       );
     }
   } catch (error) {

@@ -25,7 +25,7 @@ export default async function run(member: GuildMember): Promise<void> {
     if (!guild) return;
 
     const config = await GreetingsConfigurationModel.findOne({ guildId: guild.id });
-    if (!config?.greetingsChannelId || !config.welcomeEnabled) return;
+    if (!config?.enabled || !config.greetingsChannelId || !config.welcomeEnabled) return;
 
     const channel = guild.channels.cache.get(config.greetingsChannelId);
     if (!channel || !('send' in channel)) return;

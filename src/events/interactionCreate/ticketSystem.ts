@@ -10,21 +10,21 @@ import {
   ButtonInteraction,
   GuildMember,
   TextChannel,
-  Role,
   CategoryChannel,
   MessageFlags,
-  User,
 } from 'discord.js';
-import { ITicketType } from '../../interfaces/Ticket';
+import { ITicketType } from '../../interfaces/Models';
 import { createBaseEmbed } from '../../utils/embedHelpers';
-import { getGuildConfig } from '../../config/guild';
+import { getTicketBannerAttachment } from '../../utils/ticketBannerRenderer';
+import { finalizeTicketClosure } from '../../utils/ticketClosure';
 import {
   validateTicketCreation,
   takeTicket,
-  closeTicket,
+  registerTicketChannel,
+  getStaffRoleIdsForChannel,
+  getTicketState,
 } from '../../services/ticketService';
 import logger from '../../utils/logger';
-import * as path from 'path';
 
 const BUTTON_IDS = {
   TAKE_TICKET: 'zajmij-zgloszenie',
@@ -34,21 +34,6 @@ const BUTTON_IDS = {
 };
 
 const TICKET_CLOSE_DELAY = 5_000;
-
-const ticketDescriptions: Record<string, (user: User) => string> = {
-  help: (user: User) =>
-    `Witaj ${user}!\n\nPotrzebujesz pomocy? Opisz dokładnie, z czym masz problem, a nasz zespół postara się pomóc jak najszybciej.`,
-  report: (user: User) =>
-    `Witaj ${user}!\n\nJeśli chcesz poinformować o naruszeniu regulaminu, podaj kogo i co zrobił, dodaj dowody i datę zdarzenia.`,
-  partnership: (user: User) =>
-    `Witaj ${user}!\n\nJeśli jesteś zainteresowany partnerstwem z naszym serwerem, wyślij swoją reklamę i poczekaj na odpowiedź.`,
-  idea: (user: User) =>
-    `Witaj ${user}!\n\nMasz pomysł na ulepszenie serwera? Podziel się nim tutaj!`,
-  rewards: (user: User) =>
-    `Witaj ${user}!\n\nOdbierz tutaj swoją nagrodę! Napisz, jaką nagrodę chcesz odebrać i za co ją otrzymałeś.`,
-};
-
-
 
 export default async function run(interaction: Interaction): Promise<void | boolean> {
   try {
@@ -92,15 +77,20 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
     return;
   }
 
-  const selectedValue = interaction.values[0];
-  const result = await validateTicketCreation(guildId, selectedValue, interaction.user.username);
+  const selectedTypeId = interaction.values[0];
+  const result = await validateTicketCreation(
+    guildId,
+    selectedTypeId,
+    interaction.user.id,
+    interaction.user.username,
+  );
 
   if (!result.ok) {
     await interaction.editReply({ content: result.message });
     return;
   }
 
-  const { categoryId, ticketType: typeInfo, channelName } = result.data;
+  const { categoryId, ticketType, channelName } = result.data;
 
   const categoryChannel = interaction.guild?.channels.cache.get(categoryId);
   const isCategory = categoryChannel?.type === ChannelType.GuildCategory;
@@ -112,19 +102,13 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
     return;
   }
 
-  const selectedType: ITicketType = {
-    title: typeInfo.title,
-    description: ticketDescriptions[selectedValue] ?? ((u: User) => `Witaj ${u}!`),
-    color: typeInfo.color,
-    image: typeInfo.image,
-  };
-
   let ticketChannel: TextChannel | null = null;
   try {
     ticketChannel = await createTicketChannel(
       interaction,
       channelName,
-      categoryChannel as CategoryChannel
+      categoryChannel as CategoryChannel,
+      ticketType,
     );
   } catch (error) {
     logger.error(`Błąd podczas tworzenia ticketu: ${error}`);
@@ -134,8 +118,10 @@ async function handleTicketCreation(interaction: StringSelectMenuInteraction): P
     return;
   }
 
+  await registerTicketChannel(ticketChannel.id, guildId, ticketType.id, interaction.user.id);
+
   try {
-    await sendTicketMessages(interaction, ticketChannel, selectedValue, selectedType);
+    await sendTicketMessages(interaction, ticketChannel, ticketType);
   } catch (error) {
     logger.warn(`Nie udało się wysłać wiadomości powitalnych dla ticketu: ${error}`);
   }
@@ -171,27 +157,27 @@ function createConfirmButtons(): ActionRowBuilder<ButtonBuilder> {
   );
 }
 
-function hasStaffRole(guildId: string, member: GuildMember): boolean {
-  const { roles: ROLES } = getGuildConfig(guildId);
-  return member.roles.cache.some((role: Role) => Object.values(ROLES).includes(role.id));
+function hasStaffRole(member: GuildMember, roleIds: string[]): boolean {
+  if (roleIds.length === 0) return false;
+  return member.roles.cache.some((role) => roleIds.includes(role.id));
 }
 
-function isTicketCreator(member: GuildMember, channelName: string): boolean {
-  return channelName.endsWith(member.user.username.toLowerCase());
-}
-
-function createAttachment(imageName: string): AttachmentBuilder {
-  return new AttachmentBuilder(
-    path.join(__dirname, '..', '..', '..', 'assets', 'tickets', imageName)
-  );
+function createAttachmentFromBuffer(buffer: Buffer, filename: string): AttachmentBuilder {
+  return new AttachmentBuilder(buffer, { name: filename });
 }
 
 async function createTicketChannel(
   interaction: StringSelectMenuInteraction,
   channelName: string,
-  categoryChannel: CategoryChannel
+  categoryChannel: CategoryChannel,
+  ticketType: ITicketType,
 ): Promise<TextChannel> {
-  const { roles: ROLES } = getGuildConfig(interaction.guild!.id);
+  const roleOverwrites = ticketType.roleIds.map((roleId) => ({
+    id: roleId,
+    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+    type: 0 as const,
+  }));
+
   return await interaction.guild!.channels.create({
     name: channelName,
     type: ChannelType.GuildText,
@@ -207,21 +193,7 @@ async function createTicketChannel(
         allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
         type: 1,
       },
-      {
-        id: ROLES.owner,
-        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-        type: 0,
-      },
-      {
-        id: ROLES.admin,
-        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-        type: 0,
-      },
-      {
-        id: ROLES.mod,
-        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-        type: 0,
-      },
+      ...roleOverwrites,
     ],
   });
 }
@@ -229,43 +201,53 @@ async function createTicketChannel(
 async function sendTicketMessages(
   interaction: StringSelectMenuInteraction,
   channel: TextChannel,
-  selectedValue: string,
-  selectedType: ITicketType
+  ticketType: ITicketType,
 ): Promise<void> {
-  const ticketImage = createAttachment(selectedType.image);
+  const attachment = await getTicketBannerAttachment(ticketType);
+  const ticketImage = attachment ? createAttachmentFromBuffer(attachment.buffer, attachment.filename) : null;
+
+  const description = (ticketType.description || 'Witaj {user}!').replace(
+    /\{user\}/g,
+    `${interaction.user}`,
+  );
+
   const welcomeEmbed = createBaseEmbed({
-    title: selectedType.title,
-    description: selectedType.description(interaction.user),
-    color: selectedType.color,
+    title: ticketType.emoji ? `${ticketType.emoji} ${ticketType.name}` : ticketType.name,
+    description,
+    color: ticketType.color,
     thumbnail: interaction.guild?.iconURL() || undefined,
-    image: `attachment://${selectedType.image}`,
+    ...(attachment ? { image: `attachment://${attachment.filename}` } : {}),
     footerText: `Ticket utworzony przez ${interaction.user.tag}`,
     footerIcon: interaction.user.displayAvatarURL(),
   }).setTimestamp();
 
-  const { roles: ROLES } = getGuildConfig(interaction.guild!.id);
+  const staffPing =
+    ticketType.roleIds.length > 0
+      ? `||${ticketType.roleIds.map((id) => `<@&${id}>`).join(' ')}||`
+      : undefined;
 
-  let staffPing =
-    selectedValue === 'partnership'
-      ? `||<@&${ROLES.partnership}>||`
-      : `||<@&${ROLES.owner}> <@&${ROLES.admin}> <@&${ROLES.mod}>||`;
-
-  await channel.send({
-    content: staffPing,
-    flags: ['SuppressEmbeds'],
-  });
+  if (staffPing) {
+    await channel.send({
+      content: staffPing,
+      flags: ['SuppressEmbeds'],
+    });
+  }
 
   await channel.send({
     embeds: [welcomeEmbed],
-    files: [ticketImage],
+    ...(ticketImage ? { files: [ticketImage] } : {}),
     components: [createTicketButtons()],
   });
 }
 
 async function handleTakeTicket(interaction: ButtonInteraction): Promise<void> {
   const member = interaction.member as GuildMember;
+  const channelId = interaction.channel?.id;
+  if (!channelId) return;
 
-  if (!hasStaffRole(interaction.guild!.id, member)) {
+  const staffRoleIds = await getStaffRoleIdsForChannel(interaction.guild!.id, channelId);
+
+  if (!hasStaffRole(member, staffRoleIds)) {
     await interaction.followUp({
       content: 'Nie masz uprawnień do zajmowania zgłoszeń!',
       flags: MessageFlags.Ephemeral,
@@ -274,9 +256,6 @@ async function handleTakeTicket(interaction: ButtonInteraction): Promise<void> {
   }
 
   try {
-    const channelId = interaction.channel?.id;
-    if (!channelId) return;
-
     const result = await takeTicket(channelId, interaction.guild!.id, interaction.user.id);
 
     if (!result.ok) {
@@ -308,7 +287,7 @@ async function updateTakeTicketButton(interaction: ButtonInteraction): Promise<v
 
   const oldActionRow = oldComponents[0];
   if (!('components' in oldActionRow)) return;
-  
+
   const newActionRow = new ActionRowBuilder<ButtonBuilder>();
 
   for (const comp of oldActionRow.components) {
@@ -331,11 +310,16 @@ async function updateTakeTicketButton(interaction: ButtonInteraction): Promise<v
 
 async function handleCloseTicket(interaction: ButtonInteraction): Promise<void> {
   const member = interaction.member as GuildMember;
-  const channel = interaction.channel as TextChannel;
-  const channelName = channel?.name || '';
+  const channelId = interaction.channel?.id;
+  if (!channelId) return;
 
-  const isStaff = hasStaffRole(interaction.guild!.id, member);
-  const isCreator = isTicketCreator(member, channelName);
+  const [staffRoleIds, stateResult] = await Promise.all([
+    getStaffRoleIdsForChannel(interaction.guild!.id, channelId),
+    getTicketState(channelId),
+  ]);
+
+  const isStaff = hasStaffRole(member, staffRoleIds);
+  const isCreator = stateResult.ok && stateResult.data.creatorId === interaction.user.id;
 
   if (!isStaff && !isCreator) {
     await interaction.followUp({
@@ -359,20 +343,17 @@ async function handleConfirmClose(interaction: ButtonInteraction): Promise<void>
     flags: MessageFlags.Ephemeral,
   });
 
-  const channelId = interaction.channel?.id;
+  const channel = interaction.channel as TextChannel | null;
+  const closedBy = interaction.user.tag;
 
   setTimeout(async () => {
     try {
-      if (channelId) {
-        await closeTicket(channelId);
-      }
-
-      if (interaction.channel) {
-        await interaction.channel.delete();
+      if (channel) {
+        await finalizeTicketClosure(channel, `zamknięte ręcznie przez ${closedBy}`);
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      logger.warn(`Nie udało się usunąć kanału ticketu lub rekordu w bazie: ${msg}`);
+      logger.warn(`Nie udało się zamknąć ticketu: ${msg}`);
     }
   }, TICKET_CLOSE_DELAY);
 }

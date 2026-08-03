@@ -241,7 +241,7 @@ export default function VariableInserter({
 
   return (
     <div className={`space-y-2 ${containerClassName}`}>
-      <div className="relative">
+      <div className="relative group/ve">
         <div
           ref={editorRef}
           contentEditable
@@ -253,7 +253,7 @@ export default function VariableInserter({
           style={{ minHeight }}
         />
         {emojiPicker ? (
-          <div className="absolute right-1.5 top-1.5 z-10">
+          <div className="absolute right-1.5 top-1.5 z-10 opacity-0 transition-opacity focus-within:opacity-100 group-hover/ve:opacity-100 group-focus-within/ve:opacity-100 [.discord-embed-editor:focus-within~*_&]:opacity-100">
             <EmojiToolbarButton
               onInsert={insertTextAtCursor}
               hideTabs={emojiHideTabs}

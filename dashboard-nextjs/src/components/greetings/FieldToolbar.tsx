@@ -31,8 +31,8 @@ function pickHoverEmoji(exclude?: string | null) {
 }
 
 /**
- * Discord-style emoji trigger: a random greyscale emoji on start that changes
- * (but stays greyscale) on every hover. Persists after hover-out — never resets.
+ * Discord-style emoji trigger: always shows a full-colour emoji, which changes
+ * to a new random one on every hover. Persists after hover-out — never resets.
  * Forwards ref/props so it works as a Radix PopoverTrigger.
  */
 export const EmojiTriggerButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
@@ -55,7 +55,7 @@ export const EmojiTriggerButton = forwardRef<HTMLButtonElement, ButtonHTMLAttrib
         )}
         {...props}
       >
-        <span className="text-base leading-none" style={{ filter: "grayscale(1)" }}>{emoji}</span>
+        <span className="text-base leading-none">{emoji}</span>
       </button>
     );
   }
@@ -324,22 +324,24 @@ export function InlineToolbarField({
   };
 
   return (
-    <div className={cn("group/field relative flex items-start gap-2", containerClassName)}>
+    <div className={cn("group/field flex items-start gap-2", containerClassName)}>
       {leading}
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        role="textbox"
-        onInput={emit}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        data-placeholder={placeholder}
-        className={cn("inline-chip-field min-w-0 flex-1 whitespace-normal break-words outline-none", inputClassName)}
-      />
-      <div className="ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/field:opacity-100 group-focus-within/field:opacity-100">
-        <VariablesMenu variables={variables} onInsert={insert} />
-        <EmojiToolbarButton onInsert={insert} hideTabs={hideEmojiTabs} />
+      <div className="relative min-w-0 flex-1">
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          onInput={emit}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          data-placeholder={placeholder}
+          className={cn("inline-chip-field w-full whitespace-normal break-words pr-16 outline-none", inputClassName)}
+        />
+        <div className="pointer-events-none absolute right-1.5 top-1/2 z-10 flex -translate-y-1/2 shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/field:pointer-events-auto group-hover/field:opacity-100 group-focus-within/field:pointer-events-auto group-focus-within/field:opacity-100">
+          <VariablesMenu variables={variables} onInsert={insert} />
+          <EmojiToolbarButton onInsert={insert} hideTabs={hideEmojiTabs} />
+        </div>
       </div>
 
       <style jsx global>{`

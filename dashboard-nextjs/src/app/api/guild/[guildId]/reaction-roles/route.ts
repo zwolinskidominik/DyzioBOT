@@ -14,6 +14,7 @@ const reactionRoleSchema = new mongoose.Schema({
   channelId: { type: String, required: true },
   messageId: { type: String, required: true },
   title: { type: String },
+  embedColor: { type: String },
   reactions: { type: [reactionRoleMappingSchema], default: [] },
 }, {
   collection: 'reactionroles'
@@ -33,6 +34,14 @@ async function connectDB() {
 }
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+const DEFAULT_EMBED_COLOR = '#5865F2';
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
+function toEmbedColorInt(hex: unknown): number {
+  const value = typeof hex === 'string' && HEX_COLOR_PATTERN.test(hex) ? hex : DEFAULT_EMBED_COLOR;
+  return parseInt(value.slice(1), 16);
+}
 
 async function addReactionToMessage(
   channelId: string,
@@ -105,7 +114,7 @@ export async function POST(
 
     const { guildId } = await params;
     const body = await request.json();
-    const { channelId, title, reactions } = body;
+    const { channelId, title, reactions, embedColor } = body;
 
     if (!channelId || !reactions || reactions.length === 0) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -115,10 +124,10 @@ export async function POST(
 
     const embed = {
       title: title || 'Wybierz swoją rolę',
-      description: reactions.map((r: any) => 
+      description: reactions.map((r: any) =>
         `${r.emoji} - <@&${r.roleId}>${r.description ? ` • ${r.description}` : ''}`
       ).join('\n'),
-      color: 0x5865F2,
+      color: toEmbedColorInt(embedColor),
       footer: { text: 'Kliknij reakcję, aby otrzymać rolę!' },
     };
 
@@ -155,6 +164,7 @@ export async function POST(
       channelId,
       messageId,
       title: title || undefined,
+      embedColor: (typeof embedColor === 'string' && HEX_COLOR_PATTERN.test(embedColor)) ? embedColor : DEFAULT_EMBED_COLOR,
       reactions,
     });
 
@@ -177,7 +187,7 @@ export async function PATCH(
 
     const { guildId } = await params;
     const body = await request.json();
-    const { messageId, channelId, title, reactions } = body;
+    const { messageId, channelId, title, reactions, embedColor } = body;
 
     if (!messageId) {
       return NextResponse.json({ error: 'Missing messageId' }, { status: 400 });
@@ -193,6 +203,9 @@ export async function PATCH(
     const targetChannelId = channelId || existing.channelId;
     const finalTitle = title !== undefined ? title : existing.title;
     const finalReactions = reactions || existing.reactions;
+    const finalEmbedColor = (typeof embedColor === 'string' && HEX_COLOR_PATTERN.test(embedColor))
+      ? embedColor
+      : existing.embedColor || DEFAULT_EMBED_COLOR;
 
     // Try to delete old Discord message (silent fail)
     await fetch(
@@ -211,7 +224,7 @@ export async function PATCH(
       description: finalReactions.map((r: any) =>
         `${r.emoji} - <@&${r.roleId}>${r.description ? ` • ${r.description}` : ''}`
       ).join('\n'),
-      color: 0x5865F2,
+      color: toEmbedColorInt(finalEmbedColor),
       footer: { text: 'Kliknij reakcję, aby otrzymać rolę!' },
     };
 
@@ -245,6 +258,7 @@ export async function PATCH(
     existing.messageId = newMessageId;
     if (title !== undefined) existing.title = finalTitle || undefined;
     if (reactions) existing.reactions = finalReactions;
+    existing.embedColor = finalEmbedColor;
     await existing.save();
 
     return NextResponse.json(existing.toObject());
@@ -264,6 +278,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { guildId } = await params;
     const { searchParams } = new URL(request.url);
     const messageId = searchParams.get('messageId');
 
@@ -272,9 +287,10 @@ export async function DELETE(
     }
 
     await connectDB();
-    
-    const reactionRole = await ReactionRole.findOne({ messageId });
-    
+
+    // Scope do guildId — bez tego dało się skasować panel innego serwera.
+    const reactionRole = await ReactionRole.findOne({ messageId, guildId });
+
     if (reactionRole) {
       try {
         await fetch(
@@ -291,7 +307,7 @@ export async function DELETE(
       }
     }
 
-    await ReactionRole.deleteOne({ messageId });
+    await ReactionRole.deleteOne({ messageId, guildId });
     
     return NextResponse.json({ success: true });
   } catch (error) {

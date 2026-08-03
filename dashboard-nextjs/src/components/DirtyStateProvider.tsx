@@ -15,6 +15,8 @@ export interface DirtyStateController {
   isDirty: boolean;
   isSaving?: boolean;
   label?: string;
+  /** Overrides the save button's text (defaults to "Zapisz") — e.g. "Deploy na Discord". */
+  saveLabel?: string;
   onSave: () => Promise<void> | void;
   onCancel: () => Promise<void> | void;
 }

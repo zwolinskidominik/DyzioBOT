@@ -95,6 +95,7 @@ export async function sendLog(
     const config = await LogConfigurationModel.findOne({ guildId }).lean<LeanLogConfiguration>();
     
     if (!config) return;
+    if (!config.enabled) return;
     if (!config.enabledEvents?.[eventType]) return;
 
     // Check ignored channels/users/roles

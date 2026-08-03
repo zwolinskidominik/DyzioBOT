@@ -5,7 +5,7 @@ module.exports = {
   testMatch: ['**/tests/unit/**/*.test.ts', '**/tests/integration/**/*.test.ts', '**/tests/e2e/**/*.test.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { diagnostics: false }],
+    '^.+\\.(ts|tsx)$': ['ts-jest', { diagnostics: false, tsconfig: 'tsconfig.tests.json' }],
   },
   collectCoverageFrom: ['src/**/*.{ts,js}', '!src/index.ts', '!src/scripts/**'],
   coverageDirectory: 'coverage',

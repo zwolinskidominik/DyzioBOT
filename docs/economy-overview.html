@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deezy — System Ekonomii</title>
+<style>
+:root {
+  --bg:       #0d1117;
+  --surface:  #161b22;
+  --card:     #21262d;
+  --border:   #30363d;
+  --text:     #e6edf3;
+  --muted:    #8b949e;
+  --earning:  #27ae60;
+  --gambling: #e67e22;
+  --shop:     #3498db;
+  --profile:  #9b59b6;
+  --quests:   #1abc9c;
+  --finance:  #d4ac0d;
+  --admin:    #6c7a89;
+  --set:      #e67e22;
+  --legendary:#d4ac0d;
+  --epic:     #8e44ad;
+  --rare:     #2471a3;
+  --common:   #5d6d7e;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 0 0 80px;
+}
+
+/* NAV */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(13,17,23,.95);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  padding: 10px 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+nav h1 { font-size: 15px; font-weight: 600; white-space: nowrap; margin-right: 8px; }
+nav a {
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: all .15s;
+  border: 1px solid transparent;
+}
+nav a:hover { color: var(--text); background: var(--card); border-color: var(--border); }
+
+/* LAYOUT */
+.container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+/* SECTION */
+section { margin-bottom: 48px; }
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.section-header h2 { font-size: 18px; font-weight: 600; }
+.section-pill {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+/* GRID */
+.grid { display: grid; gap: 12px; }
+.grid-2 { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+/* CARD */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.card-accent { border-top: 2px solid var(--accent, var(--border)); }
+.card h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.card p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* CMD CARD */
+.cmd-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cmd-card .cmd-name {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Consolas', monospace;
+}
+.cmd-card .cmd-details {
+  list-style: none;
+  font-size: 11px;
+  color: var(--muted);
+}
+.cmd-card .cmd-details li::before { content: '· '; }
+
+/* ITEM TABLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,.02); }
+
+/* RARITY BADGES */
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.b-legendary { background: rgba(212,172,13,.15); color: var(--legendary); border: 1px solid rgba(212,172,13,.3); }
+.b-epic      { background: rgba(142,68,173,.15); color: #a569bd;           border: 1px solid rgba(142,68,173,.3); }
+.b-rare      { background: rgba(36,113,163,.15); color: #5dade2;           border: 1px solid rgba(36,113,163,.3); }
+.b-common    { background: rgba(93,109,126,.15); color: #85929e;           border: 1px solid rgba(93,109,126,.3); }
+.b-set       { background: rgba(230,126,34,.15); color: #e67e22;           border: 1px solid rgba(230,126,34,.3); }
+.b-event     { background: rgba(231,76,60,.15);  color: #e74c3c;           border: 1px solid rgba(231,76,60,.3); }
+.b-cmd       { background: rgba(255,255,255,.06); color: var(--muted);     border: 1px solid var(--border); font-family: monospace; }
+
+/* PHASE BADGES */
+.phase {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,.06);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+/* SUBSECTION */
+.subsection { margin-bottom: 24px; }
+.subsection h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 10px;
+}
+
+/* ACCENT LINES */
+.accent-earning  { color: var(--earning); }
+.accent-gambling { color: var(--gambling); }
+.accent-shop     { color: var(--shop); }
+.accent-profile  { color: var(--profile); }
+.accent-quests   { color: var(--quests); }
+.accent-finance  { color: var(--finance); }
+.accent-admin    { color: var(--admin); }
+
+.pill-earning  { background: rgba(39,174,96,.15);  color: var(--earning);  border: 1px solid rgba(39,174,96,.3); }
+.pill-gambling { background: rgba(230,126,34,.15); color: var(--gambling); border: 1px solid rgba(230,126,34,.3); }
+.pill-shop     { background: rgba(52,152,219,.15); color: var(--shop);     border: 1px solid rgba(52,152,219,.3); }
+.pill-profile  { background: rgba(155,89,182,.15); color: var(--profile);  border: 1px solid rgba(155,89,182,.3); }
+.pill-quests   { background: rgba(26,188,156,.15); color: var(--quests);   border: 1px solid rgba(26,188,156,.3); }
+.pill-finance  { background: rgba(212,172,13,.15); color: var(--finance);  border: 1px solid rgba(212,172,13,.3); }
+.pill-admin    { background: rgba(108,122,137,.15);color: var(--admin);    border: 1px solid rgba(108,122,137,.3); }
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 2px;
+}
+
+/* CRATE TIERS */
+.tier-row { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.tier-row:last-child { border-bottom: none; }
+.tier-pct { font-size: 13px; font-weight: 700; min-width: 40px; }
+.tier-items { font-size: 12px; color: var(--muted); flex: 1; }
+.tier-items span { display: inline-block; margin-right: 6px; }
+
+/* PHASES OVERVIEW */
+.phase-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.phase-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.phase-card .phase-num { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+.phase-card .phase-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.phase-card .phase-items { font-size: 11px; color: var(--muted); line-height: 1.8; }
+
+/* LEDGER NOTE */
+.note {
+  background: rgba(36,113,163,.08);
+  border: 1px solid rgba(52,152,219,.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #5dade2;
+  margin: 12px 0;
+}
+.note strong { color: #85c1e9; }
+
+/* HERO */
+.hero {
+  background: linear-gradient(135deg, rgba(52,152,219,.08) 0%, rgba(155,89,182,.06) 100%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 32px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.hero-title { font-size: 26px; font-weight: 700; }
+.hero-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.hero-stats { display: flex; gap: 24px; flex-wrap: wrap; }
+.hero-stat { text-align: center; }
+.hero-stat .n { font-size: 22px; font-weight: 700; }
+.hero-stat .l { font-size: 11px; color: var(--muted); }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+</style>
+</head>
+<body>
+
+<nav>
+  <h1>💎 Deezy Economy</h1>
+  <a href="#fazy">Fazy</a>
+  <a href="#zarabianie">Zarabianie</a>
+  <a href="#hazard">Hazard</a>
+  <a href="#sklep">Sklep</a>
+  <a href="#skrzynki">Skrzynki</a>
+  <a href="#profil">Profil</a>
+  <a href="#questy">Questy</a>
+  <a href="#finanse">Finanse</a>
+  <a href="#admin">Admin</a>
+</nav>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <div class="hero-title">💎 System Ekonomii Deezy</div>
+      <div class="hero-sub">Ledger-based · MongoDB Atlas · Integers (grosze) · Per-guild config</div>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="n accent-earning">10+</div><div class="l">Komendy zarabiania</div></div>
+      <div class="hero-stat"><div class="n accent-gambling">8+</div><div class="l">Gry hazardowe</div></div>
+      <div class="hero-stat"><div class="n accent-shop">40+</div><div class="l">Itemów w sklepie</div></div>
+      <div class="hero-stat"><div class="n accent-profile">10</div><div class="l">Faz rozwoju</div></div>
+    </div>
+  </div>
+
+  <!-- FAZY -->
+  <section id="fazy">
+    <div class="section-header">
+      <h2>📅 Plan Faz</h2>
+    </div>
+    <div class="phase-grid">
+      <div class="phase-card">
+        <div class="phase-num">Faza 1 ✅</div>
+        <div class="phase-name">Core</div>
+        <div class="phase-items">/balance · /deposit · /withdraw · /send · /leaderboard<br>Economy + EconomyTransaction + EconomyConfig</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 2</div>
+        <div class="phase-name">Zarabianie</div>
+        <div class="phase-items">/daily · /weekly · /monthly<br>/work · /crime · /rob · /beg · /search · /fish · /hunt · /mine · /collect</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 3</div>
+        <div class="phase-name">Hazard + Animacje</div>
+        <div class="phase-items">/coin-flip · /dice · /slots · /blackjack · /roulette · /higher-lower · /wheel · /coin-war<br>Canvas → FFmpeg → MP4</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 4</div>
+        <div class="phase-name">Sklep</div>
+        <div class="phase-items">/shop · /buy · /sell · /inventory · /use · /give · /open · /market · /auction · /bid</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 5</div>
+        <div class="phase-name">Profil</div>
+        <div class="phase-items">/profile · /stats · /history · /networth · /rank · /richest</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 6</div>
+        <div class="phase-name">Questy &amp; Osiągnięcia</div>
+        <div class="phase-items">/quest · /missions · /claim · /achievements<br>Quest.ts · Achievement.ts</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 7</div>
+        <div class="phase-name">Prestiż &amp; Poziomy</div>
+        <div class="phase-items">/level (economy) · /prestige<br>Prestige Shop · Trwałe bonusy</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 8</div>
+        <div class="phase-name">Social / PvP</div>
+        <div class="phase-items">/rps · /duel · /horse-race · /lottery · /jackpot · /trade</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 9</div>
+        <div class="phase-name">Administracja</div>
+        <div class="phase-items">/add-money · /remove-money · /reset-user<br>Anti-abuse · Rate limits · Alt detection</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Faza 10</div>
+        <div class="phase-name">Dashboard</div>
+        <div class="phase-items">Next.js panel admina<br>Config waluty · Sklep · Anti-abuse · Audit log</div>
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ZARABIANIE -->
+  <section id="zarabianie">
+    <div class="section-header">
+      <h2 class="accent-earning">💼 Zarabianie</h2>
+      <span class="section-pill pill-earning">Faza 2</span>
+    </div>
+    <div class="grid grid-3">
+
+      <div class="cmd-card" style="--accent:var(--earning)">
+        <div class="cmd-name">/work</div>
+        <ul class="cmd-details">
+          <li>Zarobek 50–500 🪙</li>
+          <li>Cooldown 60 min</li>
+          <li>Boost: Potrójne Espresso (+50%)</li>
+          <li>Boost: Tryb Bestii (+zarobki)</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/daily</div>
+        <ul class="cmd-details">
+          <li>Streak dzienny (bonus rośnie)</li>
+          <li>Bonus x7 przy tygodniowym streak</li>
+          <li>Boost: Daily Booster (+25%)</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/weekly &amp; /monthly</div>
+        <ul class="cmd-details">
+          <li>Większe jednorazowe nagrody</li>
+          <li>Streak weeklyStreak / monthlyStreak</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/crime</div>
+        <ul class="cmd-details">
+          <li>Cooldown 45 min</li>
+          <li>Ryzyko wpadki → kara</li>
+          <li>Wyższy zarobek niż /work</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/rob @user</div>
+        <ul class="cmd-details">
+          <li>Wymaga: 🔫 Pistolet w ekwipunku</li>
+          <li>Ryzyko kary przy niepowodzeniu</li>
+          <li>Cel może mieć Anti-Rob</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/beg</div>
+        <ul class="cmd-details">
+          <li>Bardzo mały zarobek</li>
+          <li>Boost: Kubek Tekturowy (+15%)</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/search</div>
+        <ul class="cmd-details">
+          <li>Przeszukuje losowe miejsca</li>
+          <li>Boost: Czołówka (+10%)</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/fish</div>
+        <ul class="cmd-details">
+          <li>Wymaga: Wędki w ekwipunku</li>
+          <li>3 tiery wędek (różne zarobki)</li>
+          <li>Cooldown zależny od wędki</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/hunt</div>
+        <ul class="cmd-details">
+          <li>Cooldown 30 min</li>
+          <li>Losowy łup</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/mine</div>
+        <ul class="cmd-details">
+          <li>Wymaga: Kilof w ekwipunku</li>
+          <li>3 tiery kilofów</li>
+          <li>Boost: wyższy tier = więcej</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/collect</div>
+        <ul class="cmd-details">
+          <li>Wymaga: Torba w ekwipunku</li>
+          <li>Zbiera butelki, puszki, złom</li>
+          <li>Boost: Wózek Taktyczny (-cooldown)</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- HAZARD -->
+  <section id="hazard">
+    <div class="section-header">
+      <h2 class="accent-gambling">🎲 Hazard</h2>
+      <span class="section-pill pill-gambling">Faza 3 · Canvas + FFmpeg</span>
+    </div>
+    <div class="grid grid-3">
+
+      <div class="cmd-card">
+        <div class="cmd-name">/coin-flip</div>
+        <ul class="cmd-details"><li>Orzeł lub reszka</li><li>House edge 5%</li></ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/dice</div>
+        <ul class="cmd-details"><li>Rzut kością / zakład</li><li>Boost: Załadowane Kości</li></ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/slots 🎰</div>
+        <ul class="cmd-details">
+          <li>3 bębny · 5 symboli</li>
+          <li>Animacja MP4 (canvas → FFmpeg)</li>
+          <li>Jackpot pool (wspólna pula)</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/blackjack 🃏</div>
+        <ul class="cmd-details">
+          <li>Discord Buttons (Hit / Stand / Double)</li>
+          <li>Boost: Blackjack Pass</li>
+        </ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/roulette 🔴</div>
+        <ul class="cmd-details"><li>Zakłady na numery / kolory</li></ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/higher-lower</div>
+        <ul class="cmd-details"><li>Zgaduj wyżej/niżej</li><li>Kumulowany mnożnik</li></ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">/wheel 🎡</div>
+        <ul class="cmd-details"><li>Koło fortuny · animacja</li></ul>
+      </div>
+
+      <div class="cmd-card">
+        <div class="cmd-name">PvP Hazard ⚔️</div>
+        <ul class="cmd-details">
+          <li>/coin-war — zakład między graczami</li>
+          <li>/rps — kamień papier nożyce</li>
+          <li>/duel — pojedynek na 🪙</li>
+          <li>/horse-race — wyścig koni</li>
+          <li>/lottery — wspólna loteria serwera</li>
+          <li>/jackpot — wspólna pula</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- SKLEP -->
+  <section id="sklep">
+    <div class="section-header">
+      <h2 class="accent-shop">🏪 Sklep</h2>
+      <span class="section-pill pill-shop">Faza 4</span>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:20px;">/shop · /buy · /sell · /inventory · /use · /give · /open · /market · /auction · /bid</p>
+
+    <div class="subsection">
+      <h3>🔑 Klucze</h3>
+      <table>
+        <thead><tr><th>Item</th><th>Tier</th><th>Otwiera</th></tr></thead>
+        <tbody>
+          <tr><td>🔑 Wytrych</td><td><span class="badge b-common">Basic</span></td><td>Osiedlowa Skrzynka · Skrzynka Spod Żabki · Paczka z Temu</td></tr>
+          <tr><td>🪛 Śrubokręt Sąsiada</td><td><span class="badge b-rare">Mid</span></td><td>Skrzynka z Bagażnika</td></tr>
+          <tr><td>🔨 Perswazja Mechaniczna</td><td><span class="badge b-epic">High</span></td><td>Skrzynka Króla Osiedla</td></tr>
+          <tr><td>🗝️ Klucz Kolekcjonera</td><td><span class="badge b-legendary">Elite</span></td><td>Skrzynka Niewiadomego Pochodzenia</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subsection">
+      <h3>🔧 Narzędzia (odblokowują komendy)</h3>
+      <table>
+        <thead><tr><th>Item</th><th>Odblokowuje</th><th>Efekt</th></tr></thead>
+        <tbody>
+          <tr><td>🎣 Kij z Sznurkiem</td><td><span class="badge b-cmd">/fish</span></td><td>Podstawowa wędka · małe ryby</td></tr>
+          <tr><td>🎣 Wędka Janusza</td><td><span class="badge b-cmd">/fish</span></td><td>Średni zarobek</td></tr>
+          <tr><td>🎣 Karpiowy Niszczyciel</td><td><span class="badge b-cmd">/fish</span></td><td>Top tier · duże ryby</td></tr>
+          <tr><td>⛏️ Zardzewiały Kilof</td><td><span class="badge b-cmd">/mine</span></td><td>Podstawowy kilof</td></tr>
+          <tr><td>⛏️ Kilof Górnika Miesiąca</td><td><span class="badge b-cmd">/mine</span></td><td>Średni urobek</td></tr>
+          <tr><td>⛏️ Niszczyciel Skał</td><td><span class="badge b-cmd">/mine</span></td><td>Top tier · rzadkie minerały</td></tr>
+          <tr><td>🛍️ Reklamówka Premium</td><td><span class="badge b-cmd">/collect</span></td><td>Podstawowa torba</td></tr>
+          <tr><td>🛒 Wózek Taktyczny</td><td><span class="badge b-cmd">/collect</span></td><td>Większy drop · -5 min cooldown</td></tr>
+          <tr><td>🔫 Pistolet</td><td><span class="badge b-cmd">/rob</span></td><td>Wymagany do rabunku</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subsection">
+      <h3>⚡ Boostery (czasowe)</h3>
+      <table>
+        <thead><tr><th>Item</th><th>Czas</th><th>Efekt</th></tr></thead>
+        <tbody>
+          <tr><td>🍀 Siódmy Traf</td><td>4h</td><td>+5% drop luck globalnie</td></tr>
+          <tr><td>☕ Potrójne Espresso</td><td>2h</td><td>+50% zarobku z /work</td></tr>
+          <tr><td>⚡ Tryb Bestii</td><td>4h</td><td>+30% zarobków generalnie</td></tr>
+          <tr><td>🎯 Fart Dnia</td><td>24h</td><td>+5% do wszystkich dropów ze skrzynek</td></tr>
+          <tr><td>🧃 Turbo Kubuś</td><td>1×</td><td>Resetuje cooldown /collect i /search</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subsection">
+      <h3>🛡️ Anti-Rob (ochrona)</h3>
+      <table>
+        <thead><tr><th>Item</th><th>Efekt</th><th>Czas</th></tr></thead>
+        <tbody>
+          <tr><td>🔒 Trzy Zamki Gerda</td><td>Blokuje 1 napad /rob</td><td>Do pierwszego napadu</td></tr>
+          <tr><td>🐕 Zły Pies</td><td>-40% szansy udanego /rob</td><td>24h</td></tr>
+          <tr><td>🚨 Alarm z Allegro</td><td>-25% szansy + notification</td><td>12h</td></tr>
+          <tr><td>📹 Atrapa Monitoringu</td><td>-15% szansy</td><td>48h</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subsection">
+      <h3>🎨 Customizacja Profilu</h3>
+      <div class="grid grid-4">
+        <div class="card"><h3>✨ Golden Name</h3><p>Złota nazwa w /profile</p></div>
+        <div class="card"><h3>🖼️ Profile Banner</h3><p>Tło karty profilu</p></div>
+        <div class="card"><h3>🎖️ Avatar Frame</h3><p>Ramka avatara</p></div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>🏆 Tytuły (wyświetlają się w /profile)</h3>
+      <div class="grid grid-3">
+        <div class="card"><h3>💸 Chodził Po Bułki, Wrócił Bogaty</h3><p>Zarobił X 🪙 w jednej sesji</p></div>
+        <div class="card"><h3>🎰 Dziecko Kasyna</h3><p>Wygrał X w hazardzie</p></div>
+        <div class="card"><h3>♻️ Król Recyklingu</h3><p>X razy użyto /collect</p></div>
+        <div class="card"><h3>🐟 Terror Jezior</h3><p>X ryb złowionych</p></div>
+        <div class="card"><h3>🚔 Znany Organom Ścigania</h3><p>X udanych /crime</p></div>
+        <div class="card"><h3>👑 Cesarz Osiedla</h3><p>Pozycja #1 na leaderboard</p></div>
+        <div class="card"><h3>🎖️ Deezy Veteran</h3><p>X dni aktywności</p></div>
+        <div class="card"><h3>📦 Pan Skrzynka</h3><p>X skrzynek otwarto</p></div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3>🎁 Utility Skrzynek</h3>
+      <table>
+        <thead><tr><th>Item</th><th>Efekt</th></tr></thead>
+        <tbody>
+          <tr><td>🔄 Case Reroll Token</td><td>Ponownie losuje zawartość już otwartej skrzynki</td></tr>
+          <tr><td>🎟️ Double Open Ticket</td><td>2 itemy za 1 klucz przy otwieraniu</td></tr>
+          <tr><td>🍀 Lucky Spin Ticket</td><td>Dodatkowy los przy otwieraniu (+szansa na wyższy tier)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- SKRZYNKI -->
+  <section id="skrzynki">
+    <div class="section-header">
+      <h2 class="accent-shop">📦 Skrzynki — Tabele Dropów</h2>
+      <span class="section-pill pill-shop">Faza 3 · Animacja MP4</span>
+    </div>
+
+    <div class="grid grid-2">
+
+      <div class="card">
+        <h3>🗑️ Osiedlowa Skrzynka — 100 🪙 · Wytrych</h3>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--common)">60%</div>
+          <div><span class="badge b-common">Pospolity</span></div>
+          <div class="tier-items"><span>10–50 🪙</span><span>Kaseta VHS 📼</span><span>Zgięty Drut</span><span>Wytłoczka po Jajkach 🥚</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:#5dade2">25%</div>
+          <div><span class="badge b-rare">Rzadki</span></div>
+          <div class="tier-items"><span>Reklamówka Premium 🛍️</span><span>Turbo Kubuś 🧃</span><span>Kij z Sznurkiem 🎣</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:#a569bd">12%</div>
+          <div><span class="badge b-epic">Epicki</span></div>
+          <div class="tier-items"><span>Siódmy Traf 🍀</span><span>Legendarna Skarpeta 🧦</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--legendary)">3%</div>
+          <div><span class="badge b-legendary">Legendarny</span></div>
+          <div class="tier-items"><span>Złoty Kurczak 🐔</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🚬 Skrzynka Spod Żabki — 300 🪙 · Wytrych</h3>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--common)">55%</div>
+          <div><span class="badge b-common">Pospolity</span></div>
+          <div class="tier-items"><span>50–150 🪙</span><span>Płyta CD Lato 2002 💿</span><span>Klaser ze Znaczkami 📮</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:#5dade2">27%</div>
+          <div><span class="badge b-rare">Rzadki</span></div>
+          <div class="tier-items"><span>Potrójne Espresso ☕</span><span>Alarm z Allegro 🚨</span><span>Wędka Janusza 🎣</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:#a569bd">14%</div>
+          <div><span class="badge b-epic">Epicki</span></div>
+          <div class="tier-items"><span>Fart Dnia 🎯</span><span>Zardzewiały Kilof ⛏️</span><span>Atrapa Monitoringu 📹</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--legendary)">4%</div>
+          <div><span class="badge b-legendary">Legendarny</span></div>
+          <div class="tier-items"><span>Śrubokręt Sąsiada 🪛</span><span>Rubin 714p 📺</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🛒 Skrzynka z Bagażnika — 750 🪙 · Śrubokręt Sąsiada</h3>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--common)">50%</div>
+          <div><span class="badge b-common">Pospolity</span></div>
+          <div class="tier-items"><span>150–400 🪙</span><span>Święty Ogórek 🥒</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:#5dade2">30%</div>
+          <div><span class="badge b-rare">Rzadki</span></div>
+          <div class="tier-items"><span>Tryb Bestii ⚡</span><span>Zły Pies 🐕</span><span>Wędka Janusza 🎣</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:#a569bd">16%</div>
+          <div><span class="badge b-epic">Epicki</span></div>
+          <div class="tier-items"><span>Trzy Zamki Gerda 🔒</span><span>Zardzewiały Kilof ⛏️</span><span>Potrójne Espresso ☕</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--legendary)">4%</div>
+          <div><span class="badge b-legendary">Legendarny</span></div>
+          <div class="tier-items"><span>Karpiowy Niszczyciel 🎣</span><span>Klucz Kolekcjonera 🗝️</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>👑 Skrzynka Króla Osiedla — 2000 🪙 · Perswazja Mechaniczna</h3>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--common)">40%</div>
+          <div><span class="badge b-common">Pospolity</span></div>
+          <div class="tier-items"><span>400–1000 🪙</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:#5dade2">32%</div>
+          <div><span class="badge b-rare">Rzadki</span></div>
+          <div class="tier-items"><span>Kilof Górnika Miesiąca ⛏️</span><span>Perswazja Mechaniczna 🔨</span><span>Tryb Bestii ⚡</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:#a569bd">23%</div>
+          <div><span class="badge b-epic">Epicki</span></div>
+          <div class="tier-items"><span>Karpiowy Niszczyciel 🎣</span><span>Niszczyciel Skał ⛏️</span><span>Trzy Zamki Gerda 🔒</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--legendary)">5%</div>
+          <div><span class="badge b-legendary">Legendarny</span></div>
+          <div class="tier-items"><span>Złoty Kurczak 🐔</span><span>Wózek z Biedry (oryginał) 🛒</span><span>Klucz Kolekcjonera 🗝️</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📦 Paczka z Temu — 500 🪙 · Wytrych</h3>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--common)">65%</div>
+          <div><span class="badge b-common">Złom</span></div>
+          <div class="tier-items"><span>1–10 🪙</span><span>Losowy common item</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:#5dade2">30%</div>
+          <div><span class="badge b-rare">Niespodzianka</span></div>
+          <div class="tier-items"><span>Losowy rare item</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--legendary)">5%</div>
+          <div><span class="badge b-legendary">JACKPOT</span></div>
+          <div class="tier-items"><span>Losowy legendarny item</span><span>MEGA JACKPOT 💰</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>☢️ Skrzynka Niewiadomego Pochodzenia — 1000 🪙 · Klucz Kolekcjonera</h3>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--quests)">???</div>
+          <div><span class="badge b-set">NIEZNANA</span></div>
+          <div class="tier-items"><span>Losowy tier 1–4</span><span>Złoty Ząb 🦷</span><span>Karton Kabli 📦</span><span>Dywan na Ścianie 🎨</span><span>Tytuł: Znany Organom Ścigania 🚔</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🧨 Skrzynka Po Wujku — EVENT ONLY</h3>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--gambling)">98%</div>
+          <div><span class="badge b-event">Event</span></div>
+          <div class="tier-items"><span>Tytuł sezonowy 🏆</span><span>Event Badge 🎖️</span><span>Booster x3 (24h) ⚡</span><span>Skrzynka Króla Osiedla 👑</span></div>
+        </div>
+        <div class="tier-row">
+          <div class="tier-pct" style="color:var(--legendary)">2%</div>
+          <div><span class="badge b-legendary">Ultra Rzadki</span></div>
+          <div class="tier-items"><span>Złoty Kurczak 🐔</span><span>Tytuł: Cesarz Osiedla 👑</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:24px">
+      <h3 style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🧸 Kolekcjonerskie + Sety</h3>
+      <div class="note"><strong>Mechanika Setów:</strong> Zebranie kompletnego zestawu przedmiotów w ekwipunku aktywuje permanentny bonus.</div>
+      <table>
+        <thead><tr><th>Set</th><th>Wymagane przedmioty</th><th>Nagroda</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-set">🎯 Salon Babci</span></td><td>Kaseta VHS + Rubin 714p + Dywan na Ścianie</td><td>+5 🪙/h pasywnie</td></tr>
+          <tr><td><span class="badge b-set">🎯 Skarb Dziadka</span></td><td>Złoty Ząb + Klaser ze Znaczkami + Moneta za Dwa Złote</td><td>+1% luck permanentnie</td></tr>
+          <tr><td><span class="badge b-set">🎯 Muzeum PRL-u</span></td><td>Karton Kabli + Kaseta VHS + Wózek z Biedry (oryginał)</td><td>Tytuł: Dyrektor Muzeum + unikalny badge</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- PROFIL -->
+  <section id="profil">
+    <div class="section-header">
+      <h2 class="accent-profile">👤 Profil & Postęp</h2>
+      <span class="section-pill pill-profile">Faza 5 · 7</span>
+    </div>
+    <div class="grid grid-3">
+      <div class="cmd-card"><div class="cmd-name">/profile</div><ul class="cmd-details"><li>Karta gracza z avatarem</li><li>Wallet, bank, netWorth</li><li>Aktywne tytuły i badge</li></ul></div>
+      <div class="cmd-card"><div class="cmd-name">/stats</div><ul class="cmd-details"><li>Statystyki ekonomiczne</li><li>totalEarned / totalWon / totalSpent</li></ul></div>
+      <div class="cmd-card"><div class="cmd-name">/history</div><ul class="cmd-details"><li>Ostatnie N transakcji z ledgera</li></ul></div>
+      <div class="cmd-card"><div class="cmd-name">/rank</div><ul class="cmd-details"><li>Pozycja na leaderboard</li></ul></div>
+      <div class="cmd-card"><div class="cmd-name">/networth</div><ul class="cmd-details"><li>Całkowita wartość konta</li></ul></div>
+      <div class="cmd-card"><div class="cmd-name">/richest</div><ul class="cmd-details"><li>Top 10 serwera</li></ul></div>
+    </div>
+
+    <div style="margin-top:20px" class="grid grid-2">
+      <div class="card">
+        <h3>⭐ Poziomy Ekonomiczne (economy level)</h3>
+        <ul style="font-size:12px;color:var(--muted);list-style:none;margin-top:8px;line-height:2">
+          <li>· Level 1–50</li>
+          <li>· XP za każdą operację finansową</li>
+          <li>· Bonusy co 10 level (np. +1% zarobek)</li>
+          <li>· Osobny od systemu XP (doświadczenie serwera)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🔁 Prestiż (Faza 7)</h3>
+        <ul style="font-size:12px;color:var(--muted);list-style:none;margin-top:8px;line-height:2">
+          <li>· Reset konta po osiągnięciu max level</li>
+          <li>· Ekskluzywne nagrody prestiżowe</li>
+          <li>· Permanentne bonusy (+1% luck, +1% work income)</li>
+          <li>· Prestige Shop — ekskluzywne skrzynki i tytuły</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- QUESTY -->
+  <section id="questy">
+    <div class="section-header">
+      <h2 class="accent-quests">📋 Questy & Osiągnięcia</h2>
+      <span class="section-pill pill-quests">Faza 6</span>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>Komendy</h3>
+        <ul style="font-size:12px;color:var(--muted);list-style:none;margin-top:8px;line-height:2">
+          <li><code>/quest</code> — aktywne questy</li>
+          <li><code>/missions</code> — lista misji głównych</li>
+          <li><code>/claim</code> — odbieranie nagród</li>
+          <li><code>/achievements</code> — osiągnięcia</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Przykłady questów</h3>
+        <ul style="font-size:12px;color:var(--muted);list-style:none;margin-top:8px;line-height:2">
+          <li>📅 Dzienny: Zarobij 500 🪙 z /work</li>
+          <li>📅 Dzienny: Otwórz 1 skrzynkę</li>
+          <li>📆 Tygodniowy: Wygraj X w hazardzie</li>
+          <li>🏅 Główny: Zrób /collect 50 razy → Tytuł</li>
+          <li>🏅 Główny: Zbuduj Set "Salon Babci"</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- FINANSE -->
+  <section id="finanse">
+    <div class="section-header">
+      <h2 class="accent-finance">💳 Finanse & Architektura</h2>
+      <span class="section-pill pill-finance">Faza 1 ✅</span>
+    </div>
+
+    <div class="note"><strong>Twarda zasada:</strong> Pieniądze = INTEGER (grosze). 12,50 🪙 = 1250. Nigdy float. Każda operacja tworzy wpis w EconomyTransaction (ledger). Saldo nigdy nie jest aktualizowane bezpośrednio.</div>
+
+    <div class="grid grid-3" style="margin-top:16px">
+      <div class="card">
+        <h3>👛 Portfel (Wallet)</h3>
+        <ul style="font-size:12px;color:var(--muted);list-style:none;margin-top:8px;line-height:2">
+          <li>· Gotówka do natychmiastowego użycia</li>
+          <li>· Podatny na /rob</li>
+          <li>· Limit transferu per konfiguracja</li>
+          <li>· /deposit → przelew do banku</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🏦 Bank</h3>
+        <ul style="font-size:12px;color:var(--muted);list-style:none;margin-top:8px;line-height:2">
+          <li>· Bezpieczne oszczędności</li>
+          <li>· Odsetki pasywne (konfigurowalne)</li>
+          <li>· Boost: Bank Interest Booster</li>
+          <li>· /withdraw → przelew do portfela</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>📒 EconomyTransaction (Ledger)</h3>
+        <ul style="font-size:12px;color:var(--muted);list-style:none;margin-top:8px;line-height:2">
+          <li>· Każda operacja = jeden wpis</li>
+          <li>· Pełny audit trail</li>
+          <li>· Atomowe $inc w MongoDB</li>
+          <li>· Zawsze guildId + userId</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <h3 style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Konfiguracja waluty (per guild — EconomyConfig)</h3>
+      <table>
+        <thead><tr><th>Pole</th><th>Przykład</th><th>Opis</th></tr></thead>
+        <tbody>
+          <tr><td>currencyName</td><td>Żeton</td><td>Nazwa waluty serwera</td></tr>
+          <tr><td>currencySymbol</td><td>🪙</td><td>Symbol w embedach</td></tr>
+          <tr><td>startingBalance</td><td>100</td><td>Początkowe saldo nowego gracza</td></tr>
+          <tr><td>maxTransferAmount</td><td>50 000</td><td>Max jednorazowy /send</td></tr>
+          <tr><td>bankInterestRate</td><td>0.02 (2%/dzień)</td><td>Odsetki bankowe</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ADMIN -->
+  <section id="admin">
+    <div class="section-header">
+      <h2 class="accent-admin">🛡️ Administracja & Anti-Abuse</h2>
+      <span class="section-pill pill-admin">Faza 9 · 10</span>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>🔧 Komendy admina (adminOnly)</h3>
+        <ul style="font-size:12px;color:var(--muted);list-style:none;margin-top:8px;line-height:2">
+          <li><code>/add-money @user kwota</code> — dodaje 🪙</li>
+          <li><code>/remove-money @user kwota</code> — odbiera 🪙</li>
+          <li><code>/reset-user @user</code> — resetuje konto do zera</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🚫 Anti-Abuse (Faza 9)</h3>
+        <ul style="font-size:12px;color:var(--muted);list-style:none;margin-top:8px;line-height:2">
+          <li>· Rate limity na każdej komendzie zarabiania</li>
+          <li>· Inflation monitor (alert gdy za dużo 🪙 w obiegu)</li>
+          <li>· Alt detection (wspólne IP / nowe konta)</li>
+          <li>· Cooldown enforcement po stronie serwera</li>
+        </ul>
+      </div>
+      <div class="card" style="grid-column: 1 / -1">
+        <h3>📊 Dashboard Admina — Faza 10 (Next.js + NextAuth)</h3>
+        <div class="grid grid-3" style="margin-top:10px">
+          <div><p style="font-size:12px;color:var(--muted)">⚙️ Konfiguracja waluty, nagród, cooldownów</p></div>
+          <div><p style="font-size:12px;color:var(--muted)">🏪 Zarządzanie sklepem (ceny, dostępność)</p></div>
+          <div><p style="font-size:12px;color:var(--muted)">📋 Audit log transakcji</p></div>
+          <div><p style="font-size:12px;color:var(--muted)">📦 Community Case — admin decyduje o zawartości</p></div>
+          <div><p style="font-size:12px;color:var(--muted)">📊 Statystyki ekonomii serwera</p></div>
+          <div><p style="font-size:12px;color:var(--muted)">🚫 Panel anti-abuse + ban użytkowników</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

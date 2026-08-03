@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
 import redis from "@/lib/redis";
 import { getCachedGuildList, setCachedGuildList, type CachedDiscordGuild } from "@/lib/discordGuildCache";
+import { fetchDiscordUserGuildsDeduped } from "@/lib/discordUserGuilds";
 
 const CACHE_TTL_SECONDS = 60;
 const STALE_CACHE_TTL_SECONDS = CACHE_TTL_SECONDS * 30;
@@ -37,31 +38,22 @@ export async function GET() {
       // Redis unavailable — proceed without cache
     }
 
-    const response = await fetch("https://discord.com/api/v10/users/@me/guilds", {
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      signal: AbortSignal.timeout(30000),
-    });
+    const userGuildsResult = await fetchDiscordUserGuildsDeduped(userId, session.accessToken);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-
-      if (response.status === 429 && staleData) {
+    if (!userGuildsResult.ok) {
+      if (userGuildsResult.status === 429 && staleData) {
         return NextResponse.json(staleData);
       }
 
-      console.error("Discord API error:", response.status, errorText);
+      console.error("Discord API error:", userGuildsResult.status, userGuildsResult.errorText);
 
       return NextResponse.json(
         { error: "Failed to fetch guilds from Discord" },
-        { status: response.status }
+        { status: userGuildsResult.status || 502 }
       );
     }
 
-    const guilds = await response.json();
-
-    const adminGuilds = guilds.filter((guild: any) => {
+    const adminGuilds = userGuildsResult.guilds.filter((guild) => {
       const permissions = BigInt(guild.permissions);
       const ADMINISTRATOR = BigInt(0x8);
       return (permissions & ADMINISTRATOR) === ADMINISTRATOR;
@@ -76,14 +68,18 @@ export async function GET() {
       });
 
       if (botResponse.ok) {
-        const botGuilds = await botResponse.json();
-        botGuildIds = botGuilds.map((g: any) => g.id);
+        const botGuilds: unknown = await botResponse.json();
+        botGuildIds = Array.isArray(botGuilds)
+          ? botGuilds
+              .filter((g): g is { id: string } => !!g && typeof g === "object" && typeof (g as { id?: unknown }).id === "string")
+              .map((g) => g.id)
+          : [];
       }
     } catch (err) {
       console.error("Failed to fetch bot guilds:", err);
     }
 
-    const guildsWithBotStatus: CachedDiscordGuild[] = adminGuilds.map((guild: any) => ({
+    const guildsWithBotStatus: CachedDiscordGuild[] = adminGuilds.map((guild) => ({
       ...guild,
       hasBot: botGuildIds.includes(guild.id),
     }));

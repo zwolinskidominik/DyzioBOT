@@ -3,7 +3,8 @@ import { GuildMember } from 'discord.js';
 export async function syncRewardRoles(
   m: GuildMember,
   lvl: number,
-  rewards: { level: number; roleId: string }[]
+  rewards: { level: number; roleId: string }[],
+  removePrevious: boolean = true,
 ) {
   const best = rewards.filter((r) => r.level <= lvl).sort((a, b) => b.level - a.level)[0] ?? null;
 
@@ -13,6 +14,8 @@ export async function syncRewardRoles(
     await m.roles.add(best.roleId).catch(() => null);
     gained = best.roleId;
   }
+
+  if (!removePrevious) return { gained };
 
   const toRemove = rewards
     .filter((r) => !best || r.roleId !== best.roleId)

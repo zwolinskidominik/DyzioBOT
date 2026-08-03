@@ -1,5 +1,5 @@
 import { ButtonInteraction, TextChannel, MessageFlags } from 'discord.js';
-import { vote, getSuggestion } from '../../services/suggestionService';
+import { vote, getSuggestion, getSuggestionConfig } from '../../services/suggestionService';
 import { formatResults } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
@@ -46,11 +46,20 @@ export default async function run(interaction: ButtonInteraction): Promise<void>
 
     await interaction.editReply(action === 'upvote' ? 'Oddano głos na tak!' : 'Oddano głos na nie!');
 
+    let votingFormat: 'counts' | 'percent' | 'bar' = 'bar';
+    if (interaction.guildId) {
+      const configResult = await getSuggestionConfig(interaction.guildId);
+      if (configResult.ok) {
+        votingFormat = configResult.data.votingFormat;
+      }
+    }
+
     const targetMessageEmbed = targetMessage.embeds[0];
     targetMessageEmbed.fields[1].value = formatResults(
       interaction.client.user!.id,
       result.data.upvotes,
-      result.data.downvotes
+      result.data.downvotes,
+      votingFormat
     );
 
     await targetMessage.edit({ embeds: [targetMessageEmbed] });

@@ -156,7 +156,11 @@ export interface ISuggestion {
 
 export interface ISuggestionConfiguration {
   guildId: string;
+  enabled: boolean;
   suggestionChannelId: string;
+  votingFormat: 'counts' | 'percent' | 'bar';
+  anonymous: boolean;
+  embedColor: string;
 }
 
 export interface ITempChannel {
@@ -169,17 +173,63 @@ export interface ITempChannel {
 
 export interface ITempChannelConfiguration {
   guildId: string;
+  /** @deprecated legacy field kept for backward compatibility — derived from `creators` on every save. */
   channelIds: string[];
+  creators: { channelId: string; type: 'panel' | 'standard' }[];
+}
+
+export type ITicketBannerMode = 'preset' | 'text' | 'none';
+
+export interface ITicketTypeBanner {
+  mode: ITicketBannerMode;
+  presetId?: string;
+  text?: string;
+}
+
+export interface ITicketType {
+  id: string;
+  emoji: string;
+  name: string;
+  description: string;
+  roleIds: string[];
+  color: string;
+  banner: ITicketTypeBanner;
+}
+
+export interface ITicketAutomation {
+  maxOpenPerUser: number;
+  autoCloseHours: number;
+  transcriptEnabled: boolean;
+  transcriptChannelId?: string;
+}
+
+export interface ITicketPanelMessage {
+  emoji?: string;
+  title: string;
+  description: string;
+  color: string;
+  placeholder: string;
+  banner: ITicketTypeBanner;
 }
 
 export interface ITicketConfig {
   guildId: string;
+  enabled: boolean;
   categoryId: string;
+  panelChannelId?: string;
+  panelMessageId?: string;
+  types: ITicketType[];
+  automation: ITicketAutomation;
+  panelMessage: ITicketPanelMessage;
 }
 
 export interface ITicketState {
   channelId: string;
+  guildId?: string;
   assignedTo?: string;
+  typeId?: string;
+  creatorId?: string;
+  lastActivityAt?: Date;
 }
 
 export interface ITicketStats {

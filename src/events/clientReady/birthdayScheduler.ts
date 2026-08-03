@@ -1,5 +1,7 @@
 import { Client, TextChannel, ChannelType } from 'discord.js';
 import { getTodayBirthdays, getBirthdayConfigs } from '../../services/birthdayService';
+import { addTempRole } from '../../services/tempRoleService';
+import { getMsUntilMidnight } from '../../utils/timeHelpers';
 import logger from '../../utils/logger';
 import { schedule } from 'node-cron';
 import { CRON } from '../../config/constants/cron';
@@ -69,6 +71,24 @@ export default async function run(client: Client): Promise<void> {
                 if (birthdayConfig.roleId) {
                   try {
                     await member.roles.add(birthdayConfig.roleId);
+
+                    // Rola urodzinowa ma obowiązywać tylko do końca dnia — rejestrujemy ją
+                    // jako tymczasową (jak /role temp), żeby istniejący hourly TEMP_ROLE_CHECK
+                    // cron (tempRoleScheduler.ts) automatycznie ją zdjął po północy.
+                    const durationMs = getMsUntilMidnight('Europe/Warsaw');
+                    const trackResult = await addTempRole(
+                      birthdayConfig.guildId,
+                      member.id,
+                      birthdayConfig.roleId,
+                      durationMs,
+                      client.user?.id ?? 'system',
+                      'Rola urodzinowa – automatyczne zdjęcie o północy'
+                    );
+                    if (!trackResult.ok) {
+                      logger.error(
+                        `Błąd podczas zapisywania wygaśnięcia roli urodzinowej: ${trackResult.message}`
+                      );
+                    }
                   } catch (roleError) {
                     logger.error('Błąd podczas przypisywania roli urodzinowej', roleError);
                   }

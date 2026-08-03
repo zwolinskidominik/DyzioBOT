@@ -6,6 +6,10 @@ import { createAuditLog } from "@/lib/auditLog";
 
 export const dynamic = 'force-dynamic';
 
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+const MAX_ROLE_REWARDS = 20;
+const DEFAULT_CARD_THEME_COLOR = '#3b82f6';
+
 const levelConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
   enabled: { type: Boolean, default: false },
@@ -31,6 +35,9 @@ const levelConfigSchema = new mongoose.Schema({
   }],
   ignoredChannels: [String],
   ignoredRoles: [String],
+  cardThemeColor: { type: String, default: DEFAULT_CARD_THEME_COLOR },
+  showRankBadge: { type: Boolean, default: true },
+  removePreviousRewards: { type: Boolean, default: true },
 }, {
   collection: 'levelconfigs'
 });
@@ -71,6 +78,9 @@ export async function GET(
         channelMultipliers: [],
         ignoredChannels: [],
         ignoredRoles: [],
+        cardThemeColor: DEFAULT_CARD_THEME_COLOR,
+        showRankBadge: true,
+        removePreviousRewards: true,
       });
     }
 
@@ -98,9 +108,22 @@ export async function POST(
     const body = await request.json();
     await connectDB();
 
+    const sanitized = {
+      ...body,
+      guildId,
+      cardThemeColor: HEX_COLOR_PATTERN.test(body.cardThemeColor)
+        ? body.cardThemeColor
+        : DEFAULT_CARD_THEME_COLOR,
+      showRankBadge: body.showRankBadge !== false,
+      removePreviousRewards: body.removePreviousRewards !== false,
+      roleRewards: Array.isArray(body.roleRewards)
+        ? body.roleRewards.slice(0, MAX_ROLE_REWARDS)
+        : [],
+    };
+
     const result = await LevelConfig.findOneAndUpdate(
       { guildId },
-      { ...body, guildId },
+      sanitized,
       { upsert: true, new: true }
     );
 

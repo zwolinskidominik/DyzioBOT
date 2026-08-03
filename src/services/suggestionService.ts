@@ -1,5 +1,5 @@
 import { SuggestionModel, SuggestionDocument } from '../models/Suggestion';
-import { SuggestionConfigurationModel } from '../models/SuggestionConfiguration';
+import { SuggestionConfigurationModel, SuggestionVotingFormat } from '../models/SuggestionConfiguration';
 import { ServiceResult, ok, fail } from '../types/serviceResult';
 
 /* ── Result types ────────────────────────────────────────────────── */
@@ -14,6 +14,14 @@ export interface VoteData {
   downvotes: string[];
 }
 
+export interface SuggestionConfigData {
+  enabled: boolean;
+  suggestionChannelId: string;
+  votingFormat: SuggestionVotingFormat;
+  anonymous: boolean;
+  embedColor: string;
+}
+
 /* ── Service functions ───────────────────────────────────────────── */
 
 /**
@@ -26,7 +34,27 @@ export async function isSuggestionChannel(params: {
   const config = await SuggestionConfigurationModel.findOne({
     guildId: params.guildId,
   });
-  return !!config && config.suggestionChannelId === params.channelId;
+  return !!config && config.enabled && config.suggestionChannelId === params.channelId;
+}
+
+/**
+ * Fetch the full suggestion configuration for a guild (embed color, voting format, anonymity).
+ */
+export async function getSuggestionConfig(
+  guildId: string,
+): Promise<ServiceResult<SuggestionConfigData>> {
+  const config = await SuggestionConfigurationModel.findOne({ guildId }).lean();
+  if (!config) {
+    return fail('NOT_FOUND', 'Moduł sugestii nie jest skonfigurowany na tym serwerze.');
+  }
+
+  return ok({
+    enabled: config.enabled,
+    suggestionChannelId: config.suggestionChannelId,
+    votingFormat: config.votingFormat ?? 'bar',
+    anonymous: config.anonymous ?? false,
+    embedColor: config.embedColor || '#4C4C54',
+  });
 }
 
 /**

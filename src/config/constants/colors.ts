@@ -27,4 +27,14 @@ export const COLORS = {
   WORDLE_WIN: '#6AAA64',
   WORDLE_LOSE: '#ED4245',
   EIGHT_BALL: '#1B1464',
+  // Economy & Gambling
+  ECONOMY: '#F4C430',
+  ECONOMY_WIN: '#57F287',
+  ECONOMY_LOSE: '#ED4245',
+  ECONOMY_NEUTRAL: '#4C4C54',
+  GAMBLING: '#9B59B6',
+  DAILY: '#F1C40F',
+  SHOP: '#3498DB',
+  ROB_SUCCESS: '#E74D3C',
+  ROB_FAIL: '#7F8C8D',
 } as const;

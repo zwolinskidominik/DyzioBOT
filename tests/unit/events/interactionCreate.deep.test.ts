@@ -41,6 +41,13 @@ jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
 }));
 
+jest.mock('../../../src/utils/ticketBannerRenderer', () => ({
+  getTicketBannerAttachment: jest.fn().mockResolvedValue({
+    buffer: Buffer.from('fake-png'),
+    filename: 'ticketBanner.png',
+  }),
+}));
+
 jest.mock('../../../src/config/constants/colors', () => ({
   COLORS: {
     DEFAULT: 0x000000,
@@ -71,11 +78,20 @@ jest.mock('../../../src/config/guild', () => ({
 const mockValidateTicketCreation = jest.fn();
 const mockTakeTicket = jest.fn();
 const mockCloseTicket = jest.fn();
+const mockRegisterTicketChannel = jest.fn().mockResolvedValue({ ok: true });
+const mockGetStaffRoleIdsForChannel = jest.fn().mockResolvedValue(['r1']);
+const mockGetTicketState = jest.fn().mockResolvedValue({
+  ok: true,
+  data: { channelId: 'ch1', assignedTo: null, typeId: 'help', creatorId: 'u1' },
+});
 
 jest.mock('../../../src/services/ticketService', () => ({
   validateTicketCreation: mockValidateTicketCreation,
   takeTicket: mockTakeTicket,
   closeTicket: mockCloseTicket,
+  registerTicketChannel: mockRegisterTicketChannel,
+  getStaffRoleIdsForChannel: mockGetStaffRoleIdsForChannel,
+  getTicketState: mockGetTicketState,
 }));
 
 const mockJoinGiveaway = jest.fn();
@@ -403,6 +419,11 @@ describe('ticketSystem', () => {
     const makeButtonInteraction = (customId: string, isStaff = true) => {
     const rolesMap = new Map(isStaff ? [['r1', { id: 'r1' }]] : []) as any;
     rolesMap.some = (fn: any) => [...rolesMap.values()].some(fn);
+    mockGetStaffRoleIdsForChannel.mockResolvedValue(['r1']);
+    mockGetTicketState.mockResolvedValue({
+      ok: true,
+      data: { channelId: 'ch1', assignedTo: null, typeId: 'help', creatorId: 'someone-else' },
+    });
     return {
     isStringSelectMenu: () => false,
     isButton: () => true,
@@ -444,7 +465,14 @@ describe('ticketSystem', () => {
       ok: true,
       data: {
         categoryId: 'cat1',
-        ticketType: { title: 'Pomoc', color: 0x00ff00, image: 'help.png' },
+        ticketType: {
+          id: 'help',
+          emoji: '❓',
+          name: 'Pomoc',
+          description: 'Witaj {user}!',
+          roleIds: ['r1'],
+          banner: { mode: 'preset', presetId: 'ticketBanner' },
+        },
         channelName: 'ticket-testuser',
       },
     });

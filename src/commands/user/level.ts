@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, AttachmentBuilder } from 'discord.js';
 import { xpForLevel, deltaXp } from '../../utils/levelMath';
-import { getUserRank, getCurrentXp } from '../../services/xpService';
+import { getUserRank, getCurrentXp, getConfig } from '../../services/xpService';
 import { CanvasRankCard } from '../../utils/canvasRankCard';
 
 export const data = new SlashCommandBuilder()
@@ -24,6 +24,7 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
   const total = xpForLevel(level) + xp;
   const rankResult = await getUserRank(gid, target.id);
   const userRank = rankResult.ok ? rankResult.data.rank : 1;
+  const cfg = await getConfig(gid);
 
   const rankCard = new CanvasRankCard({
     username: target.username,
@@ -33,6 +34,8 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
     totalXP: total,
     rank: userRank,
     avatarURL: target.displayAvatarURL({ extension: 'png', size: 1024 }),
+    themeColor: cfg?.cardThemeColor,
+    showRank: cfg?.showRankBadge ?? true,
   });
 
   const cardBuffer = await rankCard.build();

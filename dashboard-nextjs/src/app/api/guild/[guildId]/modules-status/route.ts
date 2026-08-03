@@ -82,6 +82,14 @@ const ReactionRoleSchema = new mongoose.Schema({
 }, { collection: 'reactionroles', strict: false });
 const ReactionRole = mongoose.models.ReactionRole || mongoose.model('ReactionRole', ReactionRoleSchema);
 
+// Master on/off switch, separate from the per-panel `enabled` above — lives in its
+// own singleton-per-guild collection (see /api/guild/[guildId]/reaction-roles/config).
+const ReactionRoleConfigSchema = new mongoose.Schema({
+  guildId: String,
+  enabled: Boolean,
+}, { collection: 'reactionroleconfigs', strict: false });
+const ReactionRoleConfig = mongoose.models.ReactionRoleConfigStatus || mongoose.model('ReactionRoleConfigStatus', ReactionRoleConfigSchema);
+
 const LogConfigurationSchema = new mongoose.Schema({
   guildId: String,
   enabled: Boolean,
@@ -167,7 +175,7 @@ export async function GET(
       SuggestionConfig.findOne({ guildId }).lean(),
       TicketConfig.findOne({ guildId }).lean(),
       StreamConfig.findOne({ guildId }).lean(),
-      ReactionRole.findOne({ guildId }).lean(),
+      ReactionRoleConfig.findOne({ guildId }).lean(),
       LogConfiguration.findOne({ guildId }).lean(),
       TournamentConfig.findOne({ guildId }).lean(),
       GiveawayConfig.findOne({ guildId }).lean(),
@@ -184,14 +192,18 @@ export async function GET(
       levels: (levels as any)?.enabled === true,
       "monthly-stats": (monthlyStats as any)?.enabled === true,
       "channel-stats": !!((channelStats as any)?.channels && Object.keys((channelStats as any).channels).some((key: string) => (channelStats as any).channels[key]?.channelId)),
-      "temp-channels": !!((tempChannels as any)?.channelIds && Array.isArray((tempChannels as any).channelIds) && (tempChannels as any).channelIds.length > 0),
+      // Opt-out semantics (default true) — only explicit `enabled: false` turns this off.
+      "temp-channels": (tempChannels as any)?.enabled !== false && !!(
+        ((tempChannels as any)?.creators?.length > 0) || ((tempChannels as any)?.channelIds?.length > 0)
+      ),
       autoroles: (autoRole as any)?.enabled === true,
       qotd: (qotd as any)?.enabled === true,
       suggestions: (suggestions as any)?.enabled === true,
       tickets: (tickets as any)?.enabled === true,
       logs: (logs as any)?.enabled === true,
       "stream-config": (stream as any)?.enabled === true,
-      "reaction-roles": (reactionRoles as any)?.enabled === true,
+      // Opt-out semantics (default true) — only explicit `enabled: false` turns this off.
+      "reaction-roles": (reactionRoles as any)?.enabled !== false,
       tournament: (tournament as any)?.enabled === true,
       giveaway: (giveaway as any)?.enabled === true,
       "anti-spam": (antiSpam as any)?.enabled === true,

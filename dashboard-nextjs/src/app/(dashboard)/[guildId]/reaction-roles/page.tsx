@@ -1,24 +1,28 @@
-﻿"use client";
+"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Send, ArrowLeft, Plus, Trash2, Hash, Smile, Pencil, RefreshCw, Save, Search } from "lucide-react";
-import Link from "next/link";
+import {
+  ChevronDown, Hash, Loader2, Pencil, Plus, Save, Search, Send, Smile, Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import EmojiPicker from "@/components/EmojiPicker";
+import EmbedColorPicker from "@/components/EmbedColorPicker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmojiDisplay } from "@/components/EmojiDisplay";
+import { ReactionRoleLivePreview } from "@/components/reaction-roles/ReactionRoleLivePreview";
+import { ActivePanelCard } from "@/components/reaction-roles/ActivePanelCard";
 import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { SlideIn } from "@/components/ui/animated";
+import { cn } from "@/lib/utils";
 
 interface Channel {
   id: string;
@@ -35,7 +39,7 @@ interface Role {
 interface ReactionMapping {
   emoji: string;
   roleId: string;
-  description?: string;
+  description?: string | undefined;
 }
 
 interface ReactionRole {
@@ -43,8 +47,71 @@ interface ReactionRole {
   guildId: string;
   channelId: string;
   messageId: string;
-  title?: string;
+  title?: string | undefined;
+  embedColor?: string | undefined;
   reactions: ReactionMapping[];
+}
+
+const DEFAULT_EMBED_COLOR = "#5865F2";
+
+interface SettingRowProps {
+  title: string;
+  description?: string | undefined;
+  icon: React.ReactNode;
+  isOpen?: boolean | undefined;
+  onToggle?: (() => void) | undefined;
+  children?: React.ReactNode;
+}
+
+function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch>) {
+  return (
+    <Switch
+      className={cn(
+        "h-6 w-11 border-0 bg-[#636a80] shadow-none data-[state=checked]:bg-[#3b82f6] data-[state=unchecked]:bg-[#636a80] [&>span]:h-4 [&>span]:w-4 [&>span]:translate-x-1 [&>span]:bg-white [&>span]:shadow-none [&>span]:data-[state=checked]:translate-x-6 [&>span]:data-[state=unchecked]:translate-x-1",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+function SettingRow({ title, description, icon, isOpen = false, onToggle, children }: SettingRowProps) {
+  return (
+    <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
+      <div className={cn("flex min-h-[68px] items-center gap-4 border border-transparent px-5 py-3 transition-colors", isOpen && "border-[#2f3341] bg-dark-800")}>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-dark-900 text-[#aab2c8]">
+            {icon}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold text-white/90">{title}</span>
+            {description ? (
+              <span className="mt-1 block truncate text-xs text-[#8d94a8]">{description}</span>
+            ) : null}
+          </span>
+        </button>
+
+        {onToggle ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white"
+          >
+            <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+          </button>
+        ) : null}
+      </div>
+
+      {isOpen && children ? (
+        <div className="border-x border-b border-[#2f3341] bg-dark-800 p-5">{children}</div>
+      ) : null}
+    </section>
+  );
 }
 
 export default function ReactionRolesPage() {
@@ -57,71 +124,91 @@ export default function ReactionRolesPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [reactionRoles, setReactionRoles] = useState<ReactionRole[]>([]);
+  const [enabled, setEnabled] = useState(true);
+  const [savingEnabled, setSavingEnabled] = useState(false);
 
+  const [formOpen, setFormOpen] = useState(true);
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [title, setTitle] = useState("");
+  const [embedColor, setEmbedColor] = useState(DEFAULT_EMBED_COLOR);
+  const [previewEmbedColor, setPreviewEmbedColor] = useState<string | null>(null);
   const [reactions, setReactions] = useState<ReactionMapping[]>([]);
   const [currentEmoji, setCurrentEmoji] = useState("");
   const [currentRoleId, setCurrentRoleId] = useState("");
   const [currentDescription, setCurrentDescription] = useState("");
-  const [enabled, setEnabled] = useState(true);
   const [editingPanel, setEditingPanel] = useState<ReactionRole | null>(null);
   const [resending, setResending] = useState<string | null>(null);
   const [roleSearch, setRoleSearch] = useState("");
   const [rolePopoverOpen, setRolePopoverOpen] = useState(false);
 
   useEffect(() => {
-    if (guildId) {
-      fetchData();
-    }
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [channelsData, rolesData, rrRes, configRes] = await Promise.all([
+          fetchGuildData<Channel[]>(guildId, "channels", `/api/discord/guild/${guildId}/channels`),
+          fetchGuildData<Role[]>(guildId, "roles", `/api/discord/guild/${guildId}/roles`),
+          fetchWithAuth(`/api/guild/${guildId}/reaction-roles`),
+          fetchWithAuth(`/api/guild/${guildId}/reaction-roles/config`),
+        ]);
+
+        setChannels(channelsData.filter((ch) => ch.type === 0 || ch.type === 5));
+        setRoles(rolesData.filter((r) => r.id !== guildId && r.name !== "@everyone"));
+
+        if (rrRes.ok) {
+          const data: ReactionRole[] = await rrRes.json() as ReactionRole[];
+          setReactionRoles(data);
+        }
+
+        if (configRes.ok) {
+          const configData = await configRes.json() as { enabled?: boolean };
+          setEnabled(configData.enabled !== false);
+        }
+      } catch {
+        setError("Nie udało się załadować danych. Sprawdź połączenie z internetem i spróbuj ponownie.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchData();
   }, [guildId]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const handleToggleEnabled = async (next: boolean) => {
+    const previous = enabled;
+    setEnabled(next);
+    setSavingEnabled(true);
     try {
-      await Promise.all([
-        fetchChannels(),
-        fetchRoles(),
-        fetchReactionRoles(),
-      ]);
-    } catch (error) {
-      console.error("Error loading data:", error);
-      setError("Nie udało się załadować danych reaction-roles. Sprawdź połączenie z internetem i spróbuj ponownie.");
+      const res = await fetchWithAuth(`/api/guild/${guildId}/reaction-roles/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: next }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      toast.success(next ? "Role za reakcje włączone" : "Role za reakcje wyłączone");
+    } catch {
+      setEnabled(previous);
+      toast.error("Nie udało się zapisać ustawienia");
     } finally {
-      setLoading(false);
+      setSavingEnabled(false);
     }
   };
 
-  const fetchChannels = async () => {
-    try {
-      const data = await fetchGuildData<Channel[]>(guildId, 'channels', `/api/discord/guild/${guildId}/channels`);
-      setChannels(data.filter((ch: Channel) => ch.type === 0 || ch.type === 5));
-    } catch (error) {
-      console.error("Error fetching channels:", error);
-      toast.error("Nie udało się pobrać kanałów");
-    }
-  };
-
-  const fetchRoles = async () => {
-    try {
-      const data = await fetchGuildData<Role[]>(guildId, 'roles', `/api/discord/guild/${guildId}/roles`);
-      setRoles(data.filter((r: Role) => r.id !== guildId && r.name !== "@everyone"));
-    } catch (error) {
-      console.error("Error fetching roles:", error);
-      toast.error("Nie udało się pobrać ról");
-    }
-  };
-
-  const fetchReactionRoles = async () => {
-    try {
-      const response = await fetch(`/api/guild/${guildId}/reaction-roles`);
-      if (!response.ok) throw new Error("Failed to fetch reaction roles");
-      const data = await response.json();
+  const refreshReactionRoles = async () => {
+    const res = await fetchWithAuth(`/api/guild/${guildId}/reaction-roles`);
+    if (res.ok) {
+      const data: ReactionRole[] = await res.json() as ReactionRole[];
       setReactionRoles(data);
-    } catch (error) {
-      console.error("Error fetching reaction roles:", error);
-      toast.error("Nie udało się pobrać reaction roles");
     }
+  };
+
+  const getRoleName = (roleId: string) => roles.find((r) => r.id === roleId)?.name ?? roleId;
+  const getRoleColor = (roleId: string) => roles.find((r) => r.id === roleId)?.color ?? 0;
+  const getChannelName = (channelId: string) => channels.find((c) => c.id === channelId)?.name ?? channelId;
+
+  const roleColorStyle = (roleId: string): string => {
+    const color = getRoleColor(roleId);
+    return color ? `#${color.toString(16).padStart(6, "0")}` : "transparent";
   };
 
   const addReaction = () => {
@@ -131,25 +218,22 @@ export default function ReactionRolesPage() {
     }
 
     const isCustomEmoji = /^<a?:\w+:\d+>$/.test(currentEmoji.trim());
-    const unicodeEmojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)$/u;
+    const unicodeEmojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}️)$/u;
     const isUnicodeEmoji = unicodeEmojiRegex.test(currentEmoji.trim());
 
     if (!isCustomEmoji && !isUnicodeEmoji) {
       toast.error("Wprowadź prawidłowe emoji");
       return;
     }
-
     if (reactions.length >= 20) {
       toast.error("Maksymalnie 20 reakcji na wiadomość");
       return;
     }
-
-    if (reactions.some(r => r.emoji === currentEmoji)) {
+    if (reactions.some((r) => r.emoji === currentEmoji)) {
       toast.error("To emoji jest już używane");
       return;
     }
-
-    if (reactions.some(r => r.roleId === currentRoleId)) {
+    if (reactions.some((r) => r.roleId === currentRoleId)) {
       toast.error("Ta rola jest już przypisana");
       return;
     }
@@ -159,7 +243,6 @@ export default function ReactionRolesPage() {
       roleId: currentRoleId,
       description: currentDescription || undefined,
     }]);
-
     setCurrentEmoji("");
     setCurrentRoleId("");
     setRoleSearch("");
@@ -171,39 +254,26 @@ export default function ReactionRolesPage() {
   };
 
   const handleSend = async () => {
-    if (!selectedChannelId) {
-      toast.error("Wybierz kanał");
-      return;
-    }
-
-    if (reactions.length === 0) {
-      toast.error("Dodaj przynajmniej jedną reakcję");
-      return;
-    }
+    if (!selectedChannelId) { toast.error("Wybierz kanał"); return; }
+    if (reactions.length === 0) { toast.error("Dodaj przynajmniej jedną reakcję"); return; }
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/guild/${guildId}/reaction-roles`, {
+      const response = await fetchWithAuth(`/api/guild/${guildId}/reaction-roles`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channelId: selectedChannelId,
-          title: title || undefined,
-          reactions,
-        }),
+        body: JSON.stringify({ channelId: selectedChannelId, title: title || undefined, embedColor, reactions }),
       });
 
-      if (!response.ok) throw new Error("Failed to create reaction role");
+      if (!response.ok) throw new Error("Failed to create");
 
       toast.success("Wiadomość z reakcjami została wysłana!");
-      
       setSelectedChannelId("");
       setTitle("");
+      setEmbedColor(DEFAULT_EMBED_COLOR);
       setReactions([]);
-      
-      await fetchReactionRoles();
-    } catch (error) {
-      console.error("Error creating reaction role:", error);
+      await refreshReactionRoles();
+    } catch {
       toast.error("Nie udało się wysłać wiadomości");
     } finally {
       setSaving(false);
@@ -211,22 +281,18 @@ export default function ReactionRolesPage() {
   };
 
   const handleDelete = async (messageId: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć tę wiadomość z reakcjami?")) {
-      return;
-    }
+    if (!confirm("Czy na pewno chcesz usunąć tę wiadomość z reakcjami?")) return;
 
     try {
       const response = await fetchWithAuth(`/api/guild/${guildId}/reaction-roles?messageId=${messageId}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) throw new Error("Failed to delete reaction role");
+      if (!response.ok) throw new Error("Failed to delete");
 
       toast.success("Wiadomość została usunięta");
       if (editingPanel?.messageId === messageId) handleCancelEdit();
-      await fetchReactionRoles();
-    } catch (error) {
-      console.error("Error deleting reaction role:", error);
+      await refreshReactionRoles();
+    } catch {
       toast.error("Nie udało się usunąć wiadomości");
     }
   };
@@ -234,8 +300,10 @@ export default function ReactionRolesPage() {
   const handleEdit = (rr: ReactionRole) => {
     setEditingPanel(rr);
     setSelectedChannelId(rr.channelId);
-    setTitle(rr.title || "");
+    setTitle(rr.title ?? "");
+    setEmbedColor(rr.embedColor || DEFAULT_EMBED_COLOR);
     setReactions([...rr.reactions]);
+    setFormOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -243,6 +311,7 @@ export default function ReactionRolesPage() {
     setEditingPanel(null);
     setSelectedChannelId("");
     setTitle("");
+    setEmbedColor(DEFAULT_EMBED_COLOR);
     setReactions([]);
   };
 
@@ -258,17 +327,16 @@ export default function ReactionRolesPage() {
           messageId: editingPanel.messageId,
           channelId: selectedChannelId || editingPanel.channelId,
           title: title || undefined,
+          embedColor,
           reactions,
         }),
       });
-
-      if (!response.ok) throw new Error("Failed to update reaction role");
+      if (!response.ok) throw new Error("Failed to update");
 
       toast.success("Panel zaktualizowany i ponownie wysłany!");
       handleCancelEdit();
-      await fetchReactionRoles();
-    } catch (error) {
-      console.error("Error updating reaction role:", error);
+      await refreshReactionRoles();
+    } catch {
       toast.error("Nie udało się zaktualizować panelu");
     } finally {
       setSaving(false);
@@ -283,34 +351,18 @@ export default function ReactionRolesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messageId: rr.messageId }),
       });
-
       if (!response.ok) throw new Error("Failed to resend");
 
       toast.success("Panel wysłany ponownie!");
-      await fetchReactionRoles();
-    } catch (error) {
-      console.error("Error resending reaction role:", error);
+      await refreshReactionRoles();
+    } catch {
       toast.error("Nie udało się wysłać panelu ponownie");
     } finally {
       setResending(null);
     }
   };
 
-  const getRoleName = (roleId: string) => {
-    const role = roles.find(r => r.id === roleId);
-    return role ? role.name : roleId;
-  };
-
-  const getChannelName = (channelId: string) => {
-    const channel = channels.find(c => c.id === channelId);
-    return channel ? channel.name : channelId;
-  };
-
-  const handleRetry = () => {
-    setError(null);
-    setLoading(true);
-    window.location.reload();
-  };
+  const handleRetry = () => { setError(null); window.location.reload(); };
 
   const selectedRole = roles.find((role) => role.id === currentRoleId);
   const normalizedRoleSearch = roleSearch.trim().toLowerCase();
@@ -318,6 +370,14 @@ export default function ReactionRolesPage() {
     ? roles.filter((role) => role.name.toLowerCase().includes(normalizedRoleSearch))
     : roles;
   const roleInputValue = roleSearch || selectedRole?.name || "";
+
+  // Podgląd pokazuje też reakcję, którą się właśnie uzupełnia w formularzu — nie
+  // trzeba klikać "Dodaj reakcję", żeby zobaczyć efekt (stąd "na żywo").
+  const draftReaction: ReactionMapping | null =
+    currentEmoji.trim() && currentRoleId && !reactions.some((r) => r.roleId === currentRoleId)
+      ? { emoji: currentEmoji.trim(), roleId: currentRoleId, description: currentDescription || undefined }
+      : null;
+  const previewReactions = draftReaction ? [...reactions, draftReaction] : reactions;
 
   const handleRoleSelect = (role: Role) => {
     setCurrentRoleId(role.id);
@@ -329,11 +389,7 @@ export default function ReactionRolesPage() {
     return (
       <div className="min-h-screen">
         <div className="w-full">
-          <ErrorState
-            title="Nie udało się załadować reaction-roles"
-            message={error}
-            onRetry={handleRetry}
-          />
+          <ErrorState title="Nie udało się załadować reaction-roles" message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -342,420 +398,352 @@ export default function ReactionRolesPage() {
   if (loading) {
     return (
       <div className="min-h-screen">
-        <div className="w-full">
-          <Skeleton className="h-10 w-40 mb-6" />
-          
-          <Card
-            className="backdrop-blur mb-6"
-            style={{
-              boxShadow: '0 0 10px #00000026',
-              border: '1px solid transparent'
-            }}
-          >
-            <CardHeader>
-              <Skeleton className="h-8 w-56 mb-2" />
-              <Skeleton className="h-4 w-full max-w-xl" />
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              
-              <div className="space-y-4">
-                <Skeleton className="h-6 w-48" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card
-            className="backdrop-blur"
-            style={{
-              boxShadow: '0 0 10px #00000026',
-              border: '1px solid transparent'
-            }}
-          >
-            <CardHeader>
-              <Skeleton className="h-7 w-48" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[1, 2].map((i) => (
-                  <div key={i} className="p-4 border rounded-lg space-y-3">
-                    <Skeleton className="h-6 w-40" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-4 w-24" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="w-full space-y-5">
+          <div className="space-y-3 pb-2">
+            <Skeleton className="h-7 w-52" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-[68px] w-full rounded-md bg-dark-800" />
+            {[1, 2].map((i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-md bg-dark-800" />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="w-full">
+    <div className="min-h-screen pb-16">
+      <div className="w-full space-y-5">
+        <SlideIn direction="up" delay={100}>
+          <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 space-y-2">
+              <h1 className="text-2xl font-semibold text-white">Role za Reakcje</h1>
+              <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
+                Zarządzaj wiadomościami z reakcjami, które przypisują role użytkownikom na serwerze.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
+              <span>Aktywne</span>
+              <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} disabled={savingEnabled} aria-label="Włącz lub wyłącz role za reakcje" />
+            </div>
+          </header>
+        </SlideIn>
 
-
-        <div className="space-y-6">
-          {/* Create New Reaction Role */}
-          <SlideIn direction="up" delay={100}>
-          <Card
-            className="backdrop-blur"
-            style={{
-              boxShadow: '0 0 10px #00000026',
-              border: '1px solid transparent'
-            }}
-          >
-            <CardHeader>
-              <div className="flex items-center justify-between mb-2">
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  {editingPanel ? (
-                    <Pencil className="w-6 h-6 text-bot-primary" />
-                  ) : (
-                    <Plus className="w-6 h-6 text-bot-primary" />
-                  )}
-                  <span className="text-white/90">
-                    {editingPanel ? "Edytuj panel" : "Role za reakcje"}
-                  </span>
-                </CardTitle>
-                <Switch
-                  checked={enabled}
-                  onCheckedChange={setEnabled}
-                  className="data-[state=checked]:bg-bot-primary"
-                  style={{ transform: 'scale(1.5)' }}
-                />
-              </div>
-              <CardDescription>
-                {editingPanel
-                  ? "Zmodyfikuj konfigurację — stara wiadomość zostanie usunięta i wysłana nowa"
-                  : "Dodaj wiadomość z reakcjami, które przypisują role użytkownikom"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              {/* Channel Select */}
-              <div className="space-y-2">
-                <Label htmlFor="channel">
-                  Kanał docelowy <span className="text-destructive">*</span>
-                </Label>
-                <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
-                  <SelectTrigger id="channel" className="w-full">
-                    <SelectValue placeholder="Wybierz kanał..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {channels.map((channel) => (
-                      <SelectItem key={channel.id} value={channel.id}>
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-4 w-4 text-muted-foreground" />
-                          {channel.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Title */}
-              <div className="space-y-2">
-                <Label htmlFor="title">Tytuł embeda (opcjonalnie)</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Wybierz swoją rolę"
-                  maxLength={256}
-                />
-              </div>
-
-              {/* Add Reaction */}
-              <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                <h3 className="font-semibold">Dodaj reakcję</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="emoji">Emoji</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="emoji"
-                        value={currentEmoji}
-                        onChange={(e) => setCurrentEmoji(e.target.value)}
-                        placeholder="Lub wpisz własne emoji"
-                        maxLength={10}
-                        className="flex-1"
-                      />
-                      <div className="[&_button]:h-10 [&_button]:flex [&_button]:items-center [&_button]:justify-center">
-                        <EmojiPicker 
-                          onEmojiSelect={setCurrentEmoji}
-                          buttonText={currentEmoji}
-                        />
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Maksymalnie jedno emoji</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Rola</Label>
-                    <Popover
-                      open={rolePopoverOpen}
-                      onOpenChange={(open) => {
-                        setRolePopoverOpen(open);
-                        if (open) setRoleSearch("");
-                      }}
-                    >
-                      <PopoverTrigger asChild>
-                        <div className="relative">
-                          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            id="role"
-                            role="combobox"
-                            aria-expanded={rolePopoverOpen}
-                            aria-controls="reaction-role-options"
-                            placeholder="Wybierz rolę..."
-                            value={roleInputValue}
-                            onFocus={(event) => {
-                              setRolePopoverOpen(true);
-                              event.currentTarget.select();
-                            }}
-                            onChange={(event) => {
-                              setRoleSearch(event.target.value);
-                              setCurrentRoleId("");
-                              setRolePopoverOpen(true);
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" && filteredRoles[0]) {
-                                event.preventDefault();
-                                handleRoleSelect(filteredRoles[0]);
-                              }
-                            }}
-                            className="pl-9"
-                          />
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        id="reaction-role-options"
-                        align="start"
-                        onOpenAutoFocus={(event) => event.preventDefault()}
-                        className="w-[var(--radix-popover-trigger-width)] p-1"
+        <SlideIn direction="up" delay={150}>
+          <div className="space-y-3">
+            {/* ── Create / Edit panel ─────────────────────────────────── */}
+            <SettingRow
+              title={editingPanel ? "Edytuj panel" : "Nowy panel"}
+              description={
+                editingPanel
+                  ? "Zmodyfikuj konfigurację — podgląd aktualizuje się od razu"
+                  : "Skonfiguruj wiadomość i role, podgląd aktualizuje się od razu"
+              }
+              icon={editingPanel ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              isOpen={formOpen}
+              onToggle={() => setFormOpen((prev) => !prev)}
+            >
+              <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[1.3fr_1fr]">
+              <div className="space-y-5">
+                {/* Channel */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-[#c4cad8]">
+                    Kanał docelowy <span className="text-destructive">*</span>
+                  </Label>
+                  <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+                    <SelectTrigger className="h-11 border-transparent bg-dark-900 text-white/90 focus:ring-[#3b82f6]/50 focus:ring-offset-0">
+                      {/* Radix ignoruje children SelectValue, gdy value="" — placeholder MUSI iść przez
+                          prop placeholder, inaczej trigger renderuje się pusty (bez ikony i tekstu). */}
+                      <SelectValue
+                        placeholder={
+                          <div className="flex items-center gap-2 text-[#8d94a8]">
+                            <Hash className="h-4 w-4" />
+                            <span>Wybierz kanał...</span>
+                          </div>
+                        }
                       >
-                        <div className="max-h-64 overflow-y-auto overscroll-contain">
-                          {filteredRoles.length === 0 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
-                              Nie znaleziono roli
-                            </div>
-                          ) : (
-                            filteredRoles.map((role) => (
-                              <button
-                                key={role.id}
-                                type="button"
-                                onClick={() => handleRoleSelect(role)}
-                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
-                              >
-                                <span
-                                  className="h-2.5 w-2.5 rounded-full border border-white/20"
-                                  style={{ backgroundColor: role.color ? `#${role.color.toString(16).padStart(6, "0")}` : "transparent" }}
-                                  aria-hidden="true"
-                                />
-                                <span className="min-w-0 truncate">{role.name}</span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Opis (opcjonalnie)</Label>
-                    <Input
-                      id="description"
-                      value={currentDescription}
-                      onChange={(e) => setCurrentDescription(e.target.value)}
-                      placeholder="Opcjonalny opis..."
-                      maxLength={100}
-                    />
-                  </div>
+                        {selectedChannelId ? (
+                          <div className="flex items-center gap-2">
+                            <Hash className="h-4 w-4 text-[#8d94a8]" />
+                            {channels.find((ch) => ch.id === selectedChannelId)?.name ?? "Wybierz kanał..."}
+                          </div>
+                        ) : null}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="border-[#2f3341] bg-dark-900">
+                      {channels.map((channel) => (
+                        <SelectItem key={channel.id} value={channel.id}>
+                          <div className="flex items-center gap-2">
+                            <Hash className="h-4 w-4 text-[#8d94a8]" />
+                            {channel.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <Button onClick={addReaction} variant="outline" className="w-full">
-                  <Plus className="mr-2 w-4 h-4" />
-                  Dodaj reakcję
-                </Button>
-              </div>
-
-              {/* Reactions List */}
-              {reactions.length > 0 && (
+                {/* Title */}
                 <div className="space-y-2">
-                  <Label>Skonfigurowane reakcje ({reactions.length}/20)</Label>
-                  <div className="space-y-2">
-                    {reactions.map((reaction, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 hover:shadow-lg hover:shadow-bot-primary/10 hover:scale-105 hover:border-bot-primary/30 transition-all duration-300">
-                        <div className="flex items-center gap-3">
-                          <EmojiDisplay emoji={reaction.emoji} size={24} />
-                          <div>
-                            <div className="font-medium">{getRoleName(reaction.roleId)}</div>
-                            {reaction.description && (
-                              <div className="text-sm text-muted-foreground">{reaction.description}</div>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label className="text-xs font-semibold text-[#c4cad8]">Tytuł embeda (opcjonalnie)</Label>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-[#8d94a8]">Kolor embeda</span>
+                      <EmbedColorPicker value={embedColor} onChange={setEmbedColor} onPreviewChange={setPreviewEmbedColor} />
+                    </div>
+                  </div>
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Wybierz swoją rolę"
+                    maxLength={256}
+                    className="h-11 border-transparent bg-dark-900 text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
+                  />
+                </div>
+
+                {/* Add reaction subsection */}
+                <div className="space-y-4 rounded-md border border-[#2f3341] bg-dark-900 p-4">
+                  <p className="text-xs font-semibold text-[#c4cad8]">Dodaj reakcję</p>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    {/* Emoji */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-[#c4cad8]">Emoji</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={currentEmoji}
+                          onChange={(e) => setCurrentEmoji(e.target.value)}
+                          placeholder="Lub wpisz własne emoji"
+                          maxLength={10}
+                          className="h-11 flex-1 border-transparent bg-dark-800 text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
+                        />
+                        <div className="[&_button]:h-11 [&_button]:flex [&_button]:items-center [&_button]:justify-center">
+                          <EmojiPicker onEmojiSelect={setCurrentEmoji} buttonText={currentEmoji} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Role combobox */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-[#c4cad8]">Rola</Label>
+                      <Popover
+                        open={rolePopoverOpen}
+                        onOpenChange={(open) => {
+                          setRolePopoverOpen(open);
+                          if (open) setRoleSearch("");
+                        }}
+                      >
+                        <PopoverAnchor asChild>
+                          <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d94a8]" />
+                            <Input
+                              role="combobox"
+                              aria-expanded={rolePopoverOpen}
+                              aria-controls="rr-role-options"
+                              placeholder="Wybierz rolę..."
+                              value={roleInputValue}
+                              onFocus={(e) => {
+                                setRolePopoverOpen(true);
+                                e.currentTarget.select();
+                              }}
+                              onChange={(e) => {
+                                setRoleSearch(e.target.value);
+                                setCurrentRoleId("");
+                                setRolePopoverOpen(true);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && filteredRoles[0]) {
+                                  e.preventDefault();
+                                  handleRoleSelect(filteredRoles[0]);
+                                }
+                              }}
+                              className="h-11 border-transparent bg-dark-800 pl-9 text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
+                            />
+                          </div>
+                        </PopoverAnchor>
+                        <PopoverContent
+                          id="rr-role-options"
+                          align="start"
+                          onOpenAutoFocus={(e) => e.preventDefault()}
+                          className="w-[var(--radix-popover-trigger-width)] border-[#2f3341] bg-dark-900 p-1"
+                        >
+                          <div className="max-h-64 overflow-y-auto overscroll-contain">
+                            {filteredRoles.length === 0 ? (
+                              <div className="py-6 text-center text-sm text-[#8d94a8]">Nie znaleziono roli</div>
+                            ) : (
+                              filteredRoles.map((role) => (
+                                <button
+                                  key={role.id}
+                                  type="button"
+                                  onClick={() => handleRoleSelect(role)}
+                                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-white/90 hover:bg-dark-800"
+                                >
+                                  <span
+                                    className="h-2.5 w-2.5 shrink-0 rounded-full border border-white/20"
+                                    style={{ backgroundColor: roleColorStyle(role.id) }}
+                                  />
+                                  <span className="min-w-0 truncate">{role.name}</span>
+                                </button>
+                              ))
                             )}
                           </div>
-                        </div>
-                        <Button
-                          onClick={() => removeReaction(index)}
-                          variant="ghost"
-                          size="sm"
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Send / Save Button */}
-              <div className="flex flex-col gap-2">
-                {editingPanel && (
-                  <Button
-                    onClick={handleCancelEdit}
-                    variant="outline"
-                    className="w-full"
-                    disabled={saving}
-                  >
-                    Anuluj edycję
-                  </Button>
-                )}
-                <Button
-                  onClick={editingPanel ? handleUpdate : handleSend}
-                  disabled={saving || !selectedChannelId || reactions.length === 0}
-                  className="w-full"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                      {editingPanel ? "Zapisywanie..." : "Wysyłanie..."}
-                    </>
-                  ) : editingPanel ? (
-                    <>
-                      <Save className="mr-2 w-4 h-4" />
-                      Zapisz zmiany
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 w-4 h-4" />
-                      Wyślij wiadomość
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          </SlideIn>
-
-          {/* Existing Reaction Roles */}
-          <SlideIn direction="up" delay={200}>
-          <Card
-            className="backdrop-blur"
-            style={{
-              boxShadow: '0 0 10px #00000026',
-              border: '1px solid transparent'
-            }}
-          >
-            <CardHeader>
-              <CardTitle className="text-xl">Istniejące Role za Reakcje</CardTitle>
-              <CardDescription>
-                Zarządzaj utworzonymi wiadomościami z reakcjami
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
-              {reactionRoles.length === 0 ? (
-                <div className="text-center py-16 px-4">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted/50 mb-4">
-                    <Smile className="w-10 h-10 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2">Brak wiadomości z reakcjami</h3>
-                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Utwórz pierwszą wiadomość z reakcjami powyżej. Użytkownicy będą mogli przypisać sobie role reagując na wiadomość.
-                  </p>
-                </div>
-              ) : (
-                reactionRoles.map((rr, index) => (
-                  <SlideIn key={rr._id} direction="up" delay={index * 50}>
-                  <div className="p-4 border rounded-lg space-y-3 bg-muted/30 hover:bg-muted/50 hover:shadow-xl hover:shadow-bot-primary/20 hover:scale-[1.02] hover:border-bot-primary/40 transition-all duration-300">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="font-semibold">{rr.title || "Wybierz swoją rolę"}</div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                          <Hash className="w-3 h-3" />
-                          {getChannelName(rr.channelId)}
-                        </div>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <Button
-                          onClick={() => handleResend(rr)}
-                          variant="outline"
-                          size="sm"
-                          disabled={resending === rr.messageId || editingPanel?._id === rr._id}
-                          title="Wyślij ponownie"
-                        >
-                          {resending === rr.messageId ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          onClick={() => handleEdit(rr)}
-                          variant="outline"
-                          size="sm"
-                          disabled={editingPanel?._id === rr._id}
-                          title="Edytuj"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() => handleDelete(rr.messageId)}
-                          variant="destructive"
-                          size="sm"
-                          title="Usuń"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
-                    
+
+                    {/* Description */}
                     <div className="space-y-2">
-                      {rr.reactions.map((reaction, idx) => (
-                        <div key={idx} className="flex items-center gap-3 text-sm">
-                          <EmojiDisplay emoji={reaction.emoji} size={20} />
-                          <span className="font-medium">{getRoleName(reaction.roleId)}</span>
-                          {reaction.description && (
-                            <span className="text-muted-foreground">• {reaction.description}</span>
-                          )}
+                      <Label className="text-xs font-semibold text-[#c4cad8]">Opis (opcjonalnie)</Label>
+                      <Input
+                        value={currentDescription}
+                        onChange={(e) => setCurrentDescription(e.target.value)}
+                        placeholder="Opcjonalny opis..."
+                        maxLength={100}
+                        className="h-11 border-transparent bg-dark-800 text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    onClick={addReaction}
+                    variant="outline"
+                    className="w-full border-dashed border-[#3a3f4e] bg-transparent text-[#8d94a8] hover:border-[#3b82f6]/50 hover:bg-dark-800 hover:text-white"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Dodaj reakcję
+                  </Button>
+                </div>
+
+                {/* Configured reactions list */}
+                {reactions.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-[#c4cad8]">
+                      Skonfigurowane reakcje ({reactions.length}/20)
+                    </p>
+                    <div className="space-y-2">
+                      {reactions.map((reaction, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between rounded-md border border-[#2f3341] bg-dark-900 px-3 py-2.5"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center">
+                              <EmojiDisplay emoji={reaction.emoji} size={22} />
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="h-2.5 w-2.5 shrink-0 rounded-full border border-white/20"
+                                  style={{ backgroundColor: roleColorStyle(reaction.roleId) }}
+                                />
+                                <span className="text-sm font-medium text-white/90">
+                                  {getRoleName(reaction.roleId)}
+                                </span>
+                              </div>
+                              {reaction.description ? (
+                                <span className="text-xs text-[#8d94a8]">{reaction.description}</span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeReaction(index)}
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-[#8d94a8] transition-colors hover:bg-dark-800 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       ))}
                     </div>
                   </div>
-                  </SlideIn>
-                ))
-              )}
-            </CardContent>
-          </Card>
-          </SlideIn>
-        </div>
+                ) : null}
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2 pt-1">
+                  {editingPanel ? (
+                    <Button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      variant="outline"
+                      disabled={saving}
+                      className="w-full border-[#3a3f4e] bg-transparent text-[#8d94a8] hover:bg-dark-900 hover:text-white"
+                    >
+                      Anuluj edycję
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    onClick={() => void (editingPanel ? handleUpdate() : handleSend())}
+                    disabled={saving || !selectedChannelId || reactions.length === 0}
+                    className="w-full bg-[#3b82f6] text-white hover:bg-[#2563eb] disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {editingPanel ? "Zapisywanie..." : "Wysyłanie..."}
+                      </>
+                    ) : editingPanel ? (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Zapisz zmiany
+                      </>
+                    ) : (
+                      <>
+                        <Send className="mr-2 h-4 w-4" />
+                        Wyślij wiadomość
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* ── Live preview ───────────────────────────────────────── */}
+              <div className="space-y-2 rounded-md bg-dark-900/30 p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Podgląd na żywo
+                </div>
+                <ReactionRoleLivePreview title={title} reactions={previewReactions} roles={roles} embedColor={previewEmbedColor || embedColor} />
+                <p className="text-xs text-[#6f7690]">
+                  Podgląd aktualizuje się automatycznie podczas edycji formularza.
+                </p>
+              </div>
+              </div>
+            </SettingRow>
+
+            {/* ── Existing panels ─────────────────────────────────────── */}
+            {reactionRoles.length === 0 ? (
+              <div className="rounded-md bg-dark-800 py-16 text-center shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-dark-900">
+                  <Smile className="h-8 w-8 text-[#8d94a8]" />
+                </div>
+                <p className="text-sm font-semibold text-white/80">Brak wiadomości z reakcjami</p>
+                <p className="mx-auto mt-1 max-w-xs text-xs text-[#8d94a8]">
+                  Utwórz pierwszą wiadomość z reakcjami powyżej.
+                </p>
+              </div>
+            ) : (
+              reactionRoles.map((rr, index) => (
+                <SlideIn key={rr._id} direction="up" delay={index * 50}>
+                  <ActivePanelCard
+                    reactionRole={rr}
+                    channelName={getChannelName(rr.channelId)}
+                    roles={roles}
+                    isEditing={editingPanel?._id === rr._id}
+                    isResending={resending === rr.messageId}
+                    onResend={() => void handleResend(rr)}
+                    onEdit={() => handleEdit(rr)}
+                    onDelete={() => void handleDelete(rr.messageId)}
+                  />
+                </SlideIn>
+              ))
+            )}
+          </div>
+        </SlideIn>
       </div>
     </div>
   );

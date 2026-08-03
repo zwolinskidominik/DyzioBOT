@@ -1,18 +1,20 @@
-﻿"use client";
+"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, ArrowLeft, Mic, Hash, AlertCircle, Users, Plus, X } from "lucide-react";
-import Link from "next/link";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, Mic, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
 import { fetchGuildData } from "@/lib/cache";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { cn } from "@/lib/utils";
+import { TempChannelLivePreview, type TempChannelType } from "@/components/temp-channels/TempChannelLivePreview";
+import { TempChannelListItem } from "@/components/temp-channels/TempChannelListItem";
 
 interface Channel {
   id: string;
@@ -20,36 +22,38 @@ interface Channel {
   type: number;
 }
 
-interface TempChannelConfig {
-  guildId: string;
-  channelIds: string[];
+interface CreatorConfig {
+  channelId: string;
+  type: TempChannelType;
 }
 
-interface ActiveTempChannel {
-  _id: string;
-  guildId: string;
-  parentId: string;
-  channelId: string;
-  ownerId: string;
-  controlMessageId?: string;
+function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch>) {
+  return (
+    <Switch
+      className={cn(
+        "h-6 w-11 border-0 bg-[#636a80] shadow-none data-[state=checked]:bg-[#3b82f6] data-[state=unchecked]:bg-[#636a80] [&>span]:h-4 [&>span]:w-4 [&>span]:translate-x-1 [&>span]:bg-white [&>span]:shadow-none [&>span]:data-[state=checked]:translate-x-6 [&>span]:data-[state=unchecked]:translate-x-1",
+        className
+      )}
+      {...props}
+    />
+  );
 }
 
 export default function TempChannelsPage() {
   const params = useParams();
-  const guildId = params.guildId as string;
-  
+  const guildId = params?.guildId as string;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [activeTempChannels, setActiveTempChannels] = useState<ActiveTempChannel[]>([]);
-  
-  const [config, setConfig] = useState<TempChannelConfig>({
-    guildId,
-    channelIds: [],
-  });
+  const [creators, setCreators] = useState<CreatorConfig[]>([]);
+  const [enabled, setEnabled] = useState(true);
+  const [savingEnabled, setSavingEnabled] = useState(false);
 
-  const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+  const [selectedChannelId, setSelectedChannelId] = useState("");
+  const [selectedType, setSelectedType] = useState<TempChannelType>("panel");
+  const [adding, setAdding] = useState(false);
+  const [savingChannelId, setSavingChannelId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,329 +61,273 @@ export default function TempChannelsPage() {
         setLoading(true);
 
         const [channelsData, configRes] = await Promise.all([
-          fetchGuildData<Channel[]>(guildId, 'channels', `/api/discord/guild/${guildId}/channels`),
-          fetch(`/api/guild/${guildId}/temp-channels/config`),
+          fetchGuildData<Channel[]>(guildId, "channels", `/api/discord/guild/${guildId}/channels`),
+          fetchWithAuth(`/api/guild/${guildId}/temp-channels/config`),
         ]);
 
-        if (channelsData) {
-          setChannels(channelsData);
-        }
+        setChannels(channelsData.filter((ch) => ch.type === 2));
 
         if (configRes.ok) {
-          const configData = await configRes.json();
-          setConfig(configData);
+          const configData = await configRes.json() as { enabled?: boolean; channelIds?: string[]; creators?: CreatorConfig[] };
+          const merged = new Map<string, CreatorConfig>();
+          (configData.channelIds ?? []).forEach((channelId) => merged.set(channelId, { channelId, type: "panel" }));
+          (configData.creators ?? []).forEach((c) => merged.set(c.channelId, c));
+          setCreators(Array.from(merged.values()));
+          setEnabled(configData.enabled !== false);
         }
-
-        const activeTempRes = await fetch(`/api/guild/${guildId}/temp-channels/active`);
-        if (activeTempRes.ok) {
-          const activeTempData = await activeTempRes.json();
-          setActiveTempChannels(activeTempData);
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error("Error loading temp channels data:", error);
+      } catch {
         setError("Nie udało się załadować danych tymczasowych kanałów. Sprawdź połączenie z internetem i spróbuj ponownie.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [guildId]);
 
-  const handleRetry = () => {
-    setError(null);
-    setLoading(true);
-    window.location.reload();
-  };
+  const handleRetry = () => { setError(null); window.location.reload(); };
 
-  const handleSave = async () => {
+  const saveCreators = async (next: CreatorConfig[]): Promise<boolean> => {
     try {
-      setSaving(true);
-
-      if ((config.channelIds || []).length === 0) {
-        const response = await fetch(`/api/guild/${guildId}/temp-channels/config`, {
-          method: "DELETE",
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to delete configuration");
-        }
-
-        toast.success("Konfiguracja została usunięta!");
-        return;
-      }
-
-      const response = await fetch(`/api/guild/${guildId}/temp-channels/config`, {
+      const response = await fetchWithAuth(`/api/guild/${guildId}/temp-channels/config`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ channelIds: config.channelIds || [] }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creators: next, enabled }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save configuration");
-      }
-
-      const savedConfig = await response.json();
-      
-      setConfig(savedConfig);
-
-      toast.success("Konfiguracja została zapisana!");
-    } catch (error) {
-      console.error("Error saving config:", error);
+      if (!response.ok) throw new Error("Failed to save");
+      setCreators(next);
+      return true;
+    } catch {
       toast.error("Nie udało się zapisać konfiguracji");
-    } finally {
-      setSaving(false);
+      return false;
     }
   };
 
-  const handleAddChannel = () => {
+  const handleToggleEnabled = async (next: boolean) => {
+    const previous = enabled;
+    setEnabled(next);
+    setSavingEnabled(true);
+    try {
+      const response = await fetchWithAuth(`/api/guild/${guildId}/temp-channels/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creators, enabled: next }),
+      });
+      if (!response.ok) throw new Error("Failed to save");
+      toast.success(next ? "Tymczasowe kanały włączone" : "Tymczasowe kanały wyłączone");
+    } catch {
+      setEnabled(previous);
+      toast.error("Nie udało się zapisać ustawienia");
+    } finally {
+      setSavingEnabled(false);
+    }
+  };
+
+  const getChannelName = (channelId: string) => channels.find((c) => c.id === channelId)?.name ?? "Nieznany kanał";
+
+  const handleAddChannel = async () => {
     if (!selectedChannelId) {
       toast.error("Wybierz kanał głosowy!");
       return;
     }
-    
-    if ((config.channelIds || []).includes(selectedChannelId)) {
+    if (creators.some((c) => c.channelId === selectedChannelId)) {
       toast.error("Ten kanał jest już dodany!");
       return;
     }
 
-    setConfig({
-      ...config,
-      channelIds: [...(config.channelIds || []), selectedChannelId],
-    });
-    setSelectedChannelId("");
-    toast.success("Kanał dodany!");
+    setAdding(true);
+    const ok = await saveCreators([...creators, { channelId: selectedChannelId, type: selectedType }]);
+    setAdding(false);
+
+    if (ok) {
+      toast.success("Kanał tymczasowy dodany!");
+      setSelectedChannelId("");
+      setSelectedType("panel");
+    }
   };
 
-  const handleRemoveChannel = (channelId: string) => {
-    setConfig({
-      ...config,
-      channelIds: (config.channelIds || []).filter(id => id !== channelId),
-    });
-    toast.success("Kanał usunięty!");
+  const handleUpdateType = async (channelId: string, type: TempChannelType) => {
+    setSavingChannelId(channelId);
+    const ok = await saveCreators(creators.map((c) => (c.channelId === channelId ? { ...c, type } : c)));
+    setSavingChannelId(null);
+    if (ok) toast.success("Zaktualizowano typ kanału!");
   };
 
-  const getChannelName = (channelId: string) => {
-    return channels.find(c => c.id === channelId)?.name || 'Nieznany kanał';
+  const handleDeleteChannel = async (channelId: string) => {
+    if (!confirm("Czy na pewno chcesz usunąć ten kanał kreator?")) return;
+    const ok = await saveCreators(creators.filter((c) => c.channelId !== channelId));
+    if (ok) toast.success("Kanał usunięty!");
   };
 
   if (error) {
-    return <ErrorState message={error} onRetry={handleRetry} />;
-  }
-
-  if (loading) {
     return (
       <div className="min-h-screen">
         <div className="w-full">
-          <Skeleton className="h-10 w-48 mb-6" />
-          <Card className="backdrop-blur">
-            <CardHeader>
-              <Skeleton className="h-8 w-64" />
-              <Skeleton className="h-4 w-96 mt-2" />
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            </CardContent>
-          </Card>
+          <ErrorState title="Nie udało się załadować tymczasowych kanałów" message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
   }
 
-  const voiceChannels = channels.filter(ch => ch.type === 2);
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <div className="w-full space-y-5">
+          <div className="space-y-3 pb-2">
+            <Skeleton className="h-7 w-52" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+          </div>
+          <Skeleton className="h-72 w-full rounded-md bg-dark-800" />
+        </div>
+      </div>
+    );
+  }
+
+  const availableChannels = channels.filter((ch) => !creators.some((c) => c.channelId === ch.id));
 
   return (
-    <div className="min-h-screen">
-      <div className="w-full">
-
-
+    <div className="min-h-screen pb-16">
+      <div className="w-full space-y-5">
         <SlideIn direction="up" delay={100}>
-          <Card className="backdrop-blur" style={{
-            boxShadow: '0 0 10px #00000026',
-            border: '1px solid transparent'
-          }}>
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Mic className="w-6 h-6 text-bot-primary" />
-                Tymczasowe Kanały
-              </CardTitle>
-              <CardDescription>
-                Konfiguracja systemu tymczasowych kanałów głosowych
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Info Box */}
-              <div className="flex gap-3 p-4 rounded-lg bg-bot-primary/10 border border-bot-primary/20">
-                <AlertCircle className="w-5 h-5 text-bot-primary flex-shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Jak to działa?</p>
-                  <p className="text-xs text-muted-foreground">
-                    Wybierz kanał głosowy, który będzie służył jako "kreator". 
-                    Gdy użytkownik dołączy do tego kanału, bot automatycznie utworzy dla niego prywatny kanał tymczasowy. 
-                    Kanał zostanie usunięty gdy wszyscy go opuszczą.
-                  </p>
+          <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 space-y-2">
+              <h1 className="text-2xl font-semibold text-white">Tymczasowe Kanały</h1>
+              <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
+                Konfiguracja systemu tymczasowych kanałów głosowych.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
+              <span>Aktywne</span>
+              <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} disabled={savingEnabled} aria-label="Włącz lub wyłącz tymczasowe kanały" />
+            </div>
+          </header>
+        </SlideIn>
+
+        <SlideIn direction="up" delay={150}>
+          <div className="space-y-3 rounded-md bg-dark-800 p-5 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-dark-900 text-[#aab2c8]">
+                <Plus className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white/90">Nowy kanał tymczasowy</p>
+                <p className="mt-1 text-xs text-[#8d94a8]">
+                  Wybierz kanał i typ — podgląd po prawej pokaże efekt od razu
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 items-start gap-5 pt-2 lg:grid-cols-[1.3fr_1fr]">
+              {/* ── Form ─────────────────────────────────────────────── */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+                    <SelectTrigger className="h-11 border-transparent bg-dark-900 text-white/90 focus:ring-[#3b82f6]/50 focus:ring-offset-0">
+                      {/* Radix ignoruje children SelectValue, gdy value="" — placeholder MUSI iść przez
+                          prop placeholder, inaczej trigger renderuje się pusty (bez ikony i tekstu). */}
+                      <SelectValue
+                        placeholder={
+                          <div className="flex items-center gap-2 text-[#8d94a8]">
+                            <Mic className="h-4 w-4" />
+                            <span>Wybierz kanał głosowy...</span>
+                          </div>
+                        }
+                      >
+                        {selectedChannelId ? (
+                          <div className="flex items-center gap-2">
+                            <Mic className="h-4 w-4 text-[#8d94a8]" />
+                            {getChannelName(selectedChannelId)}
+                          </div>
+                        ) : null}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="border-[#2f3341] bg-dark-900">
+                      {availableChannels.length === 0 ? (
+                        <div className="p-2 text-sm text-[#8d94a8]">Brak dostępnych kanałów głosowych</div>
+                      ) : (
+                        availableChannels.map((channel) => (
+                          <SelectItem key={channel.id} value={channel.id}>
+                            <div className="flex items-center gap-2">
+                              <Mic className="h-4 w-4 text-[#8d94a8]" />
+                              {channel.name}
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                <div className="inline-flex rounded-md bg-dark-900 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedType("panel")}
+                    className={cn(
+                      "rounded px-3 py-1.5 text-xs font-medium transition-colors",
+                      selectedType === "panel" ? "bg-[#3b82f6] text-white" : "text-[#8d94a8] hover:text-white",
+                    )}
+                  >
+                    Panel zarządzania
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedType("standard")}
+                    className={cn(
+                      "rounded px-6 py-1.5 text-xs font-medium transition-colors",
+                      selectedType === "standard" ? "bg-[#3b82f6] text-white" : "text-[#8d94a8] hover:text-white",
+                    )}
+                  >
+                    Standardowy
+                  </button>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={() => void handleAddChannel()}
+                  disabled={adding || !selectedChannelId}
+                  className="flex w-fit bg-[#3b82f6] text-white hover:bg-[#2563eb] disabled:opacity-50"
+                >
+                  {adding ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  Dodaj kanał tymczasowy
+                </Button>
               </div>
 
-              {/* Channel Selection */}
-              <SlideIn direction="up" delay={150}>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="creator-channel">
-                      Dodaj kanał kreator
-                      <span className="ml-2 text-xs text-muted-foreground">(kanał głosowy)</span>
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1 mb-2">
-                      Możesz dodać wiele kanałów - każdy z nich będzie tworzył tymczasowe kanały.
-                    </p>
-                    <div className="flex gap-2">
-                      <Select
-                        value={selectedChannelId}
-                        onValueChange={setSelectedChannelId}
-                      >
-                        <SelectTrigger id="creator-channel" className="flex-1">
-                          <SelectValue placeholder="Wybierz kanał głosowy...">
-                            {selectedChannelId && (
-                              <div className="flex items-center gap-2">
-                                <Mic className="w-4 h-4" />
-                                {getChannelName(selectedChannelId)}
-                              </div>
-                            )}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {voiceChannels.length === 0 ? (
-                            <div className="p-2 text-sm text-muted-foreground">
-                              Brak kanałów głosowych
-                            </div>
-                          ) : (
-                            voiceChannels
-                              .filter(ch => !(config.channelIds || []).includes(ch.id))
-                              .map((channel) => (
-                                <SelectItem key={channel.id} value={channel.id}>
-                                  <div className="flex items-center gap-2">
-                                    <Mic className="w-4 h-4" />
-                                    {channel.name}
-                                  </div>
-                                </SelectItem>
-                              ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        onClick={handleAddChannel}
-                        disabled={!selectedChannelId}
-                        variant="outline"
-                        size="icon"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* List of configured channels */}
-                  {(config.channelIds || []).length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Skonfigurowane kanały kreatory ({(config.channelIds || []).length})</Label>
-                      <div className="space-y-2">
-                        {(config.channelIds || []).map((channelId) => (
-                          <div
-                            key={channelId}
-                            className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/50"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Mic className="w-4 h-4 text-bot-primary" />
-                              <span className="text-sm font-medium">
-                                {getChannelName(channelId)}
-                              </span>
-                            </div>
-                            <Button
-                              onClick={() => handleRemoveChannel(channelId)}
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              {/* ── Live preview ─────────────────────────────────────── */}
+              <div className="space-y-2 rounded-md bg-dark-900/30 p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Podgląd
                 </div>
-              </SlideIn>
+                <TempChannelLivePreview type={selectedType} />
+              </div>
+            </div>
 
-              {/* Active Temp Channels List */}
-              {activeTempChannels.length > 0 && (
-                <SlideIn direction="up" delay={200}>
-                  <Card className="backdrop-blur bg-background/30">
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Users className="w-5 h-5 text-bot-primary" />
-                        Aktywne Kanały Tymczasowe
-                      </CardTitle>
-                      <CardDescription>
-                        Lista obecnie utworzonych kanałów tymczasowych
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {activeTempChannels.map((tempChannel) => {
-                          const channel = channels.find(c => c.id === tempChannel.channelId);
-                          const ownerMention = `<@${tempChannel.ownerId}>`;
-                          
-                          return (
-                            <div
-                              key={tempChannel._id}
-                              className="flex items-center justify-between gap-2 p-3 rounded-lg bg-background/50 border border-border/50"
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <Mic className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium truncate">
-                                    {channel?.name || 'Kanał usunięty'}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    Właściciel: {ownerMention}
-                                  </p>
-                                </div>
-                              </div>
-
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </SlideIn>
-              )}
-
-              <Button 
-                onClick={handleSave} 
-                disabled={saving}
-                className="btn-gradient hover:scale-105 w-full"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                    Zapisywanie...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 w-4 h-4" />
-                    {(config.channelIds || []).length === 0 ? 'Usuń konfigurację' : 'Zapisz konfigurację'}
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+            {/* ── Configured channels list ─────────────────────────── */}
+            {creators.length > 0 ? (
+              <div className="space-y-2 pt-2">
+                <p className="text-xs font-semibold text-[#c4cad8]">
+                  Skonfigurowane kanały tymczasowe ({creators.length})
+                </p>
+                <div className="space-y-2">
+                  {creators.map((creator) => (
+                    <TempChannelListItem
+                      key={creator.channelId}
+                      channelId={creator.channelId}
+                      channelName={getChannelName(creator.channelId)}
+                      type={creator.type}
+                      saving={savingChannelId === creator.channelId}
+                      onSave={handleUpdateType}
+                      onDelete={(channelId) => void handleDeleteChannel(channelId)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </SlideIn>
       </div>
     </div>

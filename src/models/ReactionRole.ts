@@ -5,7 +5,9 @@ class ReactionRole {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
-  @prop({ default: false, type: () => Boolean })
+  // Opt-out semantics: no dashboard UI writes this field yet, so existing
+  // panels (created before this flag was enforced) must stay active.
+  @prop({ default: true, type: () => Boolean })
   public enabled!: boolean;
 
   @prop({ required: true, type: () => String })

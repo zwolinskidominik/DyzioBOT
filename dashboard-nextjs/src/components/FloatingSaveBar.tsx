@@ -60,7 +60,7 @@ export function FloatingSaveBar() {
             className="h-9 bg-[#3b82f6] px-3 text-xs font-semibold text-white hover:bg-[#5b9bff]"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {isSaving ? "Zapisywanie" : "Zapisz"}
+            {isSaving ? "Zapisywanie" : controller?.saveLabel ?? "Zapisz"}
           </Button>
         </div>
       </div>

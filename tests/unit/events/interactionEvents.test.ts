@@ -72,6 +72,19 @@ jest.mock('../../../src/services/ticketService', () => ({
   validateTicketCreation: jest.fn().mockResolvedValue({ ok: false, message: 'error' }),
   takeTicket: jest.fn().mockResolvedValue({ ok: true }),
   closeTicket: jest.fn().mockResolvedValue({ ok: true }),
+  registerTicketChannel: jest.fn().mockResolvedValue({ ok: true }),
+  getStaffRoleIdsForChannel: jest.fn().mockResolvedValue(['r1']),
+  getTicketState: jest.fn().mockResolvedValue({
+    ok: true,
+    data: { channelId: 'ch1', assignedTo: null, typeId: 'help', creatorId: 'someone-else' },
+  }),
+}));
+
+jest.mock('../../../src/utils/ticketBannerRenderer', () => ({
+  getTicketBannerAttachment: jest.fn().mockResolvedValue({
+    buffer: Buffer.from('fake-png'),
+    filename: 'ticketBanner.png',
+  }),
 }));
 
 jest.mock('../../../src/config/guild', () => ({

@@ -5,7 +5,7 @@ import logger from '../utils/logger';
 
 export async function notifyLevelUp(c: Client, gid: string, uid: string, lvl: number) {
   const cfg = await LevelConfigModel.findOne({ guildId: gid }).lean();
-  if (!cfg?.notifyChannelId) return;
+  if (!cfg) return;
 
   const g = c.guilds.cache.get(gid);
   if (!g) return;
@@ -16,26 +16,45 @@ export async function notifyLevelUp(c: Client, gid: string, uid: string, lvl: nu
   }
   if (!m) return;
 
-  await syncRewardRoles(m, lvl, cfg.roleRewards);
+  // Synchronizacja ról-nagród nie może zależeć od tego, czy skonfigurowano
+  // kanał powiadomień — wcześniej brak notifyChannelId blokował przyznawanie
+  // ról w ogóle.
+  await syncRewardRoles(m, lvl, cfg.roleRewards ?? [], cfg.removePreviousRewards ?? true);
 
-  const rewardForLevel = cfg.roleRewards?.find(r => r.level === lvl);
-  
-  if (!rewardForLevel) return;
+  if (!cfg.notifyChannelId) return;
 
   const ch = g.channels.cache.get(cfg.notifyChannelId) as TextChannel | undefined;
   if (!ch?.send) return;
 
   const am: MessageMentionOptions = { users: [uid as Snowflake], roles: [] };
+  const rewardForLevel = cfg.roleRewards?.find(r => r.level === lvl);
 
-  const tpl = rewardForLevel.rewardMessage?.trim() || cfg.rewardMessage?.trim() || '🎉 {user} zdobył nową rolę {roleId} za poziom **{level}**!';
+  if (rewardForLevel) {
+    const tpl = rewardForLevel.rewardMessage?.trim() || cfg.rewardMessage?.trim() || '🎉 {user} zdobył nową rolę {roleId} za poziom **{level}**!';
 
-  await ch
-    .send({
-      content: tpl
-        .replace(/{user}/g, `<@${uid}>`)
-        .replace(/{level}/g, `${lvl}`)
-        .replace(/{roleId}/g, `<@&${rewardForLevel.roleId}>`),
-      allowedMentions: am,
-    })
-    .catch(logger.error);
+    await ch
+      .send({
+        content: tpl
+          .replace(/{user}/g, `<@${uid}>`)
+          .replace(/{level}/g, `${lvl}`)
+          .replace(/{roleId}/g, `<@&${rewardForLevel.roleId}>`),
+        allowedMentions: am,
+      })
+      .catch(logger.error);
+    return;
+  }
+
+  // Brak nagrody za ten poziom — wyślij ogólną wiadomość o awansie, jeśli
+  // włączona (wcześniej enableLevelUpMessages/levelUpMessage nie były
+  // nigdzie odczytywane).
+  if (cfg.enableLevelUpMessages && cfg.levelUpMessage?.trim()) {
+    await ch
+      .send({
+        content: cfg.levelUpMessage
+          .replace(/{user}/g, `<@${uid}>`)
+          .replace(/{level}/g, `${lvl}`),
+        allowedMentions: am,
+      })
+      .catch(logger.error);
+  }
 }

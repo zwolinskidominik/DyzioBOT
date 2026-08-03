@@ -2,18 +2,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
 import { getCachedGuildFromList, type CachedDiscordGuild } from "@/lib/discordGuildCache";
+import { fetchDiscordUserGuildsDeduped, type DiscordGuildSummary } from "@/lib/discordUserGuilds";
 
 export const dynamic = 'force-dynamic';
 
 const FRESH_CACHE_MS = 10_000;
 const STALE_CACHE_MS = 30 * 60_000;
-
-interface DiscordGuildSummary {
-  id: string;
-  name: string;
-  icon: string | null;
-  permissions: string;
-}
 
 interface GuildAvailability extends DiscordGuildSummary {
   hasBot: boolean;
@@ -26,16 +20,6 @@ interface CacheEntry {
 }
 
 const availabilityCache = new Map<string, CacheEntry>();
-
-function isDiscordGuildSummary(value: unknown): value is DiscordGuildSummary {
-  if (!value || typeof value !== "object") return false;
-  return (
-    "id" in value && typeof value.id === "string" &&
-    "name" in value && typeof value.name === "string" &&
-    "permissions" in value && typeof value.permissions === "string" &&
-    "icon" in value && (typeof value.icon === "string" || value.icon === null)
-  );
-}
 
 function noStoreResponse(body: unknown, init?: ResponseInit) {
   const headers = new Headers(init?.headers);
@@ -64,14 +48,6 @@ function getRetryAfterSeconds(response: Response): string | null {
   if (retryAfter) return retryAfter;
 
   return null;
-}
-
-async function readErrorText(response: Response): Promise<string> {
-  try {
-    return await response.text();
-  } catch {
-    return "";
-  }
 }
 
 function toAvailability(guild: CachedDiscordGuild | DiscordGuildSummary): GuildAvailability {
@@ -112,48 +88,40 @@ export async function GET(
       return noStoreResponse(result, { headers: { "X-Deezy-Cache": "guild-list" } });
     }
 
-    const response = await fetch("https://discord.com/api/v10/users/@me/guilds", {
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-    });
+    const userGuildsResult = await fetchDiscordUserGuildsDeduped(userId, session.accessToken);
 
-    if (!response.ok) {
-      const errorText = await readErrorText(response);
-
+    if (!userGuildsResult.ok) {
       const stale = getCachedAvailability(cacheKey, STALE_CACHE_MS);
-      if (response.status === 429 && stale) {
+      if (userGuildsResult.status === 429 && stale) {
         return noStoreResponse(stale, {
           headers: {
-            "Retry-After": getRetryAfterSeconds(response) ?? "1",
+            "Retry-After": userGuildsResult.retryAfter ?? "1",
             "X-Deezy-Cache": "stale",
           },
         });
       }
 
       const guildListFallback = getCachedGuildFromList(userId, guildId, STALE_CACHE_MS);
-      if (response.status === 429 && guildListFallback) {
+      if (userGuildsResult.status === 429 && guildListFallback) {
         const result = toAvailability(guildListFallback);
         cacheAvailability(cacheKey, result);
         return noStoreResponse(result, {
           headers: {
-            "Retry-After": getRetryAfterSeconds(response) ?? "1",
+            "Retry-After": userGuildsResult.retryAfter ?? "1",
             "X-Deezy-Cache": "guild-list-stale",
           },
         });
       }
 
-      console.error("Discord API error:", response.status, errorText);
+      console.error("Discord API error:", userGuildsResult.status, userGuildsResult.errorText);
 
       return noStoreResponse(
-        { error: "Failed to fetch guilds from Discord", transient: response.status === 429 },
-        { status: response.status }
+        { error: "Failed to fetch guilds from Discord", transient: userGuildsResult.status === 429 },
+        { status: userGuildsResult.status || 502 }
       );
     }
 
-    const payload: unknown = await response.json();
-    const guilds = Array.isArray(payload) ? payload.filter(isDiscordGuildSummary) : [];
-    const guild = guilds.find((item) => item.id === guildId);
+    const guild = userGuildsResult.guilds.find((item) => item.id === guildId);
 
     if (!guild) {
       availabilityCache.delete(cacheKey);

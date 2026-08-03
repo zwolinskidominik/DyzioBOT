@@ -76,7 +76,8 @@ describe('Model integration tests', () => {
   describe('AutoRoleModel', () => {
     it('creates with defaults', async () => {
       const doc = await AutoRoleModel.create({ guildId: GID });
-      expect(doc.roleIds).toEqual([]);
+      expect(doc.userRoleIds).toEqual([]);
+      expect(doc.botRoleIds).toEqual([]);
       expect(doc.enabled).toBe(false);
     });
   });

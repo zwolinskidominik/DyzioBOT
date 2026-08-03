@@ -3,6 +3,20 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import { randomUUID } from 'crypto';
 import mongoose from 'mongoose';
+import { getBotEmojiIds, findInvalidCustomEmojis } from '@/lib/botEmojis';
+
+async function validateReactions(reactions: unknown): Promise<string | null> {
+  if (reactions === undefined) return null;
+  if (!Array.isArray(reactions) || !reactions.every((r) => typeof r === 'string')) {
+    return 'Reactions musi być tablicą stringów';
+  }
+  const botEmojiIds = await getBotEmojiIds();
+  const invalid = findInvalidCustomEmojis(reactions, botEmojiIds);
+  if (invalid.length > 0) {
+    return 'Można używać tylko standardowych emoji lub emoji bota';
+  }
+  return null;
+}
 
 const questionSchema = new mongoose.Schema({
   questionId: { type: String, default: () => randomUUID() },
@@ -68,8 +82,13 @@ export async function POST(
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
     }
 
+    const reactionsError = await validateReactions(reactions);
+    if (reactionsError) {
+      return NextResponse.json({ error: reactionsError }, { status: 400 });
+    }
+
     await connectDB();
-    
+
     const question = new Question({
       questionId: randomUUID(),
       authorId: session.user.id,
@@ -121,6 +140,11 @@ export async function PATCH(
     // Regular update: content + reactions
     if (!content || content.trim() === '') {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
+    }
+
+    const reactionsError = await validateReactions(reactions);
+    if (reactionsError) {
+      return NextResponse.json({ error: reactionsError }, { status: 400 });
     }
 
     const question = await Question.findOneAndUpdate(

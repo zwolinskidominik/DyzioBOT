@@ -10,7 +10,7 @@ export default async function run(client: Client): Promise<void> {
     CRON.QUESTION_POST,
     async () => {
       try {
-        const questionConfigs = await QuestionConfigurationModel.find();
+        const questionConfigs = await QuestionConfigurationModel.find({ enabled: true });
         
         if (questionConfigs.length === 0) {
           return;

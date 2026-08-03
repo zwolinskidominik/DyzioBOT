@@ -244,11 +244,11 @@ const DEFAULT_FORM_VALUES: GreetingsFormData = {
   goodbyeFooterIconFile: "",
 };
 
-function Mee6Switch({ className, ...props }: React.ComponentProps<typeof Switch>) {
+function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch>) {
   return (
     <Switch
       className={cn(
-        "mee6-switch h-6 w-11 border-0 bg-[#636a80] shadow-none data-[state=checked]:bg-[#3b82f6] data-[state=unchecked]:bg-[#636a80] [&>span]:h-4 [&>span]:w-4 [&>span]:translate-x-1 [&>span]:bg-white [&>span]:shadow-none [&>span]:data-[state=checked]:translate-x-6 [&>span]:data-[state=unchecked]:translate-x-1",
+        "deezy-switch h-6 w-11 border-0 bg-[#636a80] shadow-none data-[state=checked]:bg-[#3b82f6] data-[state=unchecked]:bg-[#636a80] [&>span]:h-4 [&>span]:w-4 [&>span]:translate-x-1 [&>span]:bg-white [&>span]:shadow-none [&>span]:data-[state=checked]:translate-x-6 [&>span]:data-[state=unchecked]:translate-x-1",
         className
       )}
       {...props}
@@ -286,7 +286,7 @@ function SettingRow({ title, description, icon, checked, onCheckedChange, isOpen
           </span>
         </button>
 
-        {typeof checked === "boolean" && onCheckedChange ? <Mee6Switch checked={checked} onCheckedChange={onCheckedChange} /> : null}
+        {typeof checked === "boolean" && onCheckedChange ? <DeezySwitch checked={checked} onCheckedChange={onCheckedChange} /> : null}
 
         {isExpandable ? (
           <button type="button" onClick={onToggle} aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
@@ -308,15 +308,25 @@ function ChannelSelectField({ id, label, required = false, helperText, channels,
       </Label>
       <Select value={value || ""} onValueChange={onValueChange}>
         <SelectTrigger className="h-11 border-transparent bg-dark-900 text-white/90 focus:ring-[#3b82f6]/50 focus:ring-offset-0">
-          <SelectValue>
-            {value ? (
-              channels.find((channel) => channel.id === value)?.name || "Wybierz kanał..."
-            ) : (
+          {/* Radix ignoruje children SelectValue, gdy value="" — placeholder MUSI iść przez
+              prop placeholder, inaczej trigger renderuje się pusty (bez ikony i tekstu).
+              Radix sprawdza WYŁĄCZNIE surowy string value — jeśli kanał o tym ID zniknął
+              (usunięty na Discordzie / dane testowe), value dalej jest "prawdziwe" i placeholder
+              się nie włączy, więc obsługujemy ten przypadek ręcznie w children. */}
+          <SelectValue
+            placeholder={
               <div className="flex items-center gap-2 text-[#8d94a8]">
                 <Hash className="h-4 w-4" />
                 <span>Wybierz kanał...</span>
               </div>
-            )}
+            }
+          >
+            {value ? (
+              <div className="flex items-center gap-2">
+                <Hash className="h-4 w-4 text-[#8d94a8]" />
+                {channels.find((channel) => channel.id === value)?.name ?? "Wybierz kanał..."}
+              </div>
+            ) : null}
           </SelectValue>
         </SelectTrigger>
         <SelectContent className="border-[#2f3341] bg-dark-900">
@@ -895,7 +905,7 @@ export default function GreetingsPage() {
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
                 <span>Aktywne</span>
-                <Mee6Switch checked={values.enabled || false} onCheckedChange={(checked) => setBooleanField("enabled", checked)} aria-label="Włącz lub wyłącz greetings" />
+                <DeezySwitch checked={values.enabled || false} onCheckedChange={(checked) => setBooleanField("enabled", checked)} aria-label="Włącz lub wyłącz greetings" />
               </div>
             </header>
           </SlideIn>
@@ -978,8 +988,8 @@ export default function GreetingsPage() {
         ) : null}
 
         <style jsx global>{`
-          .mee6-switch span { position: relative; }
-          .mee6-switch span[data-state="checked"]::after { content: ""; position: absolute; inset: 5px; border-radius: 9999px; background: #3b82f6; }
+          .deezy-switch span { position: relative; }
+          .deezy-switch span[data-state="checked"]::after { content: ""; position: absolute; inset: 5px; border-radius: 9999px; background: #3b82f6; }
         `}</style>
       </div>
     </div>

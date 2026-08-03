@@ -6,10 +6,14 @@ import {
   ActionRowBuilder,
   ThreadAutoArchiveDuration,
 } from 'discord.js';
-import { isSuggestionChannel, createSuggestion } from '../../services/suggestionService';
+import {
+  isSuggestionChannel,
+  createSuggestion,
+  getSuggestionConfig,
+  SuggestionConfigData,
+} from '../../services/suggestionService';
 import { formatResults, createBaseEmbed } from '../../utils/embedHelpers';
 import { getBotConfig } from '../../config/bot';
-import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
 export default async function run(message: Message): Promise<void> {
@@ -25,6 +29,12 @@ export default async function run(message: Message): Promise<void> {
     if (!isSuggestion) {
       return;
     }
+
+    const configResult = await getSuggestionConfig(guildId);
+    if (!configResult.ok) {
+      return;
+    }
+    const config = configResult.data;
 
     const suggestionText = message.content.trim();
     if (!suggestionText) {
@@ -56,7 +66,7 @@ export default async function run(message: Message): Promise<void> {
       return;
     }
 
-    const suggestionEmbed = createSuggestionEmbed(botId, message, suggestionText);
+    const suggestionEmbed = createSuggestionEmbed(botId, message, suggestionText, config);
     const components = createVotingButtons(botId, result.data.suggestionId);
 
     await suggestionMessage.edit({
@@ -110,15 +120,27 @@ async function createDiscussionThread(
   }
 }
 
-function createSuggestionEmbed(botId: string, message: Message, suggestionText: string) {
-  return createBaseEmbed({
-    color: COLORS.DEFAULT,
-    authorName: message.author.username,
-    authorIcon: message.author.displayAvatarURL({ size: 256 }),
+function createSuggestionEmbed(
+  botId: string,
+  message: Message,
+  suggestionText: string,
+  config: SuggestionConfigData
+) {
+  const embed = createBaseEmbed({
+    color: config.embedColor,
+    ...(config.anonymous
+      ? {}
+      : {
+          authorName: message.author.username,
+          authorIcon: message.author.displayAvatarURL({ size: 256 }),
+        }),
+    ...(config.anonymous ? { footerText: '🕵️ Zgłoszenie anonimowe' } : {}),
   }).addFields([
     { name: 'Sugestia', value: suggestionText },
-    { name: 'Głosy', value: formatResults(botId) },
+    { name: 'Głosy', value: formatResults(botId, [], [], config.votingFormat) },
   ]);
+
+  return embed;
 }
 
 function createVotingButtons(botId: string, suggestionId: string) {

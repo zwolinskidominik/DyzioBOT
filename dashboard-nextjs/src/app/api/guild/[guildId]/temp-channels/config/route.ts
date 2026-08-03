@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import mongoose from "mongoose";
-import TempChannelConfigurationModel from "@/models/TempChannelConfiguration";
+import TempChannelConfigurationModel, { ITempChannelCreator } from "@/models/TempChannelConfiguration";
 import { createAuditLog } from "@/lib/auditLog";
 
 async function connectDB() {
@@ -30,7 +30,9 @@ export async function GET(
     if (!config) {
       config = await TempChannelConfigurationModel.create({
         guildId,
+        enabled: true,
         channelIds: [],
+        creators: [],
       });
     }
 
@@ -56,17 +58,29 @@ export async function POST(
 
     await connectDB();
     const { guildId } = await params;
-    const { channelIds } = await req.json();
+    const body = await req.json();
+    const creators: ITempChannelCreator[] = Array.isArray(body.creators)
+      ? body.creators
+      : (Array.isArray(body.channelIds) ? body.channelIds : []).map((channelId: string) => ({
+          channelId,
+          type: "panel" as const,
+        }));
+    const channelIds = creators.map((c) => c.channelId);
+
+    const existing = await TempChannelConfigurationModel.findOne({ guildId });
+    const enabled = typeof body.enabled === "boolean" ? body.enabled : (existing?.enabled ?? true);
 
     const db = mongoose.connection.db;
     if (!db) {
       throw new Error('Database connection not established');
     }
-    
+
     await db.collection('tempchannelconfigurations').deleteOne({ guildId });
     await db.collection('tempchannelconfigurations').insertOne({
       guildId,
+      enabled,
       channelIds,
+      creators,
       createdAt: new Date(),
       updatedAt: new Date(),
       __v: 0
@@ -83,6 +97,7 @@ export async function POST(
       description: `Zaktualizowano kanały tymczasowe (${channelIds.length} kanałów)`,
       metadata: {
         channelIds,
+        creators,
         count: channelIds.length,
       },
     });

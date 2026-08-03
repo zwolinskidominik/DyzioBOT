@@ -1,8 +1,9 @@
-import { User } from 'discord.js';
-
-export interface ITicketType {
-  title: string;
-  description: (user: User) => string;
-  color: string;
-  image: string;
-}
+export type {
+  ITicketBannerMode,
+  ITicketTypeBanner,
+  ITicketType,
+  ITicketAutomation,
+  ITicketPanelMessage,
+  ITicketConfig,
+  ITicketState,
+} from './Models';

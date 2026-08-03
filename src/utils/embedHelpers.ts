@@ -33,21 +33,33 @@ export function createErrorEmbed(description: string): EmbedBuilder {
   });
 }
 
+export type SuggestionVotingFormat = 'counts' | 'percent' | 'bar';
+
 export function formatResults(
   botId: string,
   upvotes: string[] = [],
-  downvotes: string[] = []
+  downvotes: string[] = [],
+  format: SuggestionVotingFormat = 'bar'
 ): string {
+  const total = upvotes.length + downvotes.length;
+  const upP = total ? (upvotes.length / total) * 100 : 0;
+  const downP = total ? (downvotes.length / total) * 100 : 0;
+
+  if (format === 'counts') {
+    return `👍 ${upvotes.length} głosów na tak • 👎 ${downvotes.length} głosów na nie`;
+  }
+
+  if (format === 'percent') {
+    return `👍 ${upP.toFixed(1)}% na tak • 👎 ${downP.toFixed(1)}% na nie`;
+  }
+
   const {
     emojis: { suggestionPB },
   } = getBotConfig(botId);
 
-  const total = upvotes.length + downvotes.length;
   const length = 14;
   const filled = total ? Math.round((upvotes.length / total) * length) : 0;
   const empty = length - filled;
-  const upP = total ? (upvotes.length / total) * 100 : 0;
-  const downP = total ? (downvotes.length / total) * 100 : 0;
 
   const bar =
     (filled ? suggestionPB.lf : suggestionPB.le) +

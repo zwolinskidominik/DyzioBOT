@@ -46,4 +46,7 @@ export const CRON = {
 
   /** Every hour — check if it's time to send Disboard review reminder */
   DISBOARD_REMINDER_CHECK: '0 * * * *',
+
+  /** Every 15 minutes — auto-close idle ticket channels past their guild threshold */
+  TICKET_AUTOCLOSE_CHECK: '*/15 * * * *',
 } as const;

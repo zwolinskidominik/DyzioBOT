@@ -30,12 +30,13 @@ const INTER_FONTS: FontDef[] = [
 
 const EXTRA_FONTS: FontDef[] = [
   { file: 'Daydream.otf', family: 'Daydream', weight: 'normal', style: 'normal' },
+  { file: 'Ageer.otf', family: 'Ageer', weight: 'normal', style: 'normal' },
 ];
 
 let fontsRegistered = false;
 
 /**
- * Register all project fonts (Inter + Daydream) once.
+ * Register all project fonts (Inter + Daydream + Ageer) once.
  * Safe to call multiple times — subsequent calls are no-ops.
  */
 export function registerProjectFonts(): void {

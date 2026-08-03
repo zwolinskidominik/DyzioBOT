@@ -6,7 +6,13 @@ import {
   takeTicket,
   closeTicket,
   getTicketState,
-  TICKET_TYPES,
+  getTicketTypes,
+  registerTicketChannel,
+  touchTicketActivity,
+  getStaffRoleIdsForChannel,
+  findIdleTicketGroups,
+  getTranscriptDestination,
+  slugifyChannelPrefix,
 } from '../../../src/services/ticketService';
 
 const GID = 'guild-ticket';
@@ -19,71 +25,147 @@ beforeEach(async () => {
 
 /* ── seed helpers ─────────────────────────────────────────── */
 
-async function seedConfig(overrides: Partial<{ guildId: string; categoryId: string }> = {}) {
+const SAMPLE_TYPES = [
+  {
+    id: 'help',
+    emoji: '❓',
+    name: 'Dział pomocy',
+    description: 'Witaj {user}! Opisz swój problem.',
+    roleIds: ['role-mod'],
+    color: '#5865F2',
+    banner: { mode: 'preset' as const, presetId: 'ticketBanner' },
+  },
+  {
+    id: 'report',
+    emoji: '🚫',
+    name: 'Zgłoszenie',
+    description: 'Witaj {user}! Opisz naruszenie.',
+    roleIds: ['role-mod', 'role-admin'],
+    color: '#ED4245',
+    banner: { mode: 'text' as const, text: 'Zgłoszenie' },
+  },
+];
+
+async function seedConfig(
+  overrides: Partial<{
+    guildId: string;
+    categoryId: string;
+    types: typeof SAMPLE_TYPES;
+    automation: Partial<{
+      maxOpenPerUser: number;
+      autoCloseHours: number;
+      transcriptEnabled: boolean;
+      transcriptChannelId: string;
+    }>;
+  }> = {},
+) {
   return TicketConfigModel.create({
     guildId: GID,
     categoryId: 'cat-1',
     enabled: true,
+    types: SAMPLE_TYPES,
     ...overrides,
   });
 }
 
-/* ── TICKET_TYPES ─────────────────────────────────────────── */
+/* ── getTicketTypes ───────────────────────────────────────── */
 
-describe('TICKET_TYPES', () => {
-  it('defines all 5 ticket types', () => {
-    expect(Object.keys(TICKET_TYPES)).toHaveLength(5);
-    expect(TICKET_TYPES).toHaveProperty('help');
-    expect(TICKET_TYPES).toHaveProperty('report');
-    expect(TICKET_TYPES).toHaveProperty('partnership');
-    expect(TICKET_TYPES).toHaveProperty('idea');
-    expect(TICKET_TYPES).toHaveProperty('rewards');
+describe('getTicketTypes', () => {
+  it('returns configured types for a guild', async () => {
+    await seedConfig();
+    const res = await getTicketTypes(GID);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data).toHaveLength(2);
+    expect(res.data.map((t) => t.id)).toEqual(['help', 'report']);
   });
 
-  it('each type has required fields', () => {
-    for (const info of Object.values(TICKET_TYPES)) {
-      expect(info.title).toBeTruthy();
-      expect(info.channelPrefix).toBeTruthy();
-      expect(info.color).toBeTruthy();
-      expect(info.image).toBeTruthy();
-    }
+  it('returns an empty array when no config exists', async () => {
+    const res = await getTicketTypes(GID);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data).toEqual([]);
+  });
+});
+
+/* ── slugifyChannelPrefix ─────────────────────────────────── */
+
+describe('slugifyChannelPrefix', () => {
+  it('lowercases and hyphenates', () => {
+    expect(slugifyChannelPrefix('Zgłoszenie')).toBe('zgloszenie');
+  });
+
+  it('transliterates ł since it does not decompose under NFD', () => {
+    expect(slugifyChannelPrefix('Dział pomocy')).toBe('dzial-pomocy');
+  });
+
+  it('falls back to "ticket" for empty/symbol-only input', () => {
+    expect(slugifyChannelPrefix('!!!')).toBe('ticket');
   });
 });
 
 /* ── validateTicketCreation ───────────────────────────────── */
 
 describe('validateTicketCreation', () => {
-  it('returns config data for valid type', async () => {
+  it('returns config data for a valid, user-defined type', async () => {
     await seedConfig();
-    const res = await validateTicketCreation(GID, 'help', 'TestUser');
+    const res = await validateTicketCreation(GID, 'help', 'user-1', 'TestUser');
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.data.categoryId).toBe('cat-1');
-    expect(res.data.ticketType.title).toBe('Dział pomocy');
-    expect(res.data.channelName).toBe('pomoc-testuser');
+    expect(res.data.ticketType.name).toBe('Dział pomocy');
+    expect(res.data.ticketType.roleIds).toEqual(['role-mod']);
+    expect(res.data.ticketType.color).toBe('#5865F2');
+    expect(res.data.channelName).toBe('dzial-pomocy-testuser');
   });
 
   it('fails with NO_CONFIG when no config exists', async () => {
-    const res = await validateTicketCreation(GID, 'help', 'User');
+    const res = await validateTicketCreation(GID, 'help', 'user-1', 'User');
     expect(res.ok).toBe(false);
     if (res.ok) return;
     expect(res.code).toBe('NO_CONFIG');
   });
 
-  it('fails with INVALID_TYPE for unknown type', async () => {
+  it('fails with INVALID_TYPE for an unknown type id', async () => {
     await seedConfig();
-    const res = await validateTicketCreation(GID, 'unknown', 'User');
+    const res = await validateTicketCreation(GID, 'unknown', 'user-1', 'User');
     expect(res.ok).toBe(false);
     if (res.ok) return;
     expect(res.code).toBe('INVALID_TYPE');
   });
 
-  it('builds channel name as prefix-lowercase(username)', async () => {
+  it('builds channel name as slug(name)-lowercase(username)', async () => {
     await seedConfig();
-    const res = await validateTicketCreation(GID, 'report', 'CamelCase');
+    const res = await validateTicketCreation(GID, 'report', 'user-1', 'CamelCase');
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.data.channelName).toBe('zgloszenie-camelcase');
+  });
+
+  it('allows ticket creation when under the configured open-ticket limit', async () => {
+    await seedConfig({ automation: { maxOpenPerUser: 2 } });
+    await registerTicketChannel('ch-existing', GID, 'help', 'user-1');
+
+    const res = await validateTicketCreation(GID, 'report', 'user-1', 'User');
+    expect(res.ok).toBe(true);
+  });
+
+  it('fails with LIMIT_REACHED once the user hits automation.maxOpenPerUser', async () => {
+    await seedConfig({ automation: { maxOpenPerUser: 1 } });
+    await registerTicketChannel('ch-existing', GID, 'help', 'user-1');
+
+    const res = await validateTicketCreation(GID, 'report', 'user-1', 'User');
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.code).toBe('LIMIT_REACHED');
+  });
+
+  it('ignores the limit for other users', async () => {
+    await seedConfig({ automation: { maxOpenPerUser: 1 } });
+    await registerTicketChannel('ch-existing', GID, 'help', 'user-1');
+
+    const res = await validateTicketCreation(GID, 'report', 'user-2', 'User');
+    expect(res.ok).toBe(true);
   });
 });
 
@@ -147,10 +229,107 @@ describe('getTicketState', () => {
     expect(res.data.channelId).toBe('ch-1');
   });
 
-  it('returns null assignedTo when no state exists', async () => {
+  it('returns null assignedTo/typeId/creatorId when no state exists', async () => {
     const res = await getTicketState('nonexistent');
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.data.assignedTo).toBeNull();
+    expect(res.data.typeId).toBeNull();
+    expect(res.data.creatorId).toBeNull();
+  });
+});
+
+/* ── registerTicketChannel / getStaffRoleIdsForChannel ───── */
+
+describe('registerTicketChannel + getStaffRoleIdsForChannel', () => {
+  it('resolves staff roleIds from the type the channel was created under', async () => {
+    await seedConfig();
+    await registerTicketChannel('ch-1', GID, 'report', 'user-1');
+
+    const roleIds = await getStaffRoleIdsForChannel(GID, 'ch-1');
+    expect(roleIds).toEqual(['role-mod', 'role-admin']);
+
+    const state = await TicketStateModel.findOne({ channelId: 'ch-1' });
+    expect(state?.creatorId).toBe('user-1');
+    expect(state?.typeId).toBe('report');
+    expect(state?.guildId).toBe(GID);
+    expect(state?.lastActivityAt).toBeInstanceOf(Date);
+  });
+
+  it('returns an empty array for a channel with no registered state', async () => {
+    const roleIds = await getStaffRoleIdsForChannel(GID, 'unknown-channel');
+    expect(roleIds).toEqual([]);
+  });
+});
+
+/* ── touchTicketActivity ──────────────────────────────────── */
+
+describe('touchTicketActivity', () => {
+  it('bumps lastActivityAt for a registered ticket channel', async () => {
+    await seedConfig();
+    await registerTicketChannel('ch-1', GID, 'help', 'user-1');
+    const before = (await TicketStateModel.findOne({ channelId: 'ch-1' }))!.lastActivityAt;
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await touchTicketActivity('ch-1');
+
+    const after = (await TicketStateModel.findOne({ channelId: 'ch-1' }))!.lastActivityAt;
+    expect(after!.getTime()).toBeGreaterThanOrEqual(before!.getTime());
+  });
+
+  it('no-ops silently for a channel with no ticket state', async () => {
+    await expect(touchTicketActivity('not-a-ticket-channel')).resolves.toBeUndefined();
+  });
+});
+
+/* ── findIdleTicketGroups ─────────────────────────────────── */
+
+describe('findIdleTicketGroups', () => {
+  it('returns nothing when autoCloseHours is disabled (0)', async () => {
+    await seedConfig();
+    await registerTicketChannel('ch-1', GID, 'help', 'user-1');
+    await TicketStateModel.updateOne({ channelId: 'ch-1' }, { lastActivityAt: new Date(Date.now() - 1000 * 60 * 60 * 999) });
+
+    const groups = await findIdleTicketGroups();
+    expect(groups).toEqual([]);
+  });
+
+  it('groups idle channels past the guild threshold', async () => {
+    await seedConfig({ automation: { autoCloseHours: 1 } });
+    await registerTicketChannel('ch-idle', GID, 'help', 'user-1');
+    await registerTicketChannel('ch-fresh', GID, 'help', 'user-2');
+
+    await TicketStateModel.updateOne(
+      { channelId: 'ch-idle' },
+      { lastActivityAt: new Date(Date.now() - 1000 * 60 * 60 * 2) },
+    );
+
+    const groups = await findIdleTicketGroups();
+    expect(groups).toHaveLength(1);
+    expect(groups[0].guildId).toBe(GID);
+    expect(groups[0].autoCloseHours).toBe(1);
+    expect(groups[0].channelIds).toEqual(['ch-idle']);
+  });
+});
+
+/* ── getTranscriptDestination ─────────────────────────────── */
+
+describe('getTranscriptDestination', () => {
+  it('returns null when transcripts are disabled', async () => {
+    await seedConfig();
+    const dest = await getTranscriptDestination(GID);
+    expect(dest).toBeNull();
+  });
+
+  it('returns null when enabled but no channel is configured', async () => {
+    await seedConfig({ automation: { transcriptEnabled: true } });
+    const dest = await getTranscriptDestination(GID);
+    expect(dest).toBeNull();
+  });
+
+  it('returns the destination channel when fully configured', async () => {
+    await seedConfig({ automation: { transcriptEnabled: true, transcriptChannelId: 'log-channel' } });
+    const dest = await getTranscriptDestination(GID);
+    expect(dest).toEqual({ transcriptChannelId: 'log-channel' });
   });
 });

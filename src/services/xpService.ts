@@ -42,7 +42,7 @@ export async function modifyXp(client: Client, gid: string, uid: string, delta: 
     const g = client.guilds.cache.get(gid);
     if (g) {
       const m = await g.members.fetch(uid).catch(() => null);
-      if (m) await syncRewardRoles(m, lvl, rewards);
+      if (m) await syncRewardRoles(m, lvl, rewards, cfg?.removePreviousRewards ?? true);
     }
   }
   await LevelModel.updateOne({ guildId: gid, userId: uid }, { level: lvl, xp }, { upsert: true });
@@ -202,6 +202,9 @@ export interface XpConfigData {
   channelMultipliers: { channelId: string; multiplier: number }[];
   ignoredChannels: string[];
   ignoredRoles: string[];
+  cardThemeColor: string;
+  showRankBadge: boolean;
+  removePreviousRewards: boolean;
 }
 
 /* ── getConfig ────────────────────────────────────────────────── */
@@ -221,6 +224,7 @@ export async function trackMessage(
 ): Promise<boolean> {
   const cfg = await LevelConfigModel.findOne({ guildId }).lean();
 
+  if (!cfg?.enabled) return false;
   if (cfg?.ignoredChannels?.includes(channelId)) return false;
   if (cfg?.ignoredRoles?.some((r) => member.roles.cache.has(r))) return false;
 

@@ -1,6 +1,6 @@
 import { ServiceResult, ok, fail } from '../types/serviceResult';
 import { TempChannelModel } from '../models/TempChannel';
-import { TempChannelConfigurationModel } from '../models/TempChannelConfiguration';
+import { TempChannelConfigurationModel, TempChannelType } from '../models/TempChannelConfiguration';
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -17,7 +17,35 @@ export interface TransferResult {
   newOwnerId: string;
 }
 
+export interface CreatorChannelConfig {
+  channelId: string;
+  type: TempChannelType;
+}
+
 /* ── Service functions ────────────────────────────────────── */
+
+/**
+ * Get the full "creator" channel configuration (channel + panel/standard type) for a guild.
+ * Merges the new `creators` list with the legacy `channelIds` array (defaulting legacy
+ * entries to `panel`, matching the bot's historical behaviour before this field existed).
+ */
+export async function getCreatorConfigs(
+  guildId: string,
+): Promise<ServiceResult<CreatorChannelConfig[]>> {
+  const config = await TempChannelConfigurationModel.findOne({ guildId });
+  if (!config) return ok([]);
+  if (config.enabled === false) return ok([]);
+
+  const merged = new Map<string, CreatorChannelConfig>();
+  for (const channelId of config.channelIds ?? []) {
+    merged.set(channelId, { channelId, type: 'panel' });
+  }
+  for (const creator of config.creators ?? []) {
+    merged.set(creator.channelId, { channelId: creator.channelId, type: creator.type });
+  }
+
+  return ok(Array.from(merged.values()));
+}
 
 /**
  * Get the list of monitored "creator" channel IDs for a guild.
@@ -25,8 +53,9 @@ export interface TransferResult {
 export async function getMonitoredChannels(
   guildId: string,
 ): Promise<ServiceResult<string[]>> {
-  const config = await TempChannelConfigurationModel.findOne({ guildId });
-  return ok(config?.channelIds ?? []);
+  const result = await getCreatorConfigs(guildId);
+  if (!result.ok) return result;
+  return ok(result.data.map((c) => c.channelId));
 }
 
 /**

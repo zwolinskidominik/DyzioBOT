@@ -12,6 +12,8 @@ export default function run(client: Client) {
     
     for (const guild of client.guilds.cache.values()) {
       const cfg = await getConfig(guild.id);
+      if (!cfg?.enabled) continue;
+
       const xpPerMin = cfg?.xpPerMinVc ?? 10;
       const xpPerCheck = Math.round(xpPerMin / 2);
 

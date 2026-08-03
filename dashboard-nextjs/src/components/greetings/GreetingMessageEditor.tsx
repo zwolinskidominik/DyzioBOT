@@ -282,7 +282,7 @@ export function GreetingMessageEditor({
                     toolbarClassName="mt-2 gap-1.5"
                     variableLabel="Zmienne:"
                     variableButtonClassName="border-[#2f3341] bg-dark-900 px-2 py-1 text-[11px] text-[#58a6ff] hover:border-[#3b82f6]/60 hover:bg-dark-700 hover:text-[#8ec5ff]"
-                    className="discord-preview-editor px-0 text-sm leading-5 text-[#d8dbe6]"
+                    className="discord-preview-editor rounded-md border border-dashed border-[#2f3341] bg-dark-900 px-3 py-2 text-sm leading-5 text-[#d8dbe6] transition-colors hover:border-[#3b82f6]/60 focus:border-solid focus:border-bot-primary focus:outline-none focus:ring-1 focus:ring-bot-primary/60"
                   />
                 ) : (
                   <GreetingMessagePreview
@@ -363,7 +363,7 @@ export function GreetingMessageEditor({
                               variables={GREETING_VARIABLES}
                                 leading={renderInlineImageUpload("headerIcon", value.headerIconUrl, "Ikona headera")}
                               containerClassName="text-xs text-[#8d94a8]"
-                              inputClassName="min-w-0 flex-1 border-0 bg-transparent p-0 text-xs text-[#c4cad8] outline-none placeholder:text-[#8d94a8] focus:ring-0"
+                              inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-xs text-[#c4cad8] outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-bot-primary focus:ring-2 focus:ring-bot-primary/30 focus:ring-offset-0"
                             />
                           ) : null}
 
@@ -372,8 +372,8 @@ export function GreetingMessageEditor({
                             onChange={(next) => onValueChange("titleText", next)}
                             placeholder="Tytuł embeda"
                             variables={GREETING_VARIABLES}
-                            containerClassName={showHeaderRow ? "mt-3" : ""}
-                            inputClassName="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-semibold text-white outline-none placeholder:text-[#8d94a8] focus:ring-0"
+                            containerClassName={showHeaderRow ? "mt-2" : ""}
+                            inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-sm font-semibold text-white outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-bot-primary focus:ring-2 focus:ring-bot-primary/30 focus:ring-offset-0"
                           />
 
                           <div className="mt-2">
@@ -389,7 +389,7 @@ export function GreetingMessageEditor({
                               toolbarClassName="mt-2 gap-1.5"
                               variableLabel="Zmienne:"
                               variableButtonClassName="border-[#2f3341] bg-dark-900 px-2 py-1 text-[11px] text-[#58a6ff] hover:border-[#3b82f6]/60 hover:bg-dark-700 hover:text-[#8ec5ff]"
-                              className="discord-preview-editor px-0 text-sm leading-5 text-[#d8dbe6]"
+                              className="discord-preview-editor rounded-md border border-[#3f4455] bg-dark-800 text-sm leading-5 text-[#d8dbe6] transition-colors hover:border-[#3b82f6]/70 focus:border-bot-primary focus:ring-2 focus:ring-bot-primary/30 focus:ring-offset-0"
                             />
                           </div>
                         </div>
@@ -501,7 +501,7 @@ export function GreetingMessageEditor({
                           variables={GREETING_VARIABLES}
                           leading={renderInlineImageUpload("footerIcon", value.footerIconUrl, "Ikona footera")}
                           containerClassName="mt-4 text-xs text-[#8d94a8]"
-                          inputClassName="min-w-0 flex-1 border-0 bg-transparent p-0 text-xs text-[#c4cad8] outline-none placeholder:text-[#8d94a8] focus:ring-0"
+                          inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-xs text-[#c4cad8] outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-bot-primary focus:ring-2 focus:ring-bot-primary/30 focus:ring-offset-0"
                         />
                       ) : null}
                     </div>

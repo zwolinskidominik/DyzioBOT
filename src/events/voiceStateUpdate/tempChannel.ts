@@ -7,7 +7,7 @@ import {
   GuildChannelTypes,
 } from 'discord.js';
 import {
-  getMonitoredChannels as fetchMonitoredChannels,
+  getCreatorConfigs,
   saveTempChannel,
   deleteTempChannel,
   transferOwnership,
@@ -21,15 +21,19 @@ import logger from '../../utils/logger';
 
 export default async function run(oldState: VoiceState, newState: VoiceState): Promise<void> {
   try {
-    const monResult = await fetchMonitoredChannels(newState.guild.id);
-    const monitoredChannelIds = monResult.ok ? monResult.data : [];
+    const configResult = await getCreatorConfigs(newState.guild.id);
+    const creatorConfigs = configResult.ok ? configResult.data : [];
+    const monitoredChannelIds = creatorConfigs.map((c) => c.channelId);
 
     if (isJoiningMonitoredChannel(oldState, newState, monitoredChannelIds)) {
+      const creatorType = creatorConfigs.find((c) => c.channelId === newState.channelId)?.type ?? 'panel';
       const newChannel = await createTemporaryChannel(newState);
 
       const tempChannelData = await saveTemporaryChannelRecord(newState, newChannel);
 
-      await sendControlPanel(newChannel, tempChannelData);
+      if (creatorType === 'panel') {
+        await sendControlPanel(newChannel, tempChannelData);
+      }
 
       await moveUserToChannel(newState, newChannel);
     }

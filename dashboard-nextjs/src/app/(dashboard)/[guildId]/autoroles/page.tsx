@@ -28,7 +28,7 @@ function getRoleColor(color: number): string {
   return `#${color.toString(16).padStart(6, "0")}`;
 }
 
-function Mee6Switch({ className, ...props }: React.ComponentProps<typeof Switch>) {
+function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch>) {
   return (
     <Switch
       className={cn(
@@ -76,7 +76,7 @@ function SettingRow({
           </span>
         </button>
 
-        {typeof checked === "boolean" && onCheckedChange ? <Mee6Switch checked={checked} onCheckedChange={onCheckedChange} /> : null}
+        {typeof checked === "boolean" && onCheckedChange ? <DeezySwitch checked={checked} onCheckedChange={onCheckedChange} /> : null}
 
         {isExpandable ? (
           <button type="button" onClick={onToggle} aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
@@ -311,7 +311,7 @@ export default function AutoRolePage() {
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
               <span>Aktywne</span>
-              <Mee6Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Włącz lub wyłącz auto role" />
+              <DeezySwitch checked={enabled} onCheckedChange={setEnabled} aria-label="Włącz lub wyłącz auto role" />
             </div>
           </header>
         </SlideIn>
