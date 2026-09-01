@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
-  Loader2, Save, Hash, Trash2, Pencil, Cake, ChevronDown, Search, Settings, EyeOff,
+  Save, Hash, Trash2, Pencil, Cake, ChevronDown, Search, Settings, EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +20,20 @@ import { SlideIn } from "@/components/ui/animated";
 import { fetchGuildData } from "@/lib/cache";
 import { cn } from "@/lib/utils";
 import VariableInserter from "@/components/VariableInserter";
+import { useDirtyState } from "@/components/DirtyStateProvider";
+import { DiscordMessagePreview } from "@/components/DiscordMessagePreview";
+
+/** Niewidoczny sentinel otaczający podstawioną wartość zmiennej — DiscordMessagePreview
+ * renderuje taki fragment jako wzmiankę (chip), patrz reguła w DiscordMessagePreview.tsx. */
+const SENTINEL = "";
+function mention(value: string): string {
+  return `${SENTINEL}${value}${SENTINEL}`;
+}
+
+/** Podstawia {user} przykładową wzmianką do podglądu na żywo. */
+function resolveBirthdayPreview(template: string): string {
+  return template.replace(/\{user\}/g, mention("@Deezy"));
+}
 
 const MONTHS = [
   { value: "1", label: "Styczeń" },
@@ -44,6 +58,13 @@ const birthdaySchema = z.object({
 });
 
 type BirthdayFormData = z.infer<typeof birthdaySchema>;
+
+const DEFAULT_FORM_VALUES: BirthdayFormData = {
+  birthdayChannelId: "",
+  roleId: "",
+  message: "🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂",
+  enabled: false,
+};
 
 interface Channel {
   id: string;
@@ -163,6 +184,7 @@ function CountdownBadge({ days }: { days: number }) {
 export default function BirthdaysPage() {
   const params = useParams();
   const guildId = params.guildId as string;
+  const { registerDirtyController } = useDirtyState();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -179,20 +201,17 @@ export default function BirthdaysPage() {
   const [editMonth, setEditMonth] = useState("");
   const [editYear, setEditYear] = useState("");
 
+  const savedValuesRef = useRef<BirthdayFormData>(DEFAULT_FORM_VALUES);
+
   const {
     handleSubmit,
     setValue,
     watch,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<BirthdayFormData>({
     resolver: zodResolver(birthdaySchema),
-    defaultValues: {
-      birthdayChannelId: "",
-      roleId: "",
-      message: "🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂",
-      enabled: false,
-    },
+    defaultValues: DEFAULT_FORM_VALUES,
   });
 
   const values = watch();
@@ -218,12 +237,14 @@ export default function BirthdaysPage() {
         if (configRes.ok) {
           const config = await configRes.json();
           if (config && config.birthdayChannelId) {
-            reset({
+            const nextValues: BirthdayFormData = {
               birthdayChannelId: config.birthdayChannelId,
               roleId: config.roleId || "",
-              message: config.message || "🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂",
+              message: config.message || DEFAULT_FORM_VALUES.message,
               enabled: config.enabled !== undefined ? config.enabled : false,
-            });
+            };
+            savedValuesRef.current = nextValues;
+            reset(nextValues, { keepDirty: false });
           }
         }
       } catch (fetchError) {
@@ -238,7 +259,7 @@ export default function BirthdaysPage() {
     void fetchData();
   }, [guildId, reset]);
 
-  const onSubmit = async (data: BirthdayFormData) => {
+  const onSubmit = useCallback(async (data: BirthdayFormData) => {
     setSaving(true);
     try {
       const response = await fetch(`/api/guild/${guildId}/birthdays`, {
@@ -254,15 +275,33 @@ export default function BirthdaysPage() {
       }
 
       await response.json();
+      savedValuesRef.current = data;
+      reset(data, { keepDirty: false });
       toast.success("Konfiguracja urodzin została zapisana!");
-      setConfigOpen(false);
     } catch (saveError) {
       console.error("Failed to save:", saveError);
       toast.error("Nie udało się zapisać konfiguracji");
     } finally {
       setSaving(false);
     }
-  };
+  }, [guildId, reset]);
+
+  const handleCancel = useCallback(() => {
+    reset(savedValuesRef.current, { keepDirty: false });
+  }, [reset]);
+
+  const submitFromDirtyBar = useCallback(() => {
+    void handleSubmit(onSubmit, () => setConfigOpen(true))();
+  }, [handleSubmit, onSubmit]);
+
+  useEffect(() => registerDirtyController({
+    id: `birthdays-${guildId}`,
+    isDirty,
+    isSaving: saving,
+    label: "Urodziny",
+    onSave: submitFromDirtyBar,
+    onCancel: handleCancel,
+  }), [guildId, handleCancel, isDirty, registerDirtyController, saving, submitFromDirtyBar]);
 
   const handleEditBirthday = async (userId: string) => {
     const day = parseInt(editDay);
@@ -354,7 +393,7 @@ export default function BirthdaysPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <ErrorState
             title="Nie udało się załadować urodzin"
@@ -368,7 +407,7 @@ export default function BirthdaysPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full space-y-5">
           <div className="flex items-start justify-between gap-6 pb-2">
             <div className="space-y-3"><Skeleton className="h-7 w-56" /><Skeleton className="h-4 w-[520px] max-w-full" /></div>
@@ -417,7 +456,7 @@ export default function BirthdaysPage() {
   });
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-full pb-32">
       <div className="w-full space-y-5">
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
@@ -428,7 +467,7 @@ export default function BirthdaysPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>Aktywne</span>
+              <span>{values.enabled ? "Aktywne" : "Nieaktywne"}</span>
               <DeezySwitch
                 checked={values.enabled || false}
                 onCheckedChange={(checked) => setValue("enabled", checked, { shouldDirty: true })}
@@ -443,7 +482,7 @@ export default function BirthdaysPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł urodzin jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację i listę urodzin, ale bot nie wyśle życzeń, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                Moduł Urodzin jest <span className="font-semibold text-white/80">wyłączony na tym serwerze</span>. Bot nie wyśle życzeń, a komendy <span className="font-semibold text-white/80">/birthday</span>, <span className="font-semibold text-white/80">/birthdays-next</span>, <span className="font-semibold text-white/80">/birthday-remember</span> i <span className="font-semibold text-white/80">/birthday-set-user</span> nie zadziałają, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
               </span>
             </div>
           </SlideIn>
@@ -515,7 +554,7 @@ export default function BirthdaysPage() {
             isOpen={configOpen}
             onToggle={() => setConfigOpen((open) => !open)}
           >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div className="space-y-5">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className={labelClass}>
@@ -599,42 +638,42 @@ export default function BirthdaysPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className={labelClass}>
-                  Wiadomość urodzinowa <span className="text-destructive">*</span>
-                </Label>
-                <VariableInserter
-                  value={values.message || ""}
-                  onChange={(value) => setValue("message", value, { shouldDirty: true })}
-                  variables={[
-                    { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
-                  ]}
-                  placeholder="🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂"
-                  rows={3}
-                  unstyled
-                  className="rounded-md border border-[#3f4455] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
-                />
-                {errors.message && (
-                  <p className="text-xs text-destructive">{errors.message.message}</p>
-                )}
-              </div>
-
-              <div className="flex justify-end">
-                <Button type="submit" disabled={saving} className="bg-[#3b82f6] text-white hover:bg-[#2563eb]">
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Zapisywanie...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Zapisz konfigurację
-                    </>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className={labelClass}>
+                    Wiadomość urodzinowa <span className="text-destructive">*</span>
+                  </Label>
+                  <VariableInserter
+                    value={values.message || ""}
+                    onChange={(value) => setValue("message", value, { shouldDirty: true })}
+                    variables={[
+                      { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
+                    ]}
+                    placeholder="🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂"
+                    rows={3}
+                    emojiPicker
+                    unstyled
+                    className="rounded-md border border-[#3f4455] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
+                  />
+                  {errors.message && (
+                    <p className="text-xs text-destructive">{errors.message.message}</p>
                   )}
-                </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd na żywo</p>
+                  <DiscordMessagePreview
+                    compact
+                    avatarUrl="/deezy.png"
+                    content={
+                      values.message?.trim()
+                        ? resolveBirthdayPreview(values.message)
+                        : "*Brak treści wiadomości*"
+                    }
+                  />
+                </div>
               </div>
-            </form>
+            </div>
           </SettingRow>
         </SlideIn>
 

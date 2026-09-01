@@ -198,7 +198,7 @@ export default function GuildDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <Skeleton className="h-10 w-48 mb-4" />
           <div className="flex items-center gap-4 mb-8">
@@ -224,7 +224,7 @@ export default function GuildDashboard() {
 
   if (!guild?.botPresent) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-full flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Bot nie jest na serwerze</CardTitle>
@@ -252,7 +252,7 @@ export default function GuildDashboard() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-full">
       <div className="w-full">
         {/* Header */}
         <SlideIn direction="up">
@@ -267,7 +267,7 @@ export default function GuildDashboard() {
               )}
               <div>
                 <h1 className="text-3xl font-bold mb-1 text-white/90">
-                  Panel główny - {guild.name}
+                  Strona główna - {guild.name}
                 </h1>
                 <p className="text-muted-foreground">Przegląd aktywności serwera</p>
               </div>

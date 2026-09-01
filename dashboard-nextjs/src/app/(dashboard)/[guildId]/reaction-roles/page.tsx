@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import {
-  ChevronDown, Hash, Loader2, Pencil, Plus, Save, Search, Send, Smile, Trash2,
+  ChevronDown, EyeOff, Hash, Loader2, Pencil, Plus, Save, Search, Send, Smile, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import EmojiPicker from "@/components/EmojiPicker";
@@ -387,7 +387,7 @@ export default function ReactionRolesPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <ErrorState title="Nie udało się załadować reaction-roles" message={error} onRetry={handleRetry} />
         </div>
@@ -397,7 +397,7 @@ export default function ReactionRolesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full space-y-5">
           <div className="space-y-3 pb-2">
             <Skeleton className="h-7 w-52" />
@@ -415,7 +415,7 @@ export default function ReactionRolesPage() {
   }
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-full pb-16">
       <div className="w-full space-y-5">
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
@@ -426,11 +426,22 @@ export default function ReactionRolesPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>Aktywne</span>
+              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
               <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} disabled={savingEnabled} aria-label="Włącz lub wyłącz role za reakcje" />
             </div>
           </header>
         </SlideIn>
+
+        {!enabled ? (
+          <SlideIn direction="up" delay={130}>
+            <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
+              <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                Moduł ról za reakcje jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację, ale bot nie będzie przypisywał ról, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+              </span>
+            </div>
+          </SlideIn>
+        ) : null}
 
         <SlideIn direction="up" delay={150}>
           <div className="space-y-3">

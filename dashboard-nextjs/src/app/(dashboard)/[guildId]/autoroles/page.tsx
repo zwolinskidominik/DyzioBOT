@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { Bot, ChevronDown, Plus, TriangleAlert, Trash2, User as UserIcon } from "lucide-react";
+import { Bot, ChevronDown, EyeOff, Plus, TriangleAlert, Trash2, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -278,7 +278,7 @@ export default function AutoRolePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <ErrorState title="Nie udało się załadować Auto Role" message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />
       </div>
     );
@@ -286,7 +286,7 @@ export default function AutoRolePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full space-y-5">
           <div className="flex items-start justify-between gap-6 pb-2">
             <div className="space-y-3"><Skeleton className="h-7 w-48" /><Skeleton className="h-4 w-96 max-w-full" /></div>
@@ -299,7 +299,7 @@ export default function AutoRolePage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-full">
       <div className="w-full space-y-5">
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
@@ -310,11 +310,22 @@ export default function AutoRolePage() {
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>Aktywne</span>
+              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
               <DeezySwitch checked={enabled} onCheckedChange={setEnabled} aria-label="Włącz lub wyłącz auto role" />
             </div>
           </header>
         </SlideIn>
+
+        {!enabled ? (
+          <SlideIn direction="up" delay={130}>
+            <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
+              <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                Moduł auto ról jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację, ale bot nie przypisze ról nowym członkom, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+              </span>
+            </div>
+          </SlideIn>
+        ) : null}
 
         <SlideIn direction="up" delay={150}>
           <div className="space-y-3">

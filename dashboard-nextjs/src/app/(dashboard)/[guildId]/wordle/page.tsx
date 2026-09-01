@@ -1,18 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { OWNER_IDS } from "@/lib/owner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
@@ -26,19 +18,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
-import {
-  Search,
-  ArrowLeft,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  X,
-  Hash,
-  Puzzle,
-} from "lucide-react";
-import Link from "next/link";
-
-/* ── Types ─────────────────────────────────────────────────── */
+import { Search, Lock, Plus, X, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface WordleCategory {
   length: number;
@@ -51,23 +32,36 @@ interface WordleData {
   totalWords: number;
 }
 
-/* ── Constants ─────────────────────────────────────────────── */
-
-const POLISH_REGEX = /^[a-ząćęłńóśźż]+$/;
 const ALL_LENGTHS = [5, 6, 7];
+const POLISH_REGEX = /^[a-ząćęłńóśźż]+$/;
 
-const LENGTH_LABELS: Record<number, string> = {
-  5: "5-literowe (standard)",
-  6: "6-literowe",
-  7: "7-literowe",
-};
+const inputClass =
+  "h-11 border border-[#3f4455] bg-dark-900 text-white/90 placeholder:text-[#9aa2b8] focus-visible:border-[#3b82f6] focus-visible:ring-[#3b82f6]/30 focus-visible:ring-offset-0";
 
-const cardStyle = {
-  boxShadow: "0 0 10px #00000026",
-  border: "1px solid transparent",
-};
+/** Kafelki w stylu Wordle układające się w napis „SŁOWA" — jedyny element hero, który zachowuje kolory gry. */
+const HERO_TILES: { letter: string; color: string }[] = [
+  { letter: "S", color: "#22c55e" },
+  { letter: "Ł", color: "#2f3341" },
+  { letter: "O", color: "#f59e0b" },
+  { letter: "W", color: "#22c55e" },
+  { letter: "A", color: "#2f3341" },
+];
 
-/* ── Page ──────────────────────────────────────────────────── */
+/** Grupuje słowa alfabetycznie (polska kolejność sortowania) — identycznie jak w module Wisielec. */
+function groupWordsByLetter(words: string[]): { letter: string; words: string[] }[] {
+  const sorted = [...words].sort((a, b) => a.localeCompare(b, "pl"));
+  const groups: { letter: string; words: string[] }[] = [];
+  for (const word of sorted) {
+    const letter = word.charAt(0).toUpperCase();
+    let group = groups[groups.length - 1];
+    if (!group || group.letter !== letter) {
+      group = { letter, words: [] };
+      groups.push(group);
+    }
+    group.words.push(word);
+  }
+  return groups;
+}
 
 export default function WordlePage() {
   const params = useParams();
@@ -89,24 +83,15 @@ export default function WordlePage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<WordleData | null>(null);
   const [search, setSearch] = useState("");
-  const [expandedLengths, setExpandedLengths] = useState<Set<number>>(
-    new Set([5])
-  );
+  const [selectedLength, setSelectedLength] = useState<number>(5);
 
-  // Per-length add-word state
-  const [newWordInputs, setNewWordInputs] = useState<Record<number, string>>({});
-  const [wordErrors, setWordErrors]        = useState<Record<number, string>>({});
-  const [savingWord, setSavingWord]        = useState<number | null>(null);
-  const wordInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const [newWord, setNewWord] = useState("");
+  const [wordError, setWordError] = useState("");
+  const [savingWord, setSavingWord] = useState(false);
+  const wordInputRef = useRef<HTMLInputElement>(null);
 
-  // Delete confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState<{
-    word: string;
-    length: number;
-  } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ word: string; length: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  /* ── Data fetching ─────────────────────────────────────────── */
 
   const fetchData = useCallback(async (silent = false) => {
     try {
@@ -116,9 +101,7 @@ export default function WordlePage() {
       const result = await res.json();
       setData(result);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Nie udało się załadować danych"
-      );
+      setError(err instanceof Error ? err.message : "Nie udało się załadować danych");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -128,41 +111,20 @@ export default function WordlePage() {
     fetchData();
   }, [fetchData]);
 
-  /* ── Category helpers ──────────────────────────────────────── */
-
-  const toggleLength = (len: number) => {
-    setExpandedLengths((prev) => {
-      const next = new Set(prev);
-      if (next.has(len)) next.delete(len);
-      else next.add(len);
-      return next;
-    });
-  };
-
-  const expandAll  = () => setExpandedLengths(new Set(ALL_LENGTHS));
-  const collapseAll = () => setExpandedLengths(new Set());
-
-  /* ── Merged categories: always show all lengths ────────────── */
   const allCategories = useMemo((): WordleCategory[] => {
     const existing = data?.categories ?? [];
-    return ALL_LENGTHS.map((len) => {
-      const found = existing.find((c) => c.length === len);
-      return found ?? { length: len, words: [], wordCount: 0 };
-    });
+    return ALL_LENGTHS.map((len) => existing.find((c) => c.length === len) ?? { length: len, words: [], wordCount: 0 });
   }, [data]);
-
-  /* ── Search filtering ──────────────────────────────────────── */
 
   const normalizedSearch = search.toLowerCase().trim();
 
   const filteredCategories = useMemo(() => {
     if (!normalizedSearch) return allCategories;
     return allCategories
-      .map((cat) => ({
-        ...cat,
-        words: cat.words.filter((w) => w.includes(normalizedSearch)),
-        wordCount: cat.words.filter((w) => w.includes(normalizedSearch)).length,
-      }))
+      .map((cat) => {
+        const words = cat.words.filter((w) => w.includes(normalizedSearch));
+        return { ...cat, words, wordCount: words.length };
+      })
       .filter((cat) => cat.wordCount > 0);
   }, [allCategories, normalizedSearch]);
 
@@ -171,30 +133,45 @@ export default function WordlePage() {
     [filteredCategories]
   );
 
-  /* ── Add word ──────────────────────────────────────────────── */
+  // Utrzymuj wybraną długość w zbiorze widocznych wyników; domyślnie pierwsza dostępna.
+  useEffect(() => {
+    if (filteredCategories.length === 0) return;
+    if (!filteredCategories.some((c) => c.length === selectedLength)) {
+      setSelectedLength(filteredCategories[0].length);
+    }
+  }, [filteredCategories, selectedLength]);
 
-  const handleAddWord = async (length: number) => {
-    const word = (newWordInputs[length] ?? "").trim().toLowerCase();
+  const selectedCategoryData = useMemo(
+    () => allCategories.find((c) => c.length === selectedLength) ?? null,
+    [allCategories, selectedLength]
+  );
+
+  const visibleWords = useMemo(() => {
+    if (!selectedCategoryData) return [];
+    if (!normalizedSearch) return selectedCategoryData.words;
+    const filtered = filteredCategories.find((c) => c.length === selectedCategoryData.length);
+    return filtered ? filtered.words : [];
+  }, [selectedCategoryData, filteredCategories, normalizedSearch]);
+
+  const groupedWords = useMemo(() => groupWordsByLetter(visibleWords), [visibleWords]);
+
+  const selectedLengthCount = allCategories.find((c) => c.length === selectedLength)?.wordCount ?? 0;
+
+  const handleAddWord = async () => {
+    const word = newWord.trim().toLowerCase();
     if (!word) return;
 
     if (!POLISH_REGEX.test(word)) {
-      setWordErrors((prev) => ({
-        ...prev,
-        [length]: "Tylko polskie litery (bez q, v, x)",
-      }));
+      setWordError("Tylko polskie litery (bez q, v, x)");
+      return;
+    }
+    if (word.length !== selectedLength) {
+      setWordError(`Słowo musi mieć dokładnie ${selectedLength} liter`);
       return;
     }
 
-    if (word.length !== length) {
-      setWordErrors((prev) => ({
-        ...prev,
-        [length]: `Słowo musi mieć dokładnie ${length} liter`,
-      }));
-      return;
-    }
-
-    setSavingWord(length);
-    setWordErrors((prev) => ({ ...prev, [length]: "" }));
+    setSavingWord(true);
+    setWordError("");
 
     try {
       const res = await fetchWithAuth(`/api/guild/${guildId}/wordle`, {
@@ -204,25 +181,18 @@ export default function WordlePage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setWordErrors((prev) => ({
-          ...prev,
-          [length]: json.error || "Błąd",
-        }));
+        setWordError(json.error || "Błąd");
         return;
       }
-      setNewWordInputs((prev) => ({ ...prev, [length]: "" }));
+      setNewWord("");
       await fetchData(true);
-      requestAnimationFrame(() => {
-        wordInputRefs.current[length]?.focus();
-      });
+      requestAnimationFrame(() => wordInputRef.current?.focus());
     } catch {
-      setWordErrors((prev) => ({ ...prev, [length]: "Błąd połączenia" }));
+      setWordError("Błąd połączenia");
     } finally {
-      setSavingWord(null);
+      setSavingWord(false);
     }
   };
-
-  /* ── Remove word ───────────────────────────────────────────── */
 
   const handleRemoveWord = async () => {
     if (!deleteConfirm) return;
@@ -234,7 +204,7 @@ export default function WordlePage() {
         body: JSON.stringify({ action: "removeWord", word: deleteConfirm.word }),
       });
       setDeleteConfirm(null);
-      await fetchData();
+      await fetchData(true);
     } catch {
       // ignore
     } finally {
@@ -242,326 +212,244 @@ export default function WordlePage() {
     }
   };
 
-  /* ── Loading / error ───────────────────────────────────────── */
-
   if (loading) {
     return (
-      <div className="p-6 space-y-4 max-w-4xl mx-auto">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-64" />
-        <div className="grid grid-cols-2 gap-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
+      <div className="min-h-full">
+        <div className="w-full space-y-5">
+          <div className="flex items-start justify-between gap-6 pb-2">
+            <div className="space-y-3"><Skeleton className="h-7 w-40" /><Skeleton className="h-4 w-[420px] max-w-full" /></div>
+            <Skeleton className="h-7 w-40 rounded-full" />
+          </div>
+          <Skeleton className="h-24 w-full rounded-md bg-dark-800" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Skeleton className="h-20 w-full rounded-md bg-dark-800" />
+            <Skeleton className="h-20 w-full rounded-md bg-dark-800" />
+            <Skeleton className="h-20 w-full rounded-md bg-dark-800" />
+          </div>
+          <Skeleton className="h-11 w-full rounded-md bg-dark-800" />
+          <Skeleton className="h-72 w-full rounded-md bg-dark-800" />
         </div>
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-16 w-full" />
-        ))}
       </div>
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <ErrorState message={error} onRetry={fetchData} />
+      <div className="min-h-full">
+        <div className="w-full">
+          <ErrorState
+            title="Błąd ładowania"
+            message={error || "Nie udało się załadować danych Wordle"}
+            onRetry={() => window.location.reload()}
+          />
+        </div>
       </div>
     );
   }
-
-  /* ── Render ────────────────────────────────────────────────── */
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <SlideIn>
-        <div className="flex items-center gap-3 mb-1">
-          <Link
-            href={`/${guildId}`}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+    <div className="min-h-full pb-32">
+      <div className="w-full space-y-5">
+        <SlideIn delay={0}>
+          <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 space-y-2">
+              <h1 className="text-2xl font-semibold text-white">Wordle</h1>
+              <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
+                Zarządzaj polskimi słowami do gry /wordle. Słowa podzielone według liczby liter (5–7).
+              </p>
+            </div>
+            <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-400">
+              <Lock className="h-3.5 w-3.5" />
+              Tylko właściciel bota
+            </span>
+          </header>
+        </SlideIn>
+
+        <SlideIn delay={50}>
+          <div
+            className="relative flex flex-wrap items-center gap-6 overflow-hidden rounded-[10px] px-6 py-5"
+            style={{ background: "linear-gradient(120deg, #1d3324 0%, #1F2129 55%, #1F2129 100%)", border: "1px solid rgba(34,197,94,0.3)" }}
           >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <Puzzle className="w-6 h-6 text-bot-primary" />
-            <h1 className="text-2xl font-bold">Wordle</h1>
+            <div
+              className="pointer-events-none absolute -right-5 -top-5 h-40 w-40 rounded-full"
+              style={{ background: "radial-gradient(circle, rgba(245,158,11,0.18), transparent 70%)" }}
+            />
+            <div className="relative flex gap-[5px]">
+              {HERO_TILES.map((tile, i) => (
+                <span
+                  key={i}
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-lg font-extrabold text-white"
+                  style={{ backgroundColor: tile.color }}
+                >
+                  {tile.letter}
+                </span>
+              ))}
+            </div>
+            <div className="relative grid flex-1 grid-cols-2 gap-3" style={{ minWidth: "260px" }}>
+              <div>
+                <p className="text-2xl font-extrabold text-white">{data.totalWords}</p>
+                <p className="text-[11px] text-[#8d94a8]">wszystkich słów</p>
+              </div>
+              <div>
+                <p className="text-2xl font-extrabold" style={{ color: "#86efac" }}>{selectedLengthCount}</p>
+                <p className="text-[11px] text-[#8d94a8]">
+                  {selectedLength}-literowych{selectedLength === 5 ? " (standard)" : ""}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-        <p className="text-muted-foreground text-sm ml-7">
-          Zarządzaj polskimi słowami do gry /wordle. Słowa są podzielone na
-          kategorie według liczby liter (5–7).
-        </p>
-      </SlideIn>
+        </SlideIn>
 
-      {/* Stats */}
-      <SlideIn delay={50}>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card style={cardStyle}>
-            <CardHeader className="pb-1 pt-4 px-4">
-              <CardDescription className="text-xs">
-                Wszystkich słów
-              </CardDescription>
-              <CardTitle className="text-2xl tabular-nums">
-                {data?.totalWords ?? 0}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          {ALL_LENGTHS.map((len) => {
-            const cat = allCategories.find((c) => c.length === len);
-            return (
-              <Card key={len} style={cardStyle}>
-                <CardHeader className="pb-1 pt-4 px-4">
-                  <CardDescription className="text-xs flex items-center gap-1">
-                    <Hash className="w-3 h-3" />
+        <SlideIn delay={90}>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            {ALL_LENGTHS.map((len) => {
+              const cat = allCategories.find((c) => c.length === len);
+              const isActive = len === selectedLength;
+              return (
+                <button
+                  key={len}
+                  type="button"
+                  onClick={() => { setSelectedLength(len); setWordError(""); }}
+                  className="rounded-[10px] px-4 py-4 text-center transition-colors hover:border-[rgba(99,102,241,0.6)]"
+                  style={{ background: "#1F2129", border: isActive ? "1px solid rgba(99,102,241,0.4)" : "1px solid transparent" }}
+                >
+                  <span
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md font-mono text-lg font-extrabold text-white"
+                    style={{ backgroundColor: isActive ? "#6366f1" : "#2f3341" }}
+                  >
+                    {len}
+                  </span>
+                  <div className={cn("mt-2 flex items-center justify-center gap-1.5 text-[13px] font-bold", isActive ? "text-white" : "text-[#c4cad8]")}>
                     {len}-literowe
-                    {len === 5 && (
-                      <Badge variant="outline" className="text-[10px] py-0 px-1 ml-1">
-                        standard
-                      </Badge>
-                    )}
-                  </CardDescription>
-                  <CardTitle className="text-2xl tabular-nums">
-                    {cat?.wordCount ?? 0}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-            );
-          })}
-        </div>
-      </SlideIn>
+                    {len === 5 ? (
+                      <span className="rounded border border-[#2f3341] px-1.5 py-px text-[9px] font-semibold text-[#9aa2b8]">standard</span>
+                    ) : null}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-[#8d94a8]">{cat?.wordCount ?? 0} słów</div>
+                </button>
+              );
+            })}
+          </div>
+        </SlideIn>
 
-      {/* Search + controls */}
-      <SlideIn delay={100}>
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <SlideIn delay={120}>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d94a8]" />
             <Input
-              placeholder="Szukaj słowa..."
+              placeholder="Szukaj słowa we wszystkich długościach..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className={cn(inputClass, "pl-9")}
             />
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={expandAll}
-              className="px-3 py-2 text-xs rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
-            >
-              Rozwiń wszystkie
-            </button>
-            <button
-              onClick={collapseAll}
-              className="px-3 py-2 text-xs rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
-            >
-              Zwiń wszystkie
-            </button>
-          </div>
-        </div>
-      </SlideIn>
-
-      {/* Search results info */}
-      {normalizedSearch && (
-        <SlideIn delay={0}>
-          <p className="text-sm text-muted-foreground">
-            Znaleziono{" "}
-            <span className="font-semibold text-foreground">
-              {totalMatchingWords}
-            </span>{" "}
-            słów dla &quot;{search}&quot;
-          </p>
+          {normalizedSearch ? (
+            <p className="mt-2 text-xs text-[#8d94a8]">
+              Znaleziono <span className="font-semibold text-white/90">{totalMatchingWords}</span> słów w{" "}
+              <span className="font-semibold text-white/90">{filteredCategories.length}</span>{" "}
+              {filteredCategories.length === 1 ? "długości" : "długościach"} dla „{search}"
+            </p>
+          ) : null}
         </SlideIn>
-      )}
 
-      {/* Length categories */}
-      <div className="space-y-3">
-        {(normalizedSearch ? filteredCategories : allCategories).map(
-          (category, index) => {
-            const isExpanded = expandedLengths.has(category.length);
-            const key        = String(category.length);
+        {filteredCategories.length === 0 ? (
+          <div className="rounded-md bg-dark-800 py-16 text-center">
+            <Search className="mx-auto mb-3 h-10 w-10 text-[#8d94a8] opacity-50" />
+            <p className="text-sm text-[#8d94a8]">Nie znaleziono słów pasujących do „{search}"</p>
+          </div>
+        ) : (
+          <SlideIn delay={150}>
+            <div className="rounded-md bg-dark-800 p-5">
+              <h2 className="text-base font-semibold text-white">
+                Słowa {selectedLength}-literowe{" "}
+                <span className="ml-1 text-xs font-normal text-[#8d94a8]">{selectedCategoryData?.wordCount ?? 0} słów</span>
+              </h2>
 
-            return (
-              <SlideIn key={key} delay={150 + index * 25}>
-                <Card className="backdrop-blur" style={cardStyle}>
-                  {/* Category header */}
-                  <button
-                    onClick={() => toggleLength(category.length)}
-                    className="w-full text-left"
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg font-mono font-bold text-green-500">
-                            {category.length}
-                          </span>
-                          <div>
-                            <CardTitle className="text-base">
-                              {LENGTH_LABELS[category.length]}
-                            </CardTitle>
-                            <CardDescription className="text-xs">
-                              {category.wordCount}{" "}
-                              {category.wordCount === 1 ? "słowo" : "słów"}
-                            </CardDescription>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant="secondary"
-                            className="text-xs tabular-nums"
-                          >
-                            {category.wordCount}
-                          </Badge>
-                          {isExpanded ? (
-                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                          )}
-                        </div>
+              <div className="mt-4 flex gap-2">
+                <Input
+                  ref={wordInputRef}
+                  placeholder="Dodaj nowe słowo... (Enter)"
+                  value={newWord}
+                  onChange={(e) => setNewWord(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAddWord(); }}
+                  maxLength={selectedLength}
+                  className={cn(inputClass, "flex-1")}
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddWord}
+                  disabled={savingWord}
+                  className="shrink-0 bg-[#3b82f6] text-white hover:bg-[#2563eb]"
+                >
+                  {savingWord ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                  Dodaj
+                </Button>
+              </div>
+              {wordError ? <p className="mt-1.5 text-xs text-destructive">{wordError}</p> : null}
+              <p className="mt-1.5 text-[11px] text-[#6f7690]">
+                Tylko polskie litery (a–ż), bez q, v, x, dokładnie {selectedLength} znaków.
+              </p>
+
+              {groupedWords.length === 0 ? (
+                <p className="mt-4 text-sm text-[#8d94a8]">Ta długość nie ma jeszcze żadnych słów.</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {groupedWords.map((group) => (
+                    <div key={group.letter}>
+                      <p className="text-xs font-bold uppercase text-[#818cf8]">{group.letter}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {group.words.map((word) => {
+                          const isHighlighted = Boolean(normalizedSearch) && word.includes(normalizedSearch);
+                          return (
+                            <span
+                              key={word}
+                              className={cn(
+                                "group inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors",
+                                isHighlighted ? "bg-[#3b82f6]/25 font-medium text-white" : "bg-dark-900 text-[#c4cad8]"
+                              )}
+                            >
+                              {word}
+                              <button
+                                type="button"
+                                onClick={() => setDeleteConfirm({ word, length: selectedLength })}
+                                className="text-[#8d94a8] opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                                aria-label={`Usuń słowo ${word}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
                       </div>
-                    </CardHeader>
-                  </button>
-
-                  {/* Expanded content */}
-                  {isExpanded && (
-                    <CardContent className="pt-0 pb-4">
-                      <div className="border-t border-border/50 pt-3 space-y-3">
-                        {/* Add word row */}
-                        <div className="flex gap-2">
-                          <Input
-                            ref={(el) => {
-                              wordInputRefs.current[category.length] = el;
-                            }}
-                            placeholder={`Dodaj ${category.length}-literowe słowo...`}
-                            value={newWordInputs[category.length] ?? ""}
-                            onChange={(e) =>
-                              setNewWordInputs((prev) => ({
-                                ...prev,
-                                [category.length]: e.target.value,
-                              }))
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter")
-                                handleAddWord(category.length);
-                            }}
-                            className="text-sm h-8"
-                            maxLength={category.length}
-                          />
-                          <Button
-                            size="sm"
-                            className="h-8 px-3 shrink-0"
-                            disabled={savingWord === category.length}
-                            onClick={() => handleAddWord(category.length)}
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Dodaj
-                          </Button>
-                        </div>
-
-                        {/* Validation hint */}
-                        <p className="text-xs text-muted-foreground -mt-1">
-                          Tylko polskie litery (a–ż), dokładnie{" "}
-                          <strong>{category.length}</strong> znaków. Regex:{" "}
-                          <code className="bg-muted px-1 rounded text-[11px]">
-                            {`^[a-ząćęłńóśźż]{${category.length}}$`}
-                          </code>
-                        </p>
-
-                        {wordErrors[category.length] && (
-                          <p className="text-xs text-destructive font-medium">
-                            ❌ {wordErrors[category.length]}
-                          </p>
-                        )}
-
-                        {/* Word chips */}
-                        {category.wordCount === 0 ? (
-                          <p className="text-xs text-muted-foreground italic py-2">
-                            Brak słów w tej kategorii. Dodaj pierwsze słowo
-                            powyżej.
-                          </p>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {category.words.map((word) => {
-                              const isHighlighted =
-                                normalizedSearch &&
-                                word.includes(normalizedSearch);
-                              return (
-                                <span
-                                  key={word}
-                                  className={`group inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-md font-mono transition-colors ${
-                                    isHighlighted
-                                      ? "bg-green-500/20 text-green-400 font-semibold"
-                                      : "bg-muted/50 text-muted-foreground"
-                                  }`}
-                                >
-                                  {word}
-                                  <button
-                                    onClick={() =>
-                                      setDeleteConfirm({
-                                        word,
-                                        length: category.length,
-                                      })
-                                    }
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
-              </SlideIn>
-            );
-          }
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </SlideIn>
         )}
+
+        {/* Delete confirmation dialog */}
+        <Dialog open={deleteConfirm !== null} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Usuń słowo</DialogTitle>
+              <DialogDescription>
+                Czy na pewno chcesz usunąć słowo{" "}
+                <strong className="font-mono text-foreground">{deleteConfirm?.word}</strong>{" "}
+                z listy {deleteConfirm?.length}-literowych? Tej operacji nie można cofnąć.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={deleting}>
+                Anuluj
+              </Button>
+              <Button variant="destructive" onClick={handleRemoveWord} disabled={deleting}>
+                {deleting ? "Usuwanie..." : "Usuń"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {filteredCategories.length === 0 && normalizedSearch && (
-        <div className="text-center py-12">
-          <Search className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-          <p className="text-muted-foreground">
-            Nie znaleziono słów pasujących do &quot;{search}&quot;
-          </p>
-        </div>
-      )}
-
-      {/* Delete confirmation dialog */}
-      <Dialog
-        open={!!deleteConfirm}
-        onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Usuń słowo</DialogTitle>
-            <DialogDescription>
-              Czy na pewno chcesz usunąć słowo{" "}
-              <strong className="font-mono text-foreground">
-                {deleteConfirm?.word}
-              </strong>{" "}
-              z listy {deleteConfirm?.length}-literowych? Tej operacji nie
-              można cofnąć.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirm(null)}
-              disabled={deleting}
-            >
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRemoveWord}
-              disabled={deleting}
-            >
-              {deleting ? "Usuwanie..." : "Usuń"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

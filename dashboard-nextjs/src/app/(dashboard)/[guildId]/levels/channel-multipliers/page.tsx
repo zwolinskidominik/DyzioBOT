@@ -166,7 +166,7 @@ export default function ChannelMultipliersPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <Button asChild variant="outline" className="mb-6">
             <Link href={`/${guildId}/levels`}>
@@ -186,7 +186,7 @@ export default function ChannelMultipliersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
@@ -213,7 +213,7 @@ export default function ChannelMultipliersPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-full">
       <div className="w-full">
         <SlideIn direction="left">
           <Button asChild variant="outline" className="mb-6">

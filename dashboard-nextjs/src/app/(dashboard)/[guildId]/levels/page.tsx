@@ -11,6 +11,7 @@ import {
   Ban,
   Check,
   ChevronDown,
+  EyeOff,
   Hash,
   Plus,
   Sparkles,
@@ -30,6 +31,24 @@ import { deriveRankCardPalette } from "@/lib/rankCardPalette";
 import VariableInserter from "@/components/VariableInserter";
 import { CustomSlider } from "@/components/ui/custom-slider";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { DiscordMessagePreview } from "@/components/DiscordMessagePreview";
+
+const PREVIEW_SAMPLE = { level: "67", roleName: "Aktywny" };
+
+/** Niewidoczny sentinel otaczający podstawioną wartość zmiennej — DiscordMessagePreview
+ * renderuje taki fragment jako wzmiankę (chip), patrz reguła w DiscordMessagePreview.tsx. */
+const SENTINEL = "";
+function mention(value: string): string {
+  return `${SENTINEL}${value}${SENTINEL}`;
+}
+
+/** Podstawia {user}/{roleId}/{level} przykładowymi wartościami do podglądu na żywo. */
+function resolveLevelsPreview(template: string): string {
+  return template
+    .replace(/\{user\}/g, mention("@Deezy"))
+    .replace(/\{roleId\}/g, mention(`@${PREVIEW_SAMPLE.roleName}`))
+    .replace(/\{level\}/g, PREVIEW_SAMPLE.level);
+}
 
 interface Channel {
   id: string;
@@ -320,72 +339,6 @@ function RankCardPreviewSvg({ themeColor, showRank }: { themeColor: string; show
           {`Razem: ${RANK_CARD_SAMPLE.totalXP.toLocaleString("pl-PL").replace(/,/g, ".")} XP`}
         </text>
       </svg>
-    </div>
-  );
-}
-
-const PREVIEW_SAMPLE = { level: "67", roleName: "Aktywny" };
-
-/** Renderuje treść wiadomości jak Discord: wzmianki jako chipy, **pogrubienie**. */
-function renderDiscordContent(template: string): React.ReactNode[] {
-  const nodes: React.ReactNode[] = [];
-  const parts = template.split(/(\{user\}|\{roleId\}|\{level\}|\*\*.+?\*\*)/g);
-
-  parts.forEach((part, i) => {
-    if (!part) return;
-    if (part === "{user}") {
-      nodes.push(
-        <span key={i} className="rounded bg-[#3f4270] px-1 font-medium text-[#c9cdfb]">@Deezy</span>
-      );
-    } else if (part === "{roleId}") {
-      nodes.push(
-        <span key={i} className="rounded bg-[#3f4270] px-1 font-medium text-[#c9cdfb]">@{PREVIEW_SAMPLE.roleName}</span>
-      );
-    } else if (part === "{level}") {
-      nodes.push(<span key={i}>{PREVIEW_SAMPLE.level}</span>);
-    } else if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
-      // Zmienne mogą być zagnieżdżone w pogrubieniu (np. **{level}**) — podstaw je też tutaj,
-      // inaczej renderuje się dosłowny token zamiast wartości.
-      const innerParts = part.slice(2, -2).split(/(\{user\}|\{roleId\}|\{level\})/g);
-      nodes.push(
-        <strong key={i} className="font-bold">
-          {innerParts.map((innerPart, j) => {
-            if (innerPart === "{user}") {
-              return <span key={j} className="rounded bg-[#3f4270] px-1 font-medium text-[#c9cdfb]">@Deezy</span>;
-            }
-            if (innerPart === "{roleId}") {
-              return <span key={j} className="rounded bg-[#3f4270] px-1 font-medium text-[#c9cdfb]">@{PREVIEW_SAMPLE.roleName}</span>;
-            }
-            if (innerPart === "{level}") {
-              return <span key={j}>{PREVIEW_SAMPLE.level}</span>;
-            }
-            return innerPart;
-          })}
-        </strong>
-      );
-    } else {
-      nodes.push(<span key={i}>{part}</span>);
-    }
-  });
-
-  return nodes;
-}
-
-/** Pojedyncza wiadomość bota w stylu Discorda (avatar + nick + APP + treść). */
-function DiscordMessagePreview({ template }: { template: string }) {
-  return (
-    <div className="flex items-start gap-3">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/deezy.png" alt="" className="mt-0.5 h-9 w-9 shrink-0 rounded-full object-cover" />
-      <div className="min-w-0">
-        <p className="flex items-center gap-1.5 text-sm">
-          <span className="font-semibold text-white">Deezy</span>
-          <span className="rounded bg-[#5865f2] px-1 py-px text-[10px] font-semibold uppercase text-white">App</span>
-        </p>
-        <p className="break-words text-sm leading-6 text-[#dbdee1]">
-          {template.trim() ? renderDiscordContent(template) : <span className="italic text-[#80848e]">Brak treści wiadomości</span>}
-        </p>
-      </div>
     </div>
   );
 }
@@ -701,7 +654,7 @@ export default function LevelsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <ErrorState title="Błąd ładowania danych" message={error} onRetry={handleRetry} />
         </div>
@@ -711,7 +664,7 @@ export default function LevelsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full space-y-5">
           <div className="space-y-3 pb-2">
             <Skeleton className="h-7 w-52" />
@@ -729,7 +682,7 @@ export default function LevelsPage() {
   const textChannels = channels.filter(ch => ch.type === 0 || ch.type === 5);
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-full pb-16">
       <div className="w-full space-y-5">
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
@@ -740,11 +693,22 @@ export default function LevelsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>Aktywne</span>
+              <span>{config.enabled ? "Aktywne" : "Nieaktywne"}</span>
               <DeezySwitch checked={config.enabled} onCheckedChange={(checked) => setConfig({ ...config, enabled: checked })} aria-label="Włącz lub wyłącz system poziomów" />
             </div>
           </header>
         </SlideIn>
+
+        {!config.enabled ? (
+          <SlideIn direction="up" delay={130}>
+            <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
+              <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                Moduł Poziomów jest <span className="font-semibold text-white/80">wyłączony na tym serwerze</span>. Możesz edytować konfigurację i nagrody, ale bot nie będzie naliczał XP, a komendy <span className="font-semibold text-white/80">/level</span>, <span className="font-semibold text-white/80">/toplvl</span> i <span className="font-semibold text-white/80">/xp</span> nie zadziałają, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+              </span>
+            </div>
+          </SlideIn>
+        ) : null}
 
         {/* ── Zasady zdobywania XP ─────────────────────────────── */}
         <SlideIn direction="up" delay={150}>
@@ -852,41 +816,63 @@ export default function LevelsPage() {
                     <p className={helperClass}>Gdzie wysyłać powiadomienia o awansie</p>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Wiadomość o poziomie</label>
-                    <VariableInserter
-                      value={config.levelUpMessage}
-                      onChange={(value) => setConfig({ ...config, levelUpMessage: value })}
-                      variables={[
-                        { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
-                        { name: "Poziom", display: "Poziom", value: "{level}", description: "Numer poziomu" },
-                      ]}
-                      rows={2}
-                      unstyled
-                      className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className={labelClass}>Wiadomość o poziomie</label>
+                        <VariableInserter
+                          value={config.levelUpMessage}
+                          onChange={(value) => setConfig({ ...config, levelUpMessage: value })}
+                          variables={[
+                            { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
+                            { name: "Poziom", display: "Poziom", value: "{level}", description: "Numer poziomu" },
+                          ]}
+                          rows={2}
+                          emojiPicker
+                          unstyled
+                          className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
+                        />
+                      </div>
 
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Wiadomość o nagrodzie</label>
-                    <VariableInserter
-                      value={config.rewardMessage}
-                      onChange={(value) => setConfig({ ...config, rewardMessage: value })}
-                      variables={[
-                        { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
-                        { name: "Rola", display: "Rola", value: "{roleId}", description: "Wzmianka roli nagrody" },
-                      ]}
-                      rows={2}
-                      unstyled
-                      className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
-                    />
-                  </div>
+                      <div className="space-y-1.5">
+                        <label className={labelClass}>Wiadomość o nagrodzie</label>
+                        <VariableInserter
+                          value={config.rewardMessage}
+                          onChange={(value) => setConfig({ ...config, rewardMessage: value })}
+                          variables={[
+                            { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
+                            { name: "Rola", display: "Rola", value: "{roleId}", description: "Wzmianka roli nagrody" },
+                          ]}
+                          rows={2}
+                          emojiPicker
+                          unstyled
+                          className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
+                        />
+                      </div>
+                    </div>
 
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd na żywo</p>
-                    <div className="space-y-4 rounded-md border border-[#2f3341] bg-[#313338] p-4">
-                      <DiscordMessagePreview template={config.levelUpMessage} />
-                      <DiscordMessagePreview template={config.rewardMessage} />
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd na żywo</p>
+                      <div className="space-y-3">
+                        <DiscordMessagePreview
+                          compact
+                          avatarUrl="/deezy.png"
+                          content={
+                            config.levelUpMessage.trim()
+                              ? resolveLevelsPreview(config.levelUpMessage)
+                              : "*Brak treści wiadomości*"
+                          }
+                        />
+                        <DiscordMessagePreview
+                          compact
+                          avatarUrl="/deezy.png"
+                          content={
+                            config.rewardMessage.trim()
+                              ? resolveLevelsPreview(config.rewardMessage)
+                              : "*Brak treści wiadomości*"
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
                 </>

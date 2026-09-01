@@ -871,7 +871,7 @@ export default function GreetingsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <ErrorState title="Nie udało się załadować greetings" message={error} onRetry={handleRetry} />
         </div>
@@ -881,7 +881,7 @@ export default function GreetingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full space-y-5">
           <div className="flex items-start justify-between gap-6 pb-2">
             <div className="space-y-3"><Skeleton className="h-7 w-56" /><Skeleton className="h-4 w-[520px] max-w-full" /></div>
@@ -894,7 +894,7 @@ export default function GreetingsPage() {
   }
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-full pb-32">
       <div className="w-full space-y-5">
         <form onSubmit={handleSubmit(onSubmit, () => setOpenSections((sections) => ({ ...sections, welcome: true })))} className="space-y-3">
           <SlideIn direction="up" delay={100}>
@@ -904,7 +904,7 @@ export default function GreetingsPage() {
                 <p className="max-w-2xl text-sm leading-6 text-[#969db0]">Automatycznie wysyłaj wiadomości, nadawaj kontekst nowym osobom i pożegnaj członków, którzy opuszczają serwer.</p>
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-                <span>Aktywne</span>
+                <span>{values.enabled ? "Aktywne" : "Nieaktywne"}</span>
                 <DeezySwitch checked={values.enabled || false} onCheckedChange={(checked) => setBooleanField("enabled", checked)} aria-label="Włącz lub wyłącz greetings" />
               </div>
             </header>

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Mic, Plus } from "lucide-react";
+import { EyeOff, Loader2, Mic, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
@@ -161,7 +161,7 @@ export default function TempChannelsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <ErrorState title="Nie udało się załadować tymczasowych kanałów" message={error} onRetry={handleRetry} />
         </div>
@@ -171,7 +171,7 @@ export default function TempChannelsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full space-y-5">
           <div className="space-y-3 pb-2">
             <Skeleton className="h-7 w-52" />
@@ -186,7 +186,7 @@ export default function TempChannelsPage() {
   const availableChannels = channels.filter((ch) => !creators.some((c) => c.channelId === ch.id));
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-full pb-16">
       <div className="w-full space-y-5">
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
@@ -197,11 +197,22 @@ export default function TempChannelsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>Aktywne</span>
+              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
               <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} disabled={savingEnabled} aria-label="Włącz lub wyłącz tymczasowe kanały" />
             </div>
           </header>
         </SlideIn>
+
+        {!enabled ? (
+          <SlideIn direction="up" delay={130}>
+            <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
+              <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                Moduł tymczasowych kanałów jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację, ale bot nie utworzy nowych kanałów, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+              </span>
+            </div>
+          </SlideIn>
+        ) : null}
 
         <SlideIn direction="up" delay={150}>
           <div className="space-y-3 rounded-md bg-dark-800 p-5 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
@@ -300,7 +311,7 @@ export default function TempChannelsPage() {
               <div className="space-y-2 rounded-md bg-dark-900/30 p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Podgląd
+                  Podgląd na żywo
                 </div>
                 <TempChannelLivePreview type={selectedType} />
               </div>

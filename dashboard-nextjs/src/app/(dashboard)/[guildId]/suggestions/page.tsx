@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Hash, Lightbulb, ThumbsUp, ThumbsDown, Trash2, ExternalLink, Search, EyeOff, Percent, BarChart3, ListOrdered } from "lucide-react";
+import { Hash, Lightbulb, EyeOff, Percent, BarChart3, ListOrdered } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,18 +34,6 @@ interface SuggestionConfig {
   votingFormat?: SuggestionVotingFormat;
   anonymous?: boolean;
   embedColor?: string;
-}
-
-interface Suggestion {
-  _id: string;
-  suggestionId: string;
-  authorId: string;
-  messageId: string;
-  content: string;
-  upvotes: string[];
-  upvoteUsernames: string[];
-  downvotes: string[];
-  downvoteUsernames: string[];
 }
 
 interface SavedState {
@@ -93,11 +81,6 @@ export default function SuggestionsPage() {
   const [embedColor, setEmbedColor] = useState("#4C4C54");
   const [previewColor, setPreviewColor] = useState<string | null>(null);
   const savedRef = useRef<SavedState>(DEFAULT_SAVED_STATE);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [sortBy, setSortBy] = useState<string>("upvotes");
-  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -262,78 +245,6 @@ export default function SuggestionsPage() {
     }
   };
 
-  const handleDeleteSuggestion = async (suggestionId: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć tę sugestię?")) return;
-
-    try {
-      const response = await fetch(`/api/guild/${guildId}/suggestions/list?suggestionId=${suggestionId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete suggestion");
-      }
-
-      setSuggestions(suggestions.filter(s => s.suggestionId !== suggestionId));
-      toast.success("Sugestia została usunięta!");
-    } catch (error) {
-      console.error("Error deleting suggestion:", error);
-      toast.error("Nie udało się usunąć sugestii");
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedSuggestions.size === 0) return;
-    
-    if (!confirm("Czy na pewno chcesz usunąć " + selectedSuggestions.size + " sugestii?")) return;
-
-    setIsDeleting(true);
-    try {
-      const deletePromises = Array.from(selectedSuggestions).map(suggestionId =>
-        fetch(
-          "/api/guild/" + guildId + "/suggestions/list?suggestionId=" + suggestionId,
-          { method: "DELETE" }
-        )
-      );
-
-      const results = await Promise.all(deletePromises);
-      const successCount = results.filter(r => r.ok).length;
-      
-      if (successCount > 0) {
-        setSuggestions(suggestions.filter((s) => !selectedSuggestions.has(s.suggestionId)));
-        setSelectedSuggestions(new Set());
-        toast.success("Usunięto " + successCount + " sugestii!");
-      }
-      
-      if (successCount < selectedSuggestions.size) {
-        toast.error("Nie udało się usunąć " + (selectedSuggestions.size - successCount) + " sugestii");
-      }
-    } catch (error) {
-      console.error("Error bulk deleting suggestions:", error);
-      toast.error("Nie udało się usunąć sugestii");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedSuggestions.size === suggestions.length) {
-      setSelectedSuggestions(new Set());
-    } else {
-      setSelectedSuggestions(new Set(suggestions.map(s => s.suggestionId)));
-    }
-  };
-
-  const toggleSelectSuggestion = (suggestionId: string) => {
-    const newSelected = new Set(selectedSuggestions);
-    if (newSelected.has(suggestionId)) {
-      newSelected.delete(suggestionId);
-    } else {
-      newSelected.add(suggestionId);
-    }
-    setSelectedSuggestions(newSelected);
-  };
-
   const handleRetry = () => {
     setError(null);
     setLoading(true);
@@ -342,7 +253,7 @@ export default function SuggestionsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <ErrorState
             title="Nie udało się załadować sugestii"
@@ -356,7 +267,7 @@ export default function SuggestionsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-full">
         <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
@@ -426,7 +337,7 @@ export default function SuggestionsPage() {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-full">
       <div className="w-full space-y-5">
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
@@ -437,11 +348,22 @@ export default function SuggestionsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>Aktywne</span>
+              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
               <DeezySwitch checked={enabled} onCheckedChange={setEnabled} aria-label="Włącz lub wyłącz sugestie" />
             </div>
           </header>
         </SlideIn>
+
+        {!enabled ? (
+          <SlideIn direction="up" delay={130}>
+            <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
+              <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                Moduł sugestii jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację, ale bot nie będzie publikował sugestii, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+              </span>
+            </div>
+          </SlideIn>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
           {/* Configuration Card */}
