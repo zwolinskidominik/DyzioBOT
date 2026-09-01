@@ -1,4 +1,4 @@
-# GitHub Copilot — instrukcje projektu DyzioBOT
+# GitHub Copilot — instrukcje projektu DeezyBOT
 
 > **Ten plik jest ładowany automatycznie przez Copilot do każdego promptu w tym workspace.**
 > Pełne instrukcje — patrz [AGENTS.md](../AGENTS.md). Poniżej skrót obowiązkowy.

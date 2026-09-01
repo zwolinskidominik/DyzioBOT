@@ -1,4 +1,4 @@
-# DyzioBOT — Development Standards
+# DeezyBOT — Development Standards
 
 > Standardy kodu, workflow, konwencje, checklisty dla całego projektu.  
 > Poziom: Senior. Każdy PR musi spełniać te standardy.

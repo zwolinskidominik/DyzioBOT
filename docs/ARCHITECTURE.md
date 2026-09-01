@@ -1,4 +1,4 @@
-# DyzioBOT — Architektura Systemu
+# DeezyBOT — Architektura Systemu
 
 > Dokument ADR (Architecture Decision Records) + opis architektury.  
 > Przeznaczony dla AI agenta i senior developerów.
@@ -7,7 +7,7 @@
 
 ## 1. OVERVIEW
 
-DyzioBOT jest **multi-tenant SaaS** — jeden deployment obsługuje N serwerów Discord jednocześnie. Architektura jest celowo **modular monolith** (nie microservices), ponieważ:
+DeezyBOT jest **multi-tenant SaaS** — jeden deployment obsługuje N serwerów Discord jednocześnie. Architektura jest celowo **modular monolith** (nie microservices), ponieważ:
 - Koszt operacyjny microservices (network hops, service discovery, distributed tracing) nie jest uzasadniony przy obecnej skali
 - Monorepo ułatwia shared types i code reuse
 - Sharding Discord.js jest obsługiwany procesowo, nie serwisowo

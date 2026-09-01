@@ -1,4 +1,4 @@
-# DyzioBOT — Testing Strategy
+# DeezyBOT — Testing Strategy
 
 > Pełna strategia testów — bot (Jest 29) + dashboard (Vitest 4).  
 > Coverage target: 90/80/90/90. Testy są obowiązkowe — nie ma merge bez testów.

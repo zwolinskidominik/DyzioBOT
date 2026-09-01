@@ -1,4 +1,4 @@
-# DyzioBOT — AI Agent Master Reference
+# DeezyBOT — AI Agent Master Reference
 > **Poziom:** Senior / Full-Stack Architect  
 > **Architektura:** Multi-tenant SaaS — Discord Bot + Web Dashboard  
 > **Środowisko:** Hostile Production — security-first, deny-by-default  
@@ -628,6 +628,15 @@ Szczegóły: `docs/DEVELOPMENT.md`
 - [ ] `guildId` scope w każdej nowej query MongoDB
 - [ ] API routes mają `getServerSession` check
 - [ ] Nowe zależności sprawdzone: `npm audit --audit-level=high`
+
+### 12.1a Bot ↔ Dashboard spójność (przy zmianach embedów/logów bota)
+
+Dashboard duplikuje kształt tego, co bot wysyła na Discorda — zmiana w bocie NIE aktualizuje go automatycznie.
+
+- [ ] Zmieniłem treść/pola embeda logu (`src/events/**/log*.ts`) lub współdzielony helper (`moderatorField`, `guildFooter`)? → sprawdź `dashboard-nextjs/src/app/(dashboard)/[guildId]/logs/page.tsx` (`LOG_EVENT_CONFIGS.previewHeading/previewAvatar`, `PREVIEW_FIELDS`)
+- [ ] Zmieniłem kontrakt/format modułu, który dashboard mockuje w podglądzie (np. Anti-Spam) → sprawdź odpowiednią stronę dashboardu
+- [ ] Wzmianki (użytkownik/kanał/rola) w podglądzie renderuj jak na Discordzie — składnia `<@Nazwa>` / `<#Nazwa>` / `<@&Nazwa>` + `renderMentionText()`, nie zwykły tekst (poza polami `code: true`)
+- [ ] Jeśli dashboard nie wymaga zmian — powiedz to jawnie, zamiast pomijać temat milczeniem
 
 ### 12.2 Security checklist (przy zmianach auth/API/webhook)
 

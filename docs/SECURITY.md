@@ -1,4 +1,4 @@
-# DyzioBOT — Security Standards & Threat Model
+# DeezyBOT — Security Standards & Threat Model
 
 > OWASP ASVS Level 2 target. Secure-by-default, deny-by-default.  
 > **Każda zmiana dotycząca auth / API / DB / webhooków wymaga przejrzenia tego dokumentu.**

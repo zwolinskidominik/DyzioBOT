@@ -1,4 +1,4 @@
-# DyzioBOT — Database Standards (MongoDB)
+# DeezyBOT — Database Standards (MongoDB)
 
 > MongoDB Atlas + Mongoose 9 + Typegoose 13.  
 > Multi-tenant: guildId jako partition key. Każda query musi mieć scope.

@@ -1,6 +1,24 @@
-# CLAUDE.md — Deezy Bot (DyzioBOT)
+# CLAUDE.md — Deezy Bot (DeezyBOT)
 
 > Czytaj NA POCZĄTKU każdej sesji. Pełna dokumentacja: `docs/` · Master ref: `AGENTS.md`
+
+---
+
+## 0. Bezpieczeństwo — priorytet nadrzędny
+
+**Przed każdą nową funkcją: ochrona przed poniższymi zagrożeniami ma pierwszeństwo przed feature'ami.** Pełny threat model: `docs/SECURITY.md`. To nie jest lista do przeczytania raz — pilnuj tych punktów przy KAŻDEJ zmianie w bocie i dashboardzie, nie tylko gdy ktoś o to poprosi:
+
+- **IDOR / brak scope'u `guildId`** — bot: każda query Mongoose ma `guildId` w filtrze. Dashboard: każda trasa `api/guild/[guildId]/**` woła `requireGuildAccess(session, guildId)` (z `@/lib/requireGuildAccess`) zaraz po standardowym sprawdzeniu sesji — nowa trasa bez tego to od razu luka.
+- **Mass assignment** — nigdy `{...body}` (albo `new Model(body)`) prosto do zapisu w bazie. Zawsze explicit whitelist pól — destrukturyzuj konkretne klucze albo waliduj Zod schematem, zwłaszcza gdy pole ma sensowny zakres (liczby, enumy, kolory hex).
+- **XSS** — żaden tekst pochodzący od użytkownika (treści wiadomości, configi, nazwy) nie trafia do `innerHTML` / `dangerouslySetInnerHTML` bez escapowania HTML.
+- **Command injection** — żaden user input nie trafia do `exec()` / budowanej stringiem komendy shell czy FFmpeg. Zawsze `execFile`/`spawn` z tablicą argumentów, nigdy interpolacja stringów.
+- **NoSQL injection** — `mongoose.set('sanitizeFilter', true)` musi być aktywne w połączeniu z bazą, i po stronie bota, i po stronie dashboardu.
+- **Mass-mention** — każda wiadomość Discorda zawierająca tekst configurowalny przez usera/admina (powitania, QOTD, tickets, reaction-roles, giveaway) ustawia `allowedMentions: { parse: [] }`, chyba że wzmianka jest jawnie zamierzona (np. ping roli z configu — wtedy explicit `roles: [roleId]`).
+- **`ownerOnly` scentralizowane** — komendy właściciela bota sprawdzają `OWNER_IDS` przez wspólny mechanizm (`ICommand.options.ownerOnly` + `CommandHandler`), nie ręcznym `if` wklejanym per-komenda — łatwo o tym zapomnieć w nowej komendzie.
+- **Upload plików** (emoji, gify, obrazki) — limit rozmiaru wymuszony PRZED zapisem, limit liczby plików per-guild (z czyszczeniem starych), sanityzacja nazwy pliku (odrzucaj `..`, `/`, `\`).
+- **Sekrety** — nigdy w logach ani w kodzie, tylko przez `.env` (gitignored) — patrz zakaz czytania `.env` niżej.
+
+Jeśli dokumentacja (`docs/SECURITY.md` i inne) opisuje jakieś zabezpieczenie jako gotowe — **zweryfikuj, że ono faktycznie istnieje w kodzie**, zanim uznasz temat za zamknięty. Dokumentacja i kod tu już się rozjeżdżały (IDOR i `sanitizeFilter` były opisane jako wdrożone, a nie były).
 
 ---
 
@@ -106,7 +124,26 @@ export default command;
 ❌ aktualizacja salda bez EconomyTransaction — zawsze ledger
 ❌ npm install bez sprawdzenia stack
 ❌ *.md podsumowania bez prośby
+❌ {...body} prosto do zapisu w bazie — zawsze explicit whitelist pól
+❌ innerHTML / dangerouslySetInnerHTML z user inputem bez escapowania
+❌ nowa trasa api/guild/[guildId]/** bez requireGuildAccess
+❌ ownerOnly sprawdzane ręcznym if — użyj ICommand.options.ownerOnly
+❌ wiadomość z user-configurowalnym tekstem bez allowedMentions: { parse: [] }
 ```
+
+---
+
+## Bot ↔ Dashboard — spójność
+
+Dashboard (`dashboard-nextjs/`) w wielu miejscach **duplikuje** kształt tego, co bot faktycznie wysyła na Discorda (treść embedów, nazwy/kolejność pól, obecność miniaturki avatara). To osobny kod — zmiana w bocie NIE aktualizuje dashboardu automatycznie.
+
+Po każdej zmianie w bocie wpływającej na to, co widzi użytkownik na Discordzie (treść embeda logu, nazwy/kolejność pól, współdzielone helpery jak `moderatorField`/`guildFooter`, nowe lub zmienione zdarzenie logu) sprawdź, czy trzeba zaktualizować:
+
+- `dashboard-nextjs/src/app/(dashboard)/[guildId]/logs/page.tsx` — `LOG_EVENT_CONFIGS` (`previewHeading`, `previewAvatar`, kolor) i `PREVIEW_FIELDS` (panel „Podgląd na żywo”) muszą odzwierciedlać realny embed z `src/events/**/log*.ts`.
+- inne moduły dashboardu mockujące/odzwierciedlające dane bota (np. Anti-Spam, Narzędzia) — jeśli zmieniasz kontrakt/format po stronie bota, ich podglądy też mogą się rozjechać.
+- **Wzmianki w podglądzie**: wszędzie tam, gdzie realny embed bota zawiera wzmiankę użytkownika/kanału/roli, podgląd MA wyglądać tak samo jak na Discordzie (podświetlony „pill”), nie jako zwykły tekst. W `logs/page.tsx` używaj składni `<@Nazwa>` (użytkownik), `<#Nazwa>` (kanał/wątek), `<@&Nazwa>` (rola) w treściach `previewHeading`/`previewBody`/wartościach pól — `renderMentionText()` automatycznie zamieni je na podświetlone wzmianki. Wyjątek: pola z `code: true` (bloki kodu) — tam Discord nie parsuje markdownu, więc mentions zostają jako zwykły tekst.
+
+Jeśli zmiana dotyczy wyłącznie bota i dashboard niczego nie mockuje/nie odzwierciedla — pomiń ten krok, ale zaznacz to jawnie w odpowiedzi (np. „dashboard nie wymaga zmian, bo X”).
 
 ---
 

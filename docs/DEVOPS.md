@@ -1,4 +1,4 @@
-# DyzioBOT — DevOps, Infrastructure & CI/CD
+# DeezyBOT — DevOps, Infrastructure & CI/CD
 
 > Deployment na VPS Ubuntu + Docker Compose. Nginx reverse proxy. GitHub Actions CI/CD.  
 > Brak Kubernetes / cloud managed services — self-hosted na OVH/Hetzner VPS.
@@ -18,7 +18,7 @@ VPS Ubuntu 22.04 (Nginx)
     │
     ├── port 443 → dashboard (Next.js :3000)
     │
-    └── Docker network: dyziobot_net
+    └── Docker network: deezybot_net
             ├── bot (discord.js) ← Discord Gateway WebSocket
             ├── dashboard (Next.js :3000)
             └── redis (:6379, internal only)
@@ -37,7 +37,7 @@ MongoDB Atlas (cloud managed, Warsaw region)
 version: '3.9'
 
 networks:
-  dyziobot_net:
+  deezybot_net:
     driver: bridge
 
 services:
@@ -47,7 +47,7 @@ services:
       dockerfile: Dockerfile.bot
     restart: unless-stopped
     env_file: .env
-    networks: [dyziobot_net]
+    networks: [deezybot_net]
     depends_on: [redis]
     logging:
       driver: json-file
@@ -66,7 +66,7 @@ services:
     restart: unless-stopped
     env_file: .env
     ports: ["3000:3000"]
-    networks: [dyziobot_net]
+    networks: [deezybot_net]
     depends_on: [redis]
     logging:
       driver: json-file
@@ -80,7 +80,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    networks: [dyziobot_net]
+    networks: [deezybot_net]
     # NIE expose portów na host — tylko wewnętrzna sieć
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
@@ -289,7 +289,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd ~/DyzioBOT
+            cd ~/DeezyBOT
             git pull origin main
             docker compose up --build -d
             # Health check po deployu
@@ -415,7 +415,7 @@ Redis traktowany jako ephemeral cache (nie source of truth):
 ```bash
 # Backup plików konfiguracyjnych VPS:
 scp user@vps:/etc/nginx/sites-available/deezybot-dashboard ./backup/nginx.conf
-scp user@vps:~/DyzioBOT/.env ./backup/.env.$(date +%Y%m%d)
+scp user@vps:~/DeezyBOT/.env ./backup/.env.$(date +%Y%m%d)
 # Uwaga: .env zawiera sekrety — przechowuj bezpiecznie!
 ```
 
