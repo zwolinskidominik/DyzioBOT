@@ -18,6 +18,8 @@ export interface DiscordGuildSummary {
   name: string;
   icon: string | null;
   permissions: string;
+  /** Czy zalogowany user jest właścicielem TEGO serwera Discorda (pole natywnie zwracane przez /users/@me/guilds). */
+  owner: boolean;
 }
 
 export interface DiscordUserGuildsResult {
@@ -36,7 +38,8 @@ function isDiscordGuildSummary(value: unknown): value is DiscordGuildSummary {
     "id" in value && typeof value.id === "string" &&
     "name" in value && typeof value.name === "string" &&
     "permissions" in value && typeof value.permissions === "string" &&
-    "icon" in value && (typeof value.icon === "string" || value.icon === null)
+    "icon" in value && (typeof value.icon === "string" || value.icon === null) &&
+    "owner" in value && typeof value.owner === "boolean"
   );
 }
 

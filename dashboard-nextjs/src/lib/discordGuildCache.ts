@@ -4,6 +4,8 @@ export interface CachedDiscordGuild {
   icon: string | null;
   permissions: string;
   hasBot?: boolean;
+  /** Czy zalogowany user jest właścicielem TEGO serwera Discorda. */
+  owner?: boolean;
 }
 
 interface CacheEntry<T> {
