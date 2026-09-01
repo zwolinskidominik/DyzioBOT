@@ -18,6 +18,10 @@ services:
       - ./logs:/app/logs
       - ./cookies.txt:/app/cookies.txt:ro
       - yt-dlp-cache:/root/.cache/yt-dlp
+      # Współdzielony z dashboardem (./assets:/assets) — bot czyta wgrane
+      # obrazki/GIF-y Powitań z process.cwd()/assets/... w czasie działania,
+      # więc musi widzieć ten sam katalog na hoście, nie tylko kopię z buildu.
+      - ./assets:/app/assets
 
   dashboard:
     build:
@@ -41,7 +45,9 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
-      - ./assets:/assets:ro
+      # Bez :ro — dashboard zapisuje tu uploady (greetings/uploads, lobby/uploads)
+      # przy każdym zapisie configu Powitań, nie tylko przy dodaniu pliku.
+      - ./assets:/assets
     depends_on:
       - redis
 
