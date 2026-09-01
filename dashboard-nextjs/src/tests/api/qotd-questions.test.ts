@@ -7,6 +7,7 @@ vi.mock("next-auth", () => ({
   getServerSession: vi.fn(),
 }));
 vi.mock("@/lib/auth.config", () => ({ authOptions: {} }));
+vi.mock("@/lib/owner", () => ({ OWNER_IDS: ["u1"] }));
 vi.mock("mongoose", () => {
   const findOneAndUpdateMock = vi.fn();
   const findMock = vi.fn();
@@ -55,7 +56,7 @@ function makeParams(guildId = "guild123") {
 // ---------------------------------------------------------------------------
 describe("GET /api/guild/[guildId]/qotd/questions", () => {
   beforeEach(() => {
-    vi.mocked(getServerSession).mockResolvedValue({ user: { id: "u1" } } as any);
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: "u1" }, accessToken: "token" } as any);
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -101,7 +102,7 @@ describe("GET /api/guild/[guildId]/qotd/questions", () => {
 // ---------------------------------------------------------------------------
 describe("PATCH /api/guild/[guildId]/qotd/questions — restore", () => {
   beforeEach(() => {
-    vi.mocked(getServerSession).mockResolvedValue({ user: { id: "u1" } } as any);
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: "u1" }, accessToken: "token" } as any);
   });
 
   it("returns 401 when not authenticated", async () => {

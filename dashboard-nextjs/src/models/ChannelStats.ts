@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 export interface IChannelStats {
   guildId: string;
+  enabled?: boolean;
   channels: {
     lastJoined?: {
       channelId?: string;
@@ -25,6 +26,7 @@ export interface IChannelStats {
 const ChannelStatsSchema = new mongoose.Schema<IChannelStats>(
   {
     guildId: { type: String, required: true, unique: true, index: true },
+    enabled: { type: Boolean, default: true },
     channels: {
       type: {
         lastJoined: {

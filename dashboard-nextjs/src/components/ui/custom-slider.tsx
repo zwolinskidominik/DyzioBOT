@@ -12,6 +12,8 @@ interface CustomSliderProps {
   ticks?: number[];
   /** Formatowanie etykiety dla danej wartości ticka (domyślnie "OFF" dla 0, inaczej "{v} XP"). */
   formatTick?: (tickValue: number) => string;
+  /** Wywoływane po zakończeniu interakcji (puszczenie myszy/dotyku, klawiatura) — na potrzeby np. odroczonego sortowania listy do momentu odkliknięcia. */
+  onCommit?: () => void;
 }
 
 const FILL_COLOR = "#3b82f6"; // spójne z DeezySwitch/focus-ring reszty modułów
@@ -36,6 +38,7 @@ export function CustomSlider({
   ariaLabel,
   ticks,
   formatTick = defaultFormatTick,
+  onCommit,
 }: CustomSliderProps) {
   const percent = max > min ? ((value - min) / (max - min)) * 100 : 0;
   const clamped = Math.min(Math.max(percent, 0), 100);
@@ -51,6 +54,9 @@ export function CustomSlider({
         disabled={disabled}
         aria-label={ariaLabel}
         onChange={(e) => onChange(Number(e.target.value))}
+        onMouseUp={onCommit}
+        onTouchEnd={onCommit}
+        onKeyUp={onCommit}
         className="custom-slider-input"
         style={{
           background: `linear-gradient(to right, ${FILL_COLOR} 0%, ${FILL_COLOR} ${clamped}%, ${TRACK_COLOR} ${clamped}%, ${TRACK_COLOR} 100%)`,

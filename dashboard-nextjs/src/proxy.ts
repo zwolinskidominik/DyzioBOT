@@ -12,7 +12,13 @@ import redis from "@/lib/redis";
 const WINDOW_SECONDS = 60;
 const LIMITS = { read: 120, write: 30 } as const;
 
-async function checkRateLimit(ip: string, isWrite: boolean): Promise<boolean> {
+interface RateLimitResult {
+  allowed: boolean;
+  /** Ustawione tylko gdy odmowa wynika z awarii Redis, nie z przekroczenia limitu. */
+  limiterUnavailable?: boolean;
+}
+
+async function checkRateLimit(ip: string, isWrite: boolean): Promise<RateLimitResult> {
   // Fixed-window bucket: key changes every 60s — atomic INCR + EXPIRE
   const bucket = Math.floor(Date.now() / (WINDOW_SECONDS * 1000));
   const key = `rl:${ip}:${isWrite ? "w" : "r"}:${bucket}`;
@@ -23,10 +29,16 @@ async function checkRateLimit(ip: string, isWrite: boolean): Promise<boolean> {
       // Set TTL only on first increment (avoid resetting window on each request)
       await redis.expire(key, WINDOW_SECONDS * 2);
     }
-    return count <= (isWrite ? LIMITS.write : LIMITS.read);
+    return { allowed: count <= (isWrite ? LIMITS.write : LIMITS.read) };
   } catch {
-    // Redis down → fail open (allow request, never block due to infra issue)
-    return true;
+    // Redis down: odczyty zostają fail-open (awaria infrastruktury nie powinna
+    // wyłączyć całego dashboardu). Zapisy (POST/PATCH/PUT/DELETE) idą fail-closed,
+    // ale TYLKO na produkcji — lokalny dev bardzo często działa bez Redisa/Dockera
+    // (patrz komentarz w lib/redis.ts), więc fail-closed w dev zablokowałoby
+    // każdy zapis w dashboardzie developerowi bez uruchomionego Redisa.
+    const isProd = process.env.NODE_ENV === "production";
+    const shouldBlock = isWrite && isProd;
+    return { allowed: !shouldBlock, limiterUnavailable: shouldBlock };
   }
 }
 
@@ -63,8 +75,17 @@ export default withAuth(
       const ip = getClientIP(req);
       const isWrite = ["POST", "PATCH", "PUT", "DELETE"].includes(req.method);
 
-      const allowed = await checkRateLimit(ip, isWrite);
-      if (!allowed) {
+      const result = await checkRateLimit(ip, isWrite);
+      if (!result.allowed) {
+        if (result.limiterUnavailable) {
+          return new NextResponse(
+            JSON.stringify({ error: "Service temporarily unavailable" }),
+            {
+              status: 503,
+              headers: { "Content-Type": "application/json", "Retry-After": "5" },
+            }
+          );
+        }
         return new NextResponse(
           JSON.stringify({ error: "Too Many Requests" }),
           {

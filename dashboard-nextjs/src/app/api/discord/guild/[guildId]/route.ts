@@ -56,6 +56,7 @@ function toAvailability(guild: CachedDiscordGuild | DiscordGuildSummary): GuildA
     name: guild.name,
     icon: guild.icon,
     permissions: guild.permissions,
+    owner: guild.owner === true,
     hasBot: "hasBot" in guild ? guild.hasBot !== false : true,
   };
 }
