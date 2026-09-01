@@ -3,6 +3,22 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build dependencies dla canvas (Alpine) — musl nie ma prebuilt binaries dla node-canvas,
+# więc kompilujemy z węzła (node-gyp) tutaj, raz, w tym etapie.
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    pkgconfig \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev \
+    pixman-dev \
+    pangomm-dev \
+    libjpeg-turbo-dev \
+    freetype-dev
+
 # Build-time argument dla NEXT_PUBLIC_
 ARG NEXT_PUBLIC_DISCORD_CLIENT_ID
 ENV NEXT_PUBLIC_DISCORD_CLIENT_ID=${NEXT_PUBLIC_DISCORD_CLIENT_ID}
@@ -25,11 +41,22 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Runtime dependencies dla canvas (Alpine) — same shared libs bez -dev/kompilatora.
+RUN apk add --no-cache \
+    cairo \
+    jpeg \
+    pango \
+    giflib \
+    pixman \
+    libjpeg-turbo \
+    freetype
+
 COPY package*.json ./
 
-# Instaluj production dependencies + typescript (needed for next.config.ts)
-RUN npm ci --only=production && npm install typescript
-
+# Kopiuj już skompilowane node_modules z buildera (z canvas) zamiast budować od nowa —
+# unika braku Pythona/kompilatora w tym etapie i gwarantuje ten sam binarny canvas,
+# który przeszedł `npm run build`. Zawiera też typescript (potrzebny dla next.config.ts).
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY next.config.ts ./next.config.ts
