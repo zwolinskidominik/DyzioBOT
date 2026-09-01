@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 
 const birthdaySchema = new mongoose.Schema({
@@ -51,6 +52,9 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await connectDB();
 
     const birthdays = await Birthday.find({ guildId: String(guildId) }).lean();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { mkdir, readdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import mongoose from "mongoose";
@@ -422,7 +423,13 @@ async function applyGifState(guildId: string, userId: string | undefined, formDa
     await GreetingGifState.deleteOne({ guildId, fileName });
   }));
 
-  await GreetingGifState.deleteMany({ guildId, fileName: { $nin: gifState.disabledDefaultNames } });
+  // mongoose.trusted(): sanitizeFilter (instrumentation.ts) rzuca CastError na
+  // {$nin: []}, gdy disabledDefaultNames jest puste (nikt nic nie wyłączył) —
+  // trzeba oznaczyć jako trusted dokładnie ten wewnętrzny obiekt operatora,
+  // nie cały filtr (sanitizeFilter sanityzuje zagnieżdżone obiekty osobno).
+  // Sama tablica pochodzi z naszego payloadu, nie z surowego inputu usera do
+  // zapytania Mongo, więc oznaczenie jako trusted jest tu bezpieczne.
+  await GreetingGifState.deleteMany({ guildId, fileName: mongoose.trusted({ $nin: gifState.disabledDefaultNames }) });
   await Promise.all(gifState.disabledDefaultNames.map((fileName) => GreetingGifState.findOneAndUpdate(
     { guildId, fileName },
     {
@@ -496,6 +503,9 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     if (!isSafeGuildId(guildId)) {
       return NextResponse.json({ error: "Invalid guildId" }, { status: 400 });
     }
@@ -522,6 +532,9 @@ export async function POST(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     if (!isSafeGuildId(guildId)) {
       return NextResponse.json({ error: "Invalid guildId" }, { status: 400 });
     }

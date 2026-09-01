@@ -67,9 +67,9 @@ export function ReactionRoleLivePreview({ title, reactions, roles, embedColor }:
         />
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-sm font-semibold text-white/90">Dyzio</span>
+            <span className="text-sm font-semibold text-white/90">Deezy</span>
             <span className="rounded bg-[#5865f2] px-1 py-0.5 text-[10px] font-bold leading-none text-white">
-              APP
+              BOT
             </span>
             <span className="text-xs text-[#8d94a8]">{timestamp ?? " "}</span>
           </div>
@@ -116,11 +116,16 @@ export function ReactionRoleLivePreview({ title, reactions, roles, embedColor }:
           </div>
 
           {reactions.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5 pt-0.5">
+            <div className="flex flex-wrap gap-1 pt-0.5">
               {reactions.map((reaction, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-1 rounded-md border border-[#2f3341] bg-dark-800 px-2 py-1 text-xs text-[#c4cad8]"
+                  className="flex items-center gap-1.5 px-1.5 py-1 text-xs text-[#c4cad8]"
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    border: "1px solid transparent",
+                    borderRadius: "0.5rem",
+                  }}
                 >
                   <EmojiDisplay emoji={reaction.emoji} size={14} />
                   <span>1</span>

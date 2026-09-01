@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 import ChannelStatsModel from "@/models/ChannelStats";
 import { createAuditLog } from "@/lib/auditLog";
+import type { IAuditLogChange } from "@/models/AuditLog";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  lastJoined: 'Ostatnio dołączył',
+  users: 'Liczba użytkowników',
+  bots: 'Liczba botów',
+  bans: 'Liczba banów',
+};
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -27,6 +36,9 @@ export async function POST(
     }
 
     const { guildId } = await context.params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const { category, template } = await req.json();
 
     console.log('[Create Channel] Request:', { guildId, category, template });
@@ -109,6 +121,10 @@ export async function POST(
     config.channels[category as keyof typeof config.channels]!.template = template;
     await config.save();
 
+    const createChanges: IAuditLogChange[] = [
+      { field: 'channelId', label: CATEGORY_LABELS[category] || category, to: `#${channelData.name}` },
+    ];
+
     await createAuditLog({
       guildId,
       userId: session.user?.id || session.user?.name || 'unknown',
@@ -122,6 +138,7 @@ export async function POST(
         category,
         template,
       },
+      changes: createChanges,
     });
 
     console.log('[Create Channel] Success:', { channelId: channelData.id, channelName: channelData.name });
@@ -132,6 +149,87 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error creating channel:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  context: RouteContext
+): Promise<NextResponse> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.accessToken) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { guildId } = await context.params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
+    const { category } = await req.json();
+
+    if (!category || !['lastJoined', 'users', 'bots', 'bans'].includes(category)) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+    }
+
+    await connectDB();
+
+    const config = await ChannelStatsModel.findOne({ guildId });
+    if (!config) {
+      return NextResponse.json({ error: "Config not found" }, { status: 404 });
+    }
+
+    const categoryData = config.channels[category as keyof typeof config.channels];
+    const channelId = categoryData?.channelId;
+
+    if (!channelId) {
+      return NextResponse.json({ error: "Channel does not exist" }, { status: 400 });
+    }
+
+    const response = await fetch(
+      `https://discord.com/api/v10/channels/${channelId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        },
+      }
+    );
+
+    if (!response.ok && response.status !== 404) {
+      const error = await response.text();
+      console.error("Discord API error:", error);
+      return NextResponse.json(
+        { error: "Failed to delete channel" },
+        { status: response.status }
+      );
+    }
+
+    config.channels[category as keyof typeof config.channels]!.channelId = undefined;
+    await config.save();
+
+    const deleteChanges: IAuditLogChange[] = [
+      { field: 'channelId', label: CATEGORY_LABELS[category] || category, from: `#${channelId}`, to: 'brak' },
+    ];
+
+    await createAuditLog({
+      guildId,
+      userId: session.user?.id || session.user?.name || 'unknown',
+      username: session.user?.name || session.user?.email || 'Unknown User',
+      action: 'channel_stats.delete_channel',
+      module: 'channel_stats',
+      description: `Usunięto kanał statystyk: ${category}`,
+      metadata: { channelId, category },
+      changes: deleteChanges,
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting channel:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth.config';
 import mongoose from 'mongoose';
 import { OWNER_IDS, OWNER_GUILD_IDS } from '@/lib/owner';
 import TournamentConfig from '@/models/TournamentConfig';
-import { createAuditLog } from '@/lib/auditLog';
+import { createAuditLog, diffFields } from '@/lib/auditLog';
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
@@ -49,6 +49,14 @@ export async function GET(
       messageTemplate: (config as any)?.messageTemplate || defaultTemplate,
       cronSchedule: (config as any)?.cronSchedule || '25 20 * * 1',
       reactionEmoji: (config as any)?.reactionEmoji || '🎮',
+      messageMode: (config as any)?.messageMode || 'text',
+      embedColor: (config as any)?.embedColor || '#3b82f6',
+      titleText: (config as any)?.titleText ?? '🏆 Turniej CS2',
+      footerText: (config as any)?.footerText ?? '',
+      participantRoleId: (config as any)?.participantRoleId || null,
+      organizerRoleId: (config as any)?.organizerRoleId || null,
+      organizerUserIds: (config as any)?.organizerUserIds || [],
+      voiceChannelId: (config as any)?.voiceChannelId || null,
     });
   } catch (error) {
     console.error('Error fetching tournament config:', error);
@@ -76,20 +84,55 @@ export async function POST(
     const body = await req.json();
 
     // Only allow known fields — strip _id, __v, guildId, etc.
-    const { enabled, channelId, messageTemplate, cronSchedule, reactionEmoji } = body;
+    const {
+      enabled, channelId, messageTemplate, cronSchedule, reactionEmoji, messageMode, embedColor, titleText, footerText,
+      participantRoleId, organizerRoleId, organizerUserIds, voiceChannelId,
+    } = body;
+
+    const oldConfig = await TournamentConfig.findOne({ guildId }).lean() as Record<string, unknown> | null;
+
+    const nextConfig = {
+      guildId,
+      enabled,
+      channelId: channelId || null,
+      messageTemplate,
+      cronSchedule,
+      reactionEmoji,
+      messageMode: messageMode === 'embed' ? 'embed' : 'text',
+      embedColor: embedColor || '#3b82f6',
+      titleText: titleText ?? '',
+      footerText: footerText ?? '',
+      participantRoleId: participantRoleId || null,
+      organizerRoleId: organizerRoleId || null,
+      organizerUserIds: Array.isArray(organizerUserIds) ? organizerUserIds : [],
+      voiceChannelId: voiceChannelId || null,
+    };
 
     const updatedConfig = await TournamentConfig.findOneAndUpdate(
       { guildId },
-      { 
-        guildId,
-        enabled,
-        channelId: channelId || null,
-        messageTemplate,
-        cronSchedule,
-        reactionEmoji,
-      },
+      nextConfig,
       { new: true, upsert: true }
     ).lean() as Record<string, unknown> | null;
+
+    const changes = diffFields(oldConfig, nextConfig, [
+      { field: 'enabled', label: 'Włączony' },
+      { field: 'channelId', label: 'Kanał ogłoszeń' },
+      { field: 'cronSchedule', label: 'Harmonogram (cron)' },
+      { field: 'reactionEmoji', label: 'Emoji reakcji' },
+      { field: 'messageMode', label: 'Tryb wiadomości' },
+      { field: 'embedColor', label: 'Kolor embeda' },
+      { field: 'titleText', label: 'Tytuł' },
+      { field: 'footerText', label: 'Stopka' },
+      { field: 'participantRoleId', label: 'Rola uczestnika' },
+      { field: 'organizerRoleId', label: 'Rola organizatora' },
+      { field: 'organizerUserIds', label: 'Liczba organizatorów' },
+      { field: 'voiceChannelId', label: 'Kanał głosowy' },
+      {
+        field: 'messageTemplate',
+        label: 'Szablon wiadomości',
+        formatValue: (v: string) => (typeof v === 'string' && v.length > 60 ? `${v.slice(0, 60)}…` : v ?? 'brak'),
+      },
+    ]);
 
     await createAuditLog({
       guildId,
@@ -102,6 +145,7 @@ export async function POST(
         enabled,
         cronSchedule,
       },
+      changes,
     });
 
     return NextResponse.json({
@@ -111,6 +155,14 @@ export async function POST(
       messageTemplate: updatedConfig?.messageTemplate || '',
       cronSchedule: updatedConfig?.cronSchedule || '25 20 * * 1',
       reactionEmoji: updatedConfig?.reactionEmoji || '🎮',
+      messageMode: updatedConfig?.messageMode || 'text',
+      embedColor: updatedConfig?.embedColor || '#3b82f6',
+      titleText: updatedConfig?.titleText ?? '',
+      footerText: updatedConfig?.footerText ?? '',
+      participantRoleId: updatedConfig?.participantRoleId || null,
+      organizerRoleId: updatedConfig?.organizerRoleId || null,
+      organizerUserIds: updatedConfig?.organizerUserIds || [],
+      voiceChannelId: updatedConfig?.voiceChannelId || null,
     });
   } catch (error) {
     console.error('Error updating tournament config:', error);

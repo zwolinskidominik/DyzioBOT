@@ -10,6 +10,16 @@ interface Variable {
   description: string;
 }
 
+const escapeHtml = (str: string): string =>
+  str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const escapeRegex = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 interface VariableInserterProps {
   value: string;
   onChange: (value: string) => void;
@@ -116,17 +126,21 @@ export default function VariableInserter({
 
   const renderContent = (text: string) => {
     if (!text) return "";
-    
-    let html = text;
+
+    // Chroni przed stored XSS: `text` to zapisana wcześniej wartość (np. treść
+    // szablonu wiadomości ustawiona przez innego admina), więc zanim trafi do
+    // editor.innerHTML MUSI zostać zescapowana — inaczej `<img onerror=...>`
+    // zapisane w configu wykonałoby się w przeglądarce innego admina.
+    let html = escapeHtml(text);
     variables.forEach((variable) => {
-      const escapedValue = variable.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedValue = escapeRegex(escapeHtml(variable.value));
       const regex = new RegExp(escapedValue, 'g');
       html = html.replace(
         regex,
-        `<span class="variable-tag" contenteditable="false" data-variable="${variable.value}">${variable.display}</span>`
+        `<span class="variable-tag" contenteditable="false" data-variable="${escapeHtml(variable.value)}">${escapeHtml(variable.display)}</span>`
       );
     });
-    
+
     return html.replace(/\n/g, '<br>');
   };
 
@@ -263,6 +277,7 @@ export default function VariableInserter({
         ) : null}
       </div>
 
+      {variables.length > 0 ? (
       <div className={`flex flex-wrap gap-2 ${toolbarClassName}`}>
         <span className="text-xs text-muted-foreground self-center">{variableLabel}</span>
         {variables.map((variable) => (
@@ -282,6 +297,7 @@ export default function VariableInserter({
           </button>
         ))}
       </div>
+      ) : null}
 
       <style jsx global>{`
         [contenteditable][data-placeholder]:empty:before {

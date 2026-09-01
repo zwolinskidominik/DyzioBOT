@@ -11,12 +11,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import EmojiPicker from "@/components/EmojiPicker";
 import { EmojiDisplay } from "@/components/EmojiDisplay";
+import VariableInserter from "@/components/VariableInserter";
 import { cn } from "@/lib/utils";
 import { TicketLivePreview, TicketBannerThumbnail, type TicketTypeDraft } from "./TicketLivePreview";
 
@@ -203,14 +203,17 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-[#c4cad8]">Wiadomość powitalna</label>
-              <Textarea
+              <VariableInserter
                 value={draft.description}
-                onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+                onChange={(value) => setDraft((d) => ({ ...d, description: value }))}
+                variables={[
+                  { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka osoby otwierającej ticket" },
+                ]}
                 rows={4}
                 placeholder="Użyj {user}, aby wspomnieć osobę otwierającą ticket"
-                className="border-transparent bg-dark-900 text-white/90"
+                unstyled
+                className="rounded-md border border-transparent bg-dark-900 text-sm leading-6 text-white/90 transition-colors focus:border-[#3b82f6]"
               />
-              <p className="text-[11px] text-[#6f7690]">{"{user}"} zostanie zamienione na wzmiankę autora ticketa.</p>
             </div>
 
             <div className="space-y-1.5">

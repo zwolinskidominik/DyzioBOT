@@ -211,4 +211,131 @@ describe('CommandHandler', () => {
     };
     expect((handler as any).commandChanged(cmd1, cmd2)).toBe(true);
   });
+
+  describe('executeCommand — restrictedGuildIds', () => {
+    it('blocks execution outside the allowed guilds', async () => {
+      mockReaddirSync.mockReturnValue([]);
+      const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
+      const client = mockClient();
+      const handler = new CH(client, {});
+
+      const run = jest.fn();
+      const command = {
+        data: { name: 'kalendarz-adwentowy' },
+        options: { restrictedGuildIds: ['owner-guild'] },
+        run,
+      };
+      (handler as any).commands.set('kalendarz-adwentowy', command);
+
+      const guild = mockGuild({ id: 'other-guild' });
+      const interaction = mockInteraction({ commandName: 'kalendarz-adwentowy', guild });
+
+      await (handler as any).executeCommand(interaction);
+
+      expect(run).not.toHaveBeenCalled();
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ content: expect.stringContaining('dostępna tylko na wybranych serwerach') })
+      );
+    });
+
+    it('allows execution inside an allowed guild', async () => {
+      mockReaddirSync.mockReturnValue([]);
+      const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
+      const client = mockClient();
+      const handler = new CH(client, {});
+
+      const run = jest.fn().mockResolvedValue(undefined);
+      const command = {
+        data: { name: 'kalendarz-adwentowy' },
+        options: { restrictedGuildIds: ['owner-guild'] },
+        run,
+      };
+      (handler as any).commands.set('kalendarz-adwentowy', command);
+
+      const guild = mockGuild({ id: 'owner-guild' });
+      const interaction = mockInteraction({ commandName: 'kalendarz-adwentowy', guild });
+
+      await (handler as any).executeCommand(interaction);
+
+      expect(run).toHaveBeenCalled();
+    });
+
+    it('is unaffected for commands without restrictedGuildIds', async () => {
+      mockReaddirSync.mockReturnValue([]);
+      const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
+      const client = mockClient();
+      const handler = new CH(client, {});
+
+      const run = jest.fn().mockResolvedValue(undefined);
+      const command = { data: { name: 'ping' }, options: {}, run };
+      (handler as any).commands.set('ping', command);
+
+      const interaction = mockInteraction({ commandName: 'ping' });
+      await (handler as any).executeCommand(interaction);
+
+      expect(run).toHaveBeenCalled();
+    });
+  });
+
+  describe('registerCommands — restrictedGuildIds', () => {
+    it('registers a restricted command only on its guild, never globally', async () => {
+      mockReaddirSync.mockReturnValue([]);
+      const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
+      const client = mockClient();
+      const handler = new CH(client, {});
+
+      const command = {
+        data: {
+          name: 'kalendarz-adwentowy',
+          toJSON: () => ({ name: 'kalendarz-adwentowy', description: 'x', type: 1 }),
+        },
+        options: { restrictedGuildIds: ['owner-guild'] },
+        run: jest.fn(),
+      };
+      (handler as any).commands.set('kalendarz-adwentowy', command);
+
+      const guild = mockGuild({ id: 'owner-guild' });
+      client.guilds.fetch = jest.fn().mockResolvedValue(guild);
+
+      await handler.registerCommands();
+
+      expect(client.application.commands.create).not.toHaveBeenCalled();
+      expect(guild.commands.create).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'kalendarz-adwentowy' })
+      );
+    });
+
+    it('merges devOnly and restrictedGuildIds commands targeting the same guild', async () => {
+      mockReaddirSync.mockReturnValue([]);
+      const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
+      const client = mockClient();
+      const handler = new CH(client, { devGuildIds: ['shared-guild'] });
+
+      const devCommand = {
+        data: { name: 'dev-cmd', toJSON: () => ({ name: 'dev-cmd', description: 'x', type: 1 }) },
+        options: { devOnly: true },
+        run: jest.fn(),
+      };
+      const restrictedCommand = {
+        data: {
+          name: 'kalendarz-adwentowy',
+          toJSON: () => ({ name: 'kalendarz-adwentowy', description: 'x', type: 1 }),
+        },
+        options: { restrictedGuildIds: ['shared-guild'] },
+        run: jest.fn(),
+      };
+      (handler as any).commands.set('dev-cmd', devCommand);
+      (handler as any).commands.set('kalendarz-adwentowy', restrictedCommand);
+
+      const guild = mockGuild({ id: 'shared-guild' });
+      client.guilds.fetch = jest.fn().mockResolvedValue(guild);
+
+      await handler.registerCommands();
+
+      expect(guild.commands.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'dev-cmd' }));
+      expect(guild.commands.create).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'kalendarz-adwentowy' })
+      );
+    });
+  });
 });

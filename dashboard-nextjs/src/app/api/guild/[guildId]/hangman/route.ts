@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import dbConnect from "@/lib/mongodb";
 import HangmanCategory from "@/models/HangmanCategory";
 
@@ -14,7 +15,10 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await params;
+    const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await dbConnect();
 
     const categories = await HangmanCategory.find().lean();
@@ -50,7 +54,10 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await params;
+    const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await dbConnect();
 
     const body = await request.json();

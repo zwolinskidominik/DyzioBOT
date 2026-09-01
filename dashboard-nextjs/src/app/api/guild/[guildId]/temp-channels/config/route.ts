@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 import TempChannelConfigurationModel, { ITempChannelCreator } from "@/models/TempChannelConfiguration";
-import { createAuditLog } from "@/lib/auditLog";
+import { createAuditLog, diffFields } from "@/lib/auditLog";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -22,8 +23,11 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
+    await connectDB();
 
     let config = await TempChannelConfigurationModel.findOne({ guildId });
 
@@ -56,8 +60,11 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
+    await connectDB();
     const body = await req.json();
     const creators: ITempChannelCreator[] = Array.isArray(body.creators)
       ? body.creators
@@ -88,6 +95,16 @@ export async function POST(
 
     const config = await TempChannelConfigurationModel.findOne({ guildId });
 
+    const changes = diffFields(
+      existing ? { enabled: existing.enabled, channelIds: existing.channelIds, creators: existing.creators } : null,
+      { enabled, channelIds, creators },
+      [
+        { field: 'enabled', label: 'Włączony' },
+        { field: 'channelIds', label: 'Liczba kanałów' },
+        { field: 'creators', label: 'Liczba kreatorów' },
+      ]
+    );
+
     await createAuditLog({
       guildId,
       userId: session.user.id || session.user.name || 'unknown',
@@ -100,50 +117,12 @@ export async function POST(
         creators,
         count: channelIds.length,
       },
+      changes,
     });
 
     return NextResponse.json(config);
   } catch (error) {
     console.error("Error updating temp channel config:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ guildId: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await connectDB();
-    const { guildId } = await params;
-
-    const db = mongoose.connection.db;
-    if (!db) {
-      throw new Error('Database connection not established');
-    }
-    
-    await db.collection('tempchannelconfigurations').deleteOne({ guildId });
-
-    await createAuditLog({
-      guildId,
-      userId: session.user.id || session.user.name || 'unknown',
-      username: session.user.name || session.user.email || 'Unknown User',
-      action: 'temp_channels.delete',
-      module: 'temp_channels',
-      description: 'Usunięto konfigurację kanałów tymczasowych',
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting temp channel config:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

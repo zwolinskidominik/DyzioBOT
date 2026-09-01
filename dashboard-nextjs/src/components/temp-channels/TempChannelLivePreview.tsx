@@ -39,9 +39,9 @@ export function TempChannelLivePreview({ type }: TempChannelLivePreviewProps) {
           <Image src="/deezy.png" alt="Deezy" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-sm font-semibold text-white/90">Dyzio</span>
+              <span className="text-sm font-semibold text-white/90">Deezy</span>
               <span className="rounded bg-[#5865f2] px-1 py-0.5 text-[10px] font-bold leading-none text-white">
-                APP
+                BOT
               </span>
               <span className="text-xs text-[#8d94a8]">{timestamp ?? " "}</span>
             </div>

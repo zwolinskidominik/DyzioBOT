@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
-import { writeFile, unlink, readdir, mkdir } from "fs/promises";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
+import { readdir } from "fs/promises";
 import path from "path";
 import mongoose from "mongoose";
 
+// Uwaga: to jedyny działający endpoint tego pliku (GET). Upload/toggle/usuwanie GIF-ów
+// idzie przez główny POST w ../route.ts (formData "gifState"/"gifUploads" → applyGifState()) —
+// front-end nigdy nie wywołuje POST/PATCH/DELETE z tego pliku, więc zostały usunięte jako
+// martwy, zduplikowany kod (ten sam wzorzec, co usunięty wcześniej greetings/images POST).
 const DEFAULT_GIFS_DIR = path.join(process.cwd(), '../assets/lobby');
 const UPLOADS_DIR = path.join(DEFAULT_GIFS_DIR, 'uploads');
-const MAX_GREETING_GIFS = 5;
 
 const greetingGifStateSchema = new mongoose.Schema({
   guildId: { type: String, required: true },
@@ -24,28 +28,12 @@ greetingGifStateSchema.index({ guildId: 1, fileName: 1 }, { unique: true });
 
 const GreetingGifState = mongoose.models.GreetingGifState || mongoose.model('GreetingGifState', greetingGifStateSchema);
 
-interface UploadedGifFileShape {
-  name: string;
-  type: string;
-  size: number;
-  arrayBuffer: () => Promise<ArrayBuffer>;
-}
-
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
     return;
   }
 
   await mongoose.connect(process.env.MONGODB_URI!);
-}
-
-function isSafeGifFilename(fileName: string): boolean {
-  return (
-    fileName.toLowerCase().endsWith('.gif') &&
-    !fileName.includes('..') &&
-    !fileName.includes('/') &&
-    !fileName.includes('\\')
-  );
 }
 
 function isSafeGuildId(guildId: string): boolean {
@@ -67,27 +55,6 @@ function createGifItem(guildId: string, fileName: string, source: 'default' | 'u
     disabled,
     url: toGifUrl(guildId, fileName, source),
   };
-}
-
-function createUploadFileName(fileName: string): string {
-  const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const gifFileName = sanitizedName.toLowerCase().endsWith('.gif') ? sanitizedName : `${sanitizedName}.gif`;
-
-  return `${Date.now()}-${gifFileName}`;
-}
-
-function isUploadedGifFile(file: FormDataEntryValue | null): file is File {
-  if (typeof file !== 'object' || file === null) {
-    return false;
-  }
-
-  const candidate = file as Partial<UploadedGifFileShape>;
-  return (
-    typeof candidate.name === 'string' &&
-    typeof candidate.type === 'string' &&
-    typeof candidate.size === 'number' &&
-    typeof candidate.arrayBuffer === 'function'
-  );
 }
 
 async function readGifFiles(directory: string): Promise<string[]> {
@@ -139,6 +106,9 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     if (!isSafeGuildId(guildId)) {
       return NextResponse.json({ error: "Invalid guildId" }, { status: 400 });
     }
@@ -146,180 +116,6 @@ export async function GET(
     await connectDB();
 
     return NextResponse.json(await getVisibleGifFiles(guildId));
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ guildId: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const formData = await request.formData();
-    const file = formData.get('gif');
-
-    if (!isUploadedGifFile(file)) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
-
-    if (!file.type.includes('gif')) {
-      return NextResponse.json({ error: "File must be a GIF" }, { status: 400 });
-    }
-
-    if (file.size > 8 * 1024 * 1024) { // 8MB
-      return NextResponse.json({ error: "File too large (max 8MB)" }, { status: 400 });
-    }
-
-    const { guildId } = await params;
-    if (!isSafeGuildId(guildId)) {
-      return NextResponse.json({ error: "Invalid guildId" }, { status: 400 });
-    }
-
-    const uploadDir = getGuildUploadsDir(guildId);
-    const uploadedGifCount = (await readGifFiles(uploadDir)).length;
-    if (uploadedGifCount >= MAX_GREETING_GIFS) {
-      return NextResponse.json(
-        { error: "GIF_LIMIT_REACHED", max: MAX_GREETING_GIFS },
-        { status: 409 }
-      );
-    }
-
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    const fileName = createUploadFileName(file.name);
-    const filePath = path.join(uploadDir, fileName);
-
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(filePath, buffer);
-    await connectDB();
-    await GreetingGifState.deleteOne({ guildId, fileName });
-
-    return NextResponse.json({
-      name: fileName,
-      source: 'upload',
-      url: toGifUrl(guildId, fileName, 'upload')
-    });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ guildId: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const fileName = searchParams.get('name');
-    const source = searchParams.get('source') === 'upload' ? 'upload' : 'default';
-
-    if (!fileName) {
-      return NextResponse.json({ error: "Filename required" }, { status: 400 });
-    }
-
-    if (source !== 'default') {
-      return NextResponse.json({ error: "Only default GIFs can be toggled" }, { status: 400 });
-    }
-
-    if (!isSafeGifFilename(fileName)) {
-      return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
-    }
-
-    const { disabled } = await request.json().catch(() => ({ disabled: true }));
-    const shouldDisable = disabled !== false;
-    const { guildId } = await params;
-    if (!isSafeGuildId(guildId)) {
-      return NextResponse.json({ error: "Invalid guildId" }, { status: 400 });
-    }
-
-    await connectDB();
-
-    if (shouldDisable) {
-      await GreetingGifState.findOneAndUpdate(
-        { guildId, fileName },
-        {
-          disabled: true,
-          disabledBy: session.user.id,
-          disabledAt: new Date(),
-        },
-        { upsert: true, new: true }
-      );
-    } else {
-      await GreetingGifState.deleteOne({ guildId, fileName });
-    }
-
-    return NextResponse.json({
-      success: true,
-      mode: shouldDisable ? "hidden" : "restored",
-      gif: createGifItem(guildId, fileName, 'default', shouldDisable),
-    });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ guildId: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const fileName = searchParams.get('name');
-    const source = searchParams.get('source') === 'upload' ? 'upload' : 'default';
-
-    if (!fileName) {
-      return NextResponse.json({ error: "Filename required" }, { status: 400 });
-    }
-
-    if (!isSafeGifFilename(fileName)) {
-      return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
-    }
-
-    const { guildId } = await params;
-    if (!isSafeGuildId(guildId)) {
-      return NextResponse.json({ error: "Invalid guildId" }, { status: 400 });
-    }
-
-    const userId = session.user.id;
-
-    if (source === 'default') {
-      await connectDB();
-      await GreetingGifState.findOneAndUpdate(
-        { guildId, fileName },
-        {
-          disabled: true,
-          disabledBy: userId,
-          disabledAt: new Date(),
-        },
-        { upsert: true, new: true }
-      );
-
-      return NextResponse.json({ success: true, mode: "soft" });
-    }
-
-    const filePath = path.join(getGuildUploadsDir(guildId), fileName);
-    await unlink(filePath);
-    await connectDB();
-    await GreetingGifState.deleteOne({ guildId, fileName });
-
-    return NextResponse.json({ success: true, mode: "hard" });
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
+import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
 
 const reactionRoleMappingSchema = new mongoose.Schema({
@@ -91,8 +92,11 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await connectDB();
-    
+
     const reactionRoles = await ReactionRole.find({ guildId }).sort({ _id: -1 });
     
     return NextResponse.json(reactionRoles.map(rr => rr.toObject()));
@@ -113,6 +117,9 @@ export async function POST(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const body = await request.json();
     const { channelId, title, reactions, embedColor } = body;
 
@@ -186,6 +193,9 @@ export async function PATCH(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const body = await request.json();
     const { messageId, channelId, title, reactions, embedColor } = body;
 
@@ -279,6 +289,9 @@ export async function DELETE(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const { searchParams } = new URL(request.url);
     const messageId = searchParams.get('messageId');
 

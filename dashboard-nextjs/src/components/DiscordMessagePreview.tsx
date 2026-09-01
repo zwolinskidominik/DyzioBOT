@@ -21,6 +21,17 @@ let _lookups: LookupMaps = { roles: {}, users: {}, channels: {} };
 
 /** Regex patterns for inline elements (order matters – longest match first). */
 const INLINE_RULES: { pattern: RegExp; render: (m: RegExpMatchArray, key: number) => React.ReactNode }[] = [
+  // wstawiona zmienna (np. Invite Trackera) — owinięta w niewidoczny sentinel …,
+  // renderowana jako wzmianka Discorda. Musi być pierwsza w tablicy, żeby wygrywać remisy
+  // na tym samym indeksie z innymi regułami (np. bold wewnątrz podstawionej wartości).
+  {
+    pattern: /([\s\S]*?)/,
+    render: (m, k) => (
+      <span key={k} className="rounded bg-[#3f4270] px-1 font-medium text-[#c9cdfb] cursor-default">
+        {m[1]}
+      </span>
+    ),
+  },
   // role mention  <@&ROLE_ID>
   {
     pattern: /<@&(\d+)>/,
@@ -257,6 +268,15 @@ interface DiscordMessagePreviewProps {
   users?: Record<string, string>;
   /** Map of channel ID → name for resolving <#ID> mentions */
   channels?: Record<string, string>;
+  /** When set, renders content inside a Discord embed box instead of as plain message text */
+  embed?: { color: string; title?: string; footer?: string };
+  /** Set to false when the bubble is directly followed by more same-background content (e.g. a reaction row) — avoids a rounded-corner gap revealing the page background behind. */
+  roundBottom?: boolean;
+  /** Tighter padding/avatar + top-aligned author row (mniej pustej przestrzeni nad nazwą bota i treścią — wzór: Urodziny). */
+  compact?: boolean;
+  /** Tylko w trybie compact: gdy false, pomija własną ramkę (border) — przydatne, gdy element nadrzędny
+   * już rysuje wspólną ramkę wokół dymka i doklejonego pod nim elementu (np. rząd reakcji w Turnieju). */
+  bordered?: boolean;
 }
 
 export function DiscordMessagePreview({
@@ -266,43 +286,105 @@ export function DiscordMessagePreview({
   roles = {},
   users = {},
   channels = {},
+  embed,
+  roundBottom = true,
+  compact = false,
+  bordered = true,
 }: DiscordMessagePreviewProps) {
-  const rendered = useMemo(() => {
+  const embedTitle = embed?.title;
+  const embedFooter = embed?.footer;
+
+  const { bodyNodes, titleNodes, footerNodes } = useMemo(() => {
     // Set lookup maps for the inline renderer
     _lookups = { roles, users, channels };
     const lines = content.split("\n");
-    return lines.map((line, i) => renderLine(line, i));
-  }, [content, roles, users, channels]);
+    return {
+      bodyNodes: lines.map((line, i) => renderLine(line, i)),
+      titleNodes: embedTitle?.trim() ? renderInline(embedTitle) : null,
+      footerNodes: embedFooter?.trim() ? renderInline(embedFooter) : null,
+    };
+  }, [content, roles, users, channels, embedTitle, embedFooter]);
 
   const now = new Date();
   const timestamp = `Dzisiaj o ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
+  const bodyContent = embed ? (
+    <div
+      className="rounded-[4px] py-2 pr-4"
+      style={{
+        borderLeft: `4px solid ${embed.color}`,
+        backgroundColor: "rgba(46,48,54,0.5)",
+        paddingLeft: "12px",
+      }}
+    >
+      {titleNodes && (
+        <p className="mb-1 font-semibold text-[#f2f3f5]">{titleNodes}</p>
+      )}
+      <div>{bodyNodes}</div>
+      {footerNodes && (
+        <p className="mt-2 text-[11px] text-[#949ba4]">{footerNodes}</p>
+      )}
+    </div>
+  ) : (
+    bodyNodes
+  );
+
+  const authorLine = (
+    <div className="flex items-center gap-1.5">
+      <span className="font-medium text-[#f2f3f5] leading-none">{botName}</span>
+      <span className="rounded bg-[#5865f2] px-1 py-0 text-[10px] font-medium leading-[14px] text-white">
+        BOT
+      </span>
+      <span className="text-[11px] text-[#949ba4] leading-none">{timestamp}</span>
+    </div>
+  );
+
+  if (compact) {
+    // Struktura i klasy 1:1 wzorowane na lokalnym podglądzie z modułu Urodziny:
+    // brak timestampu, avatar h-9 z object-cover, nazwa+treść w jednej kolumnie
+    // obok avatara (bez osobnego "wiersza autora" o wysokości avatara).
+    return (
+      <div
+        className={`${roundBottom ? "rounded-md" : "rounded-t-md"} ${bordered ? "border border-[#2f3341]" : ""} bg-[#313338] p-4 font-[Whitney,Helvetica_Neue,Helvetica,Arial,sans-serif] text-sm text-[#dbdee1]`}
+      >
+        <div className="flex items-start gap-3">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={botName} className="mt-0.5 h-9 w-9 shrink-0 rounded-full object-cover" />
+          ) : (
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#5865f2] text-white text-xs font-bold select-none">
+              {botName.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-sm">
+              <span className="font-semibold text-white">{botName}</span>
+              <span className="rounded bg-[#5865f2] px-1 py-0 text-[10px] font-semibold uppercase leading-[14px] text-white">Bot</span>
+            </p>
+            <div className="break-words text-sm leading-6 text-[#dbdee1]">{bodyContent}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-lg bg-[#313338] p-4 font-[Whitney,Helvetica_Neue,Helvetica,Arial,sans-serif] text-sm text-[#dbdee1]">
+    <div
+      className={`${roundBottom ? "rounded-lg" : "rounded-t-lg"} bg-[#313338] p-4 font-[Whitney,Helvetica_Neue,Helvetica,Arial,sans-serif] text-sm text-[#dbdee1]`}
+    >
       {/* Author row */}
       <div className="flex items-center gap-2 mb-1">
         {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt={botName}
-            className="h-10 w-10 rounded-full"
-          />
+          <img src={avatarUrl} alt={botName} className="h-10 w-10 rounded-full" />
         ) : (
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#5865f2] text-white text-xs font-bold select-none">
             {botName.slice(0, 2).toUpperCase()}
           </div>
         )}
-        <div className="flex items-center gap-1.5">
-          <span className="font-medium text-[#f2f3f5] leading-none">{botName}</span>
-          <span className="rounded bg-[#5865f2] px-1 py-[1px] text-[10px] font-medium text-white leading-none">
-            BOT
-          </span>
-          <span className="text-[11px] text-[#949ba4] leading-none">{timestamp}</span>
-        </div>
+        {authorLine}
       </div>
 
       {/* Message body */}
-      <div className="pl-12">{rendered}</div>
+      <div className="pl-12">{bodyContent}</div>
     </div>
   );
 }

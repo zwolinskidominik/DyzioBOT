@@ -4,7 +4,8 @@ import { authOptions } from '@/lib/auth.config';
 import mongoose from 'mongoose';
 import { OWNER_IDS, OWNER_GUILD_IDS } from '@/lib/owner';
 import WrappedConfigModel, { IWrappedConfig } from '@/models/WrappedConfig';
-import { createAuditLog } from '@/lib/auditLog';
+import { createAuditLog, diffFields } from '@/lib/auditLog';
+import { DEFAULT_WRAPPED_THEME, resolveWrappedTheme } from '@/lib/wrappedThemes';
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
@@ -34,11 +35,13 @@ export async function GET(
       const newConfig = await WrappedConfigModel.create({
         guildId,
         enabled: false,
+        colorTheme: DEFAULT_WRAPPED_THEME,
       });
       return NextResponse.json({
         guildId: newConfig.guildId,
         channelId: newConfig.channelId,
         enabled: newConfig.enabled,
+        colorTheme: newConfig.colorTheme,
       });
     }
 
@@ -46,6 +49,7 @@ export async function GET(
       guildId: config.guildId,
       channelId: config.channelId,
       enabled: config.enabled,
+      colorTheme: resolveWrappedTheme(config.colorTheme),
     });
   } catch (error) {
     console.error('Error fetching wrapped config:', error);
@@ -72,7 +76,9 @@ export async function POST(
 
     const body = await req.json();
 
-    const { enabled, channelId } = body;
+    const { enabled, channelId, colorTheme } = body;
+
+    const oldConfig = await WrappedConfigModel.findOne({ guildId }).lean<IWrappedConfig>();
 
     const config = await WrappedConfigModel.findOneAndUpdate(
       { guildId },
@@ -80,8 +86,19 @@ export async function POST(
         guildId,
         channelId: channelId || undefined,
         enabled: enabled !== undefined ? enabled : false,
+        colorTheme: resolveWrappedTheme(colorTheme),
       },
       { upsert: true, new: true }
+    );
+
+    const changes = diffFields<Pick<IWrappedConfig, 'channelId' | 'enabled' | 'colorTheme'>>(
+      oldConfig,
+      { channelId: config.channelId, enabled: config.enabled, colorTheme: config.colorTheme },
+      [
+        { field: 'enabled', label: 'Włączony' },
+        { field: 'channelId', label: 'Kanał' },
+        { field: 'colorTheme', label: 'Motyw kolorystyczny' },
+      ]
     );
 
     await createAuditLog({
@@ -91,13 +108,15 @@ export async function POST(
       action: 'update',
       module: 'wrapped',
       description: 'Zaktualizowano konfigurację Server Wrapped',
-      metadata: { enabled, channelId },
+      metadata: { enabled, channelId, colorTheme: config.colorTheme },
+      changes,
     });
 
     return NextResponse.json({
       guildId: config.guildId,
       channelId: config.channelId,
       enabled: config.enabled,
+      colorTheme: config.colorTheme,
     });
   } catch (error) {
     console.error('Error updating wrapped config:', error);

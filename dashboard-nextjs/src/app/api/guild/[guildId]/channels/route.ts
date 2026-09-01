@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 
 export async function GET(
@@ -14,6 +15,8 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
 
     const response = await fetch(
       `https://discord.com/api/v10/guilds/${guildId}/channels`,

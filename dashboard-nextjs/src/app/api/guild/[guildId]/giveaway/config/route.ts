@@ -1,9 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
+import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
 import GiveawayConfig from '@/models/GiveawayConfig';
-import { createAuditLog } from '@/lib/auditLog';
+import { createAuditLog, diffFields } from '@/lib/auditLog';
+import { z } from 'zod';
+
+// Whitelist pól POST-a — blokuje mass assignment.
+const giveawayConfigZod = z.object({
+  enabled: z.boolean().optional(),
+  additionalNote: z.string().max(500).optional(),
+  roleMultipliers: z
+    .array(
+      z.object({
+        roleId: z.string(),
+        multiplier: z.number().min(0).max(100),
+      })
+    )
+    .optional(),
+});
 
 interface RoleMultiplier {
   roleId: string;
@@ -32,8 +48,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectDB();
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
+    await connectDB();
 
     const config = await GiveawayConfig.findOne({ guildId }).lean<IGiveawayConfig>();
 
@@ -59,18 +78,37 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectDB();
     const { guildId } = await params;
-    const body = await req.json();
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
+    await connectDB();
+    const rawBody = await req.json();
+    const parsed = giveawayConfigZod.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Nieprawidłowe dane konfiguracji', details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+    const body = parsed.data;
+
+    const oldConfig = await GiveawayConfig.findOne({ guildId }).lean<IGiveawayConfig>();
 
     const updatedConfig = await GiveawayConfig.findOneAndUpdate(
       { guildId },
-      { 
+      {
         ...body,
-        guildId 
+        guildId
       },
       { new: true, upsert: true }
     );
+
+    const changes = diffFields(oldConfig, { ...body, guildId }, [
+      { field: 'enabled', label: 'Włączony' },
+      { field: 'additionalNote', label: 'Dodatkowa notatka' },
+      { field: 'roleMultipliers', label: 'Liczba mnożników ról' },
+    ]);
 
     await createAuditLog({
       guildId,
@@ -83,6 +121,7 @@ export async function POST(
         enabled: body.enabled,
         roleMultipliersCount: body.roleMultipliers?.length || 0,
       },
+      changes,
     });
 
     return NextResponse.json(updatedConfig);

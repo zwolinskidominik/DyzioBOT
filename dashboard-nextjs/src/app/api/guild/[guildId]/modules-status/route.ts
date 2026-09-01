@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 
 async function connectDB() {
@@ -132,6 +133,18 @@ const WrappedConfigSchema = new mongoose.Schema({
 }, { collection: 'wrappedconfigs', strict: false });
 const WrappedModuleConfig = mongoose.models.WrappedModuleConfig || mongoose.model('WrappedModuleConfig', WrappedConfigSchema);
 
+const CommandConfigSchema = new mongoose.Schema({
+  guildId: String,
+  enabled: Boolean,
+}, { collection: 'commandconfigs', strict: false });
+const CommandModuleConfig = mongoose.models.CommandModuleConfig || mongoose.model('CommandModuleConfig', CommandConfigSchema);
+
+const ModerationConfigSchema = new mongoose.Schema({
+  guildId: String,
+  enabled: Boolean,
+}, { collection: 'moderationconfigs', strict: false });
+const ModerationModuleConfig = mongoose.models.ModerationModuleConfig || mongoose.model('ModerationModuleConfig', ModerationConfigSchema);
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -142,8 +155,11 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
+    await connectDB();
 
     const [
       birthday,
@@ -185,6 +201,8 @@ export async function GET(
 
     const disboard = await DisboardModuleConfig.findOne({ guildId }).lean();
     const inviteTracker = await InviteTrackerModuleConfig.findOne({ guildId }).lean();
+    const commands = await CommandModuleConfig.findOne({ guildId }).lean();
+    const moderation = await ModerationModuleConfig.findOne({ guildId }).lean();
 
     const status = {
       birthdays: (birthday as any)?.enabled === true,
@@ -210,6 +228,10 @@ export async function GET(
       disboard: (disboard as any)?.enabled === true,
       "invite-tracker": (inviteTracker as any)?.enabled === true,
       wrapped: (wrapped as any)?.enabled === true,
+      // Opt-out semantics (default true) — only explicit `enabled: false` turns this off.
+      commands: (commands as any)?.enabled !== false,
+      // Opt-out semantics (default true, patrz ModerationConfig.ts w bocie) — tylko jawne `enabled: false` wyłącza.
+      moderation: (moderation as any)?.enabled !== false,
     };
 
     return NextResponse.json(status);

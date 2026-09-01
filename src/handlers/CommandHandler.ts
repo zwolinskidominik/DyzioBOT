@@ -15,6 +15,7 @@ import type { ICommand, ICommandHandlerConfig } from '../interfaces/Command';
 import { readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import logger from '../utils/logger';
+import { OWNER_IDS } from '../config/constants/owner';
 
 type CommandInteraction =
   | ChatInputCommandInteraction
@@ -50,11 +51,14 @@ export class CommandHandler {
     });
   }
 
-  private loadCommands(dir: string): void {
+  private loadCommands(dir: string, category?: string): void {
     for (const entry of readdirSync(dir)) {
       const fullPath = join(dir, entry);
       if (statSync(fullPath).isDirectory()) {
-        this.loadCommands(fullPath);
+        // Kategoria = nazwa najbliższego folderu nadrzędnego (np. "fun", "misc", "birthdays").
+        // Zagnieżdżone podfoldery dostają WŁASNĄ kategorię, a nie kategorię rodzica — dzięki temu
+        // np. misc/birthdays/* nie trafia do kategorii "misc" (mają już osobny moduł Urodziny).
+        this.loadCommands(fullPath, entry);
         continue;
       }
 
@@ -71,6 +75,7 @@ export class CommandHandler {
         data: commandModule.data,
         run: commandModule.run,
         options: commandModule.options || {},
+        category,
       };
 
       if (commandModule.autocomplete) {
@@ -103,7 +108,16 @@ export class CommandHandler {
       throw new Error('Klient Discord jeszcze nie gotowy (brak client.application)');
     }
     const globalCommands: ApplicationCommandData[] = [];
-    const devCommands: ApplicationCommandData[] = [];
+    // guildId -> komendy, które mają być zarejestrowane WYŁĄCZNIE na tym serwerze
+    // (dev-only na devGuildIds ORAZ restrictedGuildIds z pojedynczych komend — scalone,
+    // bo jeden serwer może dostać komendy z obu źródeł naraz).
+    const guildCommands = new Map<string, ApplicationCommandData[]>();
+
+    const addToGuild = (guildId: string, json: ApplicationCommandData) => {
+      const list = guildCommands.get(guildId) ?? [];
+      list.push(json);
+      guildCommands.set(guildId, list);
+    };
 
     for (const command of this.commands.values()) {
       if (command.options?.deleted) {
@@ -112,7 +126,18 @@ export class CommandHandler {
       }
 
       const json = command.data.toJSON() as unknown as ApplicationCommandData;
-      (command.options?.devOnly ? devCommands : globalCommands).push(json);
+
+      if (command.options?.devOnly) {
+        for (const guildId of this.config.devGuildIds ?? []) addToGuild(guildId, json);
+        continue;
+      }
+
+      if (command.options?.restrictedGuildIds?.length) {
+        for (const guildId of command.options.restrictedGuildIds) addToGuild(guildId, json);
+        continue;
+      }
+
+      globalCommands.push(json);
     }
 
     if (this.config.bulkRegister) {
@@ -121,20 +146,14 @@ export class CommandHandler {
         logger.info(`✅ Załadowano globalnie ${globalCommands.length} komend.`);
       }
 
-      if (devCommands.length && this.config.devGuildIds?.length) {
-        for (const guildId of this.config.devGuildIds) {
-          const guild = await this.client.guilds.fetch(guildId);
-          if (!guild) {
-            logger.warn(
-              `⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend dev.`
-            );
-            continue;
-          }
-          await guild.commands.set(devCommands);
-          logger.info(
-            `✅ Załadowano ${devCommands.length} deweloperskich komend na serwerze "${guild.name}".`
-          );
+      for (const [guildId, cmds] of guildCommands) {
+        const guild = await this.client.guilds.fetch(guildId).catch(() => null);
+        if (!guild) {
+          logger.warn(`⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend guild-scoped.`);
+          continue;
         }
+        await guild.commands.set(cmds);
+        logger.info(`✅ Załadowano ${cmds.length} komend guild-scoped na serwerze "${guild.name}".`);
       }
       return;
     }
@@ -155,27 +174,25 @@ export class CommandHandler {
       }
     }
 
-    if (devCommands.length && this.config.devGuildIds?.length) {
-      for (const guildId of this.config.devGuildIds) {
-        const guild = await this.client.guilds.fetch(guildId);
-        if (!guild) {
-          logger.warn(`⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend dev.`);
+    for (const [guildId, cmds] of guildCommands) {
+      const guild = await this.client.guilds.fetch(guildId).catch(() => null);
+      if (!guild) {
+        logger.warn(`⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend guild-scoped.`);
+        continue;
+      }
+
+      const existing = await guild.commands.fetch();
+
+      for (const cmdData of cmds) {
+        const found = existing.find((cmd) => cmd.name === cmdData.name);
+        if (!found) {
+          await guild.commands.create(cmdData);
+          logger.info(`✅ Utworzono "${cmdData.name}" na serwerze "${guild.name}".`);
           continue;
         }
-
-        const existing = await guild.commands.fetch();
-
-        for (const cmdData of devCommands) {
-          const found = existing.find((cmd) => cmd.name === cmdData.name);
-          if (!found) {
-            await guild.commands.create(cmdData);
-            logger.info(`✅ Utworzono "${cmdData.name}" na serwerze "${guild.name}".`);
-            continue;
-          }
-          if (this.commandChanged(found, cmdData)) {
-            await guild.commands.edit(found.id, cmdData);
-            logger.info(`✅ Zaktualizowano "${cmdData.name}" na serwerze "${guild.name}".`);
-          }
+        if (this.commandChanged(found, cmdData)) {
+          await guild.commands.edit(found.id, cmdData);
+          logger.info(`✅ Zaktualizowano "${cmdData.name}" na serwerze "${guild.name}".`);
         }
       }
     }
@@ -189,17 +206,20 @@ export class CommandHandler {
     await this.client.application.commands.set([]);
     logger.info('🧹 Wyczyszczono globalne komendy');
 
-    if (this.config.devGuildIds?.length) {
-      for (const guildId of this.config.devGuildIds) {
-        try {
-          const guild = await this.client.guilds.fetch(guildId);
-          if (guild) {
-            await guild.commands.set([]);
-            logger.info(`🧹 Wyczyszczono komendy na serwerze "${guild.name}"`);
-          }
-        } catch (error) {
-          logger.warn(`⚠️ Nie udało się wyczyścić komend na serwerze ${guildId}: ${error}`);
+    const restrictedGuildIds = [...this.commands.values()].flatMap(
+      (cmd) => cmd.options?.restrictedGuildIds ?? []
+    );
+    const guildIds = new Set([...(this.config.devGuildIds ?? []), ...restrictedGuildIds]);
+
+    for (const guildId of guildIds) {
+      try {
+        const guild = await this.client.guilds.fetch(guildId);
+        if (guild) {
+          await guild.commands.set([]);
+          logger.info(`🧹 Wyczyszczono komendy na serwerze "${guild.name}"`);
         }
+      } catch (error) {
+        logger.warn(`⚠️ Nie udało się wyczyścić komend na serwerze ${guildId}: ${error}`);
       }
     }
   }
@@ -234,6 +254,23 @@ export class CommandHandler {
     if (command.options?.devOnly && !this.isDeveloper(interaction)) {
       await this.respond(interaction, {
         content: '⛔ Ta komenda jest dostępna tylko dla deweloperów.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    if (command.options?.ownerOnly && !OWNER_IDS.includes(interaction.user.id as (typeof OWNER_IDS)[number])) {
+      await this.respond(interaction, {
+        content: '⛔ Ta komenda jest dostępna tylko dla właściciela bota.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    if (
+      command.options?.restrictedGuildIds?.length &&
+      (!interaction.guildId || !command.options.restrictedGuildIds.includes(interaction.guildId))
+    ) {
+      await this.respond(interaction, {
+        content: '⛔ Ta komenda jest dostępna tylko na wybranych serwerach.',
         flags: MessageFlags.Ephemeral,
       });
       return;

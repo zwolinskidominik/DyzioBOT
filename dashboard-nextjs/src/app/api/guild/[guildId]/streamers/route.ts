@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
+import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
 import { validateTwitchUser } from '@/lib/twitchApi';
 
@@ -10,6 +11,16 @@ const twitchStreamerSchema = new mongoose.Schema({
   userId: { type: String, required: true },
   isLive: { type: Boolean, default: false },
   active: { type: Boolean, default: true },
+  // Cache z ostatniego sprawdzenia bota (co ok. 1 minutę) — dashboard czyta tylko z Mongo,
+  // bez własnych zapytań do Twitch API.
+  title: { type: String },
+  game: { type: String },
+  viewerCount: { type: Number },
+  liveSince: { type: Date },
+  thumbnailUrl: { type: String },
+  // URL avatara streamera z Twitcha (profile_image_url) — pobierany przy walidacji kanału,
+  // bez żadnych dodatkowych zapytań do API.
+  avatarUrl: { type: String },
 }, {
   collection: 'twitchstreamers'
 });
@@ -38,6 +49,8 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
 
     await connectDB();
     const streamers = await TwitchStreamer.find({ guildId, active: true }).lean();
@@ -60,6 +73,9 @@ export async function POST(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const { twitchChannel, userId } = await req.json();
 
     if (!twitchChannel || !userId) {
@@ -67,6 +83,7 @@ export async function POST(
     }
 
     // Validate Twitch user exists before saving
+    let avatarUrl: string | undefined;
     try {
       const twitchUser = await validateTwitchUser(twitchChannel);
       if (!twitchUser) {
@@ -75,28 +92,46 @@ export async function POST(
           { status: 404 },
         );
       }
+      avatarUrl = twitchUser.profile_image_url;
     } catch (err) {
       console.error('Twitch validation error:', err);
       // Graceful degradation: allow save if Twitch API is unavailable
     }
 
     await connectDB();
-    
+
+    const normalizedChannel = twitchChannel.toLowerCase().trim();
+    // mongoose.trusted(): sanitizeFilter (instrumentation.ts) sanityzuje każdy
+    // operator w ręcznie pisanym filtrze — bez tego rzuca CastError na $ne.
+    const duplicateChannel = await TwitchStreamer.findOne({
+      guildId,
+      twitchChannel: normalizedChannel,
+      userId: mongoose.trusted({ $ne: userId }),
+    });
+    if (duplicateChannel) {
+      return NextResponse.json(
+        { error: `Kanał „${normalizedChannel}" jest już na liście.` },
+        { status: 409 },
+      );
+    }
+
     const existing = await TwitchStreamer.findOne({ guildId, userId });
-    
+
     if (existing) {
-      existing.twitchChannel = twitchChannel.toLowerCase().trim();
+      existing.twitchChannel = normalizedChannel;
       existing.active = true;
+      if (avatarUrl) existing.avatarUrl = avatarUrl;
       await existing.save();
       return NextResponse.json(existing.toObject());
     }
-    
+
     const streamer = await TwitchStreamer.create({
       guildId,
       twitchChannel: twitchChannel.toLowerCase().trim(),
       userId,
       isLive: false,
       active: true,
+      avatarUrl,
     });
 
     return NextResponse.json(streamer.toObject());
@@ -117,6 +152,9 @@ export async function PATCH(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const { streamerId, twitchChannel, userId } = await req.json();
 
     if (!streamerId || !twitchChannel || !userId) {
@@ -124,6 +162,7 @@ export async function PATCH(
     }
 
     // Validate Twitch user exists before saving
+    let avatarUrl: string | undefined;
     try {
       const twitchUser = await validateTwitchUser(twitchChannel);
       if (!twitchUser) {
@@ -132,17 +171,34 @@ export async function PATCH(
           { status: 404 },
         );
       }
+      avatarUrl = twitchUser.profile_image_url;
     } catch (err) {
       console.error('Twitch validation error:', err);
     }
 
     await connectDB();
-    
-    const streamer = await TwitchStreamer.findByIdAndUpdate(
-      streamerId,
-      { 
-        twitchChannel: twitchChannel.toLowerCase().trim(), 
-        userId 
+
+    const normalizedChannel = twitchChannel.toLowerCase().trim();
+    // mongoose.trusted(): sanitizeFilter (instrumentation.ts) sanityzuje każdy
+    // operator w ręcznie pisanym filtrze — bez tego rzuca CastError na $ne.
+    const duplicateChannel = await TwitchStreamer.findOne({
+      guildId,
+      twitchChannel: normalizedChannel,
+      _id: mongoose.trusted({ $ne: streamerId }),
+    });
+    if (duplicateChannel) {
+      return NextResponse.json(
+        { error: `Kanał „${normalizedChannel}" jest już na liście.` },
+        { status: 409 },
+      );
+    }
+
+    const streamer = await TwitchStreamer.findOneAndUpdate(
+      { _id: streamerId, guildId },
+      {
+        twitchChannel: normalizedChannel,
+        userId,
+        ...(avatarUrl ? { avatarUrl } : {}),
       },
       { new: true }
     );
@@ -169,6 +225,9 @@ export async function DELETE(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const { searchParams } = new URL(req.url);
     const streamerId = searchParams.get('streamerId');
 
@@ -177,8 +236,8 @@ export async function DELETE(
     }
 
     await connectDB();
-    
-    await TwitchStreamer.findByIdAndDelete(streamerId);
+
+    await TwitchStreamer.findOneAndDelete({ _id: streamerId, guildId });
 
     return NextResponse.json({ success: true });
   } catch (error) {

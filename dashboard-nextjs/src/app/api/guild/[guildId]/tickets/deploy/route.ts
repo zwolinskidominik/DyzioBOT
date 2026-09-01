@@ -3,8 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import mongoose from "mongoose";
 import TicketConfigModel from "@/models/TicketConfig";
-import { createAuditLog } from "@/lib/auditLog";
+import { createAuditLog, diffFields } from "@/lib/auditLog";
 import { getPanelBannerAttachment } from "@/lib/ticketPanelBanner";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -46,6 +47,9 @@ export async function POST(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await connectDB();
 
     const config = await TicketConfigModel.findOne({ guildId });
@@ -167,6 +171,15 @@ export async function POST(
       { new: true }
     );
 
+    const changes = diffFields<{ enabled: boolean; panelMessageId?: string }>(
+      config.toObject ? config.toObject() : config,
+      { enabled: true, panelMessageId: messageData.id },
+      [
+        { field: "enabled", label: "Włączony" },
+        { field: "panelMessageId", label: "ID wiadomości panelu" },
+      ]
+    );
+
     await createAuditLog({
       guildId,
       userId: session.user.id || session.user.name || "unknown",
@@ -175,6 +188,7 @@ export async function POST(
       module: "tickets",
       description: `Wdrożono panel ticketów na Discord (${config.types.length} typów)`,
       metadata: { panelChannelId: config.panelChannelId, typeCount: config.types.length },
+      changes,
     });
 
     return NextResponse.json(result ? result.toObject() : null);

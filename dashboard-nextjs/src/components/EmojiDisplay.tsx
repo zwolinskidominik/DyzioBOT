@@ -5,6 +5,17 @@ interface EmojiDisplayProps {
   size?: number;
 }
 
+/** Zamienia glif unicode emoji na nazwę pliku Twemoji (bez selektora wariantu FE0F). */
+function toTwemojiCodepoints(emoji: string): string {
+  const points: string[] = [];
+  for (const char of Array.from(emoji)) {
+    const codePoint = char.codePointAt(0);
+    if (codePoint === undefined || codePoint === 0xfe0f) continue;
+    points.push(codePoint.toString(16));
+  }
+  return points.join('-');
+}
+
 export function EmojiDisplay({ emoji, size = 20 }: EmojiDisplayProps) {
   const [imgError, setImgError] = useState(false);
 
@@ -43,8 +54,29 @@ export function EmojiDisplay({ emoji, size = 20 }: EmojiDisplayProps) {
     );
   }
 
-  // Unicode emoji - display as is
-  return <span className="inline-block" style={{ fontSize: size }}>{emoji}</span>;
+  // Unicode emoji — renderowane jako obraz Twemoji (ten sam zestaw grafik co Discord),
+  // żeby wyglądało identycznie niezależnie od czcionki systemowej. Fallback do glifu natywnego przy błędzie.
+  if (imgError) {
+    return <span className="inline-block" style={{ fontSize: size }}>{emoji}</span>;
+  }
+
+  const codepoints = toTwemojiCodepoints(emoji);
+  if (!codepoints) {
+    return <span className="inline-block" style={{ fontSize: size }}>{emoji}</span>;
+  }
+
+  // Pakiet Discorda (github.com/discord/twemoji) trzyma wyłącznie SVG w /dist/svg —
+  // to ten sam, aktualny zestaw grafik, którego używa dzisiejszy klient Discord.
+  return (
+    <img
+      src={`https://cdn.jsdelivr.net/npm/@discordapp/twemoji@16.0.1/dist/svg/${codepoints}.svg`}
+      alt={emoji}
+      className="inline-block align-middle"
+      style={{ width: size, height: size }}
+      draggable={false}
+      onError={() => setImgError(true)}
+    />
+  );
 }
 
 interface EmojiListProps {

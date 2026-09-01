@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
+import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
 
 const VOTING_FORMATS = ['counts', 'percent', 'bar'] as const;
@@ -42,8 +43,11 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await connectDB();
-    
+
     const config = await SuggestionConfig.findOne({ guildId });
 
     return NextResponse.json(
@@ -75,6 +79,9 @@ export async function POST(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const body = await request.json();
     const { enabled, suggestionChannelId, votingFormat, anonymous, embedColor } = body;
 
@@ -117,8 +124,11 @@ export async function DELETE(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await connectDB();
-    
+
     await SuggestionConfig.findOneAndDelete({ guildId });
     
     return NextResponse.json({ success: true });

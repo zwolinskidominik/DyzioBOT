@@ -37,7 +37,7 @@ export function SuggestionEmbedPreview({ votingFormat, anonymous, embedColor }: 
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-semibold text-white/90">Deezy</span>
             <span className="rounded bg-[#5865f2] px-1 py-0.5 text-[10px] font-bold leading-none text-white">
-              APP
+              BOT
             </span>
             <span className="text-xs text-[#8d94a8]">{timestamp ?? " "}</span>
           </div>

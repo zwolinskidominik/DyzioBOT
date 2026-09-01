@@ -3,12 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import mongoose from "mongoose";
 import TicketConfigModel, {
+  ITicketConfig,
   ITicketType,
   ITicketAutomation,
   ITicketPanelMessage,
   TicketBannerMode,
 } from "@/models/TicketConfig";
-import { createAuditLog } from "@/lib/auditLog";
+import { createAuditLog, diffFields } from "@/lib/auditLog";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -96,6 +98,9 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await connectDB();
 
     const config = await TicketConfigModel.findOne({ guildId });
@@ -135,6 +140,9 @@ export async function POST(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const body = await request.json();
     const { enabled, categoryId, panelChannelId } = body;
     const types = sanitizeTypes(body.types);
@@ -143,19 +151,30 @@ export async function POST(
 
     await connectDB();
 
+    const oldConfig = await TicketConfigModel.findOne({ guildId }).lean();
+
+    const nextConfig: ITicketConfig = {
+      guildId,
+      enabled: enabled !== undefined ? enabled : false,
+      categoryId: categoryId ?? "",
+      panelChannelId,
+      types,
+      automation,
+      panelMessage,
+    };
+
     const result = await TicketConfigModel.findOneAndUpdate(
       { guildId },
-      {
-        guildId,
-        enabled: enabled !== undefined ? enabled : false,
-        categoryId: categoryId ?? "",
-        panelChannelId,
-        types,
-        automation,
-        panelMessage,
-      },
+      nextConfig,
       { upsert: true, new: true }
     );
+
+    const changes = diffFields(oldConfig, nextConfig, [
+      { field: "enabled", label: "Włączony" },
+      { field: "categoryId", label: "Kategoria" },
+      { field: "panelChannelId", label: "Kanał panelu" },
+      { field: "types", label: "Liczba typów ticketów" },
+    ]);
 
     await createAuditLog({
       guildId,
@@ -165,33 +184,12 @@ export async function POST(
       module: "tickets",
       description: `Zaktualizowano konfigurację ticketów (${types.length} ${types.length === 1 ? "typ" : "typów"})`,
       metadata: { categoryId, panelChannelId, typeCount: types.length, automation },
+      changes,
     });
 
     return NextResponse.json(result ? result.toObject() : null);
   } catch (error) {
     console.error("Error updating ticket config:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ guildId: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { guildId } = await params;
-    await connectDB();
-
-    await TicketConfigModel.findOneAndDelete({ guildId });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting ticket config:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

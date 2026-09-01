@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 
 /**
  * Returns the highest role position the bot holds in the guild.
@@ -17,6 +18,9 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const botToken = process.env.DISCORD_BOT_TOKEN;
     const botId = process.env.DISCORD_CLIENT_ID;
 

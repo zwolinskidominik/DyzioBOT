@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { readFile } from "fs/promises";
 import path from "path";
 
@@ -22,6 +23,9 @@ export async function GET(
     }
 
     const { guildId, filename } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     const { searchParams } = new URL(request.url);
     const source = searchParams.get('source') === 'upload' ? 'upload' : 'default';
 

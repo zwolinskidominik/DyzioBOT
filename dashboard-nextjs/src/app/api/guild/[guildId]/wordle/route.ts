@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
+import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import dbConnect from '@/lib/mongodb';
 import WordleWord from '@/models/WordleWord';
+import mongoose from 'mongoose';
 
 const POLISH_REGEX = /^[a-ząćęłńóśźż]+$/;
 const MIN_LEN = 5;
@@ -19,11 +21,16 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await params;
+    const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await dbConnect();
 
+    // mongoose.trusted(): sanitizeFilter (instrumentation.ts) sanityzuje każdy
+    // operator w ręcznie pisanym filtrze — bez tego rzuca CastError na $gte/$lte.
     const words = await WordleWord.find({
-      length: { $gte: MIN_LEN, $lte: MAX_LEN },
+      length: mongoose.trusted({ $gte: MIN_LEN, $lte: MAX_LEN }),
     })
       .lean()
       .sort({ length: 1, word: 1 });
@@ -62,7 +69,10 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await params;
+    const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await dbConnect();
 
     const body = await request.json();

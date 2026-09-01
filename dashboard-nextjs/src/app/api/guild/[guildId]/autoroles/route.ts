@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
+import { z } from "zod";
+
+// Whitelist pól POST-a — blokuje mass assignment.
+const autoRoleZod = z.object({
+  userRoleIds: z.array(z.string()).optional(),
+  botRoleIds: z.array(z.string()).optional(),
+  enabled: z.boolean().optional(),
+});
 
 const autoRoleSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
@@ -36,6 +45,9 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
     await connectDB();
 
     const config = await AutoRole.findOne({ guildId: String(guildId) });
@@ -62,14 +74,24 @@ export async function POST(
     }
 
     const { guildId } = await params;
-    const body = await request.json();
+    const accessError = await requireGuildAccess(session, guildId);
+    if (accessError) return accessError;
+
+    const rawBody = await request.json();
+    const parsed = autoRoleZod.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Nieprawidłowe dane konfiguracji", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
 
     await connectDB();
 
     const config = await AutoRole.findOneAndUpdate(
       { guildId: String(guildId) },
       {
-        ...body,
+        ...parsed.data,
         guildId: String(guildId),
       },
       { upsert: true, new: true }
