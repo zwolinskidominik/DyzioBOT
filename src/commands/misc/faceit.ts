@@ -20,7 +20,7 @@ const API_BASE_URL = 'https://open.faceit.com/data/v4';
 
 export const data = new SlashCommandBuilder()
   .setName('faceit')
-  .setDescription('Wyświetla statystyki gracza z platformy Faceit.')
+  .setDescription('Sprawdź statystyki gracza z FACEIT')
   .addStringOption((option) =>
     option.setName('nick').setDescription('Nick gracza na platformie Faceit').setRequired(true)
   )

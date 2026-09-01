@@ -5,12 +5,12 @@ import { createErrorEmbed } from '../../utils/embedHelpers';
 
 export const data = new SlashCommandBuilder()
   .setName('balance')
-  .setDescription('Sprawdź swój portfel lub portfel innego użytkownika')
+  .setDescription('Sprawdź swój majątek lub stan konta innego użytkownika')
   .addUserOption((o) =>
     o.setName('uzytkownik').setDescription('Domyślnie Ty').setRequired(false),
   );
 
-export const options = { guildOnly: true };
+export const options = { guildOnly: true, deleted: true };
 
 export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
   await interaction.deferReply();

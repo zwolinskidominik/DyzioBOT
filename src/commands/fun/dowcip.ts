@@ -28,7 +28,7 @@ async function fetchFromPerelki(): Promise<string> {
 
 export const data = new SlashCommandBuilder()
   .setName('dowcip')
-  .setDescription('Losowy żart!');
+  .setDescription('Deezy ma dla Ciebie losowy dowcip. Oby był dobry. 🤡');
 
 export const options = { cooldown: 3 };
 

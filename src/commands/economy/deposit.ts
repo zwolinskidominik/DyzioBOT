@@ -5,7 +5,7 @@ import { createErrorEmbed } from '../../utils/embedHelpers';
 
 export const data = new SlashCommandBuilder()
   .setName('deposit')
-  .setDescription('Wpłać monety z portfela do banku')
+  .setDescription('Przenieś monety z portfela do banku')
   .addStringOption((o) =>
     o
       .setName('kwota')
@@ -13,7 +13,7 @@ export const data = new SlashCommandBuilder()
       .setRequired(true),
   );
 
-export const options = { guildOnly: true };
+export const options = { guildOnly: true, deleted: true };
 
 export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
   await interaction.deferReply();

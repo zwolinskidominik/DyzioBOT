@@ -18,7 +18,7 @@ const CAT_CONFIG: IAnimalCommandConfig = {
 
 export const data = new SlashCommandBuilder()
   .setName('cat')
-  .setDescription('Wysyła losowe zdjęcie kota.');
+  .setDescription('Losowe zdjęcie kota, bo czemu nie? 🐱');
 
 export const options = {};
 

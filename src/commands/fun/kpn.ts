@@ -35,7 +35,7 @@ const REPLAY_TIMEOUT = 180_000;
 
 export const data = new SlashCommandBuilder()
   .setName('kamien-papier-nozyce')
-  .setDescription('Zagraj w Kamień Papier Nożyce z botem! ✊📄✂️');
+  .setDescription('Zmierz się z Deezy w Kamień, Papier, Nożyce ✊');
 
 export const options = {
   cooldown: 3,

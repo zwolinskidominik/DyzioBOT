@@ -7,7 +7,7 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('toplvl')
-  .setDescription('Wyświetla top 10 użytkowników z najwyższym poziomem na serwerze')
+  .setDescription('Sprawdź ranking najwyższych poziomów na serwerze')
   .addIntegerOption((option) =>
     option
       .setName('strona')

@@ -17,7 +17,7 @@ const SET_USER_BIRTHDAY_COMMAND_ID = '1244599618747109506';
 
 export const data = new SlashCommandBuilder()
   .setName('birthday')
-  .setDescription('Wyświetla Twoją datę urodzin lub datę urodzin innego użytkownika.')
+  .setDescription('Sprawdź swoje urodziny lub urodziny innego użytkownika 🎂')
   .setDMPermission(false)
   .addUserOption((option) =>
     option

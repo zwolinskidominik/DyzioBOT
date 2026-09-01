@@ -17,7 +17,7 @@ const COLLECTION_TIMEOUT = 120_000;
 
 export const data = new SlashCommandBuilder()
   .setName('help')
-  .setDescription('Wyświetla listę dostępnych komend i informacje jak z nich korzystać');
+  .setDescription('Sprawdź dostępne komendy i dowiedz się, jak ich używać');
 
 export const options = {};
 

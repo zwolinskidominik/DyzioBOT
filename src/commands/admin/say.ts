@@ -21,7 +21,7 @@ const MODAL_TIMEOUT = 300_000;
 
 export const data = new SlashCommandBuilder()
   .setName('say')
-  .setDescription('Napisz coś za pomocą bota.')
+  .setDescription('Wyślij wiadomość na wybranym kanale jako Deezy')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false);
 

@@ -5,7 +5,7 @@ import { createErrorEmbed } from '../../utils/embedHelpers';
 
 export const data = new SlashCommandBuilder()
   .setName('send')
-  .setDescription('Wyślij monety do innego użytkownika')
+  .setDescription('Przelej monety innemu użytkownikowi')
   .addUserOption((o) =>
     o.setName('uzytkownik').setDescription('Odbiorca przelewu').setRequired(true),
   )
@@ -17,7 +17,7 @@ export const data = new SlashCommandBuilder()
       .setMinValue(1),
   );
 
-export const options = { guildOnly: true, cooldown: 5 };
+export const options = { guildOnly: true, cooldown: 5, deleted: true };
 
 export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
   await interaction.deferReply();

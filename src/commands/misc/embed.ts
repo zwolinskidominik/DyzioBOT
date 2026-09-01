@@ -13,7 +13,7 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('embed')
-  .setDescription('Stwórz embed.')
+  .setDescription('Stwórz własną wiadomość embed')
   .setDMPermission(false)
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addStringOption((option) =>

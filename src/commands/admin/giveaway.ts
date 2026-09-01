@@ -27,7 +27,7 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('giveaway')
-  .setDescription('System giveaway - zarządzanie konkursami z nagrodami')
+  .setDescription('Twórz i zarządzaj konkursami z nagrodami 🎁')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addSubcommand((subcommand) =>
     subcommand
@@ -289,7 +289,12 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): P
   const content = `${pingRole ? `<@&${pingRole.id}>\n` : ''}`;
 
   const channel = interaction.channel as TextChannel;
-  const giveawayMessage = await channel.send({ content, embeds: [placeholderEmbed], components: [row] });
+  const giveawayMessage = await channel.send({
+    content,
+    embeds: [placeholderEmbed],
+    components: [row],
+    allowedMentions: { parse: [], roles: pingRole ? [pingRole.id] : [] },
+  });
 
   const result = await createGiveaway({
     guildId: interaction.guild!.id,
@@ -530,9 +535,12 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
     const winnerContent = winnerIds.length
       ? `🎉 Gratulacje ${winnerIds.map((id) => `<@${id}>`).join(', ')}! **${ga.prize}** jest Twoje!`
       : 'Brak zgłoszeń, więc nie udało się wyłonić zwycięzcy!';
+    // ga.prize to tekst wpisany przez admina — allow-list tylko realnych zwycięzców,
+    // żeby "@everyone" wklejone w nazwę nagrody nie wywołało masowego pingu.
+    const winnerAllowedMentions = { parse: [] as const, users: winnerIds };
     let sent = false;
     try {
-      await giveawayMessage.reply({ content: winnerContent });
+      await giveawayMessage.reply({ content: winnerContent, allowedMentions: winnerAllowedMentions });
       sent = true;
     } catch (err) {
       logger.warn(`End giveaway: reply nie wysłany (spróbuję channel.send): ${err}`);
@@ -542,6 +550,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
         await (channel as TextChannel).send({
           content: winnerContent,
           reply: { messageReference: giveawayMessage.id },
+          allowedMentions: winnerAllowedMentions,
         });
       } catch (fallbackErr) {
         logger.error(`End giveaway: channel.send także nieudane: ${fallbackErr}`);
@@ -654,9 +663,10 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction): P
     const winnerContent = winnerIds.length
       ? `🎉 **REROLL!** Gratulacje nowym zwycięzcom: ${winnerIds.map((id) => `<@${id}>`).join(', ')}! **${ga.prize}** jest Twoje!`
       : 'Brak wystarczającej liczby uczestników, nie udało się wyłonić nowych zwycięzców!';
+    const winnerAllowedMentions = { parse: [] as const, users: winnerIds };
     let sent = false;
     try {
-      await giveawayMessage.reply({ content: winnerContent });
+      await giveawayMessage.reply({ content: winnerContent, allowedMentions: winnerAllowedMentions });
       sent = true;
     } catch (err) {
       logger.warn(`Reroll giveaway: reply nie wysłany (spróbuję channel.send): ${err}`);
@@ -666,6 +676,7 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction): P
         await (channel as TextChannel).send({
           content: winnerContent,
           reply: { messageReference: giveawayMessage.id },
+          allowedMentions: winnerAllowedMentions,
         });
       } catch (fallbackErr) {
         logger.error(`Reroll giveaway: channel.send także nieudane: ${fallbackErr}`);

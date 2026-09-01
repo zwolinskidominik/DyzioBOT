@@ -12,7 +12,7 @@ type MemeResponse =
 
 export const data = new SlashCommandBuilder()
   .setName('meme')
-  .setDescription('Losuje randomowego mema z różnych źródeł.');
+  .setDescription('Wylosuj mema z różnych zakątków internetu 🗿');
 
 export const options = {
   cooldown: 5,

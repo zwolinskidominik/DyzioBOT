@@ -16,7 +16,7 @@ const PROGRESS_UPDATE_INTERVAL = 5;
 
 export const data = new SlashCommandBuilder()
   .setName('emoji-steal')
-  .setDescription('Dodaje wiele emoji z innego serwera.')
+  .setDescription('Dodaj emoji z innego serwera do tego serwera')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addStringOption((opt) =>

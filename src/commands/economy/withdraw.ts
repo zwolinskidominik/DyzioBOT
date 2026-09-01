@@ -13,7 +13,7 @@ export const data = new SlashCommandBuilder()
       .setRequired(true),
   );
 
-export const options = { guildOnly: true };
+export const options = { guildOnly: true, deleted: true };
 
 export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
   await interaction.deferReply();

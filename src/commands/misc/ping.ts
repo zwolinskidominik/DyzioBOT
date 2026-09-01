@@ -3,7 +3,9 @@ import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
 
-export const data = new SlashCommandBuilder().setName('ping').setDescription('Pong!');
+export const data = new SlashCommandBuilder()
+  .setName('ping')
+  .setDescription('Sprawdź, czy Deezy żyje i jak szybko odpowiada 🏓');
 
 export const options = {
   cooldown: 1,

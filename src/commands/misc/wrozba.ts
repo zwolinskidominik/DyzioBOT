@@ -7,7 +7,7 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('wrozba')
-  .setDescription('Sprawdź swoją wróżbę na dziś');
+  .setDescription('Sprawdź, co los przyniósł Ci na dziś 🔮');
 
 export const options = {
   deleted: true,

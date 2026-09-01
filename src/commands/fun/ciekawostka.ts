@@ -29,7 +29,7 @@ async function fetchFact(): Promise<string> {
 
 export const data = new SlashCommandBuilder()
   .setName('ciekawostka')
-  .setDescription('Losowa ciekawostka!');
+  .setDescription('Poznaj losową ciekawostkę ze świata 🌎');
 
 export const options = { cooldown: 3 };
 

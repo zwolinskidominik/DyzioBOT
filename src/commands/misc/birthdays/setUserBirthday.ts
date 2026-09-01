@@ -14,7 +14,7 @@ import logger from '../../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('birthday-set-user')
-  .setDescription('Ustawia datę urodzin innego użytkownika.')
+  .setDescription('Ustaw datę urodzin innego użytkownika')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addUserOption((option) =>

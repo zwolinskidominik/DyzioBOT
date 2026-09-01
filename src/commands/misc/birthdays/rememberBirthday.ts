@@ -13,7 +13,7 @@ import logger from '../../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('birthday-remember')
-  .setDescription('Ustawia datę urodzin użytkownika.')
+  .setDescription('Ustaw swoją datę urodzin, żeby Deezy o niej pamiętał 🎂')
   .setDMPermission(false)
   .addStringOption((option) =>
     option

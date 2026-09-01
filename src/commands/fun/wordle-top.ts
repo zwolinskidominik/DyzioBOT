@@ -4,6 +4,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { createCanvas, loadImage } from 'canvas';
+import mongoose from 'mongoose';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { WordleStatModel } from '../../models/WordleStat';
 import logger from '../../utils/logger';
@@ -42,7 +43,7 @@ function clipCircle(ctx: Ctx2D, cx: number, cy: number, r: number) {
 // ─── Command definition ────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName('wordle-top')
-  .setDescription('Ranking graczy Wordle na tym serwerze.');
+  .setDescription('Sprawdź najlepszych graczy Wordle na serwerze 🏆');
 
 export const options = { cooldown: 5 };
 
@@ -57,8 +58,10 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   await interaction.deferReply();
 
   // ── Fetch top 10 by wins ──────────────────────────────────────────────────
+  // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
+  // operatory — bez tego rzuca CastError.
   const stats = await WordleStatModel
-    .find({ guildId, wins: { $gt: 0 } })
+    .find({ guildId, wins: mongoose.trusted({ $gt: 0 }) })
     .sort({ wins: -1 })
     .limit(MAX_ROWS)
     .lean();

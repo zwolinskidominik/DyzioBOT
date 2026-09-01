@@ -23,7 +23,7 @@ type PageResult =
 
 export const data = new SlashCommandBuilder()
   .setName('leaderboard')
-  .setDescription('Ranking ekonomiczny serwera')
+  .setDescription('Sprawdź ranking najbogatszych użytkowników serwera')
   .addStringOption((o) =>
     o
       .setName('typ')
@@ -38,7 +38,7 @@ export const data = new SlashCommandBuilder()
       ),
   );
 
-export const options = { guildOnly: true };
+export const options = { guildOnly: true, deleted: true };
 
 function buildButtons(page: number, totalPages: number): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(

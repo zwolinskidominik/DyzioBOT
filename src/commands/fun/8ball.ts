@@ -281,7 +281,7 @@ function drawQuestionFooter(ctx: Ctx2D, question: string, username: string) {
 
 export const data = new SlashCommandBuilder()
   .setName('8ball')
-  .setDescription('Zapytaj magiczną kulę 8-Ball o cokolwiek!')
+  .setDescription('Zadaj pytanie, a magiczna kula wyda wyrok 🔮')
   .addStringOption((o) =>
     o.setName('pytanie')
       .setDescription('Twoje pytanie do magicznej kuli')

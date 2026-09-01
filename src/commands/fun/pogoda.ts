@@ -30,7 +30,7 @@ function addLocationOptions(sub: any) {
 
 export const data = new SlashCommandBuilder()
   .setName('pogoda')
-  .setDescription('Sprawdź pogodę w dowolnym mieście na świecie 🌤️')
+  .setDescription('Sprawdź aktualną pogodę w dowolnym mieście ☁️')
   .addSubcommand((sub) =>
     addLocationOptions(
       sub

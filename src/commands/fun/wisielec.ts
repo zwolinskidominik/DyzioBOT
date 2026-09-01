@@ -46,7 +46,7 @@ const ASSETS_DIR = path.resolve(__dirname, '../../../assets/hangman');
 
 export const data = new SlashCommandBuilder()
   .setName('wisielec')
-  .setDescription('Zagraj w Wisielca! Odgadnij słowo zanim ludzik zostanie powieszony 🪢')
+  .setDescription('Odgadnij ukryte słowo, zanim będzie za późno 💀')
   .addUserOption((option) =>
     option
       .setName('gracz')

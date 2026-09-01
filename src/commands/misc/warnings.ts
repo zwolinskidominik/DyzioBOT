@@ -14,7 +14,7 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('warnings')
-  .setDescription('Sprawdza liczbę ostrzeżeń użytkownika.')
+  .setDescription('Sprawdź ostrzeżenia użytkownika')
   .setDMPermission(false)
   .addUserOption((option) =>
     option

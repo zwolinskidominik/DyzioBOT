@@ -4,6 +4,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { createCanvas, loadImage } from 'canvas';
+import mongoose from 'mongoose';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { HangmanStatsModel } from '../../models/HangmanStats';
 import { COLORS } from '../../config/constants/colors';
@@ -43,7 +44,7 @@ function clipCircle(ctx: Ctx2D, cx: number, cy: number, r: number) {
 // ─── Command definition ────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName('wisielec-top')
-  .setDescription('Ranking graczy Wisielca na tym serwerze.');
+  .setDescription('Sprawdź, kto najlepiej radzi sobie z Wisielcem 🏆');
 
 export const options = { guildOnly: true, cooldown: 5 };
 
@@ -58,8 +59,10 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   await interaction.deferReply();
 
   // ── Fetch top 10 — all players sorted by wins ──────────────────────────
+  // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
+  // operatory — bez tego rzuca CastError.
   const stats = await HangmanStatsModel
-    .find({ guildId, gamesPlayed: { $gt: 0 } })
+    .find({ guildId, gamesPlayed: mongoose.trusted({ $gt: 0 }) })
     .sort({ wins: -1, losses: 1 })
     .limit(MAX_ROWS)
     .lean();

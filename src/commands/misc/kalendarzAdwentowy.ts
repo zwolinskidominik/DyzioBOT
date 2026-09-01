@@ -4,16 +4,20 @@ import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import { modifyXp } from '../../services/xpService';
+import { OWNER_GUILD_IDS } from '../../config/constants/owner';
 import path from 'path';
 import fs from 'fs/promises';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('kalendarz-adwentowy')
-  .setDescription('Otwórz dzisiejsze okienko w kalendarzu adwentowym!');
+  .setDescription('Otwórz dzisiejsze okienko i odbierz swoją niespodziankę 🎁');
 
 export const options = {
-  deleted: true,
+  guildOnly: true,
+  // Rejestrowana i dostępna wyłącznie na oficjalnych serwerach bota — nie tylko dla deweloperów,
+  // dla wszystkich członków tych serwerów (patrz CommandHandler.registerCommands/executeCommand).
+  restrictedGuildIds: [...OWNER_GUILD_IDS],
 };
 
 interface RewardTier {
@@ -40,13 +44,13 @@ function getPolishTime(): Date {
 
 function getTodayDay(): number {
   const polishTime = getPolishTime();
-  const year = polishTime.getFullYear();
   const month = polishTime.getMonth();
-  
-  if (year !== 2025 || month !== 11) {
+
+  // Grudzień (miesiąc 11, 0-indeksowany) — działa co roku, nie tylko w jednym konkretnym.
+  if (month !== 11) {
     return -1;
   }
-  
+
   return polishTime.getDate();
 }
 
@@ -85,22 +89,22 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     await interaction.deferReply();
 
+    const guildId = interaction.guildId!;
+
     const today = getTodayDay();
-    
+
     if (today === -1 || today > 24) {
       await interaction.editReply({
         embeds: [
           createBaseEmbed({
             color: COLORS.ERROR,
-            description: '❌ Kalendarz adwentowy jest dostępny tylko od 1 do 24 grudnia 2025!',
+            description: '❌ Kalendarz adwentowy jest dostępny tylko od 1 do 24 grudnia!',
             timestamp: false,
           }),
         ],
       });
       return;
     }
-
-    const guildId = interaction.guildId!;
     const userId = interaction.user.id;
 
     let calendar = await AdventCalendarModel.findOne({ guildId, userId });

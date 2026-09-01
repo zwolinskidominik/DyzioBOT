@@ -8,7 +8,7 @@ import logger from '../../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('birthdays-next')
-  .setDescription('Wyświetla następne 10 urodzin użytkowników.')
+  .setDescription('Sprawdź, czyje urodziny zbliżają się na serwerze 🎈')
   .setDMPermission(false);
 
 export const options = {};

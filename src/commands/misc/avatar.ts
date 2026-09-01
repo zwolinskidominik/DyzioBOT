@@ -7,7 +7,7 @@ type AvatarSize = 16 | 32 | 64 | 128 | 256 | 512 | 1024 | 2048 | 4096;
 
 export const data = new SlashCommandBuilder()
   .setName('avatar')
-  .setDescription('Wyświetla avatar użytkownika w większym formacie.')
+  .setDescription('Wyświetl avatar użytkownika w pełnym rozmiarze')
   .addUserOption((option) =>
     option
       .setName('uzytkownik')

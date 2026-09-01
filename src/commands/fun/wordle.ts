@@ -109,7 +109,7 @@ async function saveResult(
 
 export const data = new SlashCommandBuilder()
   .setName('wordle')
-  .setDescription('Zagraj w Wordle! Odgadnij ukryte polskie słowo.')
+  .setDescription('Odgadnij ukryte polskie słowo w 6 próbach 🟩')
   .addIntegerOption((o) =>
     o.setName('litery')
       .setDescription('Liczba liter w słowie (domyślnie 5, zakres 5–7)')

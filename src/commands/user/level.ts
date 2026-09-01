@@ -5,7 +5,7 @@ import { CanvasRankCard } from '../../utils/canvasRankCard';
 
 export const data = new SlashCommandBuilder()
   .setName('level')
-  .setDescription('Wyświetla kartę poziomu')
+  .setDescription('Sprawdź swój poziom i postęp do kolejnego')
   .addUserOption((o) => o.setName('uzytkownik').setDescription('Domyślnie Ty').setRequired(false));
 
 export const options = {

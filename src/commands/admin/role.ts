@@ -14,7 +14,7 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('role')
-  .setDescription('Zarządzanie rolami na serwerze')
+  .setDescription('Nadaj, odbierz lub ustaw czasową rolę użytkownika')
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
   .setDMPermission(false)
   .addSubcommand((sub) =>
