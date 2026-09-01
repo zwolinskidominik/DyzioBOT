@@ -1,5 +1,5 @@
 import { GuildBan, AuditLogEvent, Client } from 'discord.js';
-import { sendLog } from '../../utils/logHelpers';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 
 export default async function run(ban: GuildBan, client: Client): Promise<void> {
@@ -10,12 +10,9 @@ export default async function run(ban: GuildBan, client: Client): Promise<void> 
   await sendLog(client, guild.id, 'memberUnban', {
     title: null,
     description: `**🛬 <@${user.id}> został odbanowany.**`,
-    fields: moderator ? [{ name: '**Moderator:**', value: `<@${moderator.id}>`, inline: false }] : undefined,
+    fields: moderator ? [moderatorField(moderator.id)] : [],
     authorName: user.tag,
     authorIcon: user.displayAvatarURL(),
     thumbnail: user.displayAvatarURL({ size: 256 }),
-    footer: moderator ? moderator.username : 'Nieznany moderator',
-    footerIcon: moderator?.displayAvatarURL(),
-    timestamp: new Date(),
   });
 }

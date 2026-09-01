@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { TempRoleModel } from '../models/TempRole';
 import { ServiceResult, ok, fail } from '../types/serviceResult';
 import logger from '../utils/logger';
@@ -112,8 +113,10 @@ export async function collectExpiredTempRoles(): Promise<ServiceResult<ExpiredTe
   try {
     // eslint-disable-next-line no-constant-condition
     while (true) {
+      // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie
+      // pisane operatory — bez tego CAŁE czyszczenie wygasłych ról rzuca CastError.
       const doc = await TempRoleModel.findOneAndDelete({
-        expiresAt: { $lte: new Date() },
+        expiresAt: mongoose.trusted({ $lte: new Date() }),
       }).lean();
 
       if (!doc) break;

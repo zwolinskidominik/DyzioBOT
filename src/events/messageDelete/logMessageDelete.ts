@@ -1,5 +1,5 @@
 import { Message, PartialMessage, AuditLogEvent, Client } from 'discord.js';
-import { sendLog, truncate } from '../../utils/logHelpers';
+import { sendLog, truncate, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import { deleteSuggestionByMessageId } from '../../services/suggestionService';
 import logger from '../../utils/logger';
@@ -31,9 +31,9 @@ export default async function run(
 
   await sendLog(client, message.guild.id, 'messageDelete', {
     title: null,
-    description: `**🗑️ Wiadomość wysłana przez ${message.author ? `<@${message.author.id}>` : '**Nieznany**'} została usunięta na kanale <#${message.channelId}>.**${moderator ? `\n**Usunięte przez:** <@${moderator.id}>` : ''}\n\n\`\`\`${truncate(content, 994)}\`\`\`${attachments}`,
+    description: `**🗑️ Wiadomość wysłana przez ${message.author ? `<@${message.author.id}>` : '**Nieznany**'} została usunięta na kanale <#${message.channelId}>.**\n\n${truncate(content, 1000)}${attachments}`,
+    fields: moderator ? [moderatorField(moderator.id)] : [],
     authorName: message.author?.tag || 'Nieznany',
     authorIcon: message.author?.displayAvatarURL(),
-    footer: `Message ID: ${message.id}`,
   }, { channelId: message.channelId, userId: message.author?.id });
 }

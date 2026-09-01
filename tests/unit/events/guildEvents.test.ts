@@ -107,7 +107,7 @@ describe('guildBanAdd / logBan', () => {
     expect(sendLog).toHaveBeenCalledWith(client, guild.id, 'memberBan', expect.any(Object));
   });
 
-  it('includes moderator in description when available', async () => {
+  it('includes moderator field when available', async () => {
     const mod = mockUser({ id: 'mod-1' });
     (getModerator as jest.Mock).mockResolvedValueOnce(mod);
     const client = mockClient();
@@ -115,7 +115,7 @@ describe('guildBanAdd / logBan', () => {
     const guild = mockGuild();
     await run({ guild, user }, client);
     const callArgs = (sendLog as jest.Mock).mock.calls[0][3];
-    expect(callArgs.description).toContain(mod.id);
+    expect(callArgs.fields.some((f: { name: string; value: string }) => f.name === 'Moderator:' && f.value.includes(mod.id))).toBe(true);
   });
 });
 

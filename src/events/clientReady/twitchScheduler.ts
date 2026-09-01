@@ -3,7 +3,14 @@ import {
   StreamConfigurationDocument,
   StreamConfigurationModel,
 } from '../../models/StreamConfiguration';
-import { getActiveStreamers, setLiveStatus } from '../../services/twitchService';
+import {
+  getActiveStreamers,
+  setLiveStatus,
+  logNotificationSent,
+  renderStreamMessageTemplate,
+  updateAvatarUrl,
+  LiveSnapshot,
+} from '../../services/twitchService';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
@@ -146,7 +153,8 @@ async function sendStreamNotification(
   channelId: string,
   stream: HelixStream,
   user: HelixUser,
-  twitchChannel: string
+  twitchChannel: string,
+  messageTemplate: string
 ): Promise<boolean> {
   const guild = client.guilds.cache.get(guildId);
   if (!guild) {
@@ -167,23 +175,30 @@ async function sendStreamNotification(
   const localThumbnailPath = await downloadThumbnail(thumbnailUrl, twitchChannel, stream.id);
 
   const embed = createStreamNotificationEmbed(stream, user, twitchChannel);
+  const content = renderStreamMessageTemplate(messageTemplate, {
+    streamer: user.displayName,
+    gra: stream.gameName || 'Nieznana gra',
+    tytul: stream.title,
+    link: `https://www.twitch.tv/${twitchChannel}`,
+  });
 
   try {
     if (localThumbnailPath) {
       embed.setImage('attachment://thumbnail.jpg');
       await channel.send({
+        content,
         embeds: [embed],
         files: [{ attachment: localThumbnailPath, name: 'thumbnail.jpg' }],
       });
     } else {
       embed.setImage(thumbnailUrl);
-      await channel.send({ embeds: [embed] });
+      await channel.send({ content, embeds: [embed] });
     }
     return true;
   } catch (sendError: unknown) {
     const msg = sendError instanceof Error ? sendError.message : String(sendError);
     logger.warn(`Błąd wysyłania powiadomienia z miniaturą: ${msg}`);
-    await channel.send({ embeds: [embed] });
+    await channel.send({ content, embeds: [embed] });
     return false;
   }
 }
@@ -205,22 +220,49 @@ async function checkStreams(client: Client): Promise<void> {
 
     try {
       const user = await twitchClient.users.getUserByName(s.twitchChannel);
+
+      // Dane użytkownika i tak już pobrane w tym cyklu — odświeżamy zapisany avatar
+      // bez dodatkowych zapytań do Twitch API (tylko gdy faktycznie się zmienił).
+      if (user && user.profilePictureUrl && user.profilePictureUrl !== s.avatarUrl) {
+        await updateAvatarUrl(s.guildId, s.twitchChannel, user.profilePictureUrl);
+      }
+
       const stream = user ? await twitchClient.streams.getStreamByUserId(user.id) : null;
 
-      if (stream && !s.isLive) {
-        const cfg = channelCfg.find((c) => c.guildId === s.guildId);
-        if (
-          cfg &&
-          (await sendStreamNotification(
-            client,
-            s.guildId,
-            cfg.channelId,
-            stream,
-            user!,
-            s.twitchChannel
-          ))
-        ) {
-          await setLiveStatus(s.guildId, s.twitchChannel, true);
+      if (stream) {
+        // Dane już pobrane w tym cyklu — zapisujemy je jako cache, żeby dashboard
+        // czytał świeże liczby bez własnych zapytań do Twitch API.
+        const snapshot: LiveSnapshot = {
+          title: stream.title,
+          game: stream.gameName || 'Nieznana gra',
+          viewerCount: stream.viewers,
+          liveSince: stream.startDate,
+          thumbnailUrl: stream.thumbnailUrl,
+        };
+
+        if (!s.isLive) {
+          const cfg = channelCfg.find((c) => c.guildId === s.guildId);
+          if (cfg) {
+            const sent = await sendStreamNotification(
+              client,
+              s.guildId,
+              cfg.channelId,
+              stream,
+              user!,
+              s.twitchChannel,
+              cfg.messageTemplate
+            );
+            if (sent) {
+              await setLiveStatus(s.guildId, s.twitchChannel, true, snapshot);
+              await logNotificationSent(s.guildId, s.twitchChannel);
+            }
+          } else {
+            // Brak skonfigurowanego kanału — status i tak aktualizujemy, żeby dashboard był zgodny z rzeczywistością.
+            await setLiveStatus(s.guildId, s.twitchChannel, true, snapshot);
+          }
+        } else {
+          // Już na żywo — tylko odśwież cache (widzowie/tytuł mogły się zmienić).
+          await setLiveStatus(s.guildId, s.twitchChannel, true, snapshot);
         }
       }
 

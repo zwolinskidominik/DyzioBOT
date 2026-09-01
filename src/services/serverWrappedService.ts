@@ -1,4 +1,5 @@
 import { Guild, GuildMember } from 'discord.js';
+import mongoose from 'mongoose';
 import { createCanvas, loadImage } from 'canvas';
 import { registerProjectFonts, roundRect, formatNumberDotSep, formatNumberCompact } from '../utils/canvasHelpers';
 import { MonthlyStatsModel } from '../models/MonthlyStats';
@@ -155,233 +156,321 @@ export async function collectWrappedData(guild: Guild): Promise<WrappedData> {
   };
 }
 
+// ─── Motywy kolorystyczne ─────────────────────────────────────────────────────
+
+export const WRAPPED_THEMES = ['violet', 'midnight', 'emerald', 'sunset', 'amber', 'graphite'] as const;
+export type WrappedTheme = (typeof WRAPPED_THEMES)[number];
+export const DEFAULT_WRAPPED_THEME: WrappedTheme = 'violet';
+
+interface ThemePalette {
+  bg: string;
+  tile: string;
+  tileBorder: string;
+  accent: string;
+  border: string;
+  /** [r, g, b] + alpha dla dwóch dekoracyjnych "glow" plam w tle. */
+  glowA: { rgb: string; alpha: number };
+  glowB: { rgb: string; alpha: number };
+}
+
+/** Wartości 1:1 z zatwierdzonego prototypu (dashboard-nextjs/src/lib/wrappedThemes.ts). */
+const THEME_PALETTES: Record<WrappedTheme, ThemePalette> = {
+  violet: {
+    bg: '#100f1e', tile: '#1d1b35', tileBorder: 'rgba(139,125,251,0.16)',
+    accent: '#a89bff', border: 'rgba(139,125,251,0.3)',
+    glowA: { rgb: '139,125,251', alpha: 0.3 }, glowB: { rgb: '59,130,246', alpha: 0.22 },
+  },
+  midnight: {
+    bg: '#080f1d', tile: '#152238', tileBorder: 'rgba(96,165,250,0.16)',
+    accent: '#7cb8ff', border: 'rgba(96,165,250,0.3)',
+    glowA: { rgb: '96,165,250', alpha: 0.28 }, glowB: { rgb: '14,165,233', alpha: 0.2 },
+  },
+  emerald: {
+    bg: '#05100d', tile: '#0f2119', tileBorder: 'rgba(52,211,153,0.14)',
+    accent: '#34d399', border: 'rgba(52,211,153,0.28)',
+    glowA: { rgb: '16,185,129', alpha: 0.26 }, glowB: { rgb: '13,148,136', alpha: 0.2 },
+  },
+  sunset: {
+    bg: '#1c0e1b', tile: '#31182b', tileBorder: 'rgba(244,114,182,0.16)',
+    accent: '#f9a8d4', border: 'rgba(244,114,182,0.3)',
+    glowA: { rgb: '244,114,182', alpha: 0.28 }, glowB: { rgb: '249,115,22', alpha: 0.22 },
+  },
+  amber: {
+    bg: '#19120a', tile: '#2e2417', tileBorder: 'rgba(251,191,36,0.16)',
+    accent: '#fcd34d', border: 'rgba(251,191,36,0.3)',
+    glowA: { rgb: '251,191,36', alpha: 0.24 }, glowB: { rgb: '239,68,68', alpha: 0.18 },
+  },
+  graphite: {
+    bg: '#101116', tile: '#20222c', tileBorder: 'rgba(255,255,255,0.1)',
+    accent: '#e6e9f2', border: 'rgba(255,255,255,0.16)',
+    glowA: { rgb: '255,255,255', alpha: 0.12 }, glowB: { rgb: '148,163,184', alpha: 0.12 },
+  },
+};
+
+export function resolveWrappedTheme(theme: string | undefined | null): WrappedTheme {
+  return (WRAPPED_THEMES as readonly string[]).includes(theme ?? '') ? (theme as WrappedTheme) : DEFAULT_WRAPPED_THEME;
+}
+
 // ─── Canvas rendering ─────────────────────────────────────────────────────────
 
 const W = 800;
 const H = 1200;
 
-const ACCENT   = '#6c5ce7';
-const ACCENT_2 = '#a29bfe';
-const GOLD     = '#ffd700';
-const SILVER   = '#c0c0c0';
-const BRONZE   = '#cd7f32';
-const WHITE    = '#ffffff';
-const MUTED    = '#8e8e93';
-const STAT_BG  = '#16213e';
+const WHITE = '#ffffff';
+const MUTED = '#98a2b8';
 
-const MEDAL_COLORS = [GOLD, SILVER, BRONZE];
+/** Kolory rang #1/#2/#3 w wierszach top-3 (1:1 z prototypem). */
+const RANK_FG = ['#fcd34d', '#cbd5e1', '#e79c2a'];
 
-export async function renderWrappedCanvas(data: WrappedData): Promise<Buffer> {
+/** Gradienty awatara zastępczego, gdy nie da się pobrać prawdziwego avatara. */
+const AVATAR_FALLBACK_GRADIENTS: [string, string][] = [
+  ['#6366f1', '#a855f7'],
+  ['#0ea5e9', '#22c55e'],
+  ['#f59e0b', '#ef4444'],
+  ['#ec4899', '#a855f7'],
+];
+
+/** Rysuje wielką, miękką plamę światła (odpowiednik CSS radial-gradient(...,68%)). */
+function drawGlow(ctx: any, cx: number, cy: number, radius: number, rgb: string, alpha: number): void {
+  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+  gradient.addColorStop(0, `rgba(${rgb},${alpha})`);
+  gradient.addColorStop(0.68, `rgba(${rgb},${alpha})`);
+  gradient.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+}
+
+function fillAvatarFallback(ctx: any, cx: number, cy: number, size: number, index: number): void {
+  const [c1, c2] = AVATAR_FALLBACK_GRADIENTS[index % AVATAR_FALLBACK_GRADIENTS.length];
+  const r = size / 2;
+  const gradient = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+  gradient.addColorStop(0, c1);
+  gradient.addColorStop(1, c2);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  ctx.restore();
+}
+
+export async function renderWrappedCanvas(data: WrappedData, theme: WrappedTheme = DEFAULT_WRAPPED_THEME): Promise<Buffer> {
   registerProjectFonts();
+
+  const { bg, tile: STAT_BG, tileBorder: TILE_BORDER, accent: ACCENT, border: CARD_BORDER, glowA, glowB } = THEME_PALETTES[theme];
 
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d') as any;
 
-  // ── Background gradient ──
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-  bgGrad.addColorStop(0, '#0f0c29');
-  bgGrad.addColorStop(0.5, '#302b63');
-  bgGrad.addColorStop(1, '#24243e');
-  ctx.fillStyle = bgGrad;
+  // ── Background + dekoracyjne "glow" plamy (1:1 z prototypem: dwie duże,
+  // miękkie plamy w rogach karty, zamiast dawnych trzech płaskich kółek) ──
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
+  drawGlow(ctx, 710, 90, 320, glowA.rgb, glowA.alpha);
+  drawGlow(ctx, 110, 1110, 360, glowB.rgb, glowB.alpha);
 
-  // Decorative circles
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = ACCENT;
-  ctx.beginPath();
-  ctx.arc(650, 100, 200, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(100, 900, 250, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(700, 1100, 150, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 1;
+  const PAD_SIDES = 40;
+  const CONTENT_W = W - PAD_SIDES * 2;
 
-  let y = 40;
+  let y = 38;
 
-  // ── Header: Server icon + name ──
+  // ── Header: ikona serwera + nazwa ──
+  const AVATAR_D = 80;
   if (data.serverIconUrl) {
     try {
       const icon = await loadImage(data.serverIconUrl);
       ctx.save();
       ctx.beginPath();
-      ctx.arc(W / 2, y + 50, 45, 0, Math.PI * 2);
+      ctx.arc(W / 2, y + AVATAR_D / 2, AVATAR_D / 2, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(icon, W / 2 - 45, y + 5, 90, 90);
-      ctx.restore();
-
-      // Glow
-      ctx.save();
-      ctx.shadowColor = ACCENT;
-      ctx.shadowBlur = 20;
-      ctx.strokeStyle = ACCENT;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(W / 2, y + 50, 47, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.drawImage(icon, W / 2 - AVATAR_D / 2, y, AVATAR_D, AVATAR_D);
       ctx.restore();
     } catch {
       // skip icon
     }
   }
-  y += 110;
+  ctx.save();
+  ctx.strokeStyle = ACCENT;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(W / 2, y + AVATAR_D / 2, AVATAR_D / 2, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+  y += AVATAR_D;
 
-  // Server name
+  y += 10;
   ctx.fillStyle = WHITE;
-  ctx.font = 'bold 28px Inter';
+  ctx.font = '800 24px Inter';
   ctx.textAlign = 'center';
-  ctx.fillText(data.serverName, W / 2, y);
-  y += 30;
+  ctx.fillText(data.serverName, W / 2, y + 20);
+  y += 28;
 
-  // "SERVER WRAPPED"
-  const wrappedGrad = ctx.createLinearGradient(200, y, 600, y + 40);
-  wrappedGrad.addColorStop(0, ACCENT);
-  wrappedGrad.addColorStop(1, ACCENT_2);
-  ctx.fillStyle = wrappedGrad;
-  ctx.font = 'bold 42px Inter';
-  ctx.fillText('SERVER WRAPPED', W / 2, y + 35);
-  y += 50;
+  y += 20;
+  ctx.fillStyle = ACCENT;
+  ctx.font = '900 40px Inter';
+  ctx.fillText('SERVER WRAPPED', W / 2, y + 34);
+  y += 44;
 
-  // Age subtitle
+  y += 8;
   ctx.fillStyle = MUTED;
-  ctx.font = '500 18px Inter';
+  ctx.font = '500 16px Inter';
   ctx.fillText(
     `${data.ageYears} ${data.ageYears === 1 ? 'rok' : data.ageYears < 5 ? 'lata' : 'lat'} razem!`,
     W / 2,
-    y + 10,
+    y + 14,
   );
-  y += 40;
+  y += 20;
 
-  // ── Stats grid (2×3) ──
+  // ── Stats grid (3×2) ──
   const stats = [
     { label: 'Członków', value: formatNumberDotSep(data.memberCount), icon: '👥' },
     { label: 'Wiadomości', value: formatNumberCompact(data.totalMessages), icon: '✉️' },
     { label: 'Godzin VC', value: formatNumberCompact(data.totalVoiceHours), icon: '🎙️' },
     { label: 'Giveawayów', value: formatNumberDotSep(data.totalGiveaways), icon: '🎉' },
-    { label: 'Gier Wordle', value: formatNumberDotSep(data.totalWordleGames), icon: '🟩' },
+    { label: 'Gier Wordle', value: formatNumberDotSep(data.totalWordleGames), icon: '🔤' },
     { label: 'Dołączeń', value: formatNumberDotSep(data.totalInvites), icon: '📨' },
   ];
 
   const gridCols = 3;
-  const cellW = 230;
-  const cellH = 90;
-  const gridGap = 16;
-  const gridStartX = (W - (gridCols * cellW + (gridCols - 1) * gridGap)) / 2;
+  const gridGap = 12;
+  const cellW = (CONTENT_W - (gridCols - 1) * gridGap) / gridCols;
+  const cellH = 82;
+  const gridStartX = PAD_SIDES;
+
+  y += 24;
+  const gridY = y;
 
   for (let i = 0; i < stats.length; i++) {
     const col = i % gridCols;
     const row = Math.floor(i / gridCols);
     const cx = gridStartX + col * (cellW + gridGap);
-    const cy = y + row * (cellH + gridGap);
+    const cy = gridY + row * (cellH + gridGap);
 
-    // Card bg
     ctx.fillStyle = STAT_BG;
-    ctx.globalAlpha = 0.6;
     roundRect(ctx, cx, cy, cellW, cellH, 12);
     ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.strokeStyle = TILE_BORDER;
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    // Icon + value
     ctx.fillStyle = WHITE;
-    ctx.font = 'bold 26px Inter';
+    ctx.font = '800 24px Inter';
     ctx.textAlign = 'center';
-    ctx.fillText(`${stats[i].icon} ${stats[i].value}`, cx + cellW / 2, cy + 38);
+    ctx.fillText(`${stats[i].icon} ${stats[i].value}`, cx + cellW / 2, cy + 37);
 
-    // Label
     ctx.fillStyle = MUTED;
-    ctx.font = '500 14px Inter';
-    ctx.fillText(stats[i].label, cx + cellW / 2, cy + 62);
+    ctx.font = '500 13px Inter';
+    ctx.fillText(stats[i].label, cx + cellW / 2, cy + 61);
   }
 
-  y += 2 * (cellH + gridGap) + 20;
+  const gridRows = Math.ceil(stats.length / gridCols);
+  y = gridY + gridRows * cellH + (gridRows - 1) * gridGap;
 
-  // ── Top sections ──
+  // ── Sekcje top-3 (wiadomości / głos / poziom) ──
   const sections = [
     { title: '💬 Top wiadomości', users: data.topMessages, suffix: 'wiad.' },
-    { title: '🎤 Top głosowe', users: data.topVoice, suffix: 'min' },
+    { title: '🎙️ Top głosowe', users: data.topVoice, suffix: 'min' },
     { title: '⭐ Top poziom', users: data.topLevel, suffix: 'lvl' },
   ];
 
-  const sectionW = 720;
-  const sectionX = (W - sectionW) / 2;
+  const sectionX = PAD_SIDES;
+  const sectionW = CONTENT_W;
+  const ROW_H = 50;
+  const ROW_GAP = 7;
+  const TITLE_BLOCK_H = 28; // 20 (tytuł) + 8 (margines do wierszy)
+  const BASE_SECTION_GAP = 16;
+  const FOOTER_RESERVE = 26;
+
+  const sectionContentH = TITLE_BLOCK_H + 3 * ROW_H + 2 * ROW_GAP;
+  const naturalSectionsH = sections.length * sectionContentH + (sections.length - 1) * BASE_SECTION_GAP;
+  const availableH = H - 30 - FOOTER_RESERVE - (y + 22);
+  const extraGap = Math.max(0, (availableH - naturalSectionsH) / Math.max(1, sections.length - 1));
+  const sectionGap = BASE_SECTION_GAP + extraGap;
+
+  y += 22;
 
   for (const section of sections) {
-    // Section title
-    ctx.fillStyle = ACCENT_2;
-    ctx.font = 'bold 20px Inter';
+    ctx.fillStyle = ACCENT;
+    ctx.font = '700 17px Inter';
     ctx.textAlign = 'left';
-    ctx.fillText(section.title, sectionX, y + 5);
-    y += 20;
+    ctx.fillText(section.title, sectionX, y + 13);
+    y += TITLE_BLOCK_H;
 
-    // Users
     for (let i = 0; i < section.users.length; i++) {
       const user = section.users[i];
-      const rowY = y + i * 55;
+      const rowY = y + i * (ROW_H + ROW_GAP);
 
-      // Row bg
       ctx.fillStyle = STAT_BG;
-      ctx.globalAlpha = 0.4;
-      roundRect(ctx, sectionX, rowY, sectionW, 48, 10);
+      roundRect(ctx, sectionX, rowY, sectionW, ROW_H, 10);
       ctx.fill();
-      ctx.globalAlpha = 1;
+      ctx.strokeStyle = TILE_BORDER;
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      // Medal/rank
-      ctx.fillStyle = MEDAL_COLORS[i] ?? WHITE;
-      ctx.font = 'bold 18px Inter';
+      const textBaselineY = rowY + ROW_H / 2 + 5;
+
+      // Ranga
+      ctx.fillStyle = RANK_FG[i] ?? WHITE;
+      ctx.font = '800 15px Inter';
       ctx.textAlign = 'left';
-      ctx.fillText(`#${i + 1}`, sectionX + 14, rowY + 30);
+      ctx.fillText(`#${i + 1}`, sectionX + 16, textBaselineY);
 
-      // Avatar
-      const avX = sectionX + 55;
-      const avY = rowY + 4;
-      const avSize = 40;
+      // Awatar
+      const avSize = 32;
+      const avCx = sectionX + 16 + 26 + 12 + avSize / 2;
+      const avCy = rowY + ROW_H / 2;
       if (user.avatarUrl) {
         try {
           const av = await loadImage(user.avatarUrl);
           ctx.save();
           ctx.beginPath();
-          ctx.arc(avX + avSize / 2, avY + avSize / 2, avSize / 2, 0, Math.PI * 2);
+          ctx.arc(avCx, avCy, avSize / 2, 0, Math.PI * 2);
           ctx.clip();
-          ctx.drawImage(av, avX, avY, avSize, avSize);
+          ctx.drawImage(av, avCx - avSize / 2, avCy - avSize / 2, avSize, avSize);
           ctx.restore();
         } catch {
-          // skip avatar
+          fillAvatarFallback(ctx, avCx, avCy, avSize, i);
         }
+      } else {
+        fillAvatarFallback(ctx, avCx, avCy, avSize, i);
       }
 
-      // Name
+      // Nick
       ctx.fillStyle = WHITE;
       ctx.font = '600 16px Inter';
       ctx.textAlign = 'left';
-      const maxNameW = 380;
+      const maxNameW = 340;
       let name = user.displayName;
       while (ctx.measureText(name).width > maxNameW && name.length > 3) {
         name = name.slice(0, -1);
       }
       if (name !== user.displayName) name += '…';
-      ctx.fillText(name, avX + avSize + 14, rowY + 30);
+      ctx.fillText(name, avCx + avSize / 2 + 12, textBaselineY);
 
-      // Value
-      ctx.fillStyle = ACCENT_2;
-      ctx.font = 'bold 16px Inter';
+      // Wartość
+      ctx.fillStyle = ACCENT;
+      ctx.font = '700 15px Inter';
       ctx.textAlign = 'right';
       const valStr =
         section.suffix === 'min'
           ? `${Math.floor(user.value / 60)}h ${Math.round(user.value % 60)}m`
           : `${formatNumberDotSep(user.value)} ${section.suffix}`;
-      ctx.fillText(valStr, sectionX + sectionW - 14, rowY + 30);
+      ctx.fillText(valStr, sectionX + sectionW - 16, textBaselineY);
     }
 
-    y += section.users.length * 55 + 20;
+    y += 3 * ROW_H + 2 * ROW_GAP + sectionGap;
   }
 
-  // ── Footer ──
+  // ── Ramka karty ──
+  ctx.strokeStyle = CARD_BORDER;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+
+  // ── Stopka ──
   ctx.fillStyle = MUTED;
   ctx.font = '300 13px Inter';
   ctx.textAlign = 'center';
-  ctx.fillText(`Wygenerowano ${new Date().toLocaleDateString('pl-PL')}`, W / 2, H - 20);
+  ctx.fillText(`Wygenerowano ${new Date().toLocaleDateString('pl-PL')}`, W / 2, H - 16);
 
   return canvas.toBuffer('image/png');
 }
@@ -439,7 +528,9 @@ export async function collectPersonalWrappedData(
   const totalVoiceMinutes = userAgg[0]?.totalVoiceMinutes ?? 0;
 
   // Best month (last 12 months)
-  const topMonthAgg = await MonthlyStatsModel.find({ guildId, userId, month: { $gte: yearAgoMonth } })
+  // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
+  // operatory w .find()/.countDocuments() (nie dotyczy .aggregate() poniżej).
+  const topMonthAgg = await MonthlyStatsModel.find({ guildId, userId, month: mongoose.trusted({ $gte: yearAgoMonth }) })
     .sort({ messageCount: -1 })
     .limit(1)
     .lean();
@@ -497,19 +588,19 @@ export async function collectPersonalWrappedData(
   const giveawaysEntered = await GiveawayModel.countDocuments({
     guildId,
     participants: userId,
-    createdAt: { $gte: oneYearAgo },
+    createdAt: mongoose.trusted({ $gte: oneYearAgo }),
   });
   const giveawaysWon = await GiveawayModel.countDocuments({
     guildId,
     winners: userId,
-    createdAt: { $gte: oneYearAgo },
+    createdAt: mongoose.trusted({ $gte: oneYearAgo }),
   });
 
   // Invites — total people invited (last 12 months, not only active)
   const invites = await InviteEntryModel.countDocuments({
     guildId,
     inviterId: userId,
-    joinedAt: { $gte: oneYearAgo },
+    joinedAt: mongoose.trusted({ $gte: oneYearAgo }),
   });
 
   // Ranks (last 12 months based on MonthlyStats)
@@ -558,8 +649,13 @@ export async function collectPersonalWrappedData(
 
 const PW = 800;
 
-export async function renderPersonalWrappedCanvas(data: PersonalWrappedData): Promise<Buffer> {
+export async function renderPersonalWrappedCanvas(
+  data: PersonalWrappedData,
+  theme: WrappedTheme = DEFAULT_WRAPPED_THEME,
+): Promise<Buffer> {
   registerProjectFonts();
+
+  const { bg, tile: STAT_BG, accent: ACCENT } = THEME_PALETTES[theme];
 
   // Calculate dynamic height
   const hasTopMonth = !!(data.topMonth && data.topMonth.messages > 0);
@@ -571,12 +667,8 @@ export async function renderPersonalWrappedCanvas(data: PersonalWrappedData): Pr
   const canvas = createCanvas(PW, PH);
   const ctx = canvas.getContext('2d') as any;
 
-  // Background gradient
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, PH);
-  bgGrad.addColorStop(0, '#0f0c29');
-  bgGrad.addColorStop(0.5, '#302b63');
-  bgGrad.addColorStop(1, '#24243e');
-  ctx.fillStyle = bgGrad;
+  // Background
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, PW, PH);
 
   // Decorative circles
@@ -618,10 +710,7 @@ export async function renderPersonalWrappedCanvas(data: PersonalWrappedData): Pr
   y += 28;
 
   // "TWÓJ WRAPPED"
-  const titleGrad = ctx.createLinearGradient(200, y, 600, y + 36);
-  titleGrad.addColorStop(0, ACCENT);
-  titleGrad.addColorStop(1, ACCENT_2);
-  ctx.fillStyle = titleGrad;
+  ctx.fillStyle = ACCENT;
   ctx.font = 'bold 36px Inter';
   ctx.fillText('TWÓJ WRAPPED', PW / 2, y + 32);
   y += 48;
@@ -665,10 +754,8 @@ export async function renderPersonalWrappedCanvas(data: PersonalWrappedData): Pr
     const cy = y + row * (cellH + gridGap);
 
     ctx.fillStyle = STAT_BG;
-    ctx.globalAlpha = 0.6;
     roundRect(ctx, cx, cy, cellW, cellH, 12);
     ctx.fill();
-    ctx.globalAlpha = 1;
 
     // Value
     ctx.fillStyle = WHITE;
@@ -677,7 +764,7 @@ export async function renderPersonalWrappedCanvas(data: PersonalWrappedData): Pr
     ctx.fillText(stats[i].value, cx + cellW / 2, cy + 36);
 
     // Label
-    ctx.fillStyle = ACCENT_2;
+    ctx.fillStyle = ACCENT;
     ctx.font = '600 13px Inter';
     ctx.fillText(stats[i].label, cx + cellW / 2, cy + 56);
 
@@ -695,12 +782,10 @@ export async function renderPersonalWrappedCanvas(data: PersonalWrappedData): Pr
     const sectionX = (PW - sectionW) / 2;
 
     ctx.fillStyle = STAT_BG;
-    ctx.globalAlpha = 0.5;
     roundRect(ctx, sectionX, y, sectionW, 70, 12);
     ctx.fill();
-    ctx.globalAlpha = 1;
 
-    ctx.fillStyle = ACCENT_2;
+    ctx.fillStyle = ACCENT;
     ctx.font = 'bold 16px Inter';
     ctx.textAlign = 'left';
     ctx.fillText('🔥 Najaktywniejszy miesiąc', sectionX + 20, y + 28);

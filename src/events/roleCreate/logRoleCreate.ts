@@ -1,5 +1,5 @@
 import { Role, Client, AuditLogEvent } from 'discord.js';
-import { sendLog } from '../../utils/logHelpers';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import logger from '../../utils/logger';
 
@@ -9,21 +9,20 @@ export default async function run(role: Role, client: Client): Promise<void> {
 
     await sendLog(client, role.guild.id, 'roleCreate', {
       title: null,
-      description: `**🎭 Utworzono rolę <@&${role.id}>${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
+      description: `**🎭 Utworzono rolę <@&${role.id}>.**`,
       fields: [
         {
-          name: '📝 Nazwa',
+          name: 'Nazwa',
           value: role.name,
           inline: true,
         },
         {
-          name: '🎨 Kolor',
+          name: 'Kolor',
           value: role.hexColor,
           inline: true,
         },
+        ...(moderator ? [moderatorField(moderator.id)] : []),
       ],
-      footer: `Role ID: ${role.id}`,
-      timestamp: new Date(),
     });
   } catch (error) {
     logger.error(`[logRoleCreate] Error: ${error}`);

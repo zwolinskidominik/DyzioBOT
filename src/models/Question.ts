@@ -17,6 +17,9 @@ class Question {
 
   @prop({ type: () => Boolean, default: false })
   public disabled!: boolean;
+
+  @prop({ type: () => Date })
+  public usedAt?: Date;
 }
 
 export const QuestionModel = getModelForClass(Question);

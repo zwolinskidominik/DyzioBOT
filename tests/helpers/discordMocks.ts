@@ -96,10 +96,15 @@ export function mockGuildMember(
     premiumSince?: Date | null;
     communicationDisabledUntil?: Date | null;
     joinedTimestamp?: number;
+    /** Czy target ma uprawnienie Administrator — Discord nigdy nie pozwoli go wyciszyć (timeout), niezależnie od hierarchii ról. */
+    isAdmin?: boolean;
+    /** Odpowiednik realnego GuildMember#moderatable z discord.js — domyślnie true, chyba że isAdmin. */
+    moderatable?: boolean;
   } = {},
 ): any {
   const id = opts.id ?? 'user-1';
   const username = opts.username ?? `User_${id}`;
+  const isAdmin = opts.isAdmin ?? false;
   return {
     id,
     user: {
@@ -116,6 +121,8 @@ export function mockGuildMember(
       add: jest.fn().mockResolvedValue(undefined),
       remove: jest.fn().mockResolvedValue(undefined),
     },
+    permissions: { has: jest.fn().mockReturnValue(isAdmin) },
+    moderatable: opts.moderatable ?? !isAdmin,
     displayName: username,
     premiumSince: opts.premiumSince ?? null,
     joinedTimestamp: opts.joinedTimestamp,

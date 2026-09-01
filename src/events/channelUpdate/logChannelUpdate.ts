@@ -1,5 +1,5 @@
 import { GuildChannel, Client, AuditLogEvent, OverwriteType } from 'discord.js';
-import { sendLog } from '../../utils/logHelpers';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import logger from '../../utils/logger';
 
@@ -16,13 +16,12 @@ export default async function run(
     if (oldChannel.name !== newChannel.name) {
       await sendLog(client, newChannel.guild.id, 'channelUpdate', {
         title: null,
-        description: `**✏️ Zaktualizowano nazwę kanału <#${newChannel.id}>${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
+        description: `**✏️ Zaktualizowano nazwę kanału <#${newChannel.id}>.**`,
         fields: [
-          { name: '📝 Poprzednia nazwa', value: oldChannel.name, inline: true },
-          { name: '📝 Nowa nazwa', value: newChannel.name, inline: true },
+          { name: 'Stara nazwa', value: oldChannel.name, inline: true },
+          { name: 'Nowa nazwa', value: newChannel.name, inline: true },
+          ...(moderator ? [moderatorField(moderator.id)] : []),
         ],
-        footer: `Channel ID: ${newChannel.id}`,
-        timestamp: new Date(),
       }, ctx);
     }
 
@@ -30,21 +29,20 @@ export default async function run(
       if (oldChannel.topic !== newChannel.topic) {
         await sendLog(client, newChannel.guild.id, 'channelUpdate', {
           title: null,
-          description: `**✏️ Zaktualizowano temat kanału <#${newChannel.id}>${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
+          description: `**✏️ Zaktualizowano temat kanału <#${newChannel.id}>.**`,
           fields: [
             {
-              name: '📝 Poprzedni temat',
+              name: 'Stary temat',
               value: ((oldChannel.topic as string | null) || '*Brak*') as string,
               inline: false,
             },
             {
-              name: '📝 Nowy temat',
+              name: 'Nowy temat',
               value: ((newChannel.topic as string | null) || '*Brak*') as string,
               inline: false,
             },
+            ...(moderator ? [moderatorField(moderator.id)] : []),
           ],
-          footer: `Channel ID: ${newChannel.id}`,
-          timestamp: new Date(),
         }, ctx);
       }
     }
@@ -76,9 +74,8 @@ export default async function run(
 
       await sendLog(client, newChannel.guild.id, 'channelPermissionUpdate', {
         title: null,
-        description: `**🔐 Aktualizacja uprawnień kanału: <#${newChannel.id}>**\n\n**Permissions:**\n↘️ ${targetMention}\n${permList.length > 0 ? permList.join('\n') : '*Brak uprawnień*'}${moderator ? `\n\n**Moderator:** <@${moderator.id}>` : ''}`,
-        footer: `Channel ID: ${newChannel.id}`,
-        timestamp: new Date(),
+        description: `**🔐 Aktualizacja uprawnień kanału: <#${newChannel.id}>**\n\n**Permissions:**\n↘️ ${targetMention}\n${permList.length > 0 ? permList.join('\n') : '*Brak uprawnień*'}`,
+        fields: moderator ? [moderatorField(moderator.id)] : [],
       }, ctx);
     }
 
@@ -94,9 +91,8 @@ export default async function run(
       
       await sendLog(client, newChannel.guild.id, 'channelPermissionUpdate', {
         title: null,
-        description: `**🔐 Aktualizacja uprawnień kanału: <#${newChannel.id}>**\n\n**Permissions:**\n↘️ ${targetMention}\n❌ **Usunięto wszystkie uprawnienia**${moderator ? `\n\n**Moderator:** <@${moderator.id}>` : ''}`,
-        footer: `Channel ID: ${newChannel.id}`,
-        timestamp: new Date(),
+        description: `**🔐 Aktualizacja uprawnień kanału: <#${newChannel.id}>**\n\n**Permissions:**\n↘️ ${targetMention}\n❌ **Usunięto wszystkie uprawnienia**`,
+        fields: moderator ? [moderatorField(moderator.id)] : [],
       }, ctx);
     }
 
@@ -132,9 +128,8 @@ export default async function run(
 
       await sendLog(client, newChannel.guild.id, 'channelPermissionUpdate', {
         title: null,
-        description: `**🔐 Aktualizacja uprawnień kanału: <#${newChannel.id}>**\n\n**Permissions:**\n↘️ ${targetMention}\n${permList.join('\n')}${moderator ? `\n\n**Moderator:** <@${moderator.id}>` : ''}`,
-        footer: `Channel ID: ${newChannel.id}`,
-        timestamp: new Date(),
+        description: `**🔐 Aktualizacja uprawnień kanału: <#${newChannel.id}>**\n\n**Permissions:**\n↘️ ${targetMention}\n${permList.join('\n')}`,
+        fields: moderator ? [moderatorField(moderator.id)] : [],
       }, ctx);
     }
   } catch (error) {

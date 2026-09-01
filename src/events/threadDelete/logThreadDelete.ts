@@ -1,5 +1,5 @@
 import { ThreadChannel, Client, AuditLogEvent } from 'discord.js';
-import { sendLog } from '../../utils/logHelpers';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import logger from '../../utils/logger';
 
@@ -9,16 +9,15 @@ export default async function run(thread: ThreadChannel, client: Client): Promis
 
     await sendLog(client, thread.guild.id, 'threadDelete', {
       title: null,
-      description: `**🗑️ Usunięto wątek \`${thread.name}\`${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
+      description: `**🗑️ Usunięto wątek \`${thread.name}\`.**`,
       fields: [
         {
-          name: '📁 Kanał nadrzędny',
+          name: 'Kanał nadrzędny',
           value: `<#${thread.parentId}>`,
           inline: true,
         },
+        ...(moderator ? [moderatorField(moderator.id)] : []),
       ],
-      footer: `Thread ID: ${thread.id}`,
-      timestamp: new Date(),
     }, thread.parentId ? { channelId: thread.parentId } : undefined);
   } catch (error) {
     logger.error(`[logThreadDelete] Error: ${error}`);

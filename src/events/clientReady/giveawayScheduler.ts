@@ -95,9 +95,12 @@ export default async function run(client: Client): Promise<void> {
               ? `🎉 Gratulacje ${entry.winnerIds.map((id) => `<@${id}>`).join(', ')}! **${entry.prize}** jest Twoje!`
               : 'Brak wystarczającej liczby uczestników, więc nie udało się wyłonić zwycięzcy!';
 
+            // entry.prize to tekst wpisany przez admina — allow-list tylko realnych
+            // zwycięzców, żeby "@everyone" wklejone w nazwę nagrody nie wywołało pingu.
+            const winnerAllowedMentions = { parse: [] as const, users: entry.winnerIds };
             let sent = false;
             try {
-              await giveawayMessage.reply({ content: winnerContent });
+              await giveawayMessage.reply({ content: winnerContent, allowedMentions: winnerAllowedMentions });
               sent = true;
             } catch (replyErr) {
               logger.warn(
@@ -109,6 +112,7 @@ export default async function run(client: Client): Promise<void> {
                 await textChannel.send({
                   content: winnerContent,
                   reply: { messageReference: giveawayMessage.id },
+                  allowedMentions: winnerAllowedMentions,
                 });
               } catch (fallbackErr) {
                 logger.error(

@@ -1,12 +1,20 @@
-import { GuildMember, Client, TextChannel, EmbedBuilder } from 'discord.js';
+import { GuildMember, Client, TextChannel, EmbedBuilder, AuditLogEvent, ColorResolvable } from 'discord.js';
 import { detectUsedInvite } from '../../cache/inviteCache';
-import { getConfig, recordJoin, getInviterStats } from '../../services/inviteTrackerService';
-import { COLORS } from '../../config/constants/colors';
+import {
+  getConfig,
+  recordJoin,
+  getInviterStats,
+  buildInviteMessage,
+  JOIN_SITUATIONS,
+  JoinSituation,
+  MessageContext,
+  ResolvedMessage,
+} from '../../services/inviteTrackerService';
 import logger from '../../utils/logger';
 
 /**
- * Detects which invite was used when a member joins and records it.
- * Optionally sends a log message to the configured channel.
+ * Detects which invite was used when a member joins (lub czy to dodanie bota / samo-zaproszenie /
+ * vanity link / nieznane źródło) i wysyła odpowiedni szablon wiadomości do skonfigurowanego kanału.
  */
 export default async function run(member: GuildMember, _client: Client): Promise<void> {
   try {
@@ -15,8 +23,12 @@ export default async function run(member: GuildMember, _client: Client): Promise
 
     const configResult = await getConfig(guild.id);
     if (!configResult.ok || !configResult.data.enabled) return;
-
     const config = configResult.data;
+
+    if (member.user.bot) {
+      await handleBotAdd(member, config.join.enabled, config.join.logChannelId, config.join.messages.botAdd, config.join.embed, config.join.embedColor);
+      return;
+    }
 
     // Detect which invite was used
     let inviterId: string | null = null;
@@ -33,7 +45,7 @@ export default async function run(member: GuildMember, _client: Client): Promise
       logger.warn(`[InviteTracker] Nie można pobrać zaproszeń dla ${guild.name}: ${err}`);
     }
 
-    // Record the join
+    // Record the join (zawsze, niezależnie od tego czy wiadomość zostanie wysłana — statystyki/leaderboard to osobna sprawa)
     const joinResult = await recordJoin({
       guildId: guild.id,
       joinedUserId: member.id,
@@ -41,85 +53,88 @@ export default async function run(member: GuildMember, _client: Client): Promise
       inviteCode,
       accountCreatedAt: member.user.createdAt,
     });
-
     if (!joinResult.ok) return;
 
-    // Send log message if channel configured
-    if (!config.logChannelId) return;
-
-    const logChannel = guild.channels.cache.get(config.logChannelId) as TextChannel | undefined;
+    if (!config.join.enabled || !config.join.logChannelId) return;
+    const logChannel = guild.channels.cache.get(config.join.logChannelId) as TextChannel | undefined;
     if (!logChannel) return;
 
-    // Get inviter stats
-    let statsText = '';
-    let activeCount = 0;
-    if (inviterId) {
-      const statsResult = await getInviterStats(guild.id, inviterId);
-      if (statsResult.ok) {
-        const s = statsResult.data;
-        activeCount = s.active;
-        statsText = `**${s.active}** aktywnych, **${s.left}** opuściło, **${s.fake}** fałszywych`;
-      }
-    }
-
-    // Pick the right template based on join scenario
     const isVanity = inviteCode != null && guild.vanityURLCode != null && inviteCode === guild.vanityURLCode;
-    let template = '';
+    const isSelfInvite = inviterId === member.id;
+    const situationKey: JoinSituation = isVanity ? 'vanity' : isSelfInvite ? 'selfInvite' : inviterId ? 'normal' : 'unknown';
+    const situation = JOIN_SITUATIONS[situationKey];
+
+    let inviterName = 'nieznany';
+    let inviteCountText = '0';
+
     if (isVanity) {
-      template = config.joinMessageVanity || '';
+      inviterName = 'niestandardowe zaproszenie';
     } else if (inviterId) {
-      template = config.joinMessage || '';
-    } else {
-      template = config.joinMessageUnknown || '';
+      const inviterMember = await guild.members.fetch(inviterId).catch(() => null);
+      inviterName = inviterMember?.displayName ?? 'nieznany';
+      const statsResult = await getInviterStats(guild.id, inviterId);
+      if (statsResult.ok) inviteCountText = `${statsResult.data.active}`;
     }
 
-    if (template) {
-      const message = replaceVariables(template, member, inviterId, inviteCode, statsText, activeCount);
-      await logChannel.send(message);
-    } else {
-      // Default embed
-      const embed = new EmbedBuilder()
-        .setColor(COLORS.JOIN)
-        .setAuthor({
-          name: member.user.tag,
-          iconURL: member.user.displayAvatarURL({ size: 64 }),
-        })
-        .setDescription(
-          `📥 <@${member.id}> dołączył/a do serwera!\n` +
-          (isVanity
-            ? `📨 Dołączył/a używając niestandardowego zaproszenia \`${inviteCode}\`\n`
-            : inviterId
-              ? `📨 Zaproszony/a przez: <@${inviterId}> (kod: \`${inviteCode ?? '?'}\`)\n`
-              : '📨 Zaproszenie: *nieznane*\n') +
-          (joinResult.data.fake ? '⚠️ Konto młodsze niż 7 dni — oznaczone jako fałszywe.\n' : '') +
-          (statsText ? `📊 Statystyki zapraszającego: ${statsText}` : ''),
-        )
-        .setFooter({ text: `User ID: ${member.id}` })
-        .setTimestamp();
+    const ctx: MessageContext = {
+      memberMention: `<@${member.id}>`,
+      memberName: member.displayName,
+      inviterName,
+      inviteCount: inviteCountText,
+      inviteCode: inviteCode ?? '—',
+    };
 
-      await logChannel.send({ embeds: [embed] });
-    }
+    const template = config.join.messages[situationKey];
+    const resolved = buildInviteMessage(template, situation, ctx, config.join.embed, config.join.embedColor);
+    await sendResolved(logChannel, resolved);
   } catch (error) {
     logger.error(`[InviteTracker] Błąd w guildMemberAdd: ${error}`);
   }
 }
 
-function replaceVariables(
-  template: string,
+/** Bota dodano na serwer — próbujemy (best-effort) ustalić kto go dodał przez audit log. */
+async function handleBotAdd(
   member: GuildMember,
-  inviterId: string | null,
-  inviteCode: string | null,
-  statsText: string,
-  activeCount: number,
-): string {
-  return template
-    .replace(/{user}/g, `<@${member.id}>`)
-    .replace(/{username}/g, member.user.username)
-    .replace(/{tag}/g, member.user.tag)
-    .replace(/{server}/g, member.guild.name)
-    .replace(/{memberCount}/g, `${member.guild.memberCount}`)
-    .replace(/{inviter}/g, inviterId ? `<@${inviterId}>` : '*nieznany*')
-    .replace(/{inviteCode}/g, inviteCode ?? '*brak*')
-    .replace(/{activeCount}/g, `${activeCount}`)
-    .replace(/{stats}/g, statsText || '*brak danych*');
+  sectionEnabled: boolean,
+  logChannelId: string | null,
+  template: string,
+  useEmbed: boolean,
+  embedColor?: string,
+): Promise<void> {
+  if (!sectionEnabled || !logChannelId) return;
+  const logChannel = member.guild.channels.cache.get(logChannelId) as TextChannel | undefined;
+  if (!logChannel) return;
+
+  let inviterName = 'nieznany';
+  try {
+    const logs = await member.guild.fetchAuditLogs({ type: AuditLogEvent.BotAdd, limit: 5 });
+    const entry = logs.entries.find((e) => e.target?.id === member.id);
+    if (entry?.executor?.username) inviterName = entry.executor.username;
+  } catch {
+    // brak uprawnień do audit logu — zostaw "nieznany"
+  }
+
+  const ctx: MessageContext = {
+    memberMention: `<@${member.id}>`,
+    memberName: member.user.username,
+    inviterName,
+    inviteCount: '0',
+    inviteCode: '—',
+  };
+
+  const resolved = buildInviteMessage(template, JOIN_SITUATIONS.botAdd, ctx, useEmbed, embedColor);
+  await sendResolved(logChannel, resolved);
+}
+
+async function sendResolved(channel: TextChannel, resolved: ResolvedMessage): Promise<void> {
+  if (resolved.embed) {
+    const embed = new EmbedBuilder()
+      .setColor(resolved.embed.color as ColorResolvable)
+      .setTitle(resolved.embed.title)
+      .setDescription(resolved.text)
+      .setTimestamp();
+    await channel.send({ embeds: [embed] });
+  } else {
+    await channel.send(resolved.text);
+  }
 }

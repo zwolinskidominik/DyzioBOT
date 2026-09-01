@@ -1,5 +1,5 @@
 import { GuildChannel, Client, ChannelType, AuditLogEvent } from 'discord.js';
-import { sendLog } from '../../utils/logHelpers';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import logger from '../../utils/logger';
 
@@ -22,21 +22,20 @@ export default async function run(channel: GuildChannel, client: Client): Promis
 
     await sendLog(client, channel.guild.id, 'channelCreate', {
       title: null,
-      description: `**📁 Utworzono kanał <#${channel.id}>${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
+      description: `**📁 Utworzono kanał <#${channel.id}>.**`,
       fields: [
         {
-          name: '📝 Nazwa',
+          name: 'Nazwa',
           value: channel.name,
           inline: true,
         },
         {
-          name: '🔖 Typ',
+          name: 'Typ',
           value: channelTypeNames[channel.type] || 'Nieznany',
           inline: true,
         },
+        ...(moderator ? [moderatorField(moderator.id)] : []),
       ],
-      footer: `Channel ID: ${channel.id}`,
-      timestamp: new Date(),
     }, { channelId: channel.id });
   } catch (error) {
     logger.error(`[logChannelCreate] Error: ${error}`);

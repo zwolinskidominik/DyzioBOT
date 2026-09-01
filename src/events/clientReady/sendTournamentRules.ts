@@ -1,4 +1,5 @@
-import { Client, TextChannel, ChannelType } from 'discord.js';
+import { Client, TextChannel, ChannelType, EmbedBuilder } from 'discord.js';
+import mongoose from 'mongoose';
 import logger from '../../utils/logger';
 import { getGuildConfig } from '../../config/guild';
 import { schedule, ScheduledTask } from 'node-cron';
@@ -8,6 +9,12 @@ import { TournamentConfigModel } from '../../models/TournamentConfig';
 
 /** Map guildId → { task, cronExpression } for active tournament schedules. */
 const activeTasks = new Map<string, { task: ScheduledTask; cron: string }>();
+
+/** Parsuje kolor hex (#RRGGBB) na liczbę wymaganą przez EmbedBuilder; fallback na niebieski Deezy. */
+function parseHexColor(hex: string | undefined): number {
+  const match = /^#?([0-9a-fA-F]{6})$/.exec(hex ?? '');
+  return match ? parseInt(match[1], 16) : 0x3b82f6;
+}
 
 export default async function run(client: Client): Promise<void> {
   // Sync schedules on startup, then re-sync every minute to pick up
@@ -34,7 +41,9 @@ export default async function run(client: Client): Promise<void> {
  * - Re-creates tasks when the cron expression changes.
  */
 async function syncSchedules(client: Client): Promise<void> {
-  const configs = await TournamentConfigModel.find({ guildId: { $in: OWNER_GUILD_IDS } }).lean();
+  // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
+  // operatory — bez tego rzuca CastError na $in.
+  const configs = await TournamentConfigModel.find({ guildId: mongoose.trusted({ $in: OWNER_GUILD_IDS }) }).lean();
 
   const enabledGuildIds = new Set<string>();
 
@@ -108,10 +117,12 @@ async function sendTournamentMessage(client: Client, guildId: string): Promise<v
     const guild = textChannel.guild;
 
     const guildConfig = getGuildConfig(guild.id);
-    const tournamentRoleId = guildConfig.roles.tournamentParticipants;
-    const organizerRoleId = guildConfig.roles.tournamentOrganizer;
-    const organizerUserIds = guildConfig.tournament.organizerUserIds;
-    const voiceChannelId = guildConfig.channels.tournamentVoice;
+    const tournamentRoleId = config.participantRoleId || guildConfig.roles.tournamentParticipants;
+    const organizerRoleId = config.organizerRoleId || guildConfig.roles.tournamentOrganizer;
+    const organizerUserIds = config.organizerUserIds?.length
+      ? config.organizerUserIds
+      : guildConfig.tournament.organizerUserIds;
+    const voiceChannelId = config.voiceChannelId || guildConfig.channels.tournamentVoice;
 
     const roleMention = tournamentRoleId ? `<@&${tournamentRoleId}>` : '';
     const organizerRoleMention = organizerRoleId ? `<@&${organizerRoleId}>` : '';
@@ -120,13 +131,32 @@ async function sendTournamentMessage(client: Client, guildId: string): Promise<v
       ? `https://discord.com/channels/${guild.id}/${voiceChannelId}`
       : '**kanale głosowym CS2**';
 
-    let message = config.messageTemplate;
-    message = message.replace(/{roleMention}/g, roleMention);
-    message = message.replace(/{organizerRoleMention}/g, organizerRoleMention);
-    message = message.replace(/{organizerUserPings}/g, organizerUserPings);
-    message = message.replace(/{voiceChannelLink}/g, voiceChannelLink);
+    const applyVariables = (text: string): string =>
+      text
+        .replace(/{roleMention}/g, roleMention)
+        .replace(/{organizerRoleMention}/g, organizerRoleMention)
+        .replace(/{organizerUserPings}/g, organizerUserPings)
+        .replace(/{voiceChannelLink}/g, voiceChannelLink);
 
-    const rulesMessage = await textChannel.send(message);
+    const message = applyVariables(config.messageTemplate);
+
+    const rulesMessage =
+      config.messageMode === 'embed'
+        ? await textChannel.send({
+            embeds: [
+              (() => {
+                const embed = new EmbedBuilder()
+                  .setColor(parseHexColor(config.embedColor))
+                  .setDescription(message);
+                const title = applyVariables(config.titleText || '').trim();
+                if (title) embed.setTitle(title);
+                const footer = applyVariables(config.footerText || '').trim();
+                if (footer) embed.setFooter({ text: footer });
+                return embed;
+              })(),
+            ],
+          })
+        : await textChannel.send(message);
     await rulesMessage.react(config.reactionEmoji || '🎮');
     logger.info(`Turniej ${guildId}: wiadomość wysłana na kanale #${textChannel.name}.`);
   } catch (error) {

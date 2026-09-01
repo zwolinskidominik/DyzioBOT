@@ -1,5 +1,5 @@
 import { VoiceState, Client, AuditLogEvent } from 'discord.js';
-import { sendLog } from '../../utils/logHelpers';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import logger from '../../utils/logger';
 
@@ -17,11 +17,9 @@ export default async function run(
     if (!oldState.channel && newState.channel) {
       await sendLog(client, newState.guild.id, 'voiceJoin', {
         title: null,
-        description: `**🔊 <@${member.id}> dołączył na kanał głosowy <#${newState.channelId}>.**`,
+        description: `**🔊 <@${member.id}> dołączył do kanału głosowego <#${newState.channelId}>.**`,
         authorName: member.user.tag,
         authorIcon: member.user.displayAvatarURL({ size: 64 }),
-        footer: `User ID: ${member.id} | Channel ID: ${newState.channelId}`,
-        timestamp: new Date(),
       }, ctx);
     }
 
@@ -35,20 +33,17 @@ export default async function run(
       if (moderator) {
         await sendLog(client, oldState.guild.id, 'voiceDisconnect', {
           title: null,
-          description: `**⚡ <@${member.id}> został odłączony od kanału głosowego <#${oldState.channelId}> przez <@${moderator.id}>.**`,
+          description: `**⚡ <@${member.id}> został odłączony od kanału głosowego <#${oldState.channelId}>.**`,
+          fields: [moderatorField(moderator.id)],
           authorName: member.user.tag,
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
-          footer: `User ID: ${member.id} | Channel ID: ${oldState.channelId}`,
-          timestamp: new Date(),
         }, ctx);
       } else {
         await sendLog(client, oldState.guild.id, 'voiceLeave', {
           title: null,
-          description: `**🔇 <@${member.id}> opuścił kanał głosowy <#${oldState.channelId}>.**`,
+          description: `**🔇 <@${member.id}> wyszedł z kanału głosowego <#${oldState.channelId}>.**`,
           authorName: member.user.tag,
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
-          footer: `User ID: ${member.id} | Channel ID: ${oldState.channelId}`,
-          timestamp: new Date(),
         }, ctx);
       }
     }
@@ -63,11 +58,10 @@ export default async function run(
       if (moderator) {
         await sendLog(client, newState.guild.id, 'voiceMemberMove', {
           title: null,
-          description: `**👉 <@${member.id}> został przeniesiony z <#${oldState.channelId}> na <#${newState.channelId}> przez <@${moderator.id}>.**`,
+          description: `**👉 <@${member.id}> został przeniesiony z <#${oldState.channelId}> na <#${newState.channelId}>.**`,
+          fields: [moderatorField(moderator.id)],
           authorName: member.user.tag,
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
-          footer: `User ID: ${member.id}`,
-          timestamp: new Date(),
         }, ctx);
       } else {
         await sendLog(client, newState.guild.id, 'voiceMove', {
@@ -75,8 +69,6 @@ export default async function run(
           description: `**🔀 <@${member.id}> przeniósł się z kanału <#${oldState.channelId}> na <#${newState.channelId}>.**`,
           authorName: member.user.tag,
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
-          footer: `User ID: ${member.id}`,
-          timestamp: new Date(),
         }, ctx);
       }
     }
@@ -109,8 +101,6 @@ export default async function run(
           description: `**🎤 <@${member.id}> zmienił stan głosu na <#${newState.channelId}>.**\n${stateChanges.map(s => `• ${s}`).join('\n')}`,
           authorName: member.user.tag,
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
-          footer: `User ID: ${member.id}`,
-          timestamp: new Date(),
         }, ctx);
       }
     }

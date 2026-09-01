@@ -35,9 +35,10 @@ export async function getAuditLogEntry(
 export async function getModerator(
   guild: Guild,
   event: AuditLogEvent,
-  targetId?: string
+  targetId?: string,
+  maxAge?: number
 ): Promise<User | null> {
-  const entry = await getAuditLogEntry(guild, event, targetId);
+  const entry = await getAuditLogEntry(guild, event, targetId, maxAge);
   const executor = entry?.executor;
   
   if (!executor || !('tag' in executor)) return null;

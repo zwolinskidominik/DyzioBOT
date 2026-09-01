@@ -1,4 +1,5 @@
 import { getModelForClass, index, prop, DocumentType } from '@typegoose/typegoose';
+import { DEFAULT_WRAPPED_THEME, WrappedTheme } from '../services/serverWrappedService';
 
 @index({ guildId: 1 }, { unique: true })
 export class WrappedConfig {
@@ -10,6 +11,9 @@ export class WrappedConfig {
 
   @prop({ default: false, type: () => Boolean })
   public enabled!: boolean;
+
+  @prop({ default: DEFAULT_WRAPPED_THEME, type: () => String })
+  public colorTheme!: WrappedTheme;
 }
 
 export const WrappedConfigModel = getModelForClass(WrappedConfig);

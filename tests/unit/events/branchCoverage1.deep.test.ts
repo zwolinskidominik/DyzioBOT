@@ -84,15 +84,15 @@ describe('logRoleCreate', () => {
     getModeratorMock.mockResolvedValue({ id: 'mod1' });
     await run(makeRole(), makeClient());
     expect(sendLogMock).toHaveBeenCalledTimes(1);
-    const desc = sendLogMock.mock.calls[0][3].description;
-    expect(desc).toContain('mod1');
+    const fields = sendLogMock.mock.calls[0][3].fields;
+    expect(fields.some((f: { name: string; value: string }) => f.name === 'Moderator:' && f.value.includes('mod1'))).toBe(true);
   });
 
   it('sends log WITHOUT moderator mention', async () => {
     getModeratorMock.mockResolvedValue(null);
     await run(makeRole(), makeClient());
-    const desc = sendLogMock.mock.calls[0][3].description;
-    expect(desc).not.toContain('mod1');
+    const fields = sendLogMock.mock.calls[0][3].fields;
+    expect(fields.some((f: { name: string }) => f.name === 'Moderator:')).toBe(false);
   });
 
   it('catches error and logs', async () => {
@@ -114,7 +114,8 @@ describe('logRoleDelete', () => {
   it('sends log WITH moderator', async () => {
     getModeratorMock.mockResolvedValue({ id: 'mod2' });
     await run(makeRole(), makeClient());
-    expect(sendLogMock.mock.calls[0][3].description).toContain('mod2');
+    const fields = sendLogMock.mock.calls[0][3].fields;
+    expect(fields.some((f: { name: string; value: string }) => f.name === 'Moderator:' && f.value.includes('mod2'))).toBe(true);
   });
 
   it('sends log WITHOUT moderator', async () => {
@@ -150,8 +151,8 @@ describe('logChannelDelete', () => {
     await run(ch, makeClient());
     expect(sendLogMock).toHaveBeenCalledTimes(1);
     const args = sendLogMock.mock.calls[0][3];
-    expect(args.description).toContain('mod3');
     expect(args.fields[0].value).toBe('Tekstowy');
+    expect(args.fields.some((f: { name: string; value: string }) => f.name === 'Moderator:' && f.value.includes('mod3'))).toBe(true);
   });
 
   it('sends log WITHOUT moderator, unknown channel type', async () => {
@@ -211,7 +212,8 @@ describe('logThreadCreate', () => {
     const thread = { id: 't1', name: 'Thread', parentId: 'p1', guild: makeGuild() };
     await run(thread, true, makeClient());
     expect(sendLogMock).toHaveBeenCalledTimes(1);
-    expect(sendLogMock.mock.calls[0][3].description).toContain('mod4');
+    const fields = sendLogMock.mock.calls[0][3].fields;
+    expect(fields.some((f: { name: string; value: string }) => f.name === 'Moderator:' && f.value.includes('mod4'))).toBe(true);
     expect(sendLogMock.mock.calls[0][4]).toEqual({ channelId: 'p1' });
   });
 
@@ -244,7 +246,8 @@ describe('logThreadDelete', () => {
     getModeratorMock.mockResolvedValue({ id: 'modDel' });
     const t = { id: 'td1', name: 'Del', parentId: 'p1', guild: makeGuild() };
     await run(t, makeClient());
-    expect(sendLogMock.mock.calls[0][3].description).toContain('modDel');
+    const fields = sendLogMock.mock.calls[0][3].fields;
+    expect(fields.some((f: { name: string; value: string }) => f.name === 'Moderator:' && f.value.includes('modDel'))).toBe(true);
     expect(sendLogMock.mock.calls[0][4]).toEqual({ channelId: 'p1' });
   });
 
@@ -281,7 +284,8 @@ describe('logThreadUpdate', () => {
     getModeratorMock.mockResolvedValue({ id: 'modU' });
     await run(base(), { ...base(), name: 'NewName' }, makeClient());
     expect(sendLogMock).toHaveBeenCalledTimes(1);
-    expect(sendLogMock.mock.calls[0][3].description).toContain('modU');
+    const fields = sendLogMock.mock.calls[0][3].fields;
+    expect(fields.some((f: { name: string; value: string }) => f.name === 'Moderator:' && f.value.includes('modU'))).toBe(true);
   });
 
   it('logs name change WITHOUT moderator', async () => {
@@ -295,7 +299,8 @@ describe('logThreadUpdate', () => {
     await run(base(), { ...base(), archived: true }, makeClient());
     expect(sendLogMock).toHaveBeenCalledTimes(1);
     expect(sendLogMock.mock.calls[0][3].description).toContain('zarchiwizowany');
-    expect(sendLogMock.mock.calls[0][3].description).toContain('modA');
+    const fields = sendLogMock.mock.calls[0][3].fields;
+    expect(fields.some((f: { name: string; value: string }) => f.name === 'Moderator:' && f.value.includes('modA'))).toBe(true);
   });
 
   it('logs archived=false (unarchived) WITHOUT moderator', async () => {
@@ -375,9 +380,9 @@ describe('logInviteCreate', () => {
     };
     await run(invite, makeClient());
     const args = sendLogMock.mock.calls[0][3];
-    expect(args.description).toContain('inv1');
     expect(args.fields[2].value).not.toBe('Nigdy');
     expect(args.fields[3].value).toBe('10');
+    expect(args.fields[4].value).toContain('inv1');
   });
 
   it('sends log WITHOUT inviter, no expiry, no channel, unlimited uses', async () => {
@@ -443,9 +448,7 @@ describe('logMemberRemove', () => {
     await run(makeMember(), makeClient());
     expect(sendLogMock.mock.calls[0][2]).toBe('memberKick');
     const args = sendLogMock.mock.calls[0][3];
-    expect(args.fields[0].value).toBe('Nieznany');
-    expect(args.fields[1].value).toBe('Brak powodu');
-    expect(args.footer).toBe('Nieznany moderator');
+    expect(args.fields).toHaveLength(0);
   });
 
   it('logs LEAVE with joinedAt', async () => {

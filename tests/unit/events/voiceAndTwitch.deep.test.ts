@@ -69,6 +69,7 @@ const mockSetLiveStatus = jest.fn();
 jest.mock('../../../src/services/twitchService', () => ({
   getActiveStreamers: mockGetActiveStreamers,
   setLiveStatus: mockSetLiveStatus,
+  updateAvatarUrl: jest.fn(),
 }));
 
 const mockStreamConfigFind = jest.fn();

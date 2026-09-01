@@ -14,7 +14,17 @@ import {
   MONTH_NAMES,
 } from '../../services/monthlyStatsService';
 
+/**
+ * Wyłączone — zastąpione przez `monthlyStatsV3.ts` (grafika, wspólny ranking wiadomości+głos).
+ * Plik zostaje w repo w pełni sprawny na wypadek powrotu do starego, tekstowego formatu:
+ * wystarczy zmienić `ENABLED` na `true` (i wyłączyć/usunąć monthlyStatsV3.ts, żeby uniknąć
+ * podwójnej wysyłki co miesiąc).
+ */
+const ENABLED = false;
+
 export default function run(client: Client) {
+  if (!ENABLED) return;
+
   cron.schedule(CRON.MONTHLY_STATS_GENERATE, async () => {
     for (const guild of client.guilds.cache.values()) {
       try {

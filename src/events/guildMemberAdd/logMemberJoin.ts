@@ -21,8 +21,6 @@ export default async function run(member: GuildMember, client: Client): Promise<
           inline: true,
         },
       ],
-      footer: `User ID: ${member.id}`,
-      timestamp: new Date(),
     });
   } catch (error) {
     logger.error(`[logMemberJoin] Error: ${error}`);

@@ -9,6 +9,7 @@ import {
   removeStreamer,
   setLiveStatus,
   listStreamers,
+  updateAvatarUrl,
 } from '../../../src/services/twitchService';
 import { validateTwitchUser } from '../../../src/utils/twitchApi';
 
@@ -37,6 +38,7 @@ describe('addStreamer', () => {
     expect(res.data.twitchChannel).toBe('testchannel');
     expect(res.data.isLive).toBe(false);
     expect(res.data.active).toBe(true);
+    expect(res.data.avatarUrl).toBe('https://example.com/avatar.png');
   });
 
   it('fails with ALREADY_EXISTS for duplicate channel', async () => {
@@ -134,6 +136,22 @@ describe('setLiveStatus', () => {
   it('fails with NOT_FOUND for unknown', async () => {
     const res = await setLiveStatus(GID, 'none', true);
     expect(res.ok).toBe(false);
+  });
+});
+
+/* ── updateAvatarUrl ──────────────────────────────────────── */
+
+describe('updateAvatarUrl', () => {
+  it('updates the stored avatarUrl for an existing streamer', async () => {
+    await addStreamer(GID, 'u1', 'ch1');
+    await updateAvatarUrl(GID, 'ch1', 'https://example.com/new-avatar.png');
+
+    const doc = await TwitchStreamerModel.findOne({ guildId: GID, twitchChannel: 'ch1' });
+    expect(doc?.avatarUrl).toBe('https://example.com/new-avatar.png');
+  });
+
+  it('does nothing for an unknown channel (no throw)', async () => {
+    await expect(updateAvatarUrl(GID, 'nonexistent', 'https://example.com/x.png')).resolves.toBeUndefined();
   });
 });
 

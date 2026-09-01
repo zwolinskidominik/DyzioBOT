@@ -1,23 +1,3 @@
-export interface IAutoRole {
-  guildId: string;
-  roleIds: string[];
-}
-
-export interface IBirthday {
-  userId: string;
-  guildId: string;
-  date: Date;
-  yearSpecified: boolean;
-  active: boolean;
-}
-
-export interface IBirthdayConfiguration {
-  guildId: string;
-  birthdayChannelId: string;
-  roleId?: string;
-  message?: string;
-}
-
 export interface IChannelsConfig {
   lastJoined?: IChannelInfo;
   users?: IChannelInfo;
@@ -39,14 +19,6 @@ export interface IChannelStats {
 export interface IFortune {
   content: string;
   addedBy?: string;
-}
-
-export interface IFortuneUsage {
-  userId: string;
-  targetId: string;
-  lastUsed: Date;
-  lastUsedDay: Date;
-  dailyUsageCount: number;
 }
 
 export interface IGiveaway {
@@ -117,60 +89,6 @@ export interface IGreetingsConfiguration {
   goodbyeFooterIconFile?: string;
 }
 
-export interface IQuestion {
-  questionId: string;
-  authorId: string;
-  content: string;
-  reactions: string[];
-  disabled: boolean;
-}
-
-export interface IUsedQuestion {
-  guildId: string;
-  questionId: string;
-  usedAt: Date;
-}
-
-export interface IQuestionConfiguration {
-  guildId: string;
-  questionChannelId: string;
-  pingRoleId?: string;
-}
-
-export interface IStreamConfiguration {
-  guildId: string;
-  channelId: string;
-}
-
-export interface ISuggestion {
-  suggestionId: string;
-  authorId: string;
-  guildId: string;
-  messageId: string;
-  content: string;
-  upvotes: string[];
-  upvoteUsernames: string[];
-  downvotes: string[];
-  downvoteUsernames: string[];
-}
-
-export interface ISuggestionConfiguration {
-  guildId: string;
-  enabled: boolean;
-  suggestionChannelId: string;
-  votingFormat: 'counts' | 'percent' | 'bar';
-  anonymous: boolean;
-  embedColor: string;
-}
-
-export interface ITempChannel {
-  guildId: string;
-  parentId: string;
-  channelId: string;
-  ownerId: string;
-  controlMessageId?: string;
-}
-
 export interface ITempChannelConfiguration {
   guildId: string;
   /** @deprecated legacy field kept for backward compatibility — derived from `creators` on every save. */
@@ -232,20 +150,6 @@ export interface ITicketState {
   lastActivityAt?: Date;
 }
 
-export interface ITicketStats {
-  guildId: string;
-  userId: string;
-  count: number;
-}
-
-export interface ITwitchStreamer {
-  guildId: string;
-  twitchChannel: string;
-  userId: string;
-  isLive: boolean;
-  active: boolean;
-}
-
 export interface IWarnEntry {
   reason: string;
   date: Date;
@@ -254,25 +158,10 @@ export interface IWarnEntry {
   moderator?: string;
 }
 
-export interface IWarnDocument {
-  userId: string;
-  guildId: string;
-  count: number;
-  warnings: IWarnEntry[];
-}
-
 export interface IReactionRoleMapping {
   emoji: string;
   roleId: string;
   description?: string;
-}
-
-export interface IReactionRole {
-  guildId: string;
-  channelId: string;
-  messageId: string;
-  title?: string;
-  reactions: IReactionRoleMapping[];
 }
 
 export interface IMonthlyStats {
@@ -289,24 +178,6 @@ export interface IMonthlyStatsConfig {
   channelId?: string;
   enabled: boolean;
   topCount: number;
-}
-
-export interface ITournamentConfig {
-  guildId: string;
-  enabled: boolean;
-  messageTemplate: string;
-  cronSchedule: string;
-  reactionEmoji: string;
-}
-
-export interface IInviteTrackerConfig {
-  guildId: string;
-  enabled: boolean;
-  logChannelId?: string | null;
-  joinMessage?: string;
-  joinMessageUnknown?: string;
-  joinMessageVanity?: string;
-  leaveMessage?: string;
 }
 
 export interface IInviteEntry {

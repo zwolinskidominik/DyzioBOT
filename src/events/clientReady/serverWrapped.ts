@@ -2,7 +2,7 @@ import { Client, TextChannel, AttachmentBuilder, ActionRowBuilder, ButtonBuilder
 import cron from 'node-cron';
 import logger from '../../utils/logger';
 import { OWNER_GUILD_IDS } from '../../config/constants/owner';
-import { collectWrappedData, renderWrappedCanvas } from '../../services/serverWrappedService';
+import { collectWrappedData, renderWrappedCanvas, resolveWrappedTheme } from '../../services/serverWrappedService';
 import { WrappedConfigModel } from '../../models/WrappedConfig';
 import { LevelModel } from '../../models/Level';
 import { LevelSnapshotModel } from '../../models/LevelSnapshot';
@@ -53,7 +53,7 @@ export default function run(client: Client): void {
           await takeLevelSnapshots(guild.id, new Date().getFullYear());
 
           const data = await collectWrappedData(guild);
-          const imageBuffer = await renderWrappedCanvas(data);
+          const imageBuffer = await renderWrappedCanvas(data, resolveWrappedTheme(wrappedConfig.colorTheme));
 
           const attachment = new AttachmentBuilder(imageBuffer, {
             name: 'server-wrapped.png',

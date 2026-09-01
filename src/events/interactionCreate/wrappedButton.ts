@@ -1,5 +1,6 @@
 import { ButtonInteraction, AttachmentBuilder, MessageFlags } from 'discord.js';
-import { collectPersonalWrappedData, renderPersonalWrappedCanvas } from '../../services/serverWrappedService';
+import { collectPersonalWrappedData, renderPersonalWrappedCanvas, resolveWrappedTheme } from '../../services/serverWrappedService';
+import { WrappedConfigModel } from '../../models/WrappedConfig';
 import logger from '../../utils/logger';
 
 export default async function run(interaction: ButtonInteraction): Promise<void> {
@@ -11,8 +12,10 @@ export default async function run(interaction: ButtonInteraction): Promise<void>
   try {
     const member = await interaction.guild!.members.fetch(interaction.user.id);
 
+    const wrappedConfig = await WrappedConfigModel.findOne({ guildId: interaction.guild!.id }).lean();
+
     const data = await collectPersonalWrappedData(member);
-    const imageBuffer = await renderPersonalWrappedCanvas(data);
+    const imageBuffer = await renderPersonalWrappedCanvas(data, resolveWrappedTheme(wrappedConfig?.colorTheme));
 
     const file = new AttachmentBuilder(imageBuffer, { name: 'wrapped.png' });
     await interaction.editReply({ files: [file] });

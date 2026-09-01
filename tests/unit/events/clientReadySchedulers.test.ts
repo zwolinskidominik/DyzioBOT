@@ -163,6 +163,7 @@ jest.mock('@twurple/api', () => ({
 jest.mock('../../../src/services/twitchService', () => ({
   getActiveStreamers: jest.fn().mockResolvedValue({ ok: true, data: [] }),
   setLiveStatus: jest.fn(),
+  updateAvatarUrl: jest.fn(),
 }));
 
 jest.mock('../../../src/models/StreamConfiguration', () => ({

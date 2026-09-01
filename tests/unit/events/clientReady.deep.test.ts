@@ -142,6 +142,11 @@ jest.mock('../../../src/models/QuestionConfiguration', () => ({
   QuestionConfigurationModel: { find: jest.fn() },
 }));
 
+const mockUsedQuestionCreate = jest.fn().mockResolvedValue(undefined);
+jest.mock('../../../src/models/UsedQuestion', () => ({
+  UsedQuestionModel: { create: mockUsedQuestionCreate },
+}));
+
 jest.mock('../../../src/models/TournamentConfig', () => ({
   TournamentConfigModel: {
     find: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
@@ -154,6 +159,7 @@ const mockSetLiveStatus = jest.fn();
 jest.mock('../../../src/services/twitchService', () => ({
   getActiveStreamers: mockGetActiveStreamers,
   setLiveStatus: mockSetLiveStatus,
+  updateAvatarUrl: jest.fn(),
 }));
 
 jest.mock('../../../src/models/StreamConfiguration', () => ({
@@ -865,23 +871,14 @@ describe('vcMinuteTick', () => {
    warnSystemMaintenance
    ═══════════════════════════════════════════════════════════════════ */
 describe('warnSystemMaintenance', () => {
-  it('cleans expired warns', async () => {
-    process.env.GUILD_ID = 'g1';
+  it('cleans expired warns across all guilds (bot is multi-tenant)', async () => {
     mockCleanExpiredWarns.mockResolvedValue({ ok: true, data: { totalRemoved: 3, usersAffected: 2 } });
     await warnSystemMaintenance();
     await cronCallbacks[cronCallbacks.length - 1]();
-    expect(mockCleanExpiredWarns).toHaveBeenCalledWith({ guildId: 'g1' });
-  });
-
-  it('skips when GUILD_ID not set', async () => {
-    delete process.env.GUILD_ID;
-    await warnSystemMaintenance();
-    await cronCallbacks[cronCallbacks.length - 1]();
-    expect(mockCleanExpiredWarns).not.toHaveBeenCalled();
+    expect(mockCleanExpiredWarns).toHaveBeenCalledWith({});
   });
 
   it('handles clean error', async () => {
-    process.env.GUILD_ID = 'g1';
     mockCleanExpiredWarns.mockRejectedValue(new Error('DB error'));
     await warnSystemMaintenance();
     await cronCallbacks[cronCallbacks.length - 1]();

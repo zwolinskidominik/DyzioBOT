@@ -32,6 +32,34 @@ export class TournamentConfig {
 
   @prop({ type: () => String, default: '🎮' })
   public reactionEmoji!: string;
+
+  @prop({ type: () => String, default: 'text' })
+  public messageMode!: 'embed' | 'text';
+
+  @prop({ type: () => String, default: '#3b82f6' })
+  public embedColor!: string;
+
+  @prop({ type: () => String, default: '🏆 Turniej CS2' })
+  public titleText!: string;
+
+  @prop({ type: () => String })
+  public footerText?: string;
+
+  /** Rola uczestników turnieju ({roleMention}). */
+  @prop({ type: () => String })
+  public participantRoleId?: string;
+
+  /** Rola organizatorów turnieju ({organizerRoleMention}). */
+  @prop({ type: () => String })
+  public organizerRoleId?: string;
+
+  /** Użytkownicy-organizatorzy pingowani w wiadomości ({organizerUserPings}). */
+  @prop({ type: () => [String], default: [] })
+  public organizerUserIds!: string[];
+
+  /** Kanał głosowy turnieju ({voiceChannelLink}). */
+  @prop({ type: () => String })
+  public voiceChannelId?: string;
 }
 
 export const TournamentConfigModel = getModelForClass(TournamentConfig);

@@ -22,6 +22,26 @@ class TwitchStreamer {
 
   @prop({ default: true, type: () => Boolean })
   public active!: boolean;
+
+  /** Zrzut danych z ostatniego sprawdzenia Twitch API (cache, żeby dashboard nie musiał odpytywać Twitcha). */
+  @prop({ type: () => String })
+  public title?: string;
+
+  @prop({ type: () => String })
+  public game?: string;
+
+  @prop({ type: () => Number })
+  public viewerCount?: number;
+
+  @prop({ type: () => Date })
+  public liveSince?: Date;
+
+  @prop({ type: () => String })
+  public thumbnailUrl?: string;
+
+  /** URL avatara streamera z Twitcha (profile_image_url) — pobierany przy dodawaniu/walidacji, bez dodatkowych zapytań do API. */
+  @prop({ type: () => String })
+  public avatarUrl?: string;
 }
 
 export const TwitchStreamerModel = getModelForClass(TwitchStreamer);

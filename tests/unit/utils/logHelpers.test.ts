@@ -1,4 +1,4 @@
-import { createLogEmbed, truncate } from '../../../src/utils/logHelpers';
+import { createLogEmbed, truncate, moderatorField } from '../../../src/utils/logHelpers';
 
 /* ── truncate ─────────────────────────────────────────────── */
 
@@ -89,8 +89,33 @@ describe('createLogEmbed', () => {
     expect(embed.data.timestamp).toBe(date.toISOString());
   });
 
-  it('auto-sets timestamp when timestamp is not false', () => {
+  it('does not set a timestamp by default', () => {
     const embed = createLogEmbed('memberJoin', {});
+    expect(embed.data.timestamp).toBeUndefined();
+  });
+
+  it('sets timestamp when explicitly true', () => {
+    const embed = createLogEmbed('memberJoin', { timestamp: true });
     expect(embed.data.timestamp).toBeTruthy();
+  });
+
+  it('uses colorOverride decimal value when provided', () => {
+    const embed = createLogEmbed('memberJoin', {}, 0x5865f2);
+    expect(embed.data.color).toBe(0x5865f2);
+  });
+
+  it('falls back to default event color when colorOverride is undefined', () => {
+    const withOverride = createLogEmbed('memberJoin', {}, 0x5865f2);
+    const withoutOverride = createLogEmbed('memberJoin', {});
+    expect(withoutOverride.data.color).not.toBe(withOverride.data.color);
+  });
+});
+
+/* ── moderatorField ───────────────────────────────────────── */
+
+describe('moderatorField', () => {
+  it('builds a Moderator field mentioning the user', () => {
+    const field = moderatorField('user-123');
+    expect(field).toEqual({ name: 'Moderator:', value: '<@user-123>', inline: true });
   });
 });

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { GiveawayModel } from '../models/Giveaway';
 import { GiveawayConfigModel } from '../models/GiveawayConfig';
 import type { IGiveaway } from '../interfaces/Models';
@@ -429,8 +430,10 @@ export async function finalizeExpiredGiveaways(guildIds: string[]): Promise<Serv
     // Only finalize giveaways for guilds this bot instance actually serves.
     // This prevents a second bot instance sharing the same DB from stealing
     // giveaways it cannot edit (guild not in its cache).
+    // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
+    // operatory — bez tego CAŁE auto-kończenie giveawayów rzuca CastError.
     const giveaway = await GiveawayModel.findOneAndUpdate(
-      { finalized: false, endTime: { $lte: now }, guildId: { $in: guildIds } },
+      { finalized: false, endTime: mongoose.trusted({ $lte: now }), guildId: mongoose.trusted({ $in: guildIds }) },
       { $set: { active: false, finalized: true } },
       { returnDocument: 'before', sort: { endTime: 1 } },
     );

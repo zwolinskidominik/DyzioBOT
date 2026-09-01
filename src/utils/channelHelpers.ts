@@ -133,6 +133,7 @@ async function getBanCount(guild: Guild): Promise<number> {
 export async function updateChannelStats(guild: Guild): Promise<void> {
   const channelStats = await ChannelStatsModel.findOne({ guildId: guild.id });
   if (!channelStats) return;
+  if (channelStats.enabled === false) return;
 
   try {
     await ensureFreshMembers(guild);

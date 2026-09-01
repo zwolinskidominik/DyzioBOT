@@ -1,5 +1,5 @@
 import { ThreadChannel, Client, AuditLogEvent } from 'discord.js';
-import { sendLog } from '../../utils/logHelpers';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import logger from '../../utils/logger';
 
@@ -12,17 +12,17 @@ export default async function run(
     const ctx = newThread.parentId ? { channelId: newThread.parentId } : undefined;
 
     const moderator = await getModerator(newThread.guild, AuditLogEvent.ThreadUpdate, newThread.id);
+    const modFields = moderator ? [moderatorField(moderator.id)] : [];
 
     if (oldThread.name !== newThread.name) {
       await sendLog(client, newThread.guild.id, 'threadUpdate', {
         title: null,
-        description: `**✏️ Zaktualizowano nazwę wątku <#${newThread.id}>${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
+        description: `**✏️ Zaktualizowano nazwę wątku <#${newThread.id}>.**`,
         fields: [
-          { name: '📝 Poprzednia nazwa', value: oldThread.name, inline: true },
-          { name: '📝 Nowa nazwa', value: newThread.name, inline: true },
+          { name: 'Stara nazwa', value: oldThread.name, inline: true },
+          { name: 'Nowa nazwa', value: newThread.name, inline: true },
+          ...modFields,
         ],
-        footer: `Thread ID: ${newThread.id}`,
-        timestamp: new Date(),
       }, ctx);
     }
 
@@ -30,10 +30,9 @@ export default async function run(
       await sendLog(client, newThread.guild.id, 'threadUpdate', {
         title: null,
         description: newThread.archived
-          ? `**📦 Wątek <#${newThread.id}> został zarchiwizowany${moderator ? ` przez <@${moderator.id}>` : ''}.**`
-          : `**📂 Wątek <#${newThread.id}> został odarchiwizowany${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
-        footer: `Thread ID: ${newThread.id}`,
-        timestamp: new Date(),
+          ? `**📦 Wątek <#${newThread.id}> został zarchiwizowany.**`
+          : `**📂 Wątek <#${newThread.id}> został odarchiwizowany.**`,
+        fields: modFields,
       }, ctx);
     }
 
@@ -41,10 +40,9 @@ export default async function run(
       await sendLog(client, newThread.guild.id, 'threadUpdate', {
         title: null,
         description: newThread.locked
-          ? `**🔒 Wątek <#${newThread.id}> został zamknięty${moderator ? ` przez <@${moderator.id}>` : ''}.**`
-          : `**🔓 Wątek <#${newThread.id}> został otwarty${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
-        footer: `Thread ID: ${newThread.id}`,
-        timestamp: new Date(),
+          ? `**🔒 Wątek <#${newThread.id}> został zamknięty.**`
+          : `**🔓 Wątek <#${newThread.id}> został otwarty.**`,
+        fields: modFields,
       }, ctx);
     }
   } catch (error) {

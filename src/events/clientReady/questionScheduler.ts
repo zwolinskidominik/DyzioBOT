@@ -25,7 +25,7 @@ export default async function run(client: Client): Promise<void> {
             }
             const questionChannel = channel as TextChannel;
 
-            const questionResult = await getRandomQuestion();
+            const questionResult = await getRandomQuestion(questionConfig.guildId);
             
             if (!questionResult.ok) {
               logger.info(`[${questionConfig.guildId}] Brak dostępnych pytań (wszystkie zostały już użyte)`);
@@ -42,7 +42,16 @@ export default async function run(client: Client): Promise<void> {
               ? `<@&${questionConfig.pingRoleId}>\n\n**Pytanie dnia:**\n${randomQuestion.content}`
               : `**Pytanie dnia:**\n${randomQuestion.content}`;
 
-            const questionMessage = await questionChannel.send(messageContent);
+            // randomQuestion.content to tekst pytania wpisany przez admina w dashboardzie —
+            // bez allowedMentions każde "@everyone"/"@here" wpisane w treść pytania faktycznie
+            // pingnie serwer przy wysyłce. Pozwalamy TYLKO na skonfigurowaną rolę (pingRoleId).
+            const questionMessage = await questionChannel.send({
+              content: messageContent,
+              allowedMentions: {
+                parse: [],
+                roles: questionConfig.pingRoleId ? [questionConfig.pingRoleId] : [],
+              },
+            });
 
             await questionChannel.threads.create({
               name: threadName,
@@ -59,7 +68,10 @@ export default async function run(client: Client): Promise<void> {
               }
             }
 
-            await markUsed(randomQuestion.questionId);
+            const markUsedResult = await markUsed(questionConfig.guildId, randomQuestion.questionId);
+            if (!markUsedResult.ok) {
+              logger.warn(`[${questionConfig.guildId}] Nie udało się zapisać historii użycia pytania: ${markUsedResult.message}`);
+            }
           } catch (error) {
             logger.error(`[${questionConfig.guildId}] Błąd wysyłania pytania dnia: ${error}`);
           }

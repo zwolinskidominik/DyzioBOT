@@ -25,25 +25,218 @@ export interface RecordJoinParams {
   accountCreatedAt: Date;
 }
 
-/* ── Config ──────────────────────────────────────────────────────── */
+export interface JoinMessagesData {
+  normal: string;
+  selfInvite: string;
+  unknown: string;
+  vanity: string;
+  botAdd: string;
+}
 
-export async function getConfig(guildId: string): Promise<ServiceResult<{
+export interface LeaveMessagesData {
+  normal: string;
+  unknown: string;
+  vanity: string;
+  botRemove: string;
+}
+
+export interface SectionConfigData<M> {
   enabled: boolean;
   logChannelId: string | null;
-  joinMessage: string;
-  joinMessageUnknown: string;
-  joinMessageVanity: string;
-  leaveMessage: string;
-}>> {
+  embed: boolean;
+  /** Niestandardowy kolor embeda (hex). Puste = użyj domyślnego koloru sytuacji. */
+  embedColor: string;
+  messages: M;
+}
+
+export interface InviteTrackerConfigData {
+  enabled: boolean;
+  join: SectionConfigData<JoinMessagesData>;
+  leave: SectionConfigData<LeaveMessagesData>;
+}
+
+export type JoinSituation = 'normal' | 'selfInvite' | 'unknown' | 'vanity' | 'botAdd';
+export type LeaveSituation = 'normal' | 'unknown' | 'vanity' | 'botRemove';
+
+export interface SituationMeta {
+  id: string;
+  label: string;
+  hint: string;
+  accent: string;
+  embedTitle: string;
+  defaultTemplate: string;
+}
+
+/* ── Sytuacje: kolory/tytuły embeda i treści domyślne — 1:1 z prototypu ── */
+
+export const JOIN_SITUATIONS: Record<JoinSituation, SituationMeta> = {
+  normal: {
+    id: 'normal',
+    label: 'Normalne dołączenie',
+    hint: 'Kiedy użytkownik jest zaproszony przez kogoś innego.',
+    accent: '#22c55e',
+    embedTitle: '🎉 Nowy członek',
+    defaultTemplate: '**{memberMention}** został zaproszony przez **{inviterName}**, który/a ma teraz **{inviteCount} zaproszeń**!',
+  },
+  selfInvite: {
+    id: 'selfInvite',
+    label: 'Sam się zaprosił',
+    hint: 'Kiedy użytkownik sam się zaprosił na Twój serwer.',
+    accent: '#38bdf8',
+    embedTitle: '🔗 Samo-zaproszenie',
+    defaultTemplate: '**{memberName}** zaprosił się sam.',
+  },
+  unknown: {
+    id: 'unknown',
+    label: 'Nieznany autor zaproszenia',
+    hint: 'Kiedy użytkownik dołącza, ale nie da się ustalić, kto go zaprosił.',
+    accent: '#f59e0b',
+    embedTitle: '❓ Nieznane źródło',
+    defaultTemplate: 'Nie jestem w stanie powiedzieć, kto zaprosił **{memberName}**. Możliwe, że to zaproszenie tymczasowe.',
+  },
+  vanity: {
+    id: 'vanity',
+    label: 'Niestandardowe zaproszenie',
+    hint: 'Gdy użytkownik jest zaproszony za pomocą zaproszenia niestandardowego.',
+    accent: '#a970ff',
+    embedTitle: '✨ Niestandardowe zaproszenie',
+    defaultTemplate: '**{memberName}** dołączył używając niestandardowego zaproszenia **{inviteCode}**.',
+  },
+  botAdd: {
+    id: 'botAdd',
+    label: 'Dodanie bota',
+    hint: 'Kiedy ktoś dodaje bota na serwer.',
+    accent: '#5865F2',
+    embedTitle: '🤖 Dodano bota',
+    defaultTemplate: '**{memberMention}** 🤖 został właśnie dodany na ten serwer przez **{inviterName}**',
+  },
+};
+
+export const LEAVE_SITUATIONS: Record<LeaveSituation, SituationMeta> = {
+  normal: {
+    id: 'normal',
+    label: 'Normalne opuszczenie',
+    hint: 'Kiedy użytkownik opuścił serwer i był zaproszony przez kogoś innego.',
+    accent: '#ef4444',
+    embedTitle: '😢 Ktoś nas opuścił',
+    defaultTemplate: '**{memberName}** opuścił serwer. Zaprosił go **{inviterName}**.',
+  },
+  unknown: {
+    id: 'unknown',
+    label: 'Nieznany autor zaproszenia',
+    hint: 'Kiedy użytkownik opuścił serwer, a nie wiadomo, kto go zaprosił.',
+    accent: '#f59e0b',
+    embedTitle: '❓ Odszedł — nieznane źródło',
+    defaultTemplate: '**{memberName}** opuścił serwer, ale nie wiem, kto go zaprosił.',
+  },
+  vanity: {
+    id: 'vanity',
+    label: 'Niestandardowe zaproszenie',
+    hint: 'Kiedy użytkownik wszedł przez zaproszenie niestandardowe i opuścił serwer.',
+    accent: '#a970ff',
+    embedTitle: '✨ Odszedł — niestandardowe',
+    defaultTemplate: '**{memberName}** opuścił serwer. Dołączył używając niestandardowego zaproszenia **{inviteCode}**.',
+  },
+  botRemove: {
+    id: 'botRemove',
+    label: 'Usunięcie bota',
+    hint: 'Kiedy ktoś usuwa bota z serwera.',
+    accent: '#5865F2',
+    embedTitle: '🤖 Usunięto bota',
+    defaultTemplate: '**{memberName}** 🤖 został usunięty z serwera.',
+  },
+};
+
+/* ── Zmienne szablonu ────────────────────────────────────────────── */
+
+export interface MessageContext {
+  memberMention: string;
+  memberName: string;
+  inviterName: string;
+  inviteCount: string;
+  inviteCode: string;
+}
+
+/**
+ * Podstawia zmienne w szablonie. Wspiera nowe nazwy ({memberMention} itd.) oraz —
+ * dla kompatybilności wstecznej z szablonami zapisanymi przed redesignem —
+ * stare nazwy ({user}, {username}, {inviter}, {activeCount}).
+ */
+export function replaceVariables(template: string, ctx: MessageContext): string {
+  return template
+    .replace(/\{memberMention\}/g, ctx.memberMention)
+    .replace(/\{memberName\}/g, ctx.memberName)
+    .replace(/\{inviterName\}/g, ctx.inviterName)
+    .replace(/\{inviteCount\}/g, ctx.inviteCount)
+    .replace(/\{inviteCode\}/g, ctx.inviteCode)
+    .replace(/\{user\}/g, ctx.memberMention)
+    .replace(/\{username\}/g, ctx.memberName)
+    .replace(/\{inviter\}/g, ctx.inviterName)
+    .replace(/\{activeCount\}/g, ctx.inviteCount);
+}
+
+export interface ResolvedMessage {
+  text: string;
+  embed?: { color: string; title: string };
+}
+
+/** Wybiera treść (custom albo domyślną dla danej sytuacji), podstawia zmienne, opcjonalnie owija w embed. */
+export function buildInviteMessage(
+  customTemplate: string,
+  situation: SituationMeta,
+  ctx: MessageContext,
+  useEmbed: boolean,
+  embedColor?: string,
+): ResolvedMessage {
+  const raw = customTemplate.trim() ? customTemplate : situation.defaultTemplate;
+  const text = replaceVariables(raw, ctx);
+  return useEmbed ? { text, embed: { color: embedColor?.trim() || situation.accent, title: situation.embedTitle } } : { text };
+}
+
+/* ── Config ──────────────────────────────────────────────────────── */
+
+const EMPTY_JOIN_MESSAGES: JoinMessagesData = { normal: '', selfInvite: '', unknown: '', vanity: '', botAdd: '' };
+const EMPTY_LEAVE_MESSAGES: LeaveMessagesData = { normal: '', unknown: '', vanity: '', botRemove: '' };
+
+export async function getConfig(guildId: string): Promise<ServiceResult<InviteTrackerConfigData>> {
   try {
-    const config = await InviteTrackerConfigModel.findOne({ guildId }).lean();
+    const doc = await InviteTrackerConfigModel.findOne({ guildId }).lean();
+    // `legacy` czyta pola sprzed redesignu (płaski kształt) — dokument może je jeszcze
+    // mieć, jeśli migracja (src/scripts/migrateInviteTrackerConfig.ts) nie została uruchomiona.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const legacy = doc as any;
+
+    const join: SectionConfigData<JoinMessagesData> = {
+      enabled: doc?.join?.enabled ?? true,
+      logChannelId: doc?.join?.logChannelId ?? legacy?.logChannelId ?? null,
+      embed: doc?.join?.embed ?? false,
+      embedColor: doc?.join?.embedColor ?? '',
+      messages: {
+        normal: doc?.join?.messages?.normal || legacy?.joinMessage || '',
+        selfInvite: doc?.join?.messages?.selfInvite || '',
+        unknown: doc?.join?.messages?.unknown || legacy?.joinMessageUnknown || '',
+        vanity: doc?.join?.messages?.vanity || legacy?.joinMessageVanity || '',
+        botAdd: doc?.join?.messages?.botAdd || '',
+      },
+    };
+
+    const leave: SectionConfigData<LeaveMessagesData> = {
+      enabled: doc?.leave?.enabled ?? true,
+      logChannelId: doc?.leave?.logChannelId ?? legacy?.logChannelId ?? null,
+      embed: doc?.leave?.embed ?? false,
+      embedColor: doc?.leave?.embedColor ?? '',
+      messages: {
+        normal: doc?.leave?.messages?.normal || legacy?.leaveMessage || '',
+        unknown: doc?.leave?.messages?.unknown || '',
+        vanity: doc?.leave?.messages?.vanity || '',
+        botRemove: doc?.leave?.messages?.botRemove || '',
+      },
+    };
+
     return ok({
-      enabled: config?.enabled ?? false,
-      logChannelId: config?.logChannelId ?? null,
-      joinMessage: config?.joinMessage ?? '',
-      joinMessageUnknown: config?.joinMessageUnknown ?? '',
-      joinMessageVanity: config?.joinMessageVanity ?? '',
-      leaveMessage: config?.leaveMessage ?? '',
+      enabled: doc?.enabled ?? false,
+      join: doc?.join ? join : { ...join, messages: { ...EMPTY_JOIN_MESSAGES, ...join.messages } },
+      leave: doc?.leave ? leave : { ...leave, messages: { ...EMPTY_LEAVE_MESSAGES, ...leave.messages } },
     });
   } catch (error) {
     logger.error(`[InviteTracker] getConfig error: ${error}`);
@@ -51,14 +244,22 @@ export async function getConfig(guildId: string): Promise<ServiceResult<{
   }
 }
 
-export async function updateConfig(guildId: string, data: {
+export interface SectionConfigUpdate<M> {
   enabled?: boolean;
   logChannelId?: string | null;
-  joinMessage?: string;
-  joinMessageUnknown?: string;
-  joinMessageVanity?: string;
-  leaveMessage?: string;
-}): Promise<ServiceResult<{ updated: boolean }>> {
+  embed?: boolean;
+  embedColor?: string;
+  messages?: Partial<M>;
+}
+
+export async function updateConfig(
+  guildId: string,
+  data: {
+    enabled?: boolean;
+    join?: SectionConfigUpdate<JoinMessagesData>;
+    leave?: SectionConfigUpdate<LeaveMessagesData>;
+  },
+): Promise<ServiceResult<{ updated: boolean }>> {
   try {
     await InviteTrackerConfigModel.findOneAndUpdate(
       { guildId },
@@ -105,6 +306,7 @@ export async function recordJoin(params: RecordJoinParams): Promise<ServiceResul
 
 export async function recordLeave(guildId: string, userId: string): Promise<ServiceResult<{
   inviterId: string | null;
+  inviteCode: string | null;
 }>> {
   try {
     // Mark the most recent active entry for this user as left
@@ -114,7 +316,7 @@ export async function recordLeave(guildId: string, userId: string): Promise<Serv
       { sort: { joinedAt: -1 }, new: true },
     );
 
-    return ok({ inviterId: entry?.inviterId ?? null });
+    return ok({ inviterId: entry?.inviterId ?? null, inviteCode: entry?.inviteCode ?? null });
   } catch (error) {
     logger.error(`[InviteTracker] recordLeave error: ${error}`);
     return fail('DB_ERROR', 'Nie udało się zapisać opuszczenia.');
@@ -184,8 +386,10 @@ export async function getLeaderboard(guildId: string, limit = 10): Promise<Servi
 export async function getEntries(
   guildId: string,
   options: { inviterId?: string; limit?: number; skip?: number } = {},
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<ServiceResult<{ entries: any[]; totalCount: number }>> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filter: any = { guildId };
     if (options.inviterId) filter.inviterId = options.inviterId;
 

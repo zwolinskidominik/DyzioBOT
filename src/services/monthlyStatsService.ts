@@ -37,6 +37,25 @@ export interface MonthlyStatsConfig {
   enabled: boolean;
   channelId?: string;
   topCount: number;
+  msgRate: number;
+  voiceRate: number;
+}
+
+/* ── V3 (grafika łączona: wiadomości + głos = jeden wynik) ───── */
+
+export interface CombinedStatEntry {
+  userId: string;
+  messageCount: number;
+  voiceMinutes: number;
+  score: number;
+}
+
+export interface CombinedLeaderboardResult {
+  ranked: CombinedStatEntry[];
+  totalMessages: number;
+  totalVoiceMinutes: number;
+  activeUsers: number;
+  month: string;
 }
 
 /* ── Pure helpers ─────────────────────────────────────────── */
@@ -105,6 +124,8 @@ export async function getConfig(guildId: string): Promise<ServiceResult<MonthlyS
     enabled: config.enabled,
     channelId: config.channelId,
     topCount: config.topCount,
+    msgRate: config.msgRate ?? 1,
+    voiceRate: config.voiceRate ?? 2,
   });
 }
 
@@ -157,6 +178,50 @@ export async function getUserRank(
 export async function isNewUser(guildId: string, userId: string): Promise<boolean> {
   const count = await MonthlyStatsModel.countDocuments({ guildId, userId });
   return count <= 1;
+}
+
+/**
+ * Pure function: łączony wynik aktywności = 1 pkt / `msgRate` wiadomości + 1 pkt / `voiceRate` min
+ * na głosowym. Domyślne stawki (1 wiadomość, 2 minuty) odpowiadają dotychczasowemu, sztywnemu
+ * wzorowi — konfigurowalne per-guild przez dashboard (Punktacja wyniku).
+ * Używane WYŁĄCZNIE przez wersję v3 (grafika, jeden wspólny ranking) — nie zastępuje
+ * dotychczasowych, osobnych rankingów `topMessages`/`topVoice` używanych przez wersję tekstową.
+ */
+export function computeCombinedScore(
+  messageCount: number,
+  voiceMinutes: number,
+  msgRate = 1,
+  voiceRate = 2,
+): number {
+  return Math.round(messageCount / msgRate) + Math.round(voiceMinutes / voiceRate);
+}
+
+/**
+ * Generate the combined (message + voice) leaderboard for a given month — v3.
+ */
+export async function generateCombinedLeaderboard(
+  guildId: string,
+  month: string,
+  topCount: number,
+  msgRate = 1,
+  voiceRate = 2,
+): Promise<ServiceResult<CombinedLeaderboardResult>> {
+  const stats = await MonthlyStatsModel.find({ guildId, month }).lean();
+
+  const ranked = stats
+    .map((s) => ({
+      userId: s.userId,
+      messageCount: s.messageCount,
+      voiceMinutes: s.voiceMinutes,
+      score: computeCombinedScore(s.messageCount, s.voiceMinutes, msgRate, voiceRate),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topCount);
+
+  const totalMessages = stats.reduce((sum, s) => sum + s.messageCount, 0);
+  const totalVoiceMinutes = stats.reduce((sum, s) => sum + s.voiceMinutes, 0);
+
+  return ok({ ranked, totalMessages, totalVoiceMinutes, activeUsers: stats.length, month });
 }
 
 /**

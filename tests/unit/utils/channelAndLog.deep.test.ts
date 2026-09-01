@@ -282,6 +282,30 @@ describe('logHelpers', () => {
       expect(send).toHaveBeenCalled();
     });
 
+    it('applies colorOverrides from config to the sent embed', async () => {
+      const send = jest.fn().mockResolvedValue(undefined);
+      LogConfigurationModel.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue({
+          guildId: 'g1',
+          enabled: true,
+          enabledEvents: { channelCreate: true },
+          logChannels: { channelCreate: 'logCh1' },
+          colorOverrides: { channelCreate: '#5865F2' },
+        }),
+      });
+      const client = {
+        guilds: {
+          cache: new Map([
+            ['g1', { channels: { cache: new Map([['logCh1', { send }]]) } }],
+          ]),
+        },
+      } as any;
+      await sendLog(client, 'g1', 'channelCreate' as any, { description: 'test' });
+      expect(send).toHaveBeenCalled();
+      const sentEmbed = send.mock.calls[0][0].embeds[0];
+      expect(sentEmbed.data.color).toBe(0x5865f2);
+    });
+
     it('respects ignored channels', async () => {
       const send = jest.fn();
       LogConfigurationModel.findOne.mockReturnValue({

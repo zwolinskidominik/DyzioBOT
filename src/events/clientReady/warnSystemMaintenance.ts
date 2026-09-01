@@ -8,16 +8,14 @@ export default async function run(): Promise<void> {
     CRON.WARN_MAINTENANCE,
     async () => {
       try {
-        const guildId = process.env.GUILD_ID;
-        if (!guildId) {
-          logger.warn('GUILD_ID is not set — skipping warn maintenance');
-          return;
-        }
-
-        const result = await cleanExpiredWarns({ guildId });
+        // Bez guildId → cleanExpiredWarns czyści ostrzeżenia na WSZYSTKICH serwerach.
+        // Wcześniej brano tylko process.env.GUILD_ID (jeden, sztywno ustawiony serwer),
+        // przez co ostrzeżenia na pozostałych serwerach nigdy nie wygasały — bot jest
+        // multi-tenant, więc to musi objąć każdą gildię.
+        const result = await cleanExpiredWarns({});
         if (result.ok && result.data.totalRemoved > 0) {
           logger.info(
-            `🧹 Warn maintenance: usunięto ${result.data.totalRemoved} ostrzeżeń (${result.data.usersAffected} użytkowników)`
+            `🧹 Warn maintenance: usunięto ${result.data.totalRemoved} ostrzeżeń (${result.data.usersAffected} użytkowników, wszystkie serwery)`
           );
         }
       } catch (error) {

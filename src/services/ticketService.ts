@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { ServiceResult, ok, fail } from '../types/serviceResult';
 import { TicketConfigModel } from '../models/TicketConfig';
 import { TicketStateModel } from '../models/TicketState';
@@ -237,7 +238,9 @@ export interface IdleTicketGroup {
 }
 
 export async function findIdleTicketGroups(): Promise<IdleTicketGroup[]> {
-  const configs = await TicketConfigModel.find({ 'automation.autoCloseHours': { $gt: 0 } });
+  // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
+  // operatory — bez tego auto-close ticketów rzuca CastError.
+  const configs = await TicketConfigModel.find({ 'automation.autoCloseHours': mongoose.trusted({ $gt: 0 }) });
   const groups: IdleTicketGroup[] = [];
 
   for (const config of configs) {
@@ -245,7 +248,7 @@ export async function findIdleTicketGroups(): Promise<IdleTicketGroup[]> {
     const cutoff = new Date(Date.now() - autoCloseHours * 60 * 60 * 1000);
     const idleStates = await TicketStateModel.find({
       guildId: config.guildId,
-      lastActivityAt: { $lt: cutoff },
+      lastActivityAt: mongoose.trusted({ $lt: cutoff }),
     });
 
     if (idleStates.length > 0) {

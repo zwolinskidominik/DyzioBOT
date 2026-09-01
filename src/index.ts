@@ -36,6 +36,10 @@ new CommandHandler(client, {
 
 new EventHandler(client);
 
+// Blokuje NoSQL injection — operatory Mongo ($where, $gt, $ne, itp.) w obiektach
+// filtrujących pochodzących z niezaufanego inputu są odrzucane zamiast wykonane.
+mongoose.set('sanitizeFilter', true);
+
 mongoose
   .connect(MONGODB_URI)
   .then(() => {

@@ -18,7 +18,11 @@ jest.mock('../../../src/utils/logger', () => ({
 
 // --- log/audit helpers
 const mockSendLog = jest.fn().mockResolvedValue(undefined);
-jest.mock('../../../src/utils/logHelpers', () => ({ sendLog: mockSendLog }));
+jest.mock('../../../src/utils/logHelpers', () => ({
+  sendLog: mockSendLog,
+  guildFooter: jest.fn().mockReturnValue({}),
+  moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
+}));
 
 const mockGetModerator = jest.fn().mockResolvedValue(null);
 const mockGetReason = jest.fn().mockResolvedValue(null);
@@ -180,6 +184,8 @@ function mockGuildMember(overrides: Record<string, any> = {}) {
 function mockGuild() {
   return {
     id: 'g1',
+    name: 'Test Guild',
+    iconURL: jest.fn().mockReturnValue('https://cdn.discordapp.com/icon.png'),
     fetchAuditLogs: jest.fn().mockResolvedValue({ entries: { first: () => null } }),
   };
 }
@@ -275,8 +281,9 @@ describe('branchCoverage3 — final branch push', () => {
       mockGetModerator.mockResolvedValueOnce({ id: 'mod1' });
       const channel = { id: 'ch1', name: 'test', type: 0, guild: { id: 'g1' } };
       await run(channel, mockClient());
-      const desc = mockSendLog.mock.calls[0][3].description;
-      expect(desc).toContain('mod1');
+      const payload = mockSendLog.mock.calls[0][3];
+      const fields = payload.fields as { name: string; value: string }[];
+      expect(fields.some((f) => f.name === 'Moderator:' && f.value.includes('mod1'))).toBe(true);
     });
   });
 
@@ -284,15 +291,14 @@ describe('branchCoverage3 — final branch push', () => {
   describe('logUnban', () => {
     const load = () => require('../../../src/events/guildBanRemove/logUnban').default;
 
-    it('passes undefined fields when no moderator', async () => {
+    it('passes empty fields when no moderator', async () => {
       const run = load();
       mockGetModerator.mockResolvedValueOnce(null);
       const user = mockUser();
       const guild = mockGuild();
       await run({ guild, user }, mockClient());
       const payload = mockSendLog.mock.calls[0][3];
-      expect(payload.fields).toBeUndefined();
-      expect(payload.footer).toContain('Nieznany');
+      expect(payload.fields).toEqual([]);
     });
 
     it('fills fields/footer when moderator present', async () => {
@@ -305,7 +311,6 @@ describe('branchCoverage3 — final branch push', () => {
       const payload = mockSendLog.mock.calls[0][3];
       expect(payload.fields).toBeDefined();
       expect(payload.fields[0].value).toContain('mod2');
-      expect(payload.footer).toBe('Mod2');
     });
   });
 
@@ -313,37 +318,37 @@ describe('branchCoverage3 — final branch push', () => {
   describe('logBan', () => {
     const load = () => require('../../../src/events/guildBanAdd/logBan').default;
 
-    it('includes reason in description when getReason returns value', async () => {
+    it('includes reason as a field when getReason returns value', async () => {
       const run = load();
       mockGetModerator.mockResolvedValueOnce(null);
       mockGetReason.mockResolvedValueOnce('spam');
       const user = mockUser();
       const guild = mockGuild();
       await run({ guild, user }, mockClient());
-      const desc = mockSendLog.mock.calls[0][3].description;
-      expect(desc).toContain('spam');
+      const fields = mockSendLog.mock.calls[0][3].fields;
+      expect(fields.some((f: { name: string; value: string }) => f.name === 'Powód:' && f.value === 'spam')).toBe(true);
     });
 
-    it('omits reason when null', async () => {
+    it('omits reason field when null', async () => {
       const run = load();
       mockGetModerator.mockResolvedValueOnce(null);
       mockGetReason.mockResolvedValueOnce(null);
       const user = mockUser();
       const guild = mockGuild();
       await run({ guild, user }, mockClient());
-      const desc = mockSendLog.mock.calls[0][3].description;
-      expect(desc).not.toContain('Pow');
+      const fields = mockSendLog.mock.calls[0][3].fields;
+      expect(fields.some((f: { name: string }) => f.name.startsWith('Pow'))).toBe(false);
     });
 
-    it('includes moderator when present', async () => {
+    it('includes moderator field when present', async () => {
       const run = load();
       mockGetModerator.mockResolvedValueOnce({ id: 'modx' });
       mockGetReason.mockResolvedValueOnce(null);
       const user = mockUser();
       const guild = mockGuild();
       await run({ guild, user }, mockClient());
-      const desc = mockSendLog.mock.calls[0][3].description;
-      expect(desc).toContain('modx');
+      const fields = mockSendLog.mock.calls[0][3].fields;
+      expect(fields.some((f: { value: string }) => f.value.includes('modx'))).toBe(true);
     });
   });
 

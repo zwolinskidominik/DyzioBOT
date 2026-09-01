@@ -1,5 +1,5 @@
 import { ThreadChannel, Client, AuditLogEvent } from 'discord.js';
-import { sendLog } from '../../utils/logHelpers';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import logger from '../../utils/logger';
 
@@ -14,21 +14,20 @@ export default async function run(thread: ThreadChannel, _newlyCreated: boolean,
 
     await sendLog(client, thread.guild.id, 'threadCreate', {
       title: null,
-      description: `**🧵 Utworzono wątek <#${thread.id}>${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
+      description: `**🧵 Utworzono wątek <#${thread.id}>.**`,
       fields: [
         {
-          name: '📝 Nazwa',
+          name: 'Nazwa',
           value: thread.name,
           inline: true,
         },
         {
-          name: '📁 Kanał nadrzędny',
+          name: 'Kanał nadrzędny',
           value: `<#${thread.parentId}>`,
           inline: true,
         },
+        ...(moderator ? [moderatorField(moderator.id)] : []),
       ],
-      footer: `Thread ID: ${thread.id}`,
-      timestamp: new Date(),
     }, thread.parentId ? { channelId: thread.parentId } : undefined);
   } catch (error) {
     logger.error(`[logThreadCreate] Error: ${error}`);

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { EconomyModel, EconomyDocument } from '../models/Economy';
 import { EconomyTransactionModel, TransactionType } from '../models/EconomyTransaction';
 import { EconomyConfigModel } from '../models/EconomyConfig';
@@ -182,8 +183,10 @@ export async function getUserRank(guildId: string, userId: string): Promise<Serv
   try {
     const doc = await EconomyModel.findOne({ guildId, userId }).lean();
     if (!doc) return ok(0);
+    // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
+    // operatory — bez tego /rank rzuca CastError.
     const rank =
-      (await EconomyModel.countDocuments({ guildId, netWorth: { $gt: doc.netWorth } })) + 1;
+      (await EconomyModel.countDocuments({ guildId, netWorth: mongoose.trusted({ $gt: doc.netWorth }) })) + 1;
     return ok(rank);
   } catch (err) {
     logger.error('economyService.getUserRank failed', { guildId, userId, err });

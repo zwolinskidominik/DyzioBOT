@@ -14,7 +14,7 @@ export default async function run(invite: Invite, client: Client): Promise<void>
 
     await sendLog(client, invite.guild.id, 'inviteCreate', {
       title: null,
-      description: `**📨 Utworzono zaproszenie${inviter ? ` przez <@${inviter.id}>` : ''}.**`,
+      description: `**📨 Utworzono zaproszenie.**`,
       fields: [
         {
           name: '🔗 Kod',
@@ -36,9 +36,8 @@ export default async function run(invite: Invite, client: Client): Promise<void>
           value: invite.maxUses ? `${invite.maxUses}` : 'Nielimitowane',
           inline: true,
         },
+        ...(inviter ? [{ name: 'Zaproszający', value: `<@${inviter.id}>`, inline: true }] : []),
       ],
-      footer: `Invite Code: ${invite.code}`,
-      timestamp: new Date(),
     }, { channelId: invite.channelId ?? undefined, userId: inviter?.id });
   } catch (error) {
     logger.error(`[logInviteCreate] Error: ${error}`);

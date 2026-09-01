@@ -1,5 +1,5 @@
 import { DMChannel, GuildChannel, Client, ChannelType, AuditLogEvent } from 'discord.js';
-import { sendLog } from '../../utils/logHelpers';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import logger from '../../utils/logger';
 
@@ -24,16 +24,15 @@ export default async function run(channel: DMChannel | GuildChannel, client: Cli
 
     await sendLog(client, channel.guild.id, 'channelDelete', {
       title: null,
-      description: `**🗑️ Usunięto kanał \`${channel.name}\`${moderator ? ` przez <@${moderator.id}>` : ''}.**`,
+      description: `**🗑️ Usunięto kanał \`${channel.name}\`.**`,
       fields: [
         {
-          name: '🔖 Typ',
+          name: 'Typ',
           value: channelTypeNames[channel.type] || 'Nieznany',
           inline: true,
         },
+        ...(moderator ? [moderatorField(moderator.id)] : []),
       ],
-      footer: `Channel ID: ${channel.id}`,
-      timestamp: new Date(),
     }, { channelId: channel.id });
   } catch (error) {
     logger.error(`[logChannelDelete] Error: ${error}`);

@@ -1,5 +1,3 @@
-import { EmbedBuilder } from 'discord.js';
-
 export interface IBaseEmbedOptions {
   isError?: boolean;
   color?: string;
@@ -14,11 +12,6 @@ export interface IBaseEmbedOptions {
   authorUrl?: string;
   url?: string;
   timestamp?: boolean;
-}
-
-export interface IEmbedData {
-  embed: EmbedBuilder;
-  totalPages: number;
 }
 
 export interface IEmbedField {

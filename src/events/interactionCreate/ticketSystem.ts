@@ -227,9 +227,12 @@ async function sendTicketMessages(
       : undefined;
 
   if (staffPing) {
+    // ticketType.roleIds pochodzi z configu admina — allow-list tylko tych ról,
+    // żeby ewentualny błąd/manipulacja przy zapisie roleId nie wywołała @everyone.
     await channel.send({
       content: staffPing,
       flags: ['SuppressEmbeds'],
+      allowedMentions: { parse: [], roles: ticketType.roleIds },
     });
   }
 

@@ -1,4 +1,5 @@
 import { Client, TextChannel, ChannelType } from 'discord.js';
+import mongoose from 'mongoose';
 import { schedule } from 'node-cron';
 import { CRON } from '../../config/constants/cron';
 import { OWNER_GUILD_IDS } from '../../config/constants/owner';
@@ -33,7 +34,9 @@ export default async function run(client: Client): Promise<void> {
     CRON.DISBOARD_REMINDER_CHECK,
     async () => {
       try {
-        const configs = await DisboardConfigModel.find({ enabled: true, guildId: { $in: OWNER_GUILD_IDS } }).lean();
+        // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie
+        // pisane operatory — bez tego rzuca CastError na $in.
+        const configs = await DisboardConfigModel.find({ enabled: true, guildId: mongoose.trusted({ $in: OWNER_GUILD_IDS }) }).lean();
         if (!configs.length) return;
 
         const now = new Date();

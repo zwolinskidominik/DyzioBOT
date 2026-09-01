@@ -25,32 +25,55 @@ describe('getConfig', () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.data.enabled).toBe(false);
-    expect(res.data.logChannelId).toBeNull();
-    expect(res.data.joinMessage).toBe('');
-    expect(res.data.joinMessageUnknown).toBe('');
-    expect(res.data.joinMessageVanity).toBe('');
-    expect(res.data.leaveMessage).toBe('');
+    expect(res.data.join.enabled).toBe(true);
+    expect(res.data.join.logChannelId).toBeNull();
+    expect(res.data.join.messages.normal).toBe('');
+    expect(res.data.join.messages.unknown).toBe('');
+    expect(res.data.join.messages.vanity).toBe('');
+    expect(res.data.leave.enabled).toBe(true);
+    expect(res.data.leave.messages.normal).toBe('');
   });
 
-  it('returns saved config', async () => {
+  it('returns saved (new nested) config', async () => {
     await InviteTrackerConfigModel.create({
       guildId: GID,
       enabled: true,
-      logChannelId: 'ch-1',
-      joinMessage: 'Welcome {user}!',
-      joinMessageUnknown: 'Unknown joiner',
-      joinMessageVanity: 'Vanity join',
-      leaveMessage: 'Bye {user}!',
+      join: { enabled: true, logChannelId: 'ch-1', embed: false, messages: { normal: 'Welcome {memberMention}!', unknown: 'Unknown joiner', vanity: 'Vanity join' } },
+      leave: { enabled: true, logChannelId: 'ch-1', embed: false, messages: { normal: 'Bye {memberName}!' } },
     });
 
     const res = await getConfig(GID);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.data.enabled).toBe(true);
-    expect(res.data.logChannelId).toBe('ch-1');
-    expect(res.data.joinMessage).toBe('Welcome {user}!');
-    expect(res.data.joinMessageUnknown).toBe('Unknown joiner');
-    expect(res.data.joinMessageVanity).toBe('Vanity join');
+    expect(res.data.join.logChannelId).toBe('ch-1');
+    expect(res.data.join.messages.normal).toBe('Welcome {memberMention}!');
+    expect(res.data.join.messages.unknown).toBe('Unknown joiner');
+    expect(res.data.join.messages.vanity).toBe('Vanity join');
+    expect(res.data.leave.messages.normal).toBe('Bye {memberName}!');
+  });
+
+  it('falls back to legacy flat fields when new nested shape is missing (pre-migration docs)', async () => {
+    // Symuluje dokument sprzed migracji (schema już nie ma tych pól, ale w bazie mogą jeszcze być).
+    await InviteTrackerConfigModel.collection.insertOne({
+      guildId: GID,
+      enabled: true,
+      logChannelId: 'legacy-ch',
+      joinMessage: 'Legacy join',
+      joinMessageUnknown: 'Legacy unknown',
+      joinMessageVanity: 'Legacy vanity',
+      leaveMessage: 'Legacy leave',
+    });
+
+    const res = await getConfig(GID);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data.join.logChannelId).toBe('legacy-ch');
+    expect(res.data.join.messages.normal).toBe('Legacy join');
+    expect(res.data.join.messages.unknown).toBe('Legacy unknown');
+    expect(res.data.join.messages.vanity).toBe('Legacy vanity');
+    expect(res.data.leave.logChannelId).toBe('legacy-ch');
+    expect(res.data.leave.messages.normal).toBe('Legacy leave');
   });
 });
 
@@ -58,21 +81,21 @@ describe('getConfig', () => {
 
 describe('updateConfig', () => {
   it('creates config via upsert', async () => {
-    const res = await updateConfig(GID, { enabled: true, logChannelId: 'ch-2' });
+    const res = await updateConfig(GID, { enabled: true, join: { logChannelId: 'ch-2' } });
     expect(res.ok).toBe(true);
 
     const saved = await InviteTrackerConfigModel.findOne({ guildId: GID });
     expect(saved?.enabled).toBe(true);
-    expect(saved?.logChannelId).toBe('ch-2');
+    expect(saved?.join?.logChannelId).toBe('ch-2');
   });
 
   it('updates existing config', async () => {
     await InviteTrackerConfigModel.create({ guildId: GID, enabled: false });
-    await updateConfig(GID, { enabled: true, joinMessage: 'Hello!' });
+    await updateConfig(GID, { enabled: true, join: { messages: { normal: 'Hello!' } } });
 
     const saved = await InviteTrackerConfigModel.findOne({ guildId: GID });
     expect(saved?.enabled).toBe(true);
-    expect(saved?.joinMessage).toBe('Hello!');
+    expect(saved?.join?.messages?.normal).toBe('Hello!');
   });
 });
 
@@ -139,6 +162,7 @@ describe('recordLeave', () => {
       guildId: GID,
       joinedUserId: 'user-1',
       inviterId: 'inviter-1',
+      inviteCode: 'abc123',
       active: true,
     });
 
@@ -146,6 +170,7 @@ describe('recordLeave', () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.data.inviterId).toBe('inviter-1');
+    expect(res.data.inviteCode).toBe('abc123');
 
     const entry = await InviteEntryModel.findOne({ guildId: GID, joinedUserId: 'user-1' });
     expect(entry?.active).toBe(false);

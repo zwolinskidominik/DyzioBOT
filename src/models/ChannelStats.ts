@@ -30,6 +30,9 @@ class ChannelStats {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
+  @prop({ default: true, type: () => Boolean })
+  public enabled?: boolean;
+
   @prop({
     required: true,
     _id: false,
