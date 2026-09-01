@@ -11,6 +11,20 @@ const mockFindBannedUser = jest.fn();
 const mockParseDuration = jest.fn();
 const mockFormatHumanDuration = jest.fn();
 
+// Odzwierciedla realną logikę applyTimeoutSafely() (moderationHelpers.ts) na tyle, żeby testy
+// warn.ts (które asertują na targetMember.timeout) nadal miały sens — bez tego warn.ts wywaliłby
+// się na "applyTimeoutSafely is not a function", bo cały moduł jest tu mockowany.
+const mockApplyTimeoutSafely = jest.fn(async (member: any, durationMs: number, reason: string) => {
+  if (durationMs <= 0) return { muteEndTs: null, muteFailed: false };
+  if (!member.moderatable) return { muteEndTs: null, muteFailed: true };
+  try {
+    await member.timeout(durationMs, reason);
+    return { muteEndTs: Math.floor((Date.now() + durationMs) / 1000), muteFailed: false };
+  } catch {
+    return { muteEndTs: null, muteFailed: true };
+  }
+});
+
 jest.mock('../../../src/utils/moderationHelpers', () => ({
   getModFailMessage: mockGetModFailMessage,
   createModErrorEmbed: mockCreateModErrorEmbed,
@@ -19,6 +33,7 @@ jest.mock('../../../src/utils/moderationHelpers', () => ({
   parseDuration: mockParseDuration,
   formatHumanDuration: mockFormatHumanDuration,
   canModerate: jest.fn().mockReturnValue({ allowed: true }),
+  applyTimeoutSafely: mockApplyTimeoutSafely,
 }));
 
 const mockCreateBaseEmbed = jest.fn();
@@ -646,6 +661,34 @@ describe('warn command', () => {
 
     expect(targetMember.timeout).toHaveBeenCalledWith(3600000, 'Spam');
     expect(interaction.editReply).toHaveBeenCalled();
+  });
+
+  it('does not attempt timeout and shows an honest failure message when target is not moderatable (e.g. Administrator)', async () => {
+    const { run } = loadWarn();
+    const targetUser = mockUser({ id: 'target-1' });
+    targetUser.send = jest.fn().mockResolvedValue(undefined);
+    // isAdmin: true → moderatable defaults to false, matching discord.js's real GuildMember#moderatable.
+    const targetMember = mockGuildMember({ id: 'target-1', highestPos: 1, isAdmin: true });
+    const guild = mockGuild();
+    guild.members.fetch = jest.fn().mockResolvedValue(targetMember);
+    const interaction = mockInteraction({ guild });
+    interaction.options.getUser = jest.fn().mockReturnValue(targetUser);
+    interaction.options.getString = jest.fn().mockReturnValue('Spam');
+    mockAddWarn.mockResolvedValue({
+      ok: true,
+      data: { count: 1, shouldBan: false, punishment: { duration: 900000, label: '15 minut' }, nextPunishment: null },
+    });
+
+    await run({ interaction, client: interaction.client });
+
+    // Nie próbujemy wywołać .timeout() na niemoderowalnym membrze — uniknięty gwarantowany DiscordAPIError[50013].
+    expect(targetMember.timeout).not.toHaveBeenCalled();
+
+    const embed = mockCreateBaseEmbed.mock.results[0].value;
+    const fieldsArg = embed.addFields.mock.calls[0][0] as { name: string; value: string }[];
+    const czasTrwania = fieldsArg.find((f) => f.name === 'Czas trwania');
+    expect(czasTrwania?.value).toContain('Nie udało się nałożyć');
+    expect(czasTrwania?.value).not.toBe('Brak wyciszenia');
   });
 
   it('returns error when no user provided', async () => {

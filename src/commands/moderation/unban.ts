@@ -1,15 +1,19 @@
-import { SlashCommandBuilder, PermissionFlagsBits, Guild } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, GuildMember, Guild } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import {
   createModErrorEmbed,
   createModSuccessEmbed,
   findBannedUser,
 } from '../../utils/moderationHelpers';
+import { createBaseEmbed } from '../../utils/embedHelpers';
+import { COLORS } from '../../config/constants/colors';
+import { checkCommandAccess } from '../../services/moderationConfigService';
+import { markBanLogUndone } from '../../services/moderationLogService';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('unban')
-  .setDescription('Odbanowuje użytkownika na serwerze.')
+  .setDescription('Odbanuj użytkownika z serwera')
   .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
   .setDMPermission(false)
   .addStringOption((option) =>
@@ -20,7 +24,8 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  userPermissions: [PermissionFlagsBits.BanMembers],
+  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie przez checkCommandAccess()
+  // (extraRoleIds z ModerationConfig ma prawo przepuścić moderatora bez natywnego uprawnienia).
   botPermissions: [PermissionFlagsBits.BanMembers],
   guildOnly: true,
 };
@@ -32,6 +37,18 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     await interaction.deferReply();
 
+    const access = await checkCommandAccess({
+      guildId: guild.id,
+      member: interaction.member as GuildMember,
+      commandKey: 'unban',
+      requiredPermission: PermissionFlagsBits.BanMembers,
+    });
+    if (!access.allowed) {
+      await interaction.editReply({ embeds: [errorEmbed.setDescription(`**${access.reason}**`)] });
+      return;
+    }
+    const { config } = access;
+
     const targetUserId = interaction.options.getString('id_uzytkownika', true);
 
     const bannedUser = await findBannedUser(guild, targetUserId);
@@ -42,6 +59,26 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
 
     await guild.bans.remove(targetUserId);
+
+    if (config.unban.log) {
+      await markBanLogUndone(guild.id, targetUserId);
+    }
+
+    if (config.unban.dm) {
+      try {
+        await bannedUser.send({
+          embeds: [createBaseEmbed({
+            title: '✅ Zostałeś odbanowany',
+            description:
+              `**Serwer:** ${guild.name}\n` +
+              `**Moderator:** <@${interaction.user.id}>`,
+            color: COLORS.JOIN,
+          })],
+        });
+      } catch {
+        logger.debug(`Nie można wysłać DM do ${bannedUser.tag}`);
+      }
+    }
 
     const successEmbed = createModSuccessEmbed(
       'unban',

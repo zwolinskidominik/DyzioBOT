@@ -12,11 +12,15 @@ import {
   parseDuration,
   formatHumanDuration,
 } from '../../utils/moderationHelpers';
+import { createBaseEmbed } from '../../utils/embedHelpers';
+import { COLORS } from '../../config/constants/colors';
+import { checkCommandAccess } from '../../services/moderationConfigService';
+import { logModerationAction } from '../../services/moderationLogService';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('mute')
-  .setDescription('Wysyła użytkownika na wakacje od serwera.')
+  .setDescription('Wycisz użytkownika na określony czas')
   .setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
@@ -36,7 +40,8 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  userPermissions: PermissionFlagsBits.MuteMembers,
+  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie przez checkCommandAccess()
+  // (extraRoleIds z ModerationConfig ma prawo przepuścić moderatora bez natywnego uprawnienia).
   botPermissions: PermissionFlagsBits.MuteMembers,
   guildOnly: true,
 };
@@ -46,6 +51,18 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const errorEmbed = createModErrorEmbed('', guild.name);
   try {
     await interaction.deferReply();
+
+    const access = await checkCommandAccess({
+      guildId: guild.id,
+      member: interaction.member as GuildMember,
+      commandKey: 'mute',
+      requiredPermission: PermissionFlagsBits.MuteMembers,
+    });
+    if (!access.allowed) {
+      await interaction.editReply({ embeds: [errorEmbed.setDescription(`**${access.reason}**`)] });
+      return;
+    }
+    const { config } = access;
 
     const targetUser = interaction.options.getUser('uzytkownik');
     if (!targetUser) {
@@ -111,8 +128,39 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const prettyDuration = formatHumanDuration(msDuration);
     const prettyDurationFixed = prettyDuration.replace(/(\d+)\s?m(?![a-zA-Z])/, '$1 min');
 
+    if (config.mute.dm) {
+      try {
+        await targetUser.send({
+          embeds: [createBaseEmbed({
+            title: '🔇 Zostałeś wyciszony',
+            description:
+              `**Serwer:** ${guild.name}\n` +
+              `**Czas trwania:** ${prettyDurationFixed}\n` +
+              `**Powód:** ${reason}\n` +
+              `**Moderator:** <@${interaction.user.id}>`,
+            color: COLORS.WARN,
+          })],
+        });
+      } catch {
+        logger.debug(`Nie można wysłać DM do ${targetUser.tag}`);
+      }
+    }
+
     const wasMuted = targetMember.isCommunicationDisabled();
     await targetMember.timeout(msDuration, reason);
+
+    if (config.mute.log) {
+      await logModerationAction({
+        guildId: guild.id,
+        kind: 'mute',
+        targetId: targetUser.id,
+        targetTag: targetUser.tag,
+        moderatorId: interaction.user.id,
+        moderatorTag: interaction.user.tag,
+        reason,
+        extra: prettyDurationFixed,
+      });
+    }
 
     let description = '';
     if (wasMuted) {

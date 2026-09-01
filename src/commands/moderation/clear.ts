@@ -4,10 +4,13 @@ import {
   TextChannel,
   Collection,
   Message,
+  GuildMember,
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import { sendLog } from '../../utils/logHelpers';
+import { checkCommandAccess } from '../../services/moderationConfigService';
+import { logModerationAction } from '../../services/moderationLogService';
 import logger from '../../utils/logger';
 
 /**
@@ -29,7 +32,7 @@ const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
 export const data = new SlashCommandBuilder()
   .setName('clear')
-  .setDescription('Usuwa określoną liczbę wiadomości z kanału.')
+  .setDescription('Usuń określoną liczbę wiadomości z kanału')
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
   .setDMPermission(false)
   .addIntegerOption((option) =>
@@ -48,13 +51,33 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  userPermissions: PermissionFlagsBits.ManageMessages,
+  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie przez checkCommandAccess()
+  // (extraRoleIds z ModerationConfig ma prawo przepuścić moderatora bez natywnego uprawnienia).
   botPermissions: PermissionFlagsBits.ManageMessages,
   guildOnly: true,
 };
 
 export async function run({ interaction, client }: ICommandOptions): Promise<void> {
   await interaction.deferReply({ ephemeral: true });
+
+  const access = await checkCommandAccess({
+    guildId: interaction.guildId!,
+    member: interaction.member as GuildMember,
+    commandKey: 'clear',
+    requiredPermission: PermissionFlagsBits.ManageMessages,
+  });
+  if (!access.allowed) {
+    await interaction.editReply({
+      embeds: [
+        createBaseEmbed({
+          isError: true,
+          description: `❌ ${access.reason}`,
+        }),
+      ],
+    });
+    return;
+  }
+  const { config } = access;
 
   const amount = interaction.options.getInteger('ilosc', true);
   const targetUser = interaction.options.getUser('uzytkownik');
@@ -134,6 +157,19 @@ export async function run({ interaction, client }: ICommandOptions): Promise<voi
         ? `**Moderator:** <@${interaction.user.id}>\n**Kanał:** <#${channel.id}>\n**Ilość:** ${totalDeleted}\n**Filtr:** wiadomości <@${targetUser.id}>`
         : `**Moderator:** <@${interaction.user.id}>\n**Kanał:** <#${channel.id}>\n**Ilość:** ${totalDeleted}`,
     });
+
+    if (config.clear.log) {
+      await logModerationAction({
+        guildId: interaction.guildId!,
+        kind: 'clear',
+        targetId: channel.name,
+        targetTag: `#${channel.name}`,
+        moderatorId: interaction.user.id,
+        moderatorTag: interaction.user.tag,
+        reason: targetUser ? `Filtr: wiadomości ${targetUser.tag}` : '',
+        extra: `${totalDeleted} wiadomości`,
+      });
+    }
 
     logger.info(
       `[clear] ${interaction.user.tag} usunął ${totalDeleted} wiadomości na #${channel.name}` +

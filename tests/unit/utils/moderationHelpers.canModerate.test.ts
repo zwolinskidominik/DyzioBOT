@@ -15,6 +15,15 @@ function makeMember(id: string, highestPos: number, guildOwnerId = 'owner'): any
     id,
     guild: { ownerId: guildOwnerId },
     roles: { highest: { position: highestPos } },
+    permissions: { has: () => false },
+  };
+}
+
+/** Member z uprawnieniem Administrator — Discord nigdy nie pozwoli go wyciszyć (timeout). */
+function makeAdminMember(id: string, highestPos: number, guildOwnerId = 'owner'): any {
+  return {
+    ...makeMember(id, highestPos, guildOwnerId),
+    permissions: { has: () => true },
   };
 }
 
@@ -67,6 +76,23 @@ describe('canModerate', () => {
     expect(r.allowed).toBe(true);
     expect(r.reason).toBeUndefined();
   });
+
+  it('blocks target with Administrator when requiresTimeout is true (Discord hard rule)', () => {
+    const target = makeAdminMember('t', 10);
+    const req = makeMember('r', 50);
+    const bot = makeMember('bot', 90);
+    const r = canModerate(target, req, bot, true);
+    expect(r.allowed).toBe(false);
+    expect(r.reason).toBe('TARGET_HAS_ADMIN');
+  });
+
+  it('does not check Administrator when requiresTimeout is false/omitted, even for admin target', () => {
+    const target = makeAdminMember('t', 10);
+    const req = makeMember('r', 50);
+    const bot = makeMember('bot', 90);
+    expect(canModerate(target, req, bot).allowed).toBe(true);
+    expect(canModerate(target, req, bot, false).allowed).toBe(true);
+  });
 });
 
 /* ── getModFailMessage ───────────────────────────────── */
@@ -109,6 +135,21 @@ describe('getModFailMessage', () => {
       const msg = getModFailMessage(target, req, bot, action);
       expect(msg).toBeTruthy();
     }
+  });
+
+  it('blocks /mute upfront for an Administrator target with a clear message', () => {
+    const target = makeAdminMember('t', 10);
+    const req = makeMember('r', 50);
+    const bot = makeMember('bot', 90);
+    const msg = getModFailMessage(target, req, bot, 'mute');
+    expect(msg).toContain('Administratora');
+  });
+
+  it('does NOT block /warn upfront for an Administrator target (timeout failure is handled inline in warn.ts)', () => {
+    const target = makeAdminMember('t', 10);
+    const req = makeMember('r', 50);
+    const bot = makeMember('bot', 90);
+    expect(getModFailMessage(target, req, bot, 'warn')).toBeNull();
   });
 });
 

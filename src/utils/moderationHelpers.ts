@@ -1,4 +1,4 @@
-import { EmbedBuilder, GuildMember, Guild, User } from 'discord.js';
+import { EmbedBuilder, GuildMember, Guild, User, PermissionFlagsBits } from 'discord.js';
 import { createBaseEmbed } from '../utils/embedHelpers';
 import logger from '../utils/logger';
 import prettyMs from 'pretty-ms';
@@ -13,7 +13,8 @@ export type RoleCheckFailReason =
   | 'TARGET_IS_OWNER'
   | 'SELF_ACTION'
   | 'TARGET_NOT_LOWER_THAN_REQUESTER'
-  | 'TARGET_NOT_LOWER_THAN_BOT';
+  | 'TARGET_NOT_LOWER_THAN_BOT'
+  | 'TARGET_HAS_ADMIN';
 
 export interface RoleCheckResult {
   allowed: boolean;
@@ -23,7 +24,9 @@ export interface RoleCheckResult {
 export function canModerate(
   targetMember: GuildMember | null | undefined,
   requestMember: GuildMember | null | undefined,
-  botMember: GuildMember | null | undefined
+  botMember: GuildMember | null | undefined,
+  /** Ustaw na true dla akcji korzystających z Discordowego timeoutu (mute) — Discord nigdy nie pozwoli wyciszyć membera z uprawnieniem Administrator, niezależnie od hierarchii ról. */
+  requiresTimeout = false
 ): RoleCheckResult {
   if (!targetMember || !requestMember || !botMember) {
     return { allowed: false, reason: 'MISSING_PARAM' };
@@ -42,6 +45,9 @@ export function canModerate(
   }
   if (targetPos >= botPos) {
     return { allowed: false, reason: 'TARGET_NOT_LOWER_THAN_BOT' };
+  }
+  if (requiresTimeout && targetMember.permissions.has(PermissionFlagsBits.Administrator)) {
+    return { allowed: false, reason: 'TARGET_HAS_ADMIN' };
   }
   return { allowed: true };
 }
@@ -64,6 +70,7 @@ const FAIL_MESSAGES: Record<RoleCheckFailReason, (verb: string) => string> = {
   SELF_ACTION: (v) => `Nie możesz ${v} samego siebie.`,
   TARGET_NOT_LOWER_THAN_REQUESTER: (v) => `Nie możesz ${v} użytkownika z wyższą lub równą rolą.`,
   TARGET_NOT_LOWER_THAN_BOT: (v) => `Moja rola jest za niska, aby ${v} tego użytkownika.`,
+  TARGET_HAS_ADMIN: () => 'Nie można wyciszyć użytkownika z uprawnieniem Administratora — to twarde ograniczenie Discorda, niezależne od hierarchii ról.',
 };
 
 export function getModFailMessage(
@@ -73,9 +80,49 @@ export function getModFailMessage(
   action: ModAction
 ): string | null {
   if (!botMember) return FAIL_MESSAGES.MISSING_PARAM(ACTION_LABELS[action]);
-  const result = canModerate(targetMember, requestMember, botMember);
+  // Tylko /mute korzysta wyłącznie z timeoutu — blokujemy z góry, bo bez niego komenda nic nie robi.
+  // /warn ma timeout jako efekt uboczny drabinki kar, więc samo ostrzeżenie i tak ma sens zapisać
+  // (patrz warn.ts — tam błąd nałożenia timeoutu jest łapany osobno i widoczny w odpowiedzi/logu).
+  const requiresTimeout = action === 'mute';
+  const result = canModerate(targetMember, requestMember, botMember, requiresTimeout);
   if (result.allowed) return null;
   return FAIL_MESSAGES[result.reason!](ACTION_LABELS[action]);
+}
+
+export interface TimeoutAttemptResult {
+  /** Unix timestamp (sekundy) końca timeoutu — ustawiony tylko gdy timeout faktycznie się udał. */
+  muteEndTs: number | null;
+  /** true gdy próbowaliśmy nałożyć timeout i się nie udało (np. target ma uprawnienie Administratora). */
+  muteFailed: boolean;
+}
+
+/**
+ * Bezpiecznie nakłada timeout: najpierw sprawdza `member.moderatable` (discord.js — uwzględnia
+ * uprawnienie Administratora, którego Discord nigdy nie pozwoli wyciszyć niezależnie od hierarchii
+ * ról), żeby uniknąć gwarantowanego DiscordAPIError[50013]. Współdzielone przez `/warn` i
+ * automatyczne ostrzeżenie z Anti-Spam — oba korzystają z tej samej drabinki kar (`warnService`).
+ */
+export async function applyTimeoutSafely(
+  member: GuildMember,
+  durationMs: number,
+  reason: string
+): Promise<TimeoutAttemptResult> {
+  if (durationMs <= 0) return { muteEndTs: null, muteFailed: false };
+
+  if (!member.moderatable) {
+    logger.warn(
+      `Nie można nałożyć timeoutu na ${member.id} — member.moderatable === false (prawdopodobnie uprawnienie Administratora).`
+    );
+    return { muteEndTs: null, muteFailed: true };
+  }
+
+  try {
+    await member.timeout(durationMs, reason);
+    return { muteEndTs: Math.floor((Date.now() + durationMs) / 1000), muteFailed: false };
+  } catch (err) {
+    logger.error(`Błąd przy nakładaniu kary na ${member.id}: ${err}`);
+    return { muteEndTs: null, muteFailed: true };
+  }
 }
 
 export function createModErrorEmbed(description: string, guildName?: string): EmbedBuilder {
@@ -122,6 +169,31 @@ export function createModSuccessEmbed(
 
 export function formatHumanDuration(durationMs: number): string {
   return prettyMs(durationMs, { verbose: false });
+}
+
+function pluralPl(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (n === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return few;
+  return many;
+}
+
+/** Formatuje czas trwania po polsku z poprawną odmianą (np. "15 minut", "2 godziny", "1 dzień"). */
+export function formatDurationPl(durationMs: number): string {
+  const totalMinutes = Math.max(1, Math.round(durationMs / 60_000));
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} ${pluralPl(totalMinutes, 'minutę', 'minuty', 'minut')}`;
+  }
+
+  const totalHours = Math.round(totalMinutes / 60);
+  if (totalHours < 24) {
+    return `${totalHours} ${pluralPl(totalHours, 'godzinę', 'godziny', 'godzin')}`;
+  }
+
+  const totalDays = Math.round(totalHours / 24);
+  return `${totalDays} ${pluralPl(totalDays, 'dzień', 'dni', 'dni')}`;
 }
 
 export async function findBannedUser(guild: Guild, userId: string): Promise<User | null> {

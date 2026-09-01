@@ -8,7 +8,7 @@ import Image from "next/image";
 import {
   ChevronDown, ChevronRight, Home, Cake, Hand, Trophy, UserPlus, UserCheck,
   Lightbulb, Ticket, HelpCircle, Tv, Smile, FileText, BarChart3, Activity,
-  Radio, ScrollText, Gamepad2, Gift, ShieldAlert, Star, Dices, Puzzle, PartyPopper, Plus, SmilePlus,
+  Radio, ScrollText, Gamepad2, Gift, ShieldAlert, Star, Dices, Puzzle, PartyPopper, Plus, SmilePlus, Wrench, Gavel, Settings,
 } from "lucide-react";
 import { prefetchGuildData } from "@/lib/cache";
 import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
@@ -45,13 +45,15 @@ const moduleGroups: ModuleGroup[] = [
     id: "main",
     label: null,
     modules: [
-      { id: "", name: "Panel główny", icon: Home, href: "" },
+      { id: "", name: "Strona główna", icon: Home, href: "" },
+      { id: "settings", name: "Ustawienia", icon: Settings, href: "/settings" },
     ],
   },
   {
     id: "management",
     label: "ZARZĄDZANIE SERWEREM",
     modules: [
+      { id: "commands", name: "Komendy", icon: Wrench, href: "/commands" },
       { id: "greetings", name: "Powitania", icon: Hand, href: "/greetings" },
       { id: "autoroles", name: "Auto role", icon: UserPlus, href: "/autoroles" },
       { id: "reaction-roles", name: "Role za reakcje", icon: Smile, href: "/reaction-roles" },
@@ -90,13 +92,14 @@ const moduleGroups: ModuleGroup[] = [
     modules: [
       { id: "logs", name: "Logi", icon: FileText, href: "/logs" },
       { id: "anti-spam", name: "Anti-Spam", icon: ShieldAlert, href: "/anti-spam" },
+      { id: "moderation", name: "Moderacja", icon: Gavel, href: "/moderation" },
     ],
   },
   {
     id: "system",
     label: "SYSTEM",
     modules: [
-      { id: "audit-logs", name: "Logi Systemowe", icon: ScrollText, href: "/audit-logs" },
+      { id: "audit-logs", name: "Logi panelu kontrolnego", icon: ScrollText, href: "/audit-logs" },
       { id: "disboard", name: "Disboard", icon: Star, href: "/disboard", ownerOnly: true, ownerGuildOnly: true },
       { id: "bot-emojis", name: "Emoji Bota", icon: SmilePlus, href: "/bot-emojis", ownerOnly: true },
     ],

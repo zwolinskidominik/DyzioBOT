@@ -1,6 +1,54 @@
 import { prop, getModelForClass, modelOptions } from '@typegoose/typegoose';
 
-export type AntiSpamAction = 'timeout' | 'warn' | 'kick' | 'ban';
+/** `'none'` = brak dodatkowej kary (tylko ewentualne usunięcie wiadomości). */
+export type AntiSpamPunishment = 'none' | 'warn' | 'mute' | 'kick' | 'ban';
+export type AntiSpamMode = 'single' | 'ladder';
+
+/**
+ * Konfiguracja pojedynczej reguły Anti-Spam (rate / invites / mentions / repeat).
+ * Wszystkie pola są zawsze obecne — część z nich (threshold, windowSeconds,
+ * allowOwnServerInvites) ma znaczenie tylko dla niektórych reguł, reszta je ignoruje.
+ */
+export class AntiSpamRuleConfig {
+  @prop({ type: Boolean, default: false })
+  public on!: boolean;
+
+  /** Czy usuwać wiadomość, która złamała regułę. */
+  @prop({ type: Boolean, default: true })
+  public deleteMessage!: boolean;
+
+  /** 'single' = zawsze ta sama kara. 'ladder' = eskalacja wg `steps`. */
+  @prop({ type: String, default: 'single' })
+  public mode!: AntiSpamMode;
+
+  /** Kara używana w trybie 'single'. */
+  @prop({ type: String, default: 'mute' })
+  public action!: AntiSpamPunishment;
+
+  /** Kolejne kary w trybie 'ladder' (1. wykrycie → steps[0], 2. → steps[1], itd. — ostatni krok powtarza się). */
+  @prop({ type: () => [String], default: ['warn'] })
+  public steps!: AntiSpamPunishment[];
+
+  /** Czas wyciszenia w minutach (bucket: '5' | '10' | '60' | '1440'), używany gdy kara = 'mute'. */
+  @prop({ type: String, default: '5' })
+  public muteDuration!: string;
+
+  /** Po ilu godzinach licznik eskalacji/wykryć zeruje się (bucket: '1' | '24' | '168'). */
+  @prop({ type: String, default: '24' })
+  public reset!: string;
+
+  /** Próg liczbowy (rate: liczba wiadomości, mentions: liczba wzmianek, repeat: liczba powtórzeń). */
+  @prop({ type: Number, default: 5 })
+  public threshold!: number;
+
+  /** Okno czasowe w sekundach (używane tylko przez regułę 'rate'). */
+  @prop({ type: Number, default: 3 })
+  public windowSeconds!: number;
+
+  /** Czy zaproszenia do TEGO serwera są dozwolone (używane tylko przez regułę 'invites'). */
+  @prop({ type: Boolean, default: true })
+  public allowOwnServerInvites!: boolean;
+}
 
 @modelOptions({
   schemaOptions: {
@@ -15,61 +63,29 @@ export class AntiSpamConfig {
   @prop({ type: Boolean, default: false })
   public enabled!: boolean;
 
-  /** Number of messages within the time window that triggers spam detection. */
-  @prop({ type: Number, default: 5 })
-  public messageThreshold!: number;
+  /** Za szybkie pisanie (rate-limit). */
+  @prop({ type: () => AntiSpamRuleConfig, default: () => ({}) })
+  public rate!: AntiSpamRuleConfig;
 
-  /** Time window in milliseconds. */
-  @prop({ type: Number, default: 3000 })
-  public timeWindowMs!: number;
+  /** Linki z zaproszeniami do innych serwerów. */
+  @prop({ type: () => AntiSpamRuleConfig, default: () => ({}) })
+  public invites!: AntiSpamRuleConfig;
 
-  /** Action to take when spam is detected. */
-  @prop({ type: String, default: 'timeout' })
-  public action!: AntiSpamAction;
+  /** Masowe wzmianki (@user/@role, a także @everyone/@here gdy reguła jest włączona). */
+  @prop({ type: () => AntiSpamRuleConfig, default: () => ({}) })
+  public mentions!: AntiSpamRuleConfig;
 
-  /** Timeout duration in milliseconds (used when action = 'timeout'). Default: 5 min. */
-  @prop({ type: Number, default: 5 * 60 * 1000 })
-  public timeoutDurationMs!: number;
+  /** Powtarzające się wiadomości (ta sama treść wysłana N razy pod rząd). */
+  @prop({ type: () => AntiSpamRuleConfig, default: () => ({}) })
+  public repeat!: AntiSpamRuleConfig;
 
-  /** Whether to delete spam messages. */
-  @prop({ type: Boolean, default: true })
-  public deleteMessages!: boolean;
-
-  /** Channels exempt from anti-spam. */
+  /** Kanały pomijane przez wszystkie reguły. */
   @prop({ type: () => [String], default: [] })
   public ignoredChannels!: string[];
 
-  /** Roles exempt from anti-spam. */
+  /** Role pomijane przez wszystkie reguły. */
   @prop({ type: () => [String], default: [] })
   public ignoredRoles!: string[];
-
-  /** Whether to block Discord invite links to other servers. */
-  @prop({ type: Boolean, default: false })
-  public blockInviteLinks!: boolean;
-
-  /** Whether to block mass mentions (@everyone, @here, many @user). */
-  @prop({ type: Boolean, default: false })
-  public blockMassMentions!: boolean;
-
-  /** Max user mentions allowed per message (exceeded → block). Default: 5. */
-  @prop({ type: Number, default: 5 })
-  public maxMentionsPerMessage!: number;
-
-  /** Whether to block @everyone / @here mentions. */
-  @prop({ type: Boolean, default: true })
-  public blockEveryoneHere!: boolean;
-
-  /** Whether to detect duplicate/flood messages (same text repeated across channels). */
-  @prop({ type: Boolean, default: false })
-  public blockFlood!: boolean;
-
-  /** Number of duplicate messages within the flood window that triggers detection. */
-  @prop({ type: Number, default: 3 })
-  public floodThreshold!: number;
-
-  /** Flood time window in milliseconds. Default: 30s. */
-  @prop({ type: Number, default: 30_000 })
-  public floodWindowMs!: number;
 }
 
 export const AntiSpamConfigModel = getModelForClass(AntiSpamConfig);

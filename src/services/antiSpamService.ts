@@ -1,10 +1,14 @@
-import { AntiSpamConfigModel, AntiSpamAction } from '../models/AntiSpamConfig';
+import mongoose from 'mongoose';
+import { AntiSpamConfigModel, AntiSpamPunishment, AntiSpamMode } from '../models/AntiSpamConfig';
+import { AntiSpamIncidentModel } from '../models/AntiSpamIncident';
 import { ServiceResult, ok, fail } from '../types/serviceResult';
 import logger from '../utils/logger';
 
-/* ── In-memory message tracker ───────────────────────────────────── */
+export type AntiSpamRuleId = 'rate' | 'invites' | 'mentions' | 'repeat';
 
-/** Maps "guildId:userId" → array of message timestamps (epoch ms). */
+/* ── In-memory trackers (detekcja "na żywo", nie eskalacja) ─────────── */
+
+/** Maps "guildId:userId" → array of message timestamps (epoch ms). Reguła 'rate'. */
 const messageTracker = new Map<string, number[]>();
 
 /** Interval (ms) between automatic cleanups of stale entries. */
@@ -49,41 +53,67 @@ export function stopCleanup(): void {
 
 /* ── Config types & defaults ─────────────────────────────────────── */
 
+export interface AntiSpamRuleSettings {
+  on: boolean;
+  deleteMessage: boolean;
+  mode: AntiSpamMode;
+  action: AntiSpamPunishment;
+  steps: AntiSpamPunishment[];
+  muteDuration: string;
+  reset: string;
+  threshold: number;
+  windowSeconds: number;
+  allowOwnServerInvites: boolean;
+}
+
 export interface AntiSpamSettings {
   enabled: boolean;
-  messageThreshold: number;
-  timeWindowMs: number;
-  action: AntiSpamAction;
-  timeoutDurationMs: number;
-  deleteMessages: boolean;
   ignoredChannels: string[];
   ignoredRoles: string[];
-  blockInviteLinks: boolean;
-  blockMassMentions: boolean;
-  maxMentionsPerMessage: number;
-  blockEveryoneHere: boolean;
-  blockFlood: boolean;
-  floodThreshold: number;
-  floodWindowMs: number;
+  rate: AntiSpamRuleSettings;
+  invites: AntiSpamRuleSettings;
+  mentions: AntiSpamRuleSettings;
+  repeat: AntiSpamRuleSettings;
 }
+
+const BASE_RULE: AntiSpamRuleSettings = {
+  on: false,
+  deleteMessage: true,
+  mode: 'single',
+  action: 'mute',
+  steps: ['warn'],
+  muteDuration: '5',
+  reset: '24',
+  threshold: 5,
+  windowSeconds: 3,
+  allowOwnServerInvites: true,
+};
 
 const DEFAULT_SETTINGS: AntiSpamSettings = {
   enabled: false,
-  messageThreshold: 5,
-  timeWindowMs: 3000,
-  action: 'timeout',
-  timeoutDurationMs: 5 * 60 * 1000,
-  deleteMessages: true,
   ignoredChannels: [],
   ignoredRoles: [],
-  blockInviteLinks: false,
-  blockMassMentions: false,
-  maxMentionsPerMessage: 5,
-  blockEveryoneHere: true,
-  blockFlood: false,
-  floodThreshold: 3,
-  floodWindowMs: 30_000,
+  rate: { ...BASE_RULE, on: true, threshold: 5, windowSeconds: 3 },
+  invites: { ...BASE_RULE, on: false },
+  mentions: { ...BASE_RULE, on: false, threshold: 5 },
+  repeat: { ...BASE_RULE, on: false, threshold: 3, windowSeconds: 30 },
 };
+
+function mergeRule(partial: Partial<AntiSpamRuleSettings> | undefined, fallback: AntiSpamRuleSettings): AntiSpamRuleSettings {
+  if (!partial) return fallback;
+  return {
+    on: partial.on ?? fallback.on,
+    deleteMessage: partial.deleteMessage ?? fallback.deleteMessage,
+    mode: partial.mode ?? fallback.mode,
+    action: partial.action ?? fallback.action,
+    steps: partial.steps && partial.steps.length > 0 ? partial.steps : fallback.steps,
+    muteDuration: partial.muteDuration ?? fallback.muteDuration,
+    reset: partial.reset ?? fallback.reset,
+    threshold: partial.threshold ?? fallback.threshold,
+    windowSeconds: partial.windowSeconds ?? fallback.windowSeconds,
+    allowOwnServerInvites: partial.allowOwnServerInvites ?? fallback.allowOwnServerInvites,
+  };
+}
 
 /* ── Config cache (per guild, TTL-based) ─────────────────────────── */
 
@@ -106,20 +136,12 @@ export async function getConfig(guildId: string): Promise<AntiSpamSettings> {
     const settings: AntiSpamSettings = doc
       ? {
           enabled: doc.enabled ?? DEFAULT_SETTINGS.enabled,
-          messageThreshold: doc.messageThreshold ?? DEFAULT_SETTINGS.messageThreshold,
-          timeWindowMs: doc.timeWindowMs ?? DEFAULT_SETTINGS.timeWindowMs,
-          action: (doc.action as AntiSpamAction) ?? DEFAULT_SETTINGS.action,
-          timeoutDurationMs: doc.timeoutDurationMs ?? DEFAULT_SETTINGS.timeoutDurationMs,
-          deleteMessages: doc.deleteMessages ?? DEFAULT_SETTINGS.deleteMessages,
           ignoredChannels: (doc.ignoredChannels as string[]) ?? DEFAULT_SETTINGS.ignoredChannels,
           ignoredRoles: (doc.ignoredRoles as string[]) ?? DEFAULT_SETTINGS.ignoredRoles,
-          blockInviteLinks: doc.blockInviteLinks ?? DEFAULT_SETTINGS.blockInviteLinks,
-          blockMassMentions: doc.blockMassMentions ?? DEFAULT_SETTINGS.blockMassMentions,
-          maxMentionsPerMessage: doc.maxMentionsPerMessage ?? DEFAULT_SETTINGS.maxMentionsPerMessage,
-          blockEveryoneHere: doc.blockEveryoneHere ?? DEFAULT_SETTINGS.blockEveryoneHere,
-          blockFlood: doc.blockFlood ?? DEFAULT_SETTINGS.blockFlood,
-          floodThreshold: doc.floodThreshold ?? DEFAULT_SETTINGS.floodThreshold,
-          floodWindowMs: doc.floodWindowMs ?? DEFAULT_SETTINGS.floodWindowMs,
+          rate: mergeRule(doc.rate, DEFAULT_SETTINGS.rate),
+          invites: mergeRule(doc.invites, DEFAULT_SETTINGS.invites),
+          mentions: mergeRule(doc.mentions, DEFAULT_SETTINGS.mentions),
+          repeat: mergeRule(doc.repeat, DEFAULT_SETTINGS.repeat),
         }
       : { ...DEFAULT_SETTINGS };
 
@@ -135,15 +157,37 @@ export async function getConfig(guildId: string): Promise<AntiSpamSettings> {
   }
 }
 
-/* ── Spam detection result ───────────────────────────────────────── */
+/* ── Rate detection (reguła 'rate') ──────────────────────────────── */
 
 export interface SpamCheckResult {
   isSpam: boolean;
   messageCount: number;
-  settings: AntiSpamSettings;
 }
 
-/* ── Flood detection ─────────────────────────────────────────────── */
+/**
+ * Records a message and checks whether the user has exceeded the rate-limit threshold.
+ */
+export function trackMessage(guildId: string, userId: string, rule: AntiSpamRuleSettings): SpamCheckResult {
+  const key = `${guildId}:${userId}`;
+  const now = Date.now();
+  const cutoff = now - rule.windowSeconds * 1000;
+
+  let timestamps = messageTracker.get(key) ?? [];
+  timestamps.push(now);
+  timestamps = timestamps.filter((t) => t > cutoff);
+  messageTracker.set(key, timestamps);
+
+  const isSpam = timestamps.length >= rule.threshold;
+
+  return { isSpam, messageCount: timestamps.length };
+}
+
+/** Clears the rate-limit history for a specific user in a guild (after taking action). */
+export function clearUserHistory(guildId: string, userId: string): void {
+  messageTracker.delete(`${guildId}:${userId}`);
+}
+
+/* ── Repeat detection (reguła 'repeat') ──────────────────────────── */
 
 interface FloodEntry {
   content: string;
@@ -163,18 +207,18 @@ export interface FloodCheckResult {
 
 /**
  * Records a message content and checks whether the user is flooding
- * (same/similar text sent multiple times across channels).
+ * (same text sent multiple times within the rule's window).
  */
 export function trackFlood(
   guildId: string,
   userId: string,
   content: string,
   channelId: string,
-  settings: AntiSpamSettings
+  rule: AntiSpamRuleSettings
 ): FloodCheckResult {
   const key = `${guildId}:${userId}`;
   const now = Date.now();
-  const cutoff = now - settings.floodWindowMs;
+  const cutoff = now - rule.windowSeconds * 1000;
 
   let entries = floodTracker.get(key) ?? [];
   entries.push({ content: normalizeContent(content), channelId, timestamp: now });
@@ -186,59 +230,83 @@ export function trackFlood(
   const channels = [...new Set(duplicates.map((e) => e.channelId))];
 
   return {
-    isFlood: duplicates.length >= settings.floodThreshold,
+    isFlood: duplicates.length >= rule.threshold,
     duplicateCount: duplicates.length,
     channels,
   };
 }
 
-/**
- * Clears flood history for a user after action is taken.
- */
+/** Clears repeat-message history for a user after action is taken. */
 export function clearFloodHistory(guildId: string, userId: string): void {
   floodTracker.delete(`${guildId}:${userId}`);
 }
 
-/**
- * Normalises message content for comparison:
- * lowercase, collapse whitespace, trim.
- */
+/** Normalises message content for comparison: lowercase, collapse whitespace, trim. */
 function normalizeContent(text: string): string {
   return text.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-/* ── Core detection ──────────────────────────────────────────────── */
+/* ── Eskalacja (tryb 'ladder') i historia incydentów ─────────────── */
 
 /**
- * Records a message and checks whether the user has exceeded the spam threshold.
- *
- * @returns `SpamCheckResult` with `isSpam: true` if the threshold is exceeded.
+ * Zwraca karę, jaką należy zastosować TERAZ dla danej reguły:
+ * - tryb 'single' → zawsze `rule.action`,
+ * - tryb 'ladder' → kolejny stopień na podstawie liczby incydentów tej reguły
+ *   w oknie `rule.reset` godzin (ostatni stopień powtarza się dla kolejnych wykryć).
  */
-export function trackMessage(
+export async function getNextPunishment(
   guildId: string,
   userId: string,
-  settings: AntiSpamSettings
-): SpamCheckResult {
-  const key = `${guildId}:${userId}`;
-  const now = Date.now();
-  const cutoff = now - settings.timeWindowMs;
+  ruleId: AntiSpamRuleId,
+  rule: AntiSpamRuleSettings
+): Promise<AntiSpamPunishment> {
+  if (rule.mode !== 'ladder') return rule.action;
 
-  let timestamps = messageTracker.get(key) ?? [];
-  timestamps.push(now);
-  timestamps = timestamps.filter((t) => t > cutoff);
-  messageTracker.set(key, timestamps);
+  const steps: AntiSpamPunishment[] = rule.steps.length > 0 ? rule.steps : ['warn'];
 
-  const isSpam = timestamps.length >= settings.messageThreshold;
-
-  return { isSpam, messageCount: timestamps.length, settings };
+  try {
+    const resetMs = Number(rule.reset) * 60 * 60 * 1000;
+    const since = new Date(Date.now() - resetMs);
+    // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje każdy ręcznie
+    // pisany operator — bez tego rzuca CastError na $gte.
+    const count = await AntiSpamIncidentModel.countDocuments({
+      guildId,
+      userId,
+      rule: ruleId,
+      createdAt: mongoose.trusted({ $gte: since }),
+    });
+    const idx = Math.min(count, steps.length - 1);
+    return steps[idx];
+  } catch (error) {
+    logger.error(`AntiSpam: błąd odczytu eskalacji dla ${guildId}/${userId}/${ruleId}: ${error}`);
+    return steps[0];
+  }
 }
 
-/**
- * Clears the message history for a specific user in a guild.
- * Called after taking action so they don't keep re-triggering.
- */
-export function clearUserHistory(guildId: string, userId: string): void {
-  messageTracker.delete(`${guildId}:${userId}`);
+/** Zapisuje wystąpienie zadziałania reguły — do eskalacji i statystyk. */
+export async function recordIncident(
+  guildId: string,
+  userId: string,
+  ruleId: AntiSpamRuleId,
+  actionTaken: AntiSpamPunishment
+): Promise<void> {
+  try {
+    await AntiSpamIncidentModel.create({ guildId, userId, rule: ruleId, actionTaken });
+  } catch (error) {
+    logger.error(`AntiSpam: błąd zapisu incydentu dla ${guildId}/${userId}/${ruleId}: ${error}`);
+  }
+}
+
+/** Liczba interwencji na serwerze w ostatnich `hours` godzinach — do statystyki dashboardu. */
+export async function countRecentIncidents(guildId: string, hours: number): Promise<number> {
+  try {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+    // mongoose.trusted(): patrz komentarz w escalatePunishment wyżej.
+    return await AntiSpamIncidentModel.countDocuments({ guildId, createdAt: mongoose.trusted({ $gte: since }) });
+  } catch (error) {
+    logger.error(`AntiSpam: błąd liczenia interwencji dla ${guildId}: ${error}`);
+    return 0;
+  }
 }
 
 /* ── Config management ───────────────────────────────────────────── */

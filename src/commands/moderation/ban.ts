@@ -11,11 +11,15 @@ import {
   createModSuccessEmbed,
   getModFailMessage,
 } from '../../utils/moderationHelpers';
+import { createBaseEmbed } from '../../utils/embedHelpers';
+import { COLORS } from '../../config/constants/colors';
+import { checkCommandAccess } from '../../services/moderationConfigService';
+import { logModerationAction } from '../../services/moderationLogService';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('ban')
-  .setDescription('Banuje użytkownika na serwerze.')
+  .setDescription('Zbanuj użytkownika na serwerze')
   .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
@@ -29,7 +33,8 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  userPermissions: [PermissionFlagsBits.BanMembers],
+  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie przez checkCommandAccess()
+  // (extraRoleIds z ModerationConfig ma prawo przepuścić moderatora bez natywnego uprawnienia).
   botPermissions: [PermissionFlagsBits.BanMembers],
   guildOnly: true,
 };
@@ -40,6 +45,18 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   try {
     await interaction.deferReply();
+
+    const access = await checkCommandAccess({
+      guildId: guild.id,
+      member: interaction.member as GuildMember,
+      commandKey: 'ban',
+      requiredPermission: PermissionFlagsBits.BanMembers,
+    });
+    if (!access.allowed) {
+      await interaction.editReply({ embeds: [errorEmbed.setDescription(`**${access.reason}**`)] });
+      return;
+    }
+    const { config } = access;
 
     const targetUser: User = interaction.options.getUser('uzytkownik', true);
     const targetUserId: string = targetUser.id;
@@ -72,10 +89,41 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
+    if (config.ban.dm) {
+      // DM PRZED banem — po zbanowaniu użytkownik może nie dzielić z nami już żadnego
+      // wspólnego serwera, co blokuje wysyłkę DM.
+      try {
+        await targetUser.send({
+          embeds: [createBaseEmbed({
+            title: '🚫 Zostałeś zbanowany',
+            description:
+              `**Serwer:** ${guild.name}\n` +
+              `**Powód:** ${reason}\n` +
+              `**Moderator:** <@${interaction.user.id}>`,
+            color: COLORS.ERROR,
+          })],
+        });
+      } catch {
+        logger.debug(`Nie można wysłać DM do ${targetUser.tag}`);
+      }
+    }
+
     await targetMember.ban({
       reason,
       deleteMessageSeconds: 86_400,
     });
+
+    if (config.ban.log) {
+      await logModerationAction({
+        guildId: guild.id,
+        kind: 'ban',
+        targetId: targetUserId,
+        targetTag: targetUser.tag,
+        moderatorId: interaction.user.id,
+        moderatorTag: interaction.user.tag,
+        reason,
+      });
+    }
 
     const successEmbed = createModSuccessEmbed(
       'ban',

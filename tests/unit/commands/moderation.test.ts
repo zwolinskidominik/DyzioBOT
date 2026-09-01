@@ -18,9 +18,12 @@ jest.mock('../../../src/utils/moderationHelpers', () => ({
   formatHumanDuration: jest.fn().mockReturnValue('1d'),
   createModErrorEmbed: jest.fn().mockReturnValue({ addFields: jest.fn().mockReturnThis(), setDescription: jest.fn().mockReturnThis() }),
   createModSuccessEmbed: jest.fn().mockReturnValue({ addFields: jest.fn().mockReturnThis(), setDescription: jest.fn().mockReturnThis() }),
+  applyTimeoutSafely: jest.fn().mockResolvedValue({ muteEndTs: null, muteFailed: false }),
 }));
 jest.mock('../../../src/utils/logHelpers', () => ({
   sendLog: jest.fn().mockResolvedValue(undefined),
+  guildFooter: jest.fn().mockReturnValue({}),
+  moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
 }));
 jest.mock('../../../src/services/warnService', () => ({
   addWarn: jest.fn().mockResolvedValue({ ok: true, data: { count: 1 } }),

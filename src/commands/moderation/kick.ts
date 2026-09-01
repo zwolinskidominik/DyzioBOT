@@ -10,11 +10,15 @@ import {
   createModSuccessEmbed,
   getModFailMessage,
 } from '../../utils/moderationHelpers';
+import { createBaseEmbed } from '../../utils/embedHelpers';
+import { COLORS } from '../../config/constants/colors';
+import { checkCommandAccess } from '../../services/moderationConfigService';
+import { logModerationAction } from '../../services/moderationLogService';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('kick')
-  .setDescription('Wyrzuca użytkownika z serwera.')
+  .setDescription('Wyrzuć użytkownika z serwera')
   .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
@@ -28,7 +32,8 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  userPermissions: PermissionFlagsBits.KickMembers,
+  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie przez checkCommandAccess()
+  // (extraRoleIds z ModerationConfig ma prawo przepuścić moderatora bez natywnego uprawnienia).
   botPermissions: PermissionFlagsBits.KickMembers,
   guildOnly: true,
 };
@@ -38,6 +43,18 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const errorEmbed = createModErrorEmbed('', guild.name);
   try {
     await interaction.deferReply();
+
+    const access = await checkCommandAccess({
+      guildId: guild.id,
+      member: interaction.member as GuildMember,
+      commandKey: 'kick',
+      requiredPermission: PermissionFlagsBits.KickMembers,
+    });
+    if (!access.allowed) {
+      await interaction.editReply({ embeds: [errorEmbed.setDescription(`**${access.reason}**`)] });
+      return;
+    }
+    const { config } = access;
 
     const targetUser = interaction.options.getUser('uzytkownik');
     if (!targetUser) {
@@ -83,7 +100,36 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
+    if (config.kick.dm) {
+      try {
+        await targetUser.send({
+          embeds: [createBaseEmbed({
+            title: '👢 Zostałeś wyrzucony',
+            description:
+              `**Serwer:** ${guild.name}\n` +
+              `**Powód:** ${reason}\n` +
+              `**Moderator:** <@${interaction.user.id}>`,
+            color: COLORS.ERROR,
+          })],
+        });
+      } catch {
+        logger.debug(`Nie można wysłać DM do ${targetUser.tag}`);
+      }
+    }
+
     await targetMember.kick(reason);
+
+    if (config.kick.log) {
+      await logModerationAction({
+        guildId: guild.id,
+        kind: 'kick',
+        targetId: targetUserId,
+        targetTag: targetUser.tag,
+        moderatorId: interaction.user.id,
+        moderatorTag: interaction.user.tag,
+        reason,
+      });
+    }
 
     const successEmbed = createModSuccessEmbed(
       'kick',

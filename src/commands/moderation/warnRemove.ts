@@ -2,16 +2,20 @@ import {
   SlashCommandBuilder,
   PermissionFlagsBits,
   User,
+  GuildMember,
   EmbedBuilder,
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { removeWarn } from '../../services/warnService';
+import { checkCommandAccess } from '../../services/moderationConfigService';
+import { markWarnLogUndone } from '../../services/moderationLogService';
+import { sendLog, moderatorField } from '../../utils/logHelpers';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('warn-remove')
-  .setDescription('Usuwa ostrzeżenie użytkownika o podanym identyfikatorze.')
+  .setDescription('Usuń wybrane ostrzeżenie użytkownika')
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
@@ -28,7 +32,8 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  userPermissions: PermissionFlagsBits.ModerateMembers,
+  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie przez checkCommandAccess()
+  // (extraRoleIds z ModerationConfig ma prawo przepuścić moderatora bez natywnego uprawnienia).
   botPermissions: PermissionFlagsBits.ModerateMembers,
   guildOnly: true,
 };
@@ -42,6 +47,17 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   await interaction.deferReply();
 
   try {
+    const access = await checkCommandAccess({
+      guildId,
+      member: interaction.member as GuildMember,
+      commandKey: 'warnRemove',
+      requiredPermission: PermissionFlagsBits.ModerateMembers,
+    });
+    if (!access.allowed) {
+      await interaction.editReply({ embeds: [createErrorEmbed(access.reason ?? 'Brak uprawnień.')] });
+      return;
+    }
+
     const result = await removeWarn({
       guildId: guildId,
       userId: targetUserId,
@@ -55,6 +71,10 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
+    if (result.data.removedId) {
+      await markWarnLogUndone(guildId, result.data.removedId);
+    }
+
     const successEmbed = createSuccessEmbed(
       warningId,
       targetUserId,
@@ -63,6 +83,17 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     );
 
     await interaction.editReply({ embeds: [successEmbed] });
+
+    await sendLog(interaction.client, interaction.guild!.id, 'moderationCommand', {
+      title: null,
+      description: `**⚖️ Użyto komendy \`/warn-remove\` wobec <@${targetUserId}>.**`,
+      fields: [
+        { name: 'ID ostrzeżenia', value: String(warningId), inline: true },
+        moderatorField(interaction.user.id),
+      ],
+      authorName: targetUser.tag,
+      authorIcon: targetUser.displayAvatarURL({ size: 64 }),
+    }, { userId: targetUserId });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`Błąd podczas usuwania ostrzeżenia userId=${targetUserId}: ${errorMessage}`);
