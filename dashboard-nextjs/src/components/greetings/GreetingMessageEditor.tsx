@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import {
   GREETING_VARIABLES,
   GreetingMessagePreview,
+  SAMPLE_MEMBER_AVATAR,
+  type GreetingAuthorIconMode,
   type GreetingImageMode,
   type GreetingImageSlot,
   type GreetingMessageMode,
@@ -26,7 +28,8 @@ export type GreetingMessageField =
   | "headerText"
   | "footerText"
   | "imageMode"
-  | "thumbnailMode";
+  | "thumbnailMode"
+  | "authorIconMode";
 
 export interface GreetingMessageEditorValue {
   messageMode: GreetingMessageMode;
@@ -37,6 +40,7 @@ export interface GreetingMessageEditorValue {
   footerText: string;
   imageMode: GreetingImageMode;
   thumbnailMode: GreetingThumbnailMode;
+  authorIconMode: GreetingAuthorIconMode;
   thumbnailUrl: string | null;
   customThumbnailUrl: string | null;
   customImageUrl: string | null;
@@ -182,6 +186,29 @@ export function GreetingMessageEditor({
       {imageUrl ? renderClearButton(slot, label, "sm") : null}
     </div>
   );
+
+  const renderAuthorIconToggle = () => {
+    const isOn = value.authorIconMode === "avatar";
+    return (
+      <button
+        type="button"
+        onClick={() => onValueChange("authorIconMode", isOn ? "none" : "avatar")}
+        title={isOn ? "Ukryj awatar przy nagłówku" : "Pokaż awatar użytkownika przy nagłówku"}
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border text-[#8d94a8] transition-colors",
+          isOn
+            ? "border-[#2f3341] bg-dark-800 text-[#c4cad8]"
+            : "border-dashed border-[#596276] bg-dark-800 hover:border-[#3b82f6] hover:text-white"
+        )}
+      >
+        {isOn ? (
+          <img src={SAMPLE_MEMBER_AVATAR} alt="Awatar autora" className="h-full w-full object-cover" />
+        ) : (
+          <CircleUserRound className="h-4 w-4" />
+        )}
+      </button>
+    );
+  };
 
   const renderThumbnailSlot = () => {
     if (value.thumbnailMode === "none") {
@@ -361,7 +388,7 @@ export function GreetingMessageEditor({
                               onChange={(next) => onValueChange("headerText", next)}
                               placeholder="Header"
                               variables={GREETING_VARIABLES}
-                                leading={renderInlineImageUpload("headerIcon", value.headerIconUrl, "Ikona headera")}
+                              leading={renderAuthorIconToggle()}
                               containerClassName="text-xs text-[#8d94a8]"
                               inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-xs text-[#c4cad8] outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-bot-primary focus:ring-2 focus:ring-bot-primary/30 focus:ring-offset-0"
                             />

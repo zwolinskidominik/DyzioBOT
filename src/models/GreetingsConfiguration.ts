@@ -3,6 +3,7 @@ import { getModelForClass, prop, DocumentType } from '@typegoose/typegoose';
 type GreetingMessageMode = 'embed' | 'text';
 type GreetingImageMode = 'gifs' | 'custom' | 'none';
 type GreetingThumbnailMode = 'avatar' | 'custom' | 'none';
+type GreetingAuthorIconMode = 'avatar' | 'none';
 
 class GreetingsConfiguration {
   @prop({ required: true, unique: true, type: () => String })
@@ -80,6 +81,9 @@ class GreetingsConfiguration {
   @prop({ type: () => String })
   public goodbyeFooterIconFile?: string;
 
+  @prop({ type: () => String, enum: ['avatar', 'none'], default: 'avatar' })
+  public goodbyeAuthorIconMode?: GreetingAuthorIconMode;
+
   @prop({ type: () => String })
   public dmMessage?: string;
 
@@ -116,6 +120,9 @@ class GreetingsConfiguration {
   @prop({ type: () => String })
   public dmFooterIconFile?: string;
 
+  @prop({ type: () => String, enum: ['avatar', 'none'], default: 'none' })
+  public dmAuthorIconMode?: GreetingAuthorIconMode;
+
   @prop({ type: () => String, default: '#3b82f6' })
   public welcomeEmbedColor?: string;
 
@@ -142,6 +149,9 @@ class GreetingsConfiguration {
 
   @prop({ type: () => String })
   public welcomeFooterIconFile?: string;
+
+  @prop({ type: () => String, enum: ['avatar', 'none'], default: 'none' })
+  public welcomeAuthorIconMode?: GreetingAuthorIconMode;
 }
 
 export const GreetingsConfigurationModel = getModelForClass(GreetingsConfiguration);

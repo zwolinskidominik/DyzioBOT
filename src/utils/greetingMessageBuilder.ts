@@ -10,6 +10,7 @@ import logger from './logger';
 type GreetingModuleKey = 'welcome' | 'dm' | 'goodbye';
 type GreetingImageMode = 'gifs' | 'custom' | 'none';
 type GreetingThumbnailMode = 'avatar' | 'custom' | 'none';
+type GreetingAuthorIconMode = 'avatar' | 'none';
 type GreetingMessageMode = 'embed' | 'text';
 
 interface GreetingAttachment {
@@ -28,8 +29,8 @@ interface GreetingModuleConfig {
   thumbnailMode?: GreetingThumbnailMode;
   thumbnailFile?: string;
   customImageFile?: string;
-  headerIconFile?: string;
   footerIconFile?: string;
+  authorIconMode?: GreetingAuthorIconMode;
 }
 
 interface BuildGreetingMessageOptions {
@@ -137,8 +138,8 @@ function getModuleConfig(config: IGreetingsConfiguration, moduleKey: GreetingMod
       thumbnailMode: config.dmThumbnailMode,
       thumbnailFile: config.dmThumbnailFile,
       customImageFile: config.dmCustomImageFile,
-      headerIconFile: config.dmHeaderIconFile,
       footerIconFile: config.dmFooterIconFile,
+      authorIconMode: config.dmAuthorIconMode,
     };
   }
 
@@ -154,8 +155,8 @@ function getModuleConfig(config: IGreetingsConfiguration, moduleKey: GreetingMod
       thumbnailMode: config.goodbyeThumbnailMode,
       thumbnailFile: config.goodbyeThumbnailFile,
       customImageFile: config.goodbyeCustomImageFile,
-      headerIconFile: config.goodbyeHeaderIconFile,
       footerIconFile: config.goodbyeFooterIconFile,
+      authorIconMode: config.goodbyeAuthorIconMode,
     };
   }
 
@@ -170,8 +171,8 @@ function getModuleConfig(config: IGreetingsConfiguration, moduleKey: GreetingMod
     thumbnailMode: config.welcomeThumbnailMode,
     thumbnailFile: config.welcomeThumbnailFile,
     customImageFile: config.welcomeCustomImageFile,
-    headerIconFile: config.welcomeHeaderIconFile,
     footerIconFile: config.welcomeFooterIconFile,
+    authorIconMode: config.welcomeAuthorIconMode,
   };
 }
 
@@ -243,8 +244,8 @@ export async function buildGreetingMessage(options: BuildGreetingMessageOptions)
   const thumbnailData = thumbnailMode === 'custom'
     ? getAssetAttachment(member.guild.id, moduleConfig.thumbnailFile, `${moduleKey}-thumbnail`)
     : null;
-  const headerIconData = getAssetAttachment(member.guild.id, moduleConfig.headerIconFile, `${moduleKey}-header-icon`);
   const footerIconData = getAssetAttachment(member.guild.id, moduleConfig.footerIconFile, `${moduleKey}-footer-icon`);
+  const authorIconMode: GreetingAuthorIconMode = moduleConfig.authorIconMode || (moduleKey === 'goodbye' ? 'avatar' : 'none');
   const imageMode = moduleConfig.imageMode || (moduleKey === 'goodbye' ? 'none' : 'gifs');
   let imageData: GreetingAttachment | null = null;
 
@@ -254,7 +255,7 @@ export async function buildGreetingMessage(options: BuildGreetingMessageOptions)
     imageData = await getRandomLobbyGif(member.guild.id, moduleKey);
   }
 
-  [thumbnailData, headerIconData, footerIconData, imageData].forEach((item) => {
+  [thumbnailData, footerIconData, imageData].forEach((item) => {
     if (item) files.push(item.attachment);
   });
 
@@ -275,7 +276,7 @@ export async function buildGreetingMessage(options: BuildGreetingMessageOptions)
     description: message,
     thumbnail: thumbnailUrl,
     authorName: headerText,
-    authorIcon: headerText ? headerIconData ? `attachment://${headerIconData.name}` : getFallbackThumbnail(member, moduleKey, directMessage) : undefined,
+    authorIcon: headerText && authorIconMode === 'avatar' ? getFallbackThumbnail(member, moduleKey, directMessage) : undefined,
     footerText,
     footerIcon: footerText ? footerIconData ? `attachment://${footerIconData.name}` : member.guild.iconURL({ size: 128 }) || undefined : undefined,
   });

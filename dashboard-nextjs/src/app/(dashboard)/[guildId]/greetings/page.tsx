@@ -24,6 +24,7 @@ import {
 } from "@/components/greetings/GreetingMessageEditor";
 import {
   SAMPLE_MEMBER_AVATAR,
+  type GreetingAuthorIconMode,
   type GreetingImageMode,
   type GreetingImageSlot,
   type GreetingMessageMode,
@@ -60,6 +61,7 @@ const DEFAULT_IMAGE_MODE: GreetingImageMode = "gifs";
 const messageModeSchema = z.enum(["embed", "text"]);
 const imageModeSchema = z.enum(["gifs", "custom", "none"]);
 const thumbnailModeSchema = z.enum(["avatar", "custom", "none"]);
+const authorIconModeSchema = z.enum(["avatar", "none"]);
 
 const greetingsSchema = z.object({
   enabled: z.boolean().default(true),
@@ -83,6 +85,7 @@ const greetingsSchema = z.object({
   welcomeCustomImageFile: z.string().optional(),
   welcomeHeaderIconFile: z.string().optional(),
   welcomeFooterIconFile: z.string().optional(),
+  welcomeAuthorIconMode: authorIconModeSchema.default("none"),
   dmMessageMode: messageModeSchema.default("embed"),
   dmMessage: z.string().optional(),
   dmTitleText: z.string().optional(),
@@ -95,6 +98,7 @@ const greetingsSchema = z.object({
   dmCustomImageFile: z.string().optional(),
   dmHeaderIconFile: z.string().optional(),
   dmFooterIconFile: z.string().optional(),
+  dmAuthorIconMode: authorIconModeSchema.default("none"),
   goodbyeMessageMode: messageModeSchema.default("embed"),
   goodbyeMessage: z.string().optional(),
   goodbyeTitleText: z.string().optional(),
@@ -107,6 +111,7 @@ const greetingsSchema = z.object({
   goodbyeCustomImageFile: z.string().optional(),
   goodbyeHeaderIconFile: z.string().optional(),
   goodbyeFooterIconFile: z.string().optional(),
+  goodbyeAuthorIconMode: authorIconModeSchema.default("avatar"),
 }).superRefine((data, ctx) => {
   const usedChannelVars = new Set<ChannelVariableKey>();
   const collect = (
@@ -218,6 +223,7 @@ const DEFAULT_FORM_VALUES: GreetingsFormData = {
   welcomeCustomImageFile: "",
   welcomeHeaderIconFile: "",
   welcomeFooterIconFile: "",
+  welcomeAuthorIconMode: "none",
   dmMessageMode: "embed",
   dmMessage: DEFAULT_DM_MESSAGE,
   dmTitleText: "Witaj na {server}",
@@ -230,6 +236,7 @@ const DEFAULT_FORM_VALUES: GreetingsFormData = {
   dmCustomImageFile: "",
   dmHeaderIconFile: "",
   dmFooterIconFile: "",
+  dmAuthorIconMode: "none",
   goodbyeMessageMode: "embed",
   goodbyeMessage: DEFAULT_GOODBYE_MESSAGE,
   goodbyeTitleText: "Do zobaczenia, {username}",
@@ -242,6 +249,7 @@ const DEFAULT_FORM_VALUES: GreetingsFormData = {
   goodbyeCustomImageFile: "",
   goodbyeHeaderIconFile: "",
   goodbyeFooterIconFile: "",
+  goodbyeAuthorIconMode: "avatar",
 };
 
 function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch>) {
@@ -495,6 +503,7 @@ export default function GreetingsPage() {
     const modeValue: GreetingMessageMode = value === "text" ? "text" : "embed";
     const imageModeValue: GreetingImageMode = value === "custom" || value === "none" ? value : "gifs";
     const thumbnailModeValue: GreetingThumbnailMode = value === "custom" || value === "none" ? value : "avatar";
+    const authorIconModeValue: GreetingAuthorIconMode = value === "avatar" ? "avatar" : "none";
 
     if (field === "imageMode" && imageModeValue === "gifs") {
       setOpenSections((sections) => ({ ...sections, gifs: true }));
@@ -512,6 +521,7 @@ export default function GreetingsPage() {
       if (field === "footerText") setStringField("welcomeFooterText", value);
       if (field === "imageMode") setValue("welcomeImageMode", imageModeValue, { shouldDirty: true, shouldTouch: true });
       if (field === "thumbnailMode") setValue("welcomeThumbnailMode", thumbnailModeValue, { shouldDirty: true, shouldTouch: true });
+      if (field === "authorIconMode") setValue("welcomeAuthorIconMode", authorIconModeValue, { shouldDirty: true, shouldTouch: true });
       return;
     }
 
@@ -524,6 +534,7 @@ export default function GreetingsPage() {
       if (field === "footerText") setStringField("dmFooterText", value);
       if (field === "imageMode") setValue("dmImageMode", imageModeValue, { shouldDirty: true, shouldTouch: true });
       if (field === "thumbnailMode") setValue("dmThumbnailMode", thumbnailModeValue, { shouldDirty: true, shouldTouch: true });
+      if (field === "authorIconMode") setValue("dmAuthorIconMode", authorIconModeValue, { shouldDirty: true, shouldTouch: true });
       return;
     }
 
@@ -535,6 +546,7 @@ export default function GreetingsPage() {
     if (field === "footerText") setStringField("goodbyeFooterText", value);
     if (field === "imageMode") setValue("goodbyeImageMode", imageModeValue, { shouldDirty: true, shouldTouch: true });
     if (field === "thumbnailMode") setValue("goodbyeThumbnailMode", thumbnailModeValue, { shouldDirty: true, shouldTouch: true });
+    if (field === "authorIconMode") setValue("goodbyeAuthorIconMode", authorIconModeValue, { shouldDirty: true, shouldTouch: true });
   };
 
   const getImageUrl = (moduleKey: GreetingModuleKey, slot: GreetingImageSlot, fileName?: string) => {
@@ -546,6 +558,10 @@ export default function GreetingsPage() {
     if (mode === "none") return null;
     if (mode === "avatar") return SAMPLE_MEMBER_AVATAR;
     return customUrl;
+  };
+
+  const resolveAuthorIconUrl = (mode: GreetingAuthorIconMode): string | null => {
+    return mode === "avatar" ? SAMPLE_MEMBER_AVATAR : null;
   };
 
   const getEditorValue = (moduleKey: GreetingModuleKey): GreetingMessageEditorValue => {
@@ -561,10 +577,11 @@ export default function GreetingsPage() {
         footerText: values.welcomeFooterText || "",
         imageMode: values.welcomeImageMode || DEFAULT_IMAGE_MODE,
         thumbnailMode,
+        authorIconMode: values.welcomeAuthorIconMode ?? "none",
         thumbnailUrl: resolveThumbnailUrl(thumbnailMode, customThumbnailUrl),
         customThumbnailUrl,
         customImageUrl: getImageUrl("welcome", "image", values.welcomeCustomImageFile),
-        headerIconUrl: getImageUrl("welcome", "headerIcon", values.welcomeHeaderIconFile),
+        headerIconUrl: resolveAuthorIconUrl(values.welcomeAuthorIconMode ?? "none"),
         footerIconUrl: getImageUrl("welcome", "footerIcon", values.welcomeFooterIconFile),
         previewGifUrl,
       };
@@ -582,10 +599,11 @@ export default function GreetingsPage() {
         footerText: values.dmFooterText || "",
         imageMode: values.dmImageMode || DEFAULT_IMAGE_MODE,
         thumbnailMode,
+        authorIconMode: values.dmAuthorIconMode ?? "none",
         thumbnailUrl: resolveThumbnailUrl(thumbnailMode, customThumbnailUrl),
         customThumbnailUrl,
         customImageUrl: getImageUrl("dm", "image", values.dmCustomImageFile),
-        headerIconUrl: getImageUrl("dm", "headerIcon", values.dmHeaderIconFile),
+        headerIconUrl: resolveAuthorIconUrl(values.dmAuthorIconMode ?? "none"),
         footerIconUrl: getImageUrl("dm", "footerIcon", values.dmFooterIconFile),
         previewGifUrl,
       };
@@ -602,10 +620,11 @@ export default function GreetingsPage() {
       footerText: values.goodbyeFooterText || "",
       imageMode: values.goodbyeImageMode || "none",
       thumbnailMode,
+      authorIconMode: values.goodbyeAuthorIconMode ?? "avatar",
       thumbnailUrl: resolveThumbnailUrl(thumbnailMode, customThumbnailUrl),
       customThumbnailUrl,
       customImageUrl: getImageUrl("goodbye", "image", values.goodbyeCustomImageFile),
-      headerIconUrl: getImageUrl("goodbye", "headerIcon", values.goodbyeHeaderIconFile),
+      headerIconUrl: resolveAuthorIconUrl(values.goodbyeAuthorIconMode ?? "avatar"),
       footerIconUrl: getImageUrl("goodbye", "footerIcon", values.goodbyeFooterIconFile),
       previewGifUrl,
     };

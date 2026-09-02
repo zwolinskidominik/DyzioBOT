@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 export type GreetingMessageMode = "embed" | "text";
 export type GreetingImageMode = "gifs" | "custom" | "none";
 export type GreetingThumbnailMode = "avatar" | "custom" | "none";
+export type GreetingAuthorIconMode = "avatar" | "none";
 export type GreetingImageSlot = "thumbnail" | "image" | "headerIcon" | "footerIcon";
 export type GreetingModuleKey = "welcome" | "dm" | "goodbye";
 

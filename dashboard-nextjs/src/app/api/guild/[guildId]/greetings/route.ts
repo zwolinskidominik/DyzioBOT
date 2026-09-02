@@ -58,6 +58,7 @@ const stringConfigFields = [
   "welcomeCustomImageFile",
   "welcomeHeaderIconFile",
   "welcomeFooterIconFile",
+  "welcomeAuthorIconMode",
   "dmMessageMode",
   "dmMessage",
   "dmTitleText",
@@ -70,6 +71,7 @@ const stringConfigFields = [
   "dmCustomImageFile",
   "dmHeaderIconFile",
   "dmFooterIconFile",
+  "dmAuthorIconMode",
   "goodbyeMessageMode",
   "goodbyeMessage",
   "goodbyeTitleText",
@@ -82,6 +84,7 @@ const stringConfigFields = [
   "goodbyeCustomImageFile",
   "goodbyeHeaderIconFile",
   "goodbyeFooterIconFile",
+  "goodbyeAuthorIconMode",
 ] as const;
 
 const booleanConfigFields = ["enabled", "welcomeEnabled", "goodbyeEnabled", "dmEnabled"] as const;
@@ -109,6 +112,7 @@ const greetingsConfigSchema = new mongoose.Schema({
   welcomeCustomImageFile: { type: String },
   welcomeHeaderIconFile: { type: String },
   welcomeFooterIconFile: { type: String },
+  welcomeAuthorIconMode: { type: String, enum: ["avatar", "none"], default: "none" },
   dmMessageMode: { type: String, enum: ["embed", "text"], default: "embed" },
   dmMessage: { type: String },
   dmTitleText: { type: String, default: "Witaj na {server}" },
@@ -121,6 +125,7 @@ const greetingsConfigSchema = new mongoose.Schema({
   dmCustomImageFile: { type: String },
   dmHeaderIconFile: { type: String },
   dmFooterIconFile: { type: String },
+  dmAuthorIconMode: { type: String, enum: ["avatar", "none"], default: "none" },
   goodbyeMessageMode: { type: String, enum: ["embed", "text"], default: "embed" },
   goodbyeMessage: { type: String },
   goodbyeTitleText: { type: String, default: "Do zobaczenia, {username}" },
@@ -133,6 +138,7 @@ const greetingsConfigSchema = new mongoose.Schema({
   goodbyeCustomImageFile: { type: String },
   goodbyeHeaderIconFile: { type: String },
   goodbyeFooterIconFile: { type: String },
+  goodbyeAuthorIconMode: { type: String, enum: ["avatar", "none"], default: "avatar" },
   updatedAt: { type: Date, default: Date.now },
 }, {
   collection: "greetingsconfigurations",
@@ -227,6 +233,7 @@ function getDefaultConfig(guildId: string) {
     welcomeCustomImageFile: "",
     welcomeHeaderIconFile: "",
     welcomeFooterIconFile: "",
+    welcomeAuthorIconMode: "none",
     dmMessageMode: "embed",
     dmMessage: "",
     dmTitleText: "Witaj na {server}",
@@ -239,6 +246,7 @@ function getDefaultConfig(guildId: string) {
     dmCustomImageFile: "",
     dmHeaderIconFile: "",
     dmFooterIconFile: "",
+    dmAuthorIconMode: "none",
     goodbyeMessageMode: "embed",
     goodbyeMessage: "",
     goodbyeTitleText: "Do zobaczenia, {username}",
@@ -251,6 +259,7 @@ function getDefaultConfig(guildId: string) {
     goodbyeCustomImageFile: "",
     goodbyeHeaderIconFile: "",
     goodbyeFooterIconFile: "",
+    goodbyeAuthorIconMode: "avatar",
   };
 }
 

@@ -63,6 +63,7 @@ export interface IGreetingsConfiguration {
   welcomeCustomImageFile?: string;
   welcomeHeaderIconFile?: string;
   welcomeFooterIconFile?: string;
+  welcomeAuthorIconMode?: 'avatar' | 'none';
   dmMessageMode?: 'embed' | 'text';
   dmMessage?: string;
   dmTitleText?: string;
@@ -75,6 +76,7 @@ export interface IGreetingsConfiguration {
   dmCustomImageFile?: string;
   dmHeaderIconFile?: string;
   dmFooterIconFile?: string;
+  dmAuthorIconMode?: 'avatar' | 'none';
   goodbyeMessageMode?: 'embed' | 'text';
   goodbyeMessage?: string;
   goodbyeTitleText?: string;
@@ -87,6 +89,7 @@ export interface IGreetingsConfiguration {
   goodbyeCustomImageFile?: string;
   goodbyeHeaderIconFile?: string;
   goodbyeFooterIconFile?: string;
+  goodbyeAuthorIconMode?: 'avatar' | 'none';
 }
 
 export interface ITempChannelConfiguration {
