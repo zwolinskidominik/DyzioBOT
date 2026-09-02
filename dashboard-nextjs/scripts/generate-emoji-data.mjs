@@ -32,8 +32,37 @@ function toArray(value) {
   return Array.isArray(value) ? value : [value];
 }
 
-function shortcodesFor(hexcode) {
-  const merged = [...toArray(emojibaseShortcodes[hexcode]), ...toArray(iamcalShortcodes[hexcode])];
+// Discord's own client uses a handful of shortcodes that differ from the
+// emojibase/iamcal names (e.g. Discord says :hugs:, emojibase says :hug:).
+// Keyed by the emoji glyph so it survives regeneration regardless of hexcode
+// formatting. Prepended to the shortcode list so it becomes the primary code.
+const DISCORD_ALIASES = {
+  "🙂": "slight_smile",
+  "🙃": "upside_down",
+  "🤑": "money_mouth",
+  "🤗": "hugs",
+  "🛰️": "artificial_satellite",
+  "⚖️": "balance_scale",
+  "📸": "camera_flash",
+  "❣️": "heavy_heart_exclamation",
+  "🏒": "ice_hockey",
+  "🛴": "kick_scooter",
+  "🗾": "map_of_japan",
+  "🎖️": "medal_military",
+  "🥛": "milk_glass",
+  "🗞️": "newspaper_roll",
+  "⏭️": "next_track_button",
+  "⏯️": "play_or_pause_button",
+  "⏮️": "previous_track_button",
+  "🛍️": "shopping",
+};
+
+function shortcodesFor(hexcode, emoji) {
+  const merged = [
+    DISCORD_ALIASES[emoji],
+    ...toArray(emojibaseShortcodes[hexcode]),
+    ...toArray(iamcalShortcodes[hexcode]),
+  ];
   const seen = new Set();
   const result = [];
   for (const code of merged) {
@@ -61,7 +90,13 @@ for (const item of sorted) {
   emojis[categoryKey].push({
     u: item.emoji,
     n: item.label,
-    s: shortcodesFor(item.hexcode),
+    // Twemoji asset key (matches emojibase's hexcode 1:1) — used to render the
+    // emoji as an image instead of relying on the OS's native emoji font,
+    // which is what Discord itself does. Native rendering is inconsistent
+    // across platforms — Windows in particular renders flag emoji (regional
+    // indicator symbol pairs) as plain two-letter text instead of a flag.
+    h: item.hexcode.toLowerCase(),
+    s: shortcodesFor(item.hexcode, item.emoji),
     t: item.tags ?? [],
   });
 }

@@ -33,10 +33,40 @@ interface UnicodeEmoji {
   u: string;
   /** label / name */
   n: string;
+  /** twemoji asset key (hex codepoints, dash-joined) */
+  h: string;
   /** Discord-style shortcodes */
   s: string[];
   /** search tags */
   t: string[];
+}
+
+// Rendered as images (like Discord itself does) instead of relying on the OS's
+// native emoji font — native rendering is inconsistent across platforms, most
+// notably Windows, which shows flag emoji as plain two-letter text instead of
+// an actual flag glyph.
+const TWEMOJI_BASE = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@14.0.2/assets/72x72";
+
+function twemojiUrl(emoji: UnicodeEmoji) {
+  return `${TWEMOJI_BASE}/${emoji.h}.png`;
+}
+
+/** Unicode emoji glyph rendered as a twemoji image, with a text-glyph fallback if the asset 404s. */
+function UnicodeEmojiImage({ emoji, className }: { emoji: UnicodeEmoji; className: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <span className={cn(className, "flex items-center justify-center text-xl")}>{emoji.u}</span>;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={twemojiUrl(emoji)}
+      alt={emoji.n}
+      draggable={false}
+      className={cn(className, "object-contain")}
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 interface EmojiCategoryMeta {
@@ -256,7 +286,7 @@ export default function EmojiPicker({
       const [primary, ...rest] = preview.emoji.s;
       return (
         <div className="flex h-[44px] items-center gap-2 px-3">
-          <span className="text-2xl leading-none">{preview.emoji.u}</span>
+          <UnicodeEmojiImage emoji={preview.emoji} className="h-7 w-7" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">{primary ? `:${primary}:` : preview.emoji.n}</p>
             {rest.length > 0 ? (
@@ -305,8 +335,15 @@ export default function EmojiPicker({
         align={align}
         side={side}
         sideOffset={8}
+        collisionPadding={16}
       >
-        <div className="flex h-[400px] flex-col">
+        {/* Capped to the viewport space Radix actually gave us — without this, a
+            picker opened near the edge of the screen can get clipped by the
+            viewport with no way to reach the rest via the inner scroll area. */}
+        <div
+          className="flex h-[400px] flex-col"
+          style={{ maxHeight: "var(--radix-popover-content-available-height)" }}
+        >
           {/* Search */}
           <div className="p-3">
             <div className="relative">
@@ -409,9 +446,9 @@ export default function EmojiPicker({
                             title={emoji.s[0] ? `:${emoji.s[0]}:` : emoji.n}
                             onMouseEnter={() => setPreview({ kind: "unicode", emoji })}
                             onClick={() => handlePick(emoji.u)}
-                            className="flex h-9 w-9 items-center justify-center rounded text-xl hover:bg-[#404249]"
+                            className="flex h-9 w-9 items-center justify-center rounded hover:bg-[#404249]"
                           >
-                            {emoji.u}
+                            <UnicodeEmojiImage emoji={emoji} className="h-[22px] w-[22px]" />
                           </button>
                         ))}
                       </div>
@@ -433,9 +470,9 @@ export default function EmojiPicker({
                             title={emoji.s[0] ? `:${emoji.s[0]}:` : emoji.n}
                             onMouseEnter={() => setPreview({ kind: "unicode", emoji })}
                             onClick={() => handlePick(emoji.u)}
-                            className="flex h-9 w-9 items-center justify-center rounded text-xl hover:bg-[#404249]"
+                            className="flex h-9 w-9 items-center justify-center rounded hover:bg-[#404249]"
                           >
-                            {emoji.u}
+                            <UnicodeEmojiImage emoji={emoji} className="h-[22px] w-[22px]" />
                           </button>
                         ))}
                       </div>
