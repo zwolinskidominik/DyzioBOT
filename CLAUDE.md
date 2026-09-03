@@ -49,6 +49,13 @@ npm run sync-commands # rejestracja slash commands w Discord
 
 ---
 
+## Commity
+
+- Wiadomości commitów **po angielsku**, prefiks `feat:`/`fix:`/`chore:` (commitlint zablokuje inne).
+- Treść (opis w środku wiadomości) też po angielsku — nie mieszaj z polskim, nawet jeśli reszta konwersacji jest po polsku.
+
+---
+
 ## Wzorce kodu (twarde zasady)
 
 ### ServiceResult — jedyny sposób zwracania z serwisu
