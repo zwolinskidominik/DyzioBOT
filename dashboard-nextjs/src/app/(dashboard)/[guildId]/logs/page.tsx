@@ -1,10 +1,10 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save, Hash, Search, X, RotateCcw, ShieldOff } from "lucide-react";
+import { Hash, Search, X, RotateCcw, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
@@ -12,6 +12,7 @@ import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { SlideIn } from "@/components/ui/animated";
 import EmbedColorPicker from "@/components/EmbedColorPicker";
+import { useDirtyState } from "@/components/DirtyStateProvider";
 import { cn } from "@/lib/utils";
 
 function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch>) {
@@ -261,6 +262,7 @@ function LogsPageContent() {
   const searchParams = useSearchParams();
   const guildId = params?.guildId as string;
   const highlightEvent = searchParams?.get('highlight');
+  const { registerDirtyController } = useDirtyState();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -270,6 +272,17 @@ function LogsPageContent() {
   const [activeCategory, setActiveCategory] = useState<string>(FIRST_CATEGORY);
   const [selectedEvent, setSelectedEvent] = useState<string>(FIRST_EVENT);
   const [config, setConfig] = useState<LogConfig>({
+    guildId,
+    enabled: true,
+    logChannels: {},
+    enabledEvents: {},
+    colorOverrides: {},
+  });
+
+  // Ostatnio zapisany stan — porównanie z `config` daje `isDirty` dla
+  // floating save bara (DirtyStateProvider), tak samo jak w innych modułach
+  // (np. Anti-Spam) zamiast osobnego, natychmiastowego zapisu per-zmianę.
+  const savedRef = useRef<LogConfig>({
     guildId,
     enabled: true,
     logChannels: {},
@@ -313,14 +326,16 @@ function LogsPageContent() {
 
       if (configRes.ok) {
         const configData = await configRes.json();
-        setConfig({
+        const merged: LogConfig = {
           ...configData,
           guildId,
           enabled: configData.enabled ?? true,
           logChannels: configData.logChannels || {},
           enabledEvents: configData.enabledEvents || {},
           colorOverrides: configData.colorOverrides || {},
-        });
+        };
+        setConfig(merged);
+        savedRef.current = merged;
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -330,24 +345,7 @@ function LogsPageContent() {
     }
   };
 
-  const fetchConfig = async () => {
-    try {
-      const response = await fetchWithAuth(`/api/guild/${guildId}/logs/config`);
-      if (!response.ok) throw new Error("Failed to fetch config");
-      const data = await response.json();
-      setConfig({
-        ...data,
-        logChannels: data.logChannels || {},
-        enabledEvents: data.enabledEvents || {},
-        colorOverrides: data.colorOverrides || {},
-      });
-    } catch (error) {
-      console.error("Error fetching config:", error);
-      toast.error("Nie udało się pobrać konfiguracji");
-    }
-  };
-
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     const missing = ALL_EVENTS.find((e) => config.enabledEvents[e] && !config.logChannels[e]);
     if (missing) {
       setActiveCategory(categoryOf(missing));
@@ -367,15 +365,41 @@ function LogsPageContent() {
 
       if (!response.ok) throw new Error("Failed to save config");
 
+      const saved = await response.json();
+      const merged: LogConfig = {
+        ...saved,
+        guildId,
+        enabled: saved?.enabled ?? true,
+        logChannels: saved?.logChannels || {},
+        enabledEvents: saved?.enabledEvents || {},
+        colorOverrides: saved?.colorOverrides || {},
+      };
+      setConfig(merged);
+      savedRef.current = merged;
+
       toast.success("Konfiguracja logów została zapisana!");
-      await fetchConfig();
     } catch (error) {
       console.error("Error saving config:", error);
       toast.error("Nie udało się zapisać konfiguracji");
     } finally {
       setSaving(false);
     }
-  };
+  }, [guildId, config]);
+
+  const handleCancel = useCallback(() => {
+    setConfig(savedRef.current);
+  }, []);
+
+  const isDirty = JSON.stringify(config) !== JSON.stringify(savedRef.current);
+
+  useEffect(() => registerDirtyController({
+    id: `logs-${guildId}`,
+    isDirty,
+    isSaving: saving,
+    label: "System logów",
+    onSave: handleSave,
+    onCancel: handleCancel,
+  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]);
 
   const toggleEvent = (eventType: string) => {
     setConfig((prev) => ({
@@ -712,23 +736,6 @@ function LogsPageContent() {
                 </div>
               ) : null}
             </div>
-
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="flex h-[46px] items-center justify-center gap-2 rounded-lg bg-[#6366f1] text-[13px] font-semibold text-white transition-colors hover:bg-[#818cf8] disabled:opacity-70"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Zapisywanie...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" /> Zapisz konfigurację
-                </>
-              )}
-            </button>
           </div>
 
           {/* Podgląd na żywo */}
