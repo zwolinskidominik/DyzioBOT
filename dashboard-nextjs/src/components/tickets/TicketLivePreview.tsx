@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { EmojiDisplay } from "@/components/EmojiDisplay";
 
 export type TicketBannerMode = "preset" | "text" | "none";
 
@@ -20,6 +21,7 @@ export interface TicketTypeDraft {
   color: string;
   banner: TicketTypeBannerDraft;
   thumbnail?: string;
+  dropdownDescription?: string;
 }
 
 const DEFAULT_PRESET = "ticketBanner.png";
@@ -76,6 +78,30 @@ export function TicketBannerThumbnail({ banner, className }: { banner: TicketTyp
         alt="Baner ticketa"
         className="h-full w-full object-cover"
       />
+    </div>
+  );
+}
+
+/** Mirrors tickets/deploy/route.ts::truncate() exactly, so the preview matches what Discord will actually show. */
+function truncateOptionDescription(text: string, max = 100): string {
+  const clean = text.replace(/\{user\}/g, "").trim();
+  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean || "Otwórz zgłoszenie";
+}
+
+/** Illustrative preview of this type's row in the panel's select menu (label + description Discord actually renders). */
+export function DropdownOptionPreview({ type }: { type: TicketTypeDraft }) {
+  const description = truncateOptionDescription(type.dropdownDescription?.trim() ? type.dropdownDescription : type.description);
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-[#1f2024] bg-[#2b2d31] px-3 py-2">
+      {type.emoji ? (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+          <EmojiDisplay emoji={type.emoji} size={16} />
+        </span>
+      ) : null}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm text-white/90">{type.name || "Nowy typ ticketa"}</p>
+        <p className="truncate text-xs text-[#949ba4]">{description}</p>
+      </div>
     </div>
   );
 }

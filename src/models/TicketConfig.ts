@@ -38,6 +38,10 @@ export class TicketTypeConfig {
   /** Mały obrazek w prawym górnym rogu embeda powitalnego (URL). Brak → ikona serwera. */
   @prop({ type: () => String })
   public thumbnail?: string;
+
+  /** Krótki opis widoczny pod nazwą typu w dropdownie panelu (max 100 znaków, osobne od wiadomości powitalnej). */
+  @prop({ type: () => String, default: '' })
+  public dropdownDescription!: string;
 }
 
 export class TicketPanelMessageConfig {

@@ -66,6 +66,7 @@ function sanitizeTypes(input: unknown): ITicketType[] {
         color: sanitizeColor(t.color, "#5865F2"),
         banner: sanitizeBanner(t.banner),
         ...(thumbnail ? { thumbnail } : {}),
+        dropdownDescription: typeof t.dropdownDescription === "string" ? t.dropdownDescription.trim().slice(0, 100) : "",
       };
       return type;
     })

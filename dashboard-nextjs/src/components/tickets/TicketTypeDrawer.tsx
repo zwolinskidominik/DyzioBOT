@@ -18,7 +18,7 @@ import EmojiPicker from "@/components/EmojiPicker";
 import { EmojiDisplay } from "@/components/EmojiDisplay";
 import VariableInserter from "@/components/VariableInserter";
 import { cn } from "@/lib/utils";
-import { TicketLivePreview, TicketBannerThumbnail, type TicketTypeDraft } from "./TicketLivePreview";
+import { TicketLivePreview, TicketBannerThumbnail, DropdownOptionPreview, type TicketTypeDraft } from "./TicketLivePreview";
 
 interface Role {
   id: string;
@@ -93,6 +93,7 @@ const EMPTY_DRAFT: TicketTypeDraft = {
   roleIds: [],
   color: "#5865F2",
   banner: { mode: "preset", presetId: "ticketBanner.png" },
+  dropdownDescription: "",
 };
 
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
@@ -178,6 +179,20 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                   className="border-transparent bg-dark-900 text-white/90"
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[#c4cad8]">Opis w dropdownie</label>
+              <Input
+                value={draft.dropdownDescription ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, dropdownDescription: e.target.value }))}
+                placeholder="np. Zgłoś problem techniczny"
+                maxLength={100}
+                className="border-transparent bg-dark-900 text-white/90"
+              />
+              <p className="text-[11px] text-[#8d94a8]">
+                Krótki tekst pod nazwą typu na liście wyboru. Jeśli puste, użyjemy skróconej wiadomości powitalnej.
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -359,12 +374,20 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
           </div>
 
           {/* ── Live preview ─────────────────────────────────── */}
-          <div className="space-y-2 rounded-md bg-dark-900/30 p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Podgląd
+          <div className="space-y-3 rounded-md bg-dark-900/30 p-3">
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#8d94a8]">
+                Wiersz w dropdownie
+              </p>
+              <DropdownOptionPreview type={draft} />
             </div>
-            <TicketLivePreview type={draft} />
+            <div>
+              <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#8d94a8]">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Wiadomość powitalna
+              </div>
+              <TicketLivePreview type={draft} />
+            </div>
           </div>
         </div>
 

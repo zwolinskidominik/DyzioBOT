@@ -116,6 +116,7 @@ export interface ITicketType {
   color: string;
   banner: ITicketTypeBanner;
   thumbnail?: string | undefined;
+  dropdownDescription: string;
 }
 
 export interface ITicketAutomation {

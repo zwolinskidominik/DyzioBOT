@@ -17,6 +17,7 @@ export interface ITicketType {
   color: string;
   banner: ITicketTypeBanner;
   thumbnail?: string;
+  dropdownDescription: string;
 }
 
 export interface ITicketAutomation {
@@ -69,6 +70,7 @@ const TicketTypeSchema = new mongoose.Schema<ITicketType>(
     color: { type: String, default: "#5865F2" },
     banner: { type: TicketTypeBannerSchema, default: () => ({ mode: "preset" }) },
     thumbnail: { type: String },
+    dropdownDescription: { type: String, default: "" },
   },
   { _id: false }
 );

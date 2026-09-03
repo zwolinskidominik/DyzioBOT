@@ -55,6 +55,8 @@ function toPlainTicketType(type: {
   roleIds: string[];
   color?: string;
   banner: { mode: 'preset' | 'text' | 'none'; presetId?: string; text?: string };
+  thumbnail?: string;
+  dropdownDescription?: string;
 }): ITicketType {
   const banner: ITicketType['banner'] = { mode: type.banner?.mode ?? 'preset' };
   if (type.banner?.presetId) banner.presetId = type.banner.presetId;
@@ -68,6 +70,8 @@ function toPlainTicketType(type: {
     roleIds: [...(type.roleIds ?? [])],
     color: type.color || '#5865F2',
     banner,
+    ...(type.thumbnail ? { thumbnail: type.thumbnail } : {}),
+    dropdownDescription: type.dropdownDescription ?? '',
   };
 }
 

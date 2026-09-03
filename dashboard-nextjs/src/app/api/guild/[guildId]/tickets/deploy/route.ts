@@ -130,7 +130,9 @@ export async function POST(
           placeholder: panelMessage.placeholder.slice(0, 150),
           options: config.types.slice(0, 25).map((type) => ({
             label: type.name.slice(0, 100),
-            description: truncate(type.description, 100),
+            description: type.dropdownDescription?.trim()
+              ? truncate(type.dropdownDescription, 100)
+              : truncate(type.description, 100),
             value: type.id,
             ...(type.emoji ? { emoji: parseEmoji(type.emoji) } : {}),
           })),
