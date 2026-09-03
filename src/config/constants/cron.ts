@@ -49,4 +49,7 @@ export const CRON = {
 
   /** Every 15 minutes — auto-close idle ticket channels past their guild threshold */
   TICKET_AUTOCLOSE_CHECK: '*/15 * * * *',
+
+  /** Every 20 seconds (6-field) — write bot ping/online heartbeat for dashboard */
+  BOT_STATUS_HEARTBEAT: '*/20 * * * * *',
 } as const;
