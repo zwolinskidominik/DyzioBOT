@@ -115,6 +115,7 @@ export interface ITicketType {
   roleIds: string[];
   color: string;
   banner: ITicketTypeBanner;
+  thumbnail?: string | undefined;
 }
 
 export interface ITicketAutomation {

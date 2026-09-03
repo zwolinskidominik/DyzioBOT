@@ -215,7 +215,7 @@ async function sendTicketMessages(
     title: ticketType.name,
     description,
     color: ticketType.color,
-    thumbnail: interaction.guild?.iconURL() || undefined,
+    thumbnail: ticketType.thumbnail || interaction.guild?.iconURL() || undefined,
     ...(attachment ? { image: `attachment://${attachment.filename}` } : {}),
     footerText: `Ticket utworzony przez ${interaction.user.tag}`,
     footerIcon: interaction.user.displayAvatarURL(),

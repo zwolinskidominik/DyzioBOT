@@ -34,6 +34,10 @@ export class TicketTypeConfig {
 
   @prop({ type: () => TicketTypeBannerConfig, default: () => ({ mode: 'preset' }) })
   public banner!: TicketTypeBannerConfig;
+
+  /** Mały obrazek w prawym górnym rogu embeda powitalnego (URL). Brak → ikona serwera. */
+  @prop({ type: () => String })
+  public thumbnail?: string;
 }
 
 export class TicketPanelMessageConfig {

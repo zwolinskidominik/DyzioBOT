@@ -36,12 +36,27 @@ function sanitizeColor(input: unknown, fallback: string): string {
   return typeof input === "string" && HEX_COLOR_PATTERN.test(input) ? input : fallback;
 }
 
+/** Duży thumbnail (prawy górny róg embeda) — tylko http(s) URL, brak/niepoprawny → undefined (fallback na ikonę serwera). */
+function sanitizeThumbnail(input: unknown): string | undefined {
+  if (typeof input !== "string") return undefined;
+  const trimmed = input.trim().slice(0, 500);
+  if (!trimmed) return undefined;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
+    return trimmed;
+  } catch {
+    return undefined;
+  }
+}
+
 function sanitizeTypes(input: unknown): ITicketType[] {
   if (!Array.isArray(input)) return [];
 
   return input
     .filter((t): t is Record<string, unknown> => typeof t === "object" && t !== null)
     .map((t) => {
+      const thumbnail = sanitizeThumbnail(t.thumbnail);
       const type: ITicketType = {
         id: String(t.id ?? ""),
         emoji: String(t.emoji ?? ""),
@@ -50,6 +65,7 @@ function sanitizeTypes(input: unknown): ITicketType[] {
         roleIds: Array.isArray(t.roleIds) ? t.roleIds.map(String) : [],
         color: sanitizeColor(t.color, "#5865F2"),
         banner: sanitizeBanner(t.banner),
+        ...(thumbnail ? { thumbnail } : {}),
       };
       return type;
     })

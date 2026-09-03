@@ -16,6 +16,7 @@ export interface ITicketType {
   roleIds: string[];
   color: string;
   banner: ITicketTypeBanner;
+  thumbnail?: string;
 }
 
 export interface ITicketAutomation {
@@ -67,6 +68,7 @@ const TicketTypeSchema = new mongoose.Schema<ITicketType>(
     roleIds: { type: [String], default: [] },
     color: { type: String, default: "#5865F2" },
     banner: { type: TicketTypeBannerSchema, default: () => ({ mode: "preset" }) },
+    thumbnail: { type: String },
   },
   { _id: false }
 );

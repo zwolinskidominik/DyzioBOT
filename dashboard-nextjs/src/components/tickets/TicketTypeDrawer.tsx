@@ -202,6 +202,44 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
             </div>
 
             <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[#c4cad8]">Thumbnail (obrazek w rogu embeda)</label>
+              <div className="flex items-center gap-2">
+                {draft.thumbnail ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={draft.thumbnail}
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded object-cover"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-dashed border-[#2f3341] text-[#8d94a8]">
+                    <ImageOff className="h-4 w-4" />
+                  </div>
+                )}
+                <Input
+                  value={draft.thumbnail ?? ""}
+                  onChange={(e) => setDraft((d) => ({ ...d, thumbnail: e.target.value }))}
+                  placeholder="https://... (puste = ikona serwera)"
+                  maxLength={500}
+                  className="border-transparent bg-dark-900 text-white/90"
+                />
+                {draft.thumbnail ? (
+                  <button
+                    type="button"
+                    onClick={() => setDraft((d) => ({ ...d, thumbnail: "" }))}
+                    title="Usuń thumbnail"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded text-[#8d94a8] transition-colors hover:bg-red-500/20 hover:text-red-400"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
+              <p className="text-[11px] text-[#8d94a8]">
+                Mały obrazek w prawym górnym rogu wiadomości powitalnej. Jeśli puste, pokaże się ikona serwera.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-[#c4cad8]">Wiadomość powitalna</label>
               <VariableInserter
                 value={draft.description}
