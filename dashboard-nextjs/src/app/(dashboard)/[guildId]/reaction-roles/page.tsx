@@ -21,6 +21,7 @@ import { ReactionRoleLivePreview } from "@/components/reaction-roles/ReactionRol
 import { ActivePanelCard } from "@/components/reaction-roles/ActivePanelCard";
 import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { notifyModulesStatusChanged } from "@/lib/modulesStatusBus";
 import { SlideIn } from "@/components/ui/animated";
 import { cn } from "@/lib/utils";
 
@@ -186,6 +187,7 @@ export default function ReactionRolesPage() {
       });
       if (!res.ok) throw new Error("Failed to save");
       toast.success(next ? "Role za reakcje włączone" : "Role za reakcje wyłączone");
+      notifyModulesStatusChanged();
     } catch {
       setEnabled(previous);
       toast.error("Nie udało się zapisać ustawienia");

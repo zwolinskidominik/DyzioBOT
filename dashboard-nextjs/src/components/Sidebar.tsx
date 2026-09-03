@@ -13,6 +13,7 @@ import {
 import { prefetchGuildData } from "@/lib/cache";
 import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { onModulesStatusChanged } from "@/lib/modulesStatusBus";
 
 interface Guild {
   id: string;
@@ -137,6 +138,15 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
 
   useEffect(() => {
     if (currentGuildId) fetchModulesStatus();
+  }, [currentGuildId]);
+
+  // Strony modułów wołają notifyModulesStatusChanged() po zapisie (patrz
+  // FloatingSaveBar / reaction-roles) — bez tego kropka on/off aktualizowała
+  // się dopiero po odświeżeniu strony, bo Sidebar żyje poza modułem.
+  useEffect(() => {
+    if (!currentGuildId) return;
+    return onModulesStatusChanged(() => fetchModulesStatus());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentGuildId]);
 
   useEffect(() => {

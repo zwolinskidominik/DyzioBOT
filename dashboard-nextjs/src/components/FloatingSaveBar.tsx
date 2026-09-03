@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { notifyModulesStatusChanged } from "@/lib/modulesStatusBus";
 import { cn } from "@/lib/utils";
 
 export function FloatingSaveBar() {
@@ -55,7 +56,9 @@ export function FloatingSaveBar() {
           </Button>
           <Button
             type="button"
-            onClick={() => void controller?.onSave()}
+            onClick={() => {
+              void Promise.resolve(controller?.onSave()).then(() => notifyModulesStatusChanged());
+            }}
             disabled={isSaving}
             className="h-9 bg-[#3b82f6] px-3 text-xs font-semibold text-white hover:bg-[#5b9bff]"
           >
