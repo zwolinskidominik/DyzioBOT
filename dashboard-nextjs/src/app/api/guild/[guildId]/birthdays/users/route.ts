@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
+import { resolveDiscordUsers, displayNameOf } from "@/lib/discordUsers";
 import mongoose from "mongoose";
 
 const birthdaySchema = new mongoose.Schema({
@@ -42,33 +43,20 @@ export async function GET(
     await connectDB();
 
     const birthdays = await Birthday.find({ guildId: String(guildId) }).lean();
-    
-    const birthdaysWithUsers = await Promise.all(
-      birthdays.map(async (birthday) => {
-        try {
-          const response = await fetch(
-            `https://discord.com/api/v10/users/${birthday.userId}`,
-            {
-              headers: {
-                Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-              },
-            }
-          );
-          
-          if (response.ok) {
-            const user = await response.json();
-            return {
-              ...birthday,
-              username: user.username,
-              discriminator: user.discriminator,
-              avatar: user.avatar,
-            };
-          }
-        } catch (error) {}
-        return birthday;
-      })
-    );
-    
+
+    const usersById = await resolveDiscordUsers(String(guildId), birthdays.map((b) => String(b.userId)));
+
+    const birthdaysWithUsers = birthdays.map((birthday) => {
+      const user = usersById.get(String(birthday.userId));
+      if (!user) return birthday;
+      return {
+        ...birthday,
+        username: displayNameOf(user),
+        discriminator: user.discriminator,
+        avatar: user.avatar,
+      };
+    });
+
     return NextResponse.json(birthdaysWithUsers);
   } catch (error) {
     console.error("Error fetching birthdays:", error);

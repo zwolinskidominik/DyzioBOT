@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
-import { toSortedDiscordRoles } from "@/lib/discordOrdering";
+import { fetchGuildRoles } from "@/lib/discordGuildData";
 
 export async function GET(
   request: Request,
@@ -18,28 +18,11 @@ export async function GET(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const response = await fetch(
-      `https://discord.com/api/v10/guilds/${guildId}/roles`,
-      {
-        headers: {
-          Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-        },
-      }
-    );
+    const roles = await fetchGuildRoles(guildId);
 
-    if (!response.ok) {
-      console.error(`Discord API error: ${response.status} ${response.statusText}`);
-      return NextResponse.json(
-        { error: "Failed to fetch roles" },
-        { status: response.status }
-      );
-    }
-
-    const roles = toSortedDiscordRoles(await response.json());
-    
-    const filteredRoles = roles
+    const filteredRoles = (roles as Array<{ name: string }>)
       .filter((role) => role.name !== "@everyone");
-    
+
     return NextResponse.json(filteredRoles);
   } catch (error) {
     console.error("Error fetching roles:", error);

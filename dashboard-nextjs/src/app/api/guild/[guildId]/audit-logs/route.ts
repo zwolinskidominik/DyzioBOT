@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
+import { resolveDiscordUsers } from "@/lib/discordUsers";
 import mongoose, { FilterQuery } from "mongoose";
 import AuditLogModel, { IAuditLog } from "@/models/AuditLog";
 
@@ -14,36 +15,6 @@ async function connectDB() {
 
 /** Dozwolone wartości `days` — 'all' pomija filtr zakresu dat. */
 const DAY_RANGE_VALUES = new Set(['7', '30', '90', 'all']);
-
-/**
- * Dociąga hash awatara z Discord API dla podanych userId (dedupe + równolegle).
- * Błąd pojedynczego usera (np. konto usunięte) nie wywala reszty — dostaje `null`,
- * front i tak ma fallback na domyślny awatar Discorda (`getAvatarUrl`).
- */
-async function resolveAvatars(userIds: string[]): Promise<Map<string, string | null>> {
-  const uniqueIds = Array.from(new Set(userIds));
-  const result = new Map<string, string | null>();
-
-  await Promise.all(
-    uniqueIds.map(async (id) => {
-      try {
-        const response = await fetch(`https://discord.com/api/v10/users/${id}`, {
-          headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
-        });
-        if (response.ok) {
-          const user = await response.json();
-          result.set(id, user.avatar ?? null);
-        } else {
-          result.set(id, null);
-        }
-      } catch {
-        result.set(id, null);
-      }
-    })
-  );
-
-  return result;
-}
 
 export async function GET(
   req: NextRequest,
@@ -62,7 +33,9 @@ export async function GET(
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
+    // Cap, tak jak w moderation/warned i moderation/log — nieograniczony limit
+    // to nieograniczona liczba userId do rozwiązania z Discord API per request.
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 200);
     const skip = parseInt(searchParams.get('skip') || '0');
     const module = searchParams.get('module');
     const userId = searchParams.get('userId');
@@ -99,10 +72,10 @@ export async function GET(
       AuditLogModel.countDocuments(query),
     ]);
 
-    const avatars = await resolveAvatars(logs.map((log) => log.userId));
+    const users = await resolveDiscordUsers(guildId, logs.map((log) => log.userId));
     const logsWithAvatars = logs.map((log) => ({
       ...log,
-      avatar: avatars.get(log.userId) ?? null,
+      avatar: users.get(log.userId)?.avatar ?? null,
     }));
 
     return NextResponse.json({ logs: logsWithAvatars, total });

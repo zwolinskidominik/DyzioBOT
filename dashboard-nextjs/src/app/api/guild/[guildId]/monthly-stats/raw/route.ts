@@ -5,6 +5,7 @@ import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 import MonthlyStatsModel from "@/models/MonthlyStats";
 import { getMonthString, monthFooterLabel, monthFullLabel, monthAbbr, RawMonth } from "@/lib/monthlyStats";
+import { fetchGuildInfo } from "@/lib/discordGuildData";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
@@ -67,21 +68,5 @@ export async function GET(
   } catch (error) {
     console.error("Error fetching monthly stats raw data:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-async function fetchGuildInfo(guildId: string): Promise<{ name: string; iconURL: string | null }> {
-  try {
-    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
-      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
-    });
-    if (!res.ok) return { name: "Serwer", iconURL: null };
-    const guild = (await res.json()) as { name: string; icon: string | null };
-    return {
-      name: guild.name,
-      iconURL: guild.icon ? `https://cdn.discordapp.com/icons/${guildId}/${guild.icon}.png?size=128` : null,
-    };
-  } catch {
-    return { name: "Serwer", iconURL: null };
   }
 }

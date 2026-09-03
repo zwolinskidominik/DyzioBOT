@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
+import { resolveDiscordUsers, displayNameOf } from "@/lib/discordUsers";
 import mongoose from "mongoose";
 
 const birthdaySchema = new mongoose.Schema({
@@ -58,56 +59,32 @@ export async function GET(
     await connectDB();
 
     const birthdays = await Birthday.find({ guildId: String(guildId) }).lean();
-    
-    const birthdaysWithDays = await Promise.all(
-      birthdays
-        .filter(birthday => birthday.date)
-        .map(async (birthday) => {
-        const birthdayDate = new Date(birthday.date);
-        const day = birthdayDate.getDate();
-        const month = birthdayDate.getMonth() + 1;
-        const year = birthdayDate.getFullYear();
-        const daysUntil = getDaysUntilBirthday(day, month);
-        
-        try {
-          const response = await fetch(
-            `https://discord.com/api/v10/users/${birthday.userId}`,
-            {
-              headers: {
-                Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-              },
-            }
-          );
+    const withDates = birthdays.filter((birthday) => birthday.date);
 
-          if (response.ok) {
-            const userData = await response.json();
-            return {
-              userId: birthday.userId,
-              username: userData.username,
-              discriminator: userData.discriminator,
-              avatar: userData.avatar,
-              day,
-              month,
-              year,
-              daysUntil,
-            };
-          }
-        } catch (error) {
-          console.error(`Failed to fetch user ${birthday.userId}:`, error);
-        }
+    // Jeden request na całą guildę (+ ograniczona liczba dociążek dla userów
+    // spoza aktualnej listy członków) zamiast osobnego GET /users/{id} per
+    // wpis — dla większej liczby urodzin to natychmiast łapało 429 z Discorda.
+    const usersById = await resolveDiscordUsers(String(guildId), withDates.map((b) => String(b.userId)));
 
-        return {
-          userId: birthday.userId,
-          username: null,
-          discriminator: null,
-          avatar: null,
-          day,
-          month,
-          year,
-          daysUntil,
-        };
-      })
-    );
+    const birthdaysWithDays = withDates.map((birthday) => {
+      const birthdayDate = new Date(birthday.date);
+      const day = birthdayDate.getDate();
+      const month = birthdayDate.getMonth() + 1;
+      const year = birthdayDate.getFullYear();
+      const daysUntil = getDaysUntilBirthday(day, month);
+      const user = usersById.get(String(birthday.userId));
+
+      return {
+        userId: birthday.userId,
+        username: user ? displayNameOf(user) : null,
+        discriminator: user?.discriminator ?? null,
+        avatar: user?.avatar ?? null,
+        day,
+        month,
+        year,
+        daysUntil,
+      };
+    });
 
     const upcomingBirthdays = birthdaysWithDays
       .sort((a, b) => a.daysUntil - b.daysUntil)

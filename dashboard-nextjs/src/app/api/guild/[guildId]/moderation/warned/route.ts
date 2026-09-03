@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
+import { resolveDiscordUsers } from '@/lib/discordUsers';
 import mongoose from 'mongoose';
 import { z } from 'zod';
 
@@ -56,34 +57,6 @@ const ModerationLog = mongoose.model('ModerationLog', moderationLogSchema);
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
   await mongoose.connect(process.env.MONGODB_URI!);
-}
-
-interface DiscordUserLite {
-  id: string;
-  username: string;
-  global_name: string | null;
-  avatar: string | null;
-}
-
-/** Dociąga podstawowe dane usera (tag + awatar) z Discord API — dedupe + równolegle. */
-async function resolveUsers(userIds: string[]): Promise<Map<string, DiscordUserLite | null>> {
-  const uniqueIds = Array.from(new Set(userIds));
-  const result = new Map<string, DiscordUserLite | null>();
-
-  await Promise.all(
-    uniqueIds.map(async (id) => {
-      try {
-        const response = await fetch(`https://discord.com/api/v10/users/${id}`, {
-          headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
-        });
-        result.set(id, response.ok ? await response.json() : null);
-      } catch {
-        result.set(id, null);
-      }
-    })
-  );
-
-  return result;
 }
 
 export async function GET(
@@ -156,7 +129,7 @@ export async function GET(
     ]);
     const countByUser = new Map(counts.map((c) => [c.userId as string, c.count as number]));
 
-    const users = await resolveUsers(rows.map((r) => r.userId as string));
+    const users = await resolveDiscordUsers(guildId, rows.map((r) => r.userId as string));
 
     // Stare wpisy Anti-Spam mogły zapisać żywy tag bota z Discorda (np. "Test#0229")
     // zamiast stałej etykiety — nadpisujemy przy odczycie, żeby zmiana nazwy bota
@@ -170,7 +143,7 @@ export async function GET(
         moderatorTag:
           botUserId && row.moderatorId === botUserId ? "Anti-Spam (automatycznie)" : row.moderatorTag,
         totalForUser: countByUser.get(row.userId as string) ?? 1,
-        username: user ? (user.global_name ?? user.username) : null,
+        username: user ? (user.globalName ?? user.username) : null,
         avatar: user?.avatar ?? null,
       };
     });

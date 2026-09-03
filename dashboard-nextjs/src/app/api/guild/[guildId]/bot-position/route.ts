@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
+import { fetchGuildRoles } from "@/lib/discordGuildData";
 
 /**
  * Returns the highest role position the bot holds in the guild.
@@ -28,23 +29,25 @@ export async function GET(
       return NextResponse.json({ botMaxPosition: 0 });
     }
 
-    const [rolesRes, botMemberRes] = await Promise.all([
-      fetch(`https://discord.com/api/v10/guilds/${guildId}/roles`, {
-        headers: { Authorization: `Bot ${botToken}` },
-      }),
+    // Role: przez współdzielony cache ('roles', ten sam co /api/guild/[guildId]/roles
+    // i inne trasy) — bez tego strona Auto Role przy jednym otwarciu odpytywała
+    // Discorda o pełną listę ról DWA RAZY niezależnie w tym samym momencie.
+    const [allRoles, botMemberRes] = await Promise.all([
+      fetchGuildRoles(guildId).catch(() => null),
       fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${botId}`, {
         headers: { Authorization: `Bot ${botToken}` },
       }),
     ]);
 
-    if (!rolesRes.ok || !botMemberRes.ok) {
+    if (!allRoles || !botMemberRes.ok) {
       return NextResponse.json({ botMaxPosition: 0 });
     }
 
-    const allRoles: Array<{ id: string; position: number }> = await rolesRes.json();
     const botMember: { roles: string[] } = await botMemberRes.json();
 
-    const rolePositionMap = new Map(allRoles.map((r) => [r.id, r.position]));
+    const rolePositionMap = new Map(
+      (allRoles as Array<{ id: string; position: number }>).map((r) => [r.id, r.position])
+    );
     const botMaxPosition = botMember.roles.reduce((max, roleId) => {
       return Math.max(max, rolePositionMap.get(roleId) ?? 0);
     }, 0);

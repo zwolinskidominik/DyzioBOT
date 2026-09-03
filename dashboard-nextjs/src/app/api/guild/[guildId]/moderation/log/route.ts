@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
+import { resolveDiscordUsers } from '@/lib/discordUsers';
 import mongoose, { FilterQuery } from 'mongoose';
 import { z } from 'zod';
 
@@ -73,33 +74,6 @@ async function connectDB() {
   await mongoose.connect(process.env.MONGODB_URI!);
 }
 
-interface DiscordUserLite {
-  id: string;
-  username: string;
-  global_name: string | null;
-  avatar: string | null;
-}
-
-async function resolveUsers(userIds: string[]): Promise<Map<string, DiscordUserLite | null>> {
-  const uniqueIds = Array.from(new Set(userIds));
-  const result = new Map<string, DiscordUserLite | null>();
-
-  await Promise.all(
-    uniqueIds.map(async (id) => {
-      try {
-        const response = await fetch(`https://discord.com/api/v10/users/${id}`, {
-          headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
-        });
-        result.set(id, response.ok ? await response.json() : null);
-      } catch {
-        result.set(id, null);
-      }
-    })
-  );
-
-  return result;
-}
-
 const KINDS = new Set(['ban', 'kick', 'mute', 'warn', 'clear']);
 const DAY_RANGE_VALUES = new Set(['7', '30', '90', 'all']);
 
@@ -153,14 +127,14 @@ export async function GET(
 
     // 'clear' ma targetId = nazwa kanału, nie user ID — nie ma sensu dociągać z Discorda.
     const userTargetIds = logs.filter((l) => l.kind !== 'clear').map((l) => l.targetId);
-    const users = await resolveUsers(userTargetIds);
+    const users = await resolveDiscordUsers(guildId, userTargetIds);
 
     const enriched = logs.map((log) => {
       const user = log.kind !== 'clear' ? users.get(log.targetId) ?? null : null;
       return {
         ...log,
         targetAvatar: user?.avatar ?? null,
-        targetUsername: user ? (user.global_name ?? user.username) : null,
+        targetUsername: user ? (user.globalName ?? user.username) : null,
       };
     });
 
