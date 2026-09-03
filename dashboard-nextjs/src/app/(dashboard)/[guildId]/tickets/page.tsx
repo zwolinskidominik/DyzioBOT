@@ -405,7 +405,11 @@ export default function TicketsPage() {
       }
       setPanelMessageId(data?.panelMessageId);
       deployedSnapshotRef.current = { enabled, panelChannelId, types, automation, panelMessage };
-      toast.success("Panel ticketów wdrożony na Discord!");
+      if (data?.warning) {
+        toast.warning(data.warning);
+      } else {
+        toast.success("Panel ticketów wdrożony na Discord!");
+      }
     } catch {
       toast.error("Nie udało się wdrożyć panelu na Discord");
     } finally {

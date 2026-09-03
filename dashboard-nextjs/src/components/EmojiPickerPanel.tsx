@@ -99,6 +99,19 @@ function customEmojiCode(emoji: CustomEmoji | BotEmoji) {
   return `<${emoji.animated ? "a" : ""}:${emoji.name}:${emoji.id}>`;
 }
 
+/**
+ * ~1 in 4 unicode entries in emoji-data.json carry a trailing variation-selector-16
+ * (U+FE0F, "prefer emoji presentation") — cosmetically redundant for codepoints that are
+ * already emoji-by-default (e.g. "❓️" for ❓), but Discord's component (select menu/button)
+ * emoji validation rejects it with COMPONENT_INVALID_EMOJI even though the same string
+ * renders fine in embeds, messages and our own UI. Stripped here so anything picked from
+ * now on is stored correctly; deploy routes that build Discord components additionally
+ * strip it defensively for values picked before this fix.
+ */
+function stripVariationSelector16(unicode: string): string {
+  return unicode.replace(/\uFE0F$/, "");
+}
+
 interface EmojiPickerPanelProps {
   onPick: (value: string) => void;
   hideTabs: Array<"custom" | "bot">;
@@ -209,7 +222,9 @@ export default function EmojiPickerPanel({ onPick, hideTabs }: EmojiPickerPanelP
   }, [isSearching, query, customEmojis, botEmojis, showCustom, showBot]);
 
   const handlePick = (value: string) => {
-    onPick(value);
+    // No-op for custom/bot emoji codes ("<:name:id>", "<a:name:id>") — they never end in
+    // U+FE0F — so it's safe to always strip here rather than only on the unicode call sites.
+    onPick(stripVariationSelector16(value));
   };
 
   const handleScroll = useCallback(() => {
