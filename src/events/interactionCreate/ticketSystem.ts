@@ -212,7 +212,7 @@ async function sendTicketMessages(
   );
 
   const welcomeEmbed = createBaseEmbed({
-    title: ticketType.emoji ? `${ticketType.emoji} ${ticketType.name}` : ticketType.name,
+    title: ticketType.name,
     description,
     color: ticketType.color,
     thumbnail: interaction.guild?.iconURL() || undefined,

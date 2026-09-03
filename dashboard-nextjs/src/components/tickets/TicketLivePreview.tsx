@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { EmojiDisplay } from "@/components/EmojiDisplay";
 
 export type TicketBannerMode = "preset" | "text" | "none";
 
@@ -108,8 +107,7 @@ export function TicketLivePreview({ type }: { type: TicketTypeDraft }) {
             className="space-y-2 rounded border-l-4 bg-[#2b2d31] py-2.5 pl-3 pr-3"
             style={{ borderColor: type.color || "#5865f2" }}
           >
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-white/90">
-              {type.emoji ? <EmojiDisplay emoji={type.emoji} size={16} /> : null}
+            <p className="text-sm font-semibold text-white/90">
               {type.name || "Nowy typ ticketa"}
             </p>
             <p className="whitespace-pre-wrap text-xs text-[#c4cad8]">{description}</p>

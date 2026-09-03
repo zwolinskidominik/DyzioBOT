@@ -174,8 +174,8 @@ export default function TicketsPage() {
   const [panelMessage, setPanelMessage] = useState<PanelMessageDraft>(EMPTY_PANEL_MESSAGE);
 
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
-    ogolne: false,
-    typy: true,
+    ogolne: true,
+    typy: false,
     automatyzacja: false,
   });
 
