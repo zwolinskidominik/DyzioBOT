@@ -1,19 +1,9 @@
 import React, { useState } from 'react';
+import { twemojiAssetPath } from '@/lib/emojiCodepoints';
 
 interface EmojiDisplayProps {
   emoji: string;
   size?: number;
-}
-
-/** Zamienia glif unicode emoji na nazwę pliku Twemoji (bez selektora wariantu FE0F). */
-function toTwemojiCodepoints(emoji: string): string {
-  const points: string[] = [];
-  for (const char of Array.from(emoji)) {
-    const codePoint = char.codePointAt(0);
-    if (codePoint === undefined || codePoint === 0xfe0f) continue;
-    points.push(codePoint.toString(16));
-  }
-  return points.join('-');
 }
 
 export function EmojiDisplay({ emoji, size = 20 }: EmojiDisplayProps) {
@@ -55,21 +45,22 @@ export function EmojiDisplay({ emoji, size = 20 }: EmojiDisplayProps) {
   }
 
   // Unicode emoji — renderowane jako obraz Twemoji (ten sam zestaw grafik co Discord),
-  // żeby wyglądało identycznie niezależnie od czcionki systemowej. Fallback do glifu natywnego przy błędzie.
+  // żeby wyglądało identycznie niezależnie od czcionki systemowej. Self-hosted z
+  // public/twemoji/svg/ — CSP img-src celowo nie zezwala na zewnętrzne CDN (jsDelivr
+  // itp.), patrz next.config.ts. Fallback do glifu natywnego, jeśli plik nie istnieje
+  // (emoji spoza naszego datasetu) albo się nie załaduje.
   if (imgError) {
     return <span className="inline-block" style={{ fontSize: size }}>{emoji}</span>;
   }
 
-  const codepoints = toTwemojiCodepoints(emoji);
-  if (!codepoints) {
+  const assetPath = twemojiAssetPath(emoji);
+  if (!assetPath) {
     return <span className="inline-block" style={{ fontSize: size }}>{emoji}</span>;
   }
 
-  // Pakiet Discorda (github.com/discord/twemoji) trzyma wyłącznie SVG w /dist/svg —
-  // to ten sam, aktualny zestaw grafik, którego używa dzisiejszy klient Discord.
   return (
     <img
-      src={`https://cdn.jsdelivr.net/npm/@discordapp/twemoji@16.0.1/dist/svg/${codepoints}.svg`}
+      src={assetPath}
       alt={emoji}
       className="inline-block align-middle"
       style={{ width: size, height: size }}

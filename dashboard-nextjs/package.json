@@ -10,7 +10,8 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "emoji:assets": "node scripts/download-twemoji-assets.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

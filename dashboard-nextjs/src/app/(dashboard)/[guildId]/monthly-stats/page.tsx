@@ -636,10 +636,12 @@ interface PreviewCardProps {
   monthFooterLabel: string;
 }
 
+// Self-hosted (public/twemoji/svg/, via `npm run emoji:assets`) zamiast jsDelivr —
+// CSP img-src nie zezwala na zewnętrzne CDN, patrz next.config.ts.
 const MEDAL_URL: Record<number, string> = {
-  1: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f947.png",
-  2: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f948.png",
-  3: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f949.png",
+  1: "/twemoji/svg/1f947.svg",
+  2: "/twemoji/svg/1f948.svg",
+  3: "/twemoji/svg/1f949.svg",
 };
 
 function PreviewCard({ guildName, guildIconURL, monthFull, totalMessages, totalVoiceMinutes, activeUsers, podium, rest, msgRate, voiceRate, monthFooterLabel }: PreviewCardProps) {
