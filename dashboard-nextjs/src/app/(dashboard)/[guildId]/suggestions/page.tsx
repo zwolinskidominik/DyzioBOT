@@ -409,23 +409,6 @@ export default function SuggestionsPage() {
                   </p>
                 </div>
 
-                {/* Current Config */}
-                {config?.suggestionChannelId && (
-                  <div className="rounded-lg border border-[#2f3341] bg-dark-900 p-4 space-y-2">
-                    <p className="text-sm font-medium text-white/90">Aktualnie skonfigurowany kanał:</p>
-                    <p className="text-sm text-[#9aa2b8]">
-                      {channels.find((ch) => ch.id === config.suggestionChannelId)?.name ? (
-                        <span className="flex items-center gap-2">
-                          <Hash className="h-4 w-4" />
-                          {channels.find((ch) => ch.id === config.suggestionChannelId)?.name}
-                        </span>
-                      ) : (
-                        <span className="text-destructive text-xs">Kanał usunięty</span>
-                      )}
-                    </p>
-                  </div>
-                )}
-
                 {/* Voting Format */}
                 <div className="space-y-2">
                   <Label>Format głosowania</Label>
