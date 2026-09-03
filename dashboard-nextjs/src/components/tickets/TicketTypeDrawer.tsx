@@ -126,7 +126,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto border-[#2f3341] bg-dark-800 text-white/90">
+      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto border-[#2f3341] bg-dark-800 text-white/90">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edytuj typ ticketa" : "Nowy typ ticketa"}</DialogTitle>
           <DialogDescription className="text-[#8d94a8]">
