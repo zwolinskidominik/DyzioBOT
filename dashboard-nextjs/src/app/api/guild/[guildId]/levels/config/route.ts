@@ -14,6 +14,7 @@ const levelConfigZod = z.object({
   cooldownSec: z.number().min(0).max(3600).optional(),
   notifyChannelId: z.string().optional(),
   enableLevelUpMessages: z.boolean().optional(),
+  enableRewardMessages: z.boolean().optional(),
   levelUpMessage: z.string().max(2000).optional(),
   rewardMessage: z.string().max(2000).optional(),
   roleRewards: z
@@ -67,6 +68,7 @@ interface ILevelConfig {
   cooldownSec: number;
   notifyChannelId?: string;
   enableLevelUpMessages: boolean;
+  enableRewardMessages: boolean;
   levelUpMessage: string;
   rewardMessage: string;
   roleRewards: IRoleReward[];
@@ -87,6 +89,7 @@ const levelConfigSchema = new mongoose.Schema({
   cooldownSec: { type: Number, default: 0 },
   notifyChannelId: { type: String },
   enableLevelUpMessages: { type: Boolean, default: false },
+  enableRewardMessages: { type: Boolean, default: true },
   levelUpMessage: { type: String, default: '{user} jesteś kozakiem! Wbiłeś/aś: **{level}** level. 👏' },
   rewardMessage: { type: String, default: '{user}! Zdobyto nową rolę na serwerze: {roleId}! Dziękujemy za aktywność!' },
   roleRewards: [{
@@ -148,6 +151,7 @@ export async function GET(
         xpPerMinVc: 10,
         cooldownSec: 0,
         enableLevelUpMessages: false,
+        enableRewardMessages: true,
         levelUpMessage: '{user} jesteś kozakiem! Wbiłeś/aś: **{level}** level. 👏',
         rewardMessage: '{user}! Zdobyto nową rolę na serwerze: {roleId}! Dziękujemy za aktywność!',
         roleRewards: [],
@@ -204,6 +208,7 @@ export async function POST(
       xpPerMinVc: body.xpPerMinVc ?? 10,
       cooldownSec: body.cooldownSec ?? 0,
       enableLevelUpMessages: body.enableLevelUpMessages ?? false,
+      enableRewardMessages: body.enableRewardMessages ?? true,
       levelUpMessage: body.levelUpMessage ?? '{user} jesteś kozakiem! Wbiłeś/aś: **{level}** level. 👏',
       rewardMessage: body.rewardMessage ?? '{user}! Zdobyto nową rolę na serwerze: {roleId}! Dziękujemy za aktywność!',
       roleMultipliers: body.roleMultipliers ?? [],
@@ -234,8 +239,9 @@ export async function POST(
       { field: 'xpPerMinVc', label: 'XP za minutę na kanale głosowym' },
       { field: 'cooldownSec', label: 'Cooldown (s)' },
       { field: 'notifyChannelId', label: 'Kanał powiadomień' },
-      { field: 'enableLevelUpMessages', label: 'Wiadomości o awansie' },
-      { field: 'levelUpMessage', label: 'Treść wiadomości o awansie' },
+      { field: 'enableLevelUpMessages', label: 'Wiadomość o poziomie' },
+      { field: 'enableRewardMessages', label: 'Wiadomość o nagrodzie' },
+      { field: 'levelUpMessage', label: 'Treść wiadomości o poziomie' },
       { field: 'rewardMessage', label: 'Treść wiadomości o nagrodzie' },
       { field: 'roleRewards', label: 'Liczba nagród za poziom' },
       { field: 'roleMultipliers', label: 'Liczba mnożników ról' },

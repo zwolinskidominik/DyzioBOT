@@ -29,7 +29,9 @@ export async function notifyLevelUp(c: Client, gid: string, uid: string, lvl: nu
   const am: MessageMentionOptions = { users: [uid as Snowflake], roles: [] };
   const rewardForLevel = cfg.roleRewards?.find(r => r.level === lvl);
 
-  if (rewardForLevel) {
+  // Opt-out semantics (default true) — istniejące configi bez tego pola mają
+  // działać tak jak wcześniej (wiadomość o nagrodzie zawsze włączona).
+  if (rewardForLevel && cfg.enableRewardMessages !== false) {
     const tpl = rewardForLevel.rewardMessage?.trim() || cfg.rewardMessage?.trim() || '🎉 {user} zdobył nową rolę {roleId} za poziom **{level}**!';
 
     await ch
@@ -44,9 +46,8 @@ export async function notifyLevelUp(c: Client, gid: string, uid: string, lvl: nu
     return;
   }
 
-  // Brak nagrody za ten poziom — wyślij ogólną wiadomość o awansie, jeśli
-  // włączona (wcześniej enableLevelUpMessages/levelUpMessage nie były
-  // nigdzie odczytywane).
+  // Brak nagrody za ten poziom (albo jest, ale wiadomości o nagrodzie są
+  // wyłączone) — wyślij ogólną wiadomość o awansie, jeśli włączona.
   if (cfg.enableLevelUpMessages && cfg.levelUpMessage?.trim()) {
     await ch
       .send({

@@ -86,6 +86,7 @@ interface LevelConfig {
   cooldownSec: number;
   notifyChannelId?: string;
   enableLevelUpMessages: boolean;
+  enableRewardMessages: boolean;
   levelUpMessage: string;
   rewardMessage: string;
   roleRewards: RoleReward[];
@@ -116,6 +117,7 @@ const DEFAULT_CONFIG: LevelConfig = {
   xpPerMinVc: 10,
   cooldownSec: 0,
   enableLevelUpMessages: false,
+  enableRewardMessages: true,
   levelUpMessage: '{user} jesteś kozakiem! Wbiłeś/aś: **{level}** level. 👏',
   rewardMessage: '{user}! Zdobyto nową rolę na serwerze: {roleId}! Dziękujemy za aktywność!',
   roleRewards: [],
@@ -778,105 +780,116 @@ export default function LevelsPage() {
             isOpen={openSections.levelUpMessages}
             onToggle={() => toggleSection("levelUpMessages")}
           >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between rounded-md border border-[#2f3341] bg-dark-900 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-white/90">Włącz wiadomości o awansie</p>
-                  <p className={cn("mt-0.5", helperClass)}>Wysyłaj powiadomienie gdy użytkownik zdobędzie poziom</p>
-                </div>
-                <DeezySwitch
-                  checked={config.enableLevelUpMessages}
-                  onCheckedChange={(checked) => setConfig({ ...config, enableLevelUpMessages: checked })}
-                />
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <label className={labelClass}>Kanał powiadomień</label>
+                <Select
+                  value={config.notifyChannelId || "none"}
+                  onValueChange={(value) => setConfig({ ...config, notifyChannelId: value === "none" ? undefined : value })}
+                >
+                  <SelectTrigger className={inputClass}>
+                    <SelectValue placeholder="Brak (DM)" />
+                  </SelectTrigger>
+                  <SelectContent className="border-[#3f4455] bg-dark-900">
+                    <SelectItem value="none">Brak (wiadomość prywatna)</SelectItem>
+                    {textChannels.map((channel) => (
+                      <SelectItem key={channel.id} value={channel.id}>
+                        <div className="flex items-center gap-2">
+                          <Hash className="h-4 w-4 text-[#8d94a8]" />
+                          {channel.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className={helperClass}>Gdzie wysyłać wiadomość o poziomie i wiadomość o nagrodzie — kanał wspólny dla obu</p>
               </div>
 
-              {config.enableLevelUpMessages && (
-                <>
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Kanał powiadomień</label>
-                    <Select
-                      value={config.notifyChannelId || "none"}
-                      onValueChange={(value) => setConfig({ ...config, notifyChannelId: value === "none" ? undefined : value })}
-                    >
-                      <SelectTrigger className={inputClass}>
-                        <SelectValue placeholder="Brak (DM)" />
-                      </SelectTrigger>
-                      <SelectContent className="border-[#3f4455] bg-dark-900">
-                        <SelectItem value="none">Brak (wiadomość prywatna)</SelectItem>
-                        {textChannels.map((channel) => (
-                          <SelectItem key={channel.id} value={channel.id}>
-                            <div className="flex items-center gap-2">
-                              <Hash className="h-4 w-4 text-[#8d94a8]" />
-                              {channel.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className={helperClass}>Gdzie wysyłać powiadomienia o awansie</p>
+              {/* Wiadomość o poziomie — własny toggle, niezależny od nagrody */}
+              <div className="space-y-4 rounded-md border border-[#2f3341] bg-dark-900/50 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-white/90">Wiadomość o poziomie</p>
+                    <p className={cn("mt-0.5", helperClass)}>Wysyłaj wiadomość, gdy ktoś zdobędzie poziom bez przypisanej nagrody</p>
                   </div>
+                  <DeezySwitch
+                    checked={config.enableLevelUpMessages}
+                    onCheckedChange={(checked) => setConfig({ ...config, enableLevelUpMessages: checked })}
+                  />
+                </div>
 
+                {config.enableLevelUpMessages && (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className={labelClass}>Wiadomość o poziomie</label>
-                        <VariableInserter
-                          value={config.levelUpMessage}
-                          onChange={(value) => setConfig({ ...config, levelUpMessage: value })}
-                          variables={[
-                            { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
-                            { name: "Poziom", display: "Poziom", value: "{level}", description: "Numer poziomu" },
-                          ]}
-                          rows={2}
-                          emojiPicker
-                          unstyled
-                          className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className={labelClass}>Wiadomość o nagrodzie</label>
-                        <VariableInserter
-                          value={config.rewardMessage}
-                          onChange={(value) => setConfig({ ...config, rewardMessage: value })}
-                          variables={[
-                            { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
-                            { name: "Rola", display: "Rola", value: "{roleId}", description: "Wzmianka roli nagrody" },
-                          ]}
-                          rows={2}
-                          emojiPicker
-                          unstyled
-                          className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd na żywo</p>
-                      <div className="space-y-3">
-                        <DiscordMessagePreview
-                          compact
-                          avatarUrl="/deezy.png"
-                          content={
-                            config.levelUpMessage.trim()
-                              ? resolveLevelsPreview(config.levelUpMessage)
-                              : "*Brak treści wiadomości*"
-                          }
-                        />
-                        <DiscordMessagePreview
-                          compact
-                          avatarUrl="/deezy.png"
-                          content={
-                            config.rewardMessage.trim()
-                              ? resolveLevelsPreview(config.rewardMessage)
-                              : "*Brak treści wiadomości*"
-                          }
-                        />
-                      </div>
+                    <VariableInserter
+                      value={config.levelUpMessage}
+                      onChange={(value) => setConfig({ ...config, levelUpMessage: value })}
+                      variables={[
+                        { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
+                        { name: "Poziom", display: "Poziom", value: "{level}", description: "Numer poziomu" },
+                      ]}
+                      rows={2}
+                      emojiPicker
+                      unstyled
+                      className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
+                    />
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd</p>
+                      <DiscordMessagePreview
+                        compact
+                        avatarUrl="/deezy.png"
+                        content={
+                          config.levelUpMessage.trim()
+                            ? resolveLevelsPreview(config.levelUpMessage)
+                            : "*Brak treści wiadomości*"
+                        }
+                      />
                     </div>
                   </div>
-                </>
-              )}
+                )}
+              </div>
+
+              {/* Wiadomość o nagrodzie — własny toggle, niezależny od wiadomości o poziomie */}
+              <div className="space-y-4 rounded-md border border-[#2f3341] bg-dark-900/50 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-white/90">Wiadomość o nagrodzie</p>
+                    <p className={cn("mt-0.5", helperClass)}>Wysyłaj wiadomość, gdy ktoś zdobędzie poziom z przypisaną rolą-nagrodą</p>
+                  </div>
+                  <DeezySwitch
+                    checked={config.enableRewardMessages}
+                    onCheckedChange={(checked) => setConfig({ ...config, enableRewardMessages: checked })}
+                  />
+                </div>
+
+                {config.enableRewardMessages && (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <VariableInserter
+                      value={config.rewardMessage}
+                      onChange={(value) => setConfig({ ...config, rewardMessage: value })}
+                      variables={[
+                        { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
+                        { name: "Rola", display: "Rola", value: "{roleId}", description: "Wzmianka roli nagrody" },
+                      ]}
+                      rows={2}
+                      emojiPicker
+                      unstyled
+                      className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
+                    />
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd</p>
+                      <DiscordMessagePreview
+                        compact
+                        avatarUrl="/deezy.png"
+                        content={
+                          config.rewardMessage.trim()
+                            ? resolveLevelsPreview(config.rewardMessage)
+                            : "*Brak treści wiadomości*"
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </SettingRow>
         </SlideIn>

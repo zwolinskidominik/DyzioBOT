@@ -50,6 +50,10 @@ export class LevelConfig {
   @prop({ default: false, type: () => Boolean })
   public enableLevelUpMessages!: boolean;
 
+  /** Domyślnie true (opt-out) — wcześniej wiadomości o nagrodzie były wysyłane bezwarunkowo. */
+  @prop({ default: true, type: () => Boolean })
+  public enableRewardMessages!: boolean;
+
   @prop({
     type: () => String,
     default: '{user} jesteś kozakiem! Wbiłeś/aś: **{level}** level. 👏',
