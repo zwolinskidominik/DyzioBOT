@@ -171,7 +171,7 @@ export default function AutoRolePage() {
   const [enabled, setEnabled] = useState(false);
   const [userRoleIds, setUserRoleIds] = useState<string[]>([]);
   const [botRoleIds, setBotRoleIds] = useState<string[]>([]);
-  const [openSections, setOpenSections] = useState<Record<SettingsSection, boolean>>({ users: true, bots: false });
+  const [openSections, setOpenSections] = useState<Record<SettingsSection, boolean>>({ users: true, bots: true });
 
   const savedRef = useRef<SavedState>({ enabled: false, userRoleIds: [], botRoleIds: [] });
 
