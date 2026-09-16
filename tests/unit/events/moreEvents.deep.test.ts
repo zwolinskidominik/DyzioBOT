@@ -53,11 +53,21 @@ jest.mock('../../../src/utils/embedHelpers', () => ({
 const mockSendLog = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../src/utils/logHelpers', () => ({
   sendLog: mockSendLog,
+  // Handlery logów budują pole moderatora tym helperem — bez niego fabryka zwraca undefined,
+  // wywołanie rzuca TypeError i sendLog nigdy nie dochodzi do skutku.
+  moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
+  truncate: jest.fn((text: string) => text),
 }));
 
 const mockGetModerator = jest.fn().mockResolvedValue(null);
+// getAuditLogEntry/getReason doszły do helpera już po napisaniu tego mocka — logMemberUpdate
+// czyta przez nie zmianę pseudonimu z audit logu, a brak funkcji ubijał cały handler.
+const mockGetAuditLogEntry = jest.fn().mockResolvedValue(null);
+const mockGetReason = jest.fn().mockResolvedValue(null);
 jest.mock('../../../src/utils/auditLogHelpers', () => ({
   getModerator: mockGetModerator,
+  getAuditLogEntry: mockGetAuditLogEntry,
+  getReason: mockGetReason,
 }));
 
 /* ─── Model mocks ─── */
@@ -69,6 +79,16 @@ jest.mock('../../../src/models/GreetingsConfiguration', () => ({
 const mockAutoRoleFind = jest.fn();
 jest.mock('../../../src/models/AutoRole', () => ({
   AutoRoleModel: { findOne: mockAutoRoleFind },
+}));
+
+// Builder powitań pyta ten model o wyłączone GIF-y. Bez mocka zapytanie Mongoose buforuje się
+// (brak połączenia w teście jednostkowym) i test wisi do timeoutu.
+jest.mock('../../../src/models/GreetingGifState', () => ({
+  GreetingGifStateModel: {
+    find: jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+    }),
+  },
 }));
 
 const mockBirthdayFindOne = jest.fn();
@@ -103,11 +123,21 @@ const mockIsSuggestionChannel = jest.fn();
 const mockCreateSuggestion = jest.fn();
 const mockVote = jest.fn();
 const mockGetSuggestion = jest.fn();
+// Kształt zgodny z getSuggestionConfig() w serwisie (ServiceResult<SuggestionConfigData>).
+const mockGetSuggestionConfig = jest.fn().mockResolvedValue({
+  ok: true,
+  data: { enabled: true, suggestionChannelId: 'ch1', votingFormat: 'bar', anonymous: false, embedColor: '#4C4C54' },
+});
+const mockDeleteSuggestionByMessageId = jest.fn();
 jest.mock('../../../src/services/suggestionService', () => ({
   isSuggestionChannel: mockIsSuggestionChannel,
   createSuggestion: mockCreateSuggestion,
   vote: mockVote,
   getSuggestion: mockGetSuggestion,
+  // Dwa eksporty dopisane do serwisu już po powstaniu tego mocka — bez nich handler
+  // sugestii wywala się na "is not a function".
+  getSuggestionConfig: mockGetSuggestionConfig,
+  deleteSuggestionByMessageId: mockDeleteSuggestionByMessageId,
 }));
 
 const mockGetPersonalStats = jest.fn();
@@ -162,7 +192,9 @@ describe('welcomeCard', () => {
   }
 
   it('sends welcome message when config exists', async () => {
+    // enabled: przełącznik całego modułu Powitania — bez niego handler kończy na pierwszym warunku.
     mockGreetingsFind.mockResolvedValue({
+      enabled: true,
       greetingsChannelId: 'ch1', welcomeEnabled: true, welcomeMessage: 'Welcome {user}!',
       rulesChannelId: 'rules1', chatChannelId: 'chat1',
     });
@@ -179,7 +211,7 @@ describe('welcomeCard', () => {
   });
 
   it('does nothing when welcome disabled', async () => {
-    mockGreetingsFind.mockResolvedValue({ greetingsChannelId: 'ch1', welcomeEnabled: false });
+    mockGreetingsFind.mockResolvedValue({ enabled: true, greetingsChannelId: 'ch1', welcomeEnabled: false });
     const member = makeMember();
     await welcomeCard(member as any);
   });
@@ -192,6 +224,7 @@ describe('welcomeCard', () => {
 
   it('sends DM when dmEnabled', async () => {
     mockGreetingsFind.mockResolvedValue({
+      enabled: true,
       greetingsChannelId: 'ch1', welcomeEnabled: true, dmEnabled: true,
       welcomeMessage: 'Hello {user}!',
     });
@@ -202,6 +235,7 @@ describe('welcomeCard', () => {
 
   it('handles DM failure gracefully', async () => {
     mockGreetingsFind.mockResolvedValue({
+      enabled: true,
       greetingsChannelId: 'ch1', welcomeEnabled: true, dmEnabled: true,
       welcomeMessage: 'Hello!',
     });
@@ -212,6 +246,7 @@ describe('welcomeCard', () => {
 
   it('skips when bot lacks permissions', async () => {
     mockGreetingsFind.mockResolvedValue({
+      enabled: true,
       greetingsChannelId: 'ch1', welcomeEnabled: true,
     });
     const member = makeMember();
@@ -248,6 +283,7 @@ describe('goodbyeCard', () => {
 
   it('sends goodbye message', async () => {
     mockGreetingsFind.mockResolvedValue({
+      enabled: true,
       greetingsChannelId: 'ch1', goodbyeEnabled: true, goodbyeMessage: 'Bye {user}!',
     });
     const member = makeMember();
@@ -261,7 +297,7 @@ describe('goodbyeCard', () => {
   });
 
   it('does nothing when goodbye disabled', async () => {
-    mockGreetingsFind.mockResolvedValue({ greetingsChannelId: 'ch1', goodbyeEnabled: false });
+    mockGreetingsFind.mockResolvedValue({ enabled: true, greetingsChannelId: 'ch1', goodbyeEnabled: false });
     await goodbyeCard(makeMember() as any);
   });
 
@@ -272,7 +308,7 @@ describe('goodbyeCard', () => {
   });
 
   it('skips when bot lacks permissions', async () => {
-    mockGreetingsFind.mockResolvedValue({ greetingsChannelId: 'ch1', goodbyeEnabled: true });
+    mockGreetingsFind.mockResolvedValue({ enabled: true, greetingsChannelId: 'ch1', goodbyeEnabled: true });
     const m = makeMember();
     const ch = m.guild.channels.cache.get('ch1');
     (ch as any).permissionsFor = () => ({ has: () => false });
@@ -281,7 +317,7 @@ describe('goodbyeCard', () => {
   });
 
   it('uses default message when none configured', async () => {
-    mockGreetingsFind.mockResolvedValue({ greetingsChannelId: 'ch1', goodbyeEnabled: true });
+    mockGreetingsFind.mockResolvedValue({ enabled: true, greetingsChannelId: 'ch1', goodbyeEnabled: true });
     const m = makeMember();
     await goodbyeCard(m as any);
     expect(m.guild.channels.cache.get('ch1')!.send).toHaveBeenCalled();
@@ -307,14 +343,14 @@ describe('autoRole', () => {
   }
 
   it('assigns user roles for non-bot members', async () => {
-    mockAutoRoleFind.mockResolvedValue({ roleIds: ['r1', 'r2', 'r3'] });
+    mockAutoRoleFind.mockResolvedValue({ enabled: true, userRoleIds: ['r1', 'r2', 'r3'], botRoleIds: ['r1'] });
     const m = makeMember(false);
     await autoRole(m as any);
     expect(m.roles.add).toHaveBeenCalled();
   });
 
   it('assigns bot role for bot members', async () => {
-    mockAutoRoleFind.mockResolvedValue({ roleIds: ['r1', 'r2', 'r3'] });
+    mockAutoRoleFind.mockResolvedValue({ enabled: true, userRoleIds: ['r1', 'r2', 'r3'], botRoleIds: ['r1'] });
     const m = makeMember(true);
     await autoRole(m as any);
     expect(m.roles.add).toHaveBeenCalledWith([expect.objectContaining({ id: 'r1' })]);
@@ -328,7 +364,7 @@ describe('autoRole', () => {
   });
 
   it('does nothing when roleIds empty', async () => {
-    mockAutoRoleFind.mockResolvedValue({ roleIds: [] });
+    mockAutoRoleFind.mockResolvedValue({ enabled: true, userRoleIds: [], botRoleIds: [] });
     const m = makeMember();
     await autoRole(m as any);
     expect(m.roles.add).not.toHaveBeenCalled();
@@ -341,7 +377,7 @@ describe('autoRole', () => {
   });
 
   it('warns when roles not found', async () => {
-    mockAutoRoleFind.mockResolvedValue({ roleIds: ['r1', 'missing'] });
+    mockAutoRoleFind.mockResolvedValue({ enabled: true, userRoleIds: ['r1', 'missing'], botRoleIds: ['r1', 'missing'] });
     const m = makeMember();
     m.guild.roles.cache = new Map();
     await autoRole(m as any);

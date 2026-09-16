@@ -2,6 +2,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": ".",
+    // Potrzebne, żeby ts-jest mógł transpilować zależności publikowane jako ESM (pretty-ms,
+    // parse-ms) — patrz transform w jest.config.js. Nie dotyczy kodu produkcyjnego.
+    "allowJs": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "types": ["jest", "node"]

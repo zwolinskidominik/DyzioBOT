@@ -7,12 +7,16 @@ describe('COLORS constants', () => {
   });
 
   it('has all expected color entries', () => {
+    // Lista odzwierciedla faktyczną paletę z src/config/constants/colors.ts. Poprzednia wersja
+    // wymagała kluczy po nieistniejących już modułach (CS2_MIX, FORTUNE_ADD, TICKET_*) —
+    // sprawdzone: żaden z nich nie jest nigdzie w kodzie używany.
     const expectedKeys = [
-      'CS2_MIX', 'DEFAULT', 'BIRTHDAY', 'EMBED', 'ERROR', 'FACEIT',
-      'FORTUNE', 'FORTUNE_ADD', 'GIVEAWAY', 'GIVEAWAY_ENDED', 'JOIN',
-      'LEAVE', 'MEME',
-      'TICKET', 'TICKET_REPORT', 'TICKET_PARTNERSHIP', 'TICKET_IDEA',
-      'TICKET_REWARD', 'TWITCH', 'WARN', 'WARNINGS_LIST',
+      'DEFAULT', 'BIRTHDAY', 'EMBED', 'ERROR', 'FACEIT',
+      'FORTUNE', 'GIVEAWAY', 'GIVEAWAY_ENDED', 'JOIN',
+      'LEAVE', 'MEME', 'TWITCH', 'WARN', 'WARNINGS_LIST',
+      'HANGMAN', 'HANGMAN_WIN', 'HANGMAN_LOSE',
+      'ECONOMY', 'ECONOMY_WIN', 'ECONOMY_LOSE', 'ECONOMY_NEUTRAL',
+      'GAMBLING', 'DAILY', 'SHOP', 'ROB_SUCCESS', 'ROB_FAIL',
     ];
     for (const key of expectedKeys) {
       expect(COLORS).toHaveProperty(key);

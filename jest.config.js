@@ -6,7 +6,13 @@ module.exports = {
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', { diagnostics: false, tsconfig: 'tsconfig.tests.json' }],
+    // pretty-ms (i jego zależność parse-ms) są publikowane wyłącznie jako ESM, a projekt
+    // kompiluje się do CommonJS — bez tego Jest wywala "Cannot use import statement outside
+    // a module" i ubija całe suite importujące moderationHelpers.
+    '^.+\\.m?js$': ['ts-jest', { diagnostics: false, tsconfig: 'tsconfig.tests.json' }],
   },
+  // Domyślnie Jest pomija całe node_modules w transformacji — te dwie paczki musimy przepuścić.
+  transformIgnorePatterns: ['/node_modules/(?!(pretty-ms|parse-ms)/)'],
   collectCoverageFrom: ['src/**/*.{ts,js}', '!src/index.ts', '!src/scripts/**'],
   coverageDirectory: 'coverage',
   coverageThreshold: {

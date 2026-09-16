@@ -280,11 +280,14 @@ describe('clientReady / monthlyStats', () => {
     run = (await import('../../../src/events/clientReady/monthlyStats')).default;
   });
 
-  it('registers a cron schedule', () => {
+  // monthlyStats.ts jest celowo wyłączony (ENABLED = false) — zastąpił go monthlyStatsV3.ts.
+  // Plik zostaje sprawny na wypadek powrotu do starego formatu, ale nie może rejestrować crona,
+  // bo oznaczałoby to podwójną wysyłkę co miesiąc.
+  it('does not register a cron schedule while the legacy scheduler is disabled', () => {
     scheduleMock.mockClear();
     const client = mockClient();
     run(client);
-    expect(scheduleMock).toHaveBeenCalled();
+    expect(scheduleMock).not.toHaveBeenCalled();
   });
 });
 

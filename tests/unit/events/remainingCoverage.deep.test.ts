@@ -46,6 +46,8 @@ const mockTruncate = jest.fn((s: string) => s);
 jest.mock('../../../src/utils/logHelpers', () => ({
   sendLog: mockSendLog,
   truncate: mockTruncate,
+  // Handlery logów budują pole moderatora tym helperem — bez niego rzucają TypeError.
+  moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
 }));
 
 const mockGetModerator = jest.fn().mockResolvedValue(null);

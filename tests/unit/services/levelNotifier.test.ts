@@ -130,6 +130,8 @@ describe('notifyLevelUp', () => {
       expect.objectContaining({ id: 'u1' }),
       5,
       cfg.roleRewards,
+      // 4. argument: removePreviousRewards z configu (domyślnie true).
+      true,
     );
   });
 

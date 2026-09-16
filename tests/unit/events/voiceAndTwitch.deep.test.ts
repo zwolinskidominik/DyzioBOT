@@ -56,6 +56,9 @@ const mockSendLog = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../src/utils/logHelpers', () => ({
   sendLog: mockSendLog,
   truncate: jest.fn((s: string) => s),
+  // Logi głosowe dodają pole moderatora (rozłączenie/przeniesienie przez moderatora) — bez tej
+  // funkcji fabryka zwraca undefined i handler wywala się przed sendLog.
+  moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
 }));
 
 const mockGetModerator = jest.fn().mockResolvedValue(null);
@@ -70,6 +73,10 @@ jest.mock('../../../src/services/twitchService', () => ({
   getActiveStreamers: mockGetActiveStreamers,
   setLiveStatus: mockSetLiveStatus,
   updateAvatarUrl: jest.fn(),
+  // Oba eksporty doszły do serwisu po napisaniu tego mocka — scheduler renderuje nimi treść
+  // powiadomienia i zapisuje licznik wysyłek. Bez nich cały cykl wywalał się na TypeError.
+  renderStreamMessageTemplate: jest.fn((template: string) => template ?? ''),
+  logNotificationSent: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockStreamConfigFind = jest.fn();
@@ -675,7 +682,7 @@ describe('twitchScheduler', () => {
     await twitchScheduler(client as any);
 
     mockGetActiveStreamers.mockResolvedValue({ ok: true, data: [{ guildId: 'g1', twitchChannel: 'streamer1', isLive: false }] });
-    mockStreamConfigFind.mockResolvedValue([{ guildId: 'g1', channelId: 'ch1' }]);
+    mockStreamConfigFind.mockResolvedValue([{ guildId: 'g1', channelId: 'ch1', messageTemplate: '{streamer} jest live!' }]);
     mockGetUserByName.mockResolvedValue({ id: 'tw1', displayName: 'Streamer1', profilePictureUrl: 'https://example.com/pic.png' });
     mockGetStreamByUserId.mockResolvedValue({
       title: 'Live!', gameName: 'CS2', id: 'str1',
@@ -687,7 +694,9 @@ describe('twitchScheduler', () => {
 
     // Second cron callback is stream check
     await cronCallbacks[1]();
-    expect(mockSetLiveStatus).toHaveBeenCalledWith('g1', 'streamer1', true);
+    // setLiveStatus(guildId, kanał, isLive, snapshot) — czwarty argument (dane streamu:
+    // tytuł, gra, miniatura) doszedł wraz z podglądem powiadomienia w panelu.
+    expect(mockSetLiveStatus).toHaveBeenCalledWith('g1', 'streamer1', true, expect.any(Object));
   });
 
   it('runs stream check - streamer goes offline', async () => {
@@ -741,7 +750,7 @@ describe('twitchScheduler', () => {
     await twitchScheduler(client as any);
 
     mockGetActiveStreamers.mockResolvedValue({ ok: true, data: [{ guildId: 'g1', twitchChannel: 'str1', isLive: false }] });
-    mockStreamConfigFind.mockResolvedValue([{ guildId: 'g1', channelId: 'ch1' }]);
+    mockStreamConfigFind.mockResolvedValue([{ guildId: 'g1', channelId: 'ch1', messageTemplate: '{streamer} jest live!' }]);
     mockGetUserByName.mockResolvedValue({ id: 'tw1', displayName: 'Str1', profilePictureUrl: 'https://example.com/pic.png' });
     mockGetStreamByUserId.mockResolvedValue({
       title: 'Title', gameName: 'Game', id: 'streamid',
@@ -804,7 +813,7 @@ describe('twitchScheduler', () => {
     await twitchScheduler(client as any);
 
     mockGetActiveStreamers.mockResolvedValue({ ok: true, data: [{ guildId: 'g1', twitchChannel: 'str1', isLive: false }] });
-    mockStreamConfigFind.mockResolvedValue([{ guildId: 'g1', channelId: 'ch1' }]);
+    mockStreamConfigFind.mockResolvedValue([{ guildId: 'g1', channelId: 'ch1', messageTemplate: '{streamer} jest live!' }]);
     mockGetUserByName.mockResolvedValue({ id: 'tw1', displayName: 'Str1', profilePictureUrl: 'https://example.com/pic.png' });
     mockGetStreamByUserId.mockResolvedValue({
       title: 'T', gameName: 'G', id: 'i', thumbnailUrl: 'https://example.com/{width}_{height}.jpg',

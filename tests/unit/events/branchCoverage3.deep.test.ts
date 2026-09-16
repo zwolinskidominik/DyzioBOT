@@ -66,6 +66,9 @@ jest.mock('../../../src/utils/embedHelpers', () => {
 jest.mock('../../../src/services/xpService', () => ({
   getUserRank: jest.fn().mockResolvedValue({ ok: true, data: { rank: 1 } }),
   getCurrentXp: jest.fn().mockResolvedValue({ level: 5, xp: 100 }),
+  // Konfiguracja karty rangi doszła do serwisu po napisaniu tego mocka; null jest poprawną
+  // wartością (komenda czyta ją przez cfg?.) i oznacza „brak własnych ustawień".
+  getConfig: jest.fn().mockResolvedValue(null),
 }));
 jest.mock('../../../src/utils/levelMath', () => ({
   xpForLevel: jest.fn(() => 500),
@@ -104,6 +107,14 @@ jest.mock('../../../src/config/constants/colors', () => ({
 jest.mock('../../../src/services/suggestionService', () => ({
   isSuggestionChannel: jest.fn().mockResolvedValue(false),
   createSuggestion: jest.fn().mockResolvedValue({ ok: true, data: { suggestionId: 'sug1' } }),
+  // Handler sugestii czyta dziś konfigurację osobnym eksportem (kształt: ServiceResult).
+  getSuggestionConfig: jest.fn().mockResolvedValue({
+    ok: true,
+    data: { enabled: true, suggestionChannelId: 'ch1', votingFormat: 'bar', anonymous: false, embedColor: '#4C4C54' },
+  }),
+  getSuggestion: jest.fn().mockResolvedValue({ ok: false }),
+  deleteSuggestionByMessageId: jest.fn().mockResolvedValue({ ok: true }),
+  vote: jest.fn().mockResolvedValue({ ok: true }),
 }));
 
 // --- ChannelStats model (for channelHelpers)

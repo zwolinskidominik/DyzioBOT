@@ -249,7 +249,9 @@ describe('Model integration tests', () => {
       const doc = await ReactionRoleModel.create({
         guildId: GID, channelId: 'ch-1', messageId: 'msg-1',
       });
-      expect(doc.enabled).toBe(false);
+      // Semantyka opt-out (patrz komentarz w modelu): panele utworzone zanim wprowadzono tę
+      // flagę mają pozostać aktywne, więc domyślną wartością jest true.
+      expect(doc.enabled).toBe(true);
       expect(doc.reactions).toEqual([]);
     });
   });

@@ -328,7 +328,10 @@ describe('getNextPunishment', () => {
     const rule: AntiSpamRuleSettings = { ...BASE_RULE, mode: 'ladder', steps: ['warn', 'mute'], reset: '1' };
 
     const doc = await AntiSpamIncidentModel.create({ guildId: GID, userId: 'u1', rule: 'rate', actionTaken: 'warn' });
-    await AntiSpamIncidentModel.updateOne(
+    // Uwaga: przy `timestamps: true` Mongoose traktuje createdAt jako immutable i po cichu ignoruje
+    // $set przez model — trzeba pisać przez sterownik, inaczej incydent zostaje "świeży"
+    // i test sprawdza coś innego, niż deklaruje.
+    await AntiSpamIncidentModel.collection.updateOne(
       { _id: doc._id },
       { $set: { createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) } }
     );

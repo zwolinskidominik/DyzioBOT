@@ -296,9 +296,17 @@ describe('antiSpam handler — rate rule detection', () => {
 
   it('applies the warn ladder consequences: bans when the warn hits the limit (shouldBan)', async () => {
     (getConfig as jest.Mock).mockResolvedValue(buildConfig({ rate: { on: true, action: 'warn' } }));
+    // Kontrakt addWarn: { count, step, nextStep, isFinal, warnEntryId } — o karze decyduje
+    // step.action, dawne shouldBan/punishment już nie istnieją.
     (addWarn as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      data: { count: 4, shouldBan: true, punishment: null, nextPunishment: null },
+      data: {
+        count: 4,
+        step: { action: 'ban', durationMinutes: 0, durationMs: 0, label: 'Permanentny ban' },
+        nextStep: { action: 'ban', durationMinutes: 0, durationMs: 0, label: 'Permanentny ban' },
+        isFinal: true,
+        warnEntryId: 'warn-4',
+      },
     });
 
     const { msg, member } = makeSpamMessage();
@@ -313,7 +321,13 @@ describe('antiSpam handler — rate rule detection', () => {
     (getConfig as jest.Mock).mockResolvedValue(buildConfig({ rate: { on: true, action: 'warn' } }));
     (addWarn as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      data: { count: 1, shouldBan: false, punishment: { duration: 900000, label: '15 minut' }, nextPunishment: null },
+      data: {
+        count: 1,
+        step: { action: 'mute', durationMinutes: 15, durationMs: 900_000, label: '15 minut' },
+        nextStep: { action: 'ban', durationMinutes: 0, durationMs: 0, label: 'Permanentny ban' },
+        isFinal: false,
+        warnEntryId: 'warn-1',
+      },
     });
 
     const { msg, member } = makeSpamMessage();

@@ -112,7 +112,11 @@ describe('channelDelete / deleteTempChannel', () => {
     mockFindOne.mockResolvedValueOnce({ guildId: 'guild-1', channelIds: ['ch-del'] });
     const channel = { id: 'ch-del', guild: { id: 'guild-1' }, type: 2 };
     await run(channel);
-    expect(mockFindOne).toHaveBeenCalledWith(expect.objectContaining({ channelIds: 'ch-del' }));
+    // Zapytanie obejmuje dziś oba warianty: kanał z listy i kanał-twórcę.
+    expect(mockFindOne).toHaveBeenCalledWith(expect.objectContaining({
+      guildId: 'guild-1',
+      $or: [{ channelIds: 'ch-del' }, { 'creators.channelId': 'ch-del' }],
+    }));
   });
 });
 

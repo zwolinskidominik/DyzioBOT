@@ -4,6 +4,9 @@
 
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ tempChannel mocks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const mockTCSGetMonitoredChannels = jest.fn();
+// Handler czyta dziś konfigurację kanałów-twórców przez getCreatorConfigs (ServiceResult
+// z typem kanału: 'panel' | 'standard'); getMonitoredChannels zostaje dla innych wywołań.
+const mockTCSGetCreatorConfigs = jest.fn();
 const mockTCSSaveTempChannel = jest.fn();
 const mockTCSDeleteTempChannel = jest.fn();
 const mockTCSTransferOwnership = jest.fn();
@@ -12,6 +15,7 @@ const mockTCSSetControlMessageId = jest.fn();
 
 jest.mock('../../../src/services/tempChannelService', () => ({
   getMonitoredChannels: mockTCSGetMonitoredChannels,
+  getCreatorConfigs: mockTCSGetCreatorConfigs,
   saveTempChannel: mockTCSSaveTempChannel,
   deleteTempChannel: mockTCSDeleteTempChannel,
   transferOwnership: mockTCSTransferOwnership,
@@ -76,6 +80,7 @@ import tempChannelRun from '../../../src/events/voiceStateUpdate/tempChannel';
 beforeEach(() => {
   jest.clearAllMocks();
   mockTCSGetMonitoredChannels.mockResolvedValue({ ok: true, data: ['monCh1'] });
+  mockTCSGetCreatorConfigs.mockResolvedValue({ ok: true, data: [{ channelId: 'monCh1', type: 'panel' }] });
   mockTCSSaveTempChannel.mockResolvedValue({
     ok: true,
     data: { channelId: 'newCh', ownerId: 'u1', controlMessageId: 'ctrl1' },
@@ -240,7 +245,7 @@ describe('tempChannel â€“ run', () => {
   });
 
   it('handles error in run gracefully', async () => {
-    mockTCSGetMonitoredChannels.mockRejectedValue(new Error('DB error'));
+    mockTCSGetCreatorConfigs.mockRejectedValue(new Error('DB error'));
     const oldState = makeVoiceState();
     const newState = makeVoiceState({ channelId: 'monCh1' });
     // Should not throw

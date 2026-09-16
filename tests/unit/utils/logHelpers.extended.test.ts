@@ -5,6 +5,11 @@ jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
+// Gdy kanał logów nie istnieje, sendLog powiadamia o tym kanał systemowy — a to czyta
+// GuildSettings z bazy. W teście jednostkowym bazy nie ma, więc mockujemy powiadomienie.
+jest.mock('../../../src/utils/systemNotify', () => ({
+  notifySystemChannel: jest.fn().mockResolvedValue(undefined),
+}));
 
 import { sendLog } from '../../../src/utils/logHelpers';
 import { LogConfigurationModel } from '../../../src/models/LogConfiguration';
@@ -42,6 +47,7 @@ describe('sendLog', () => {
   it('returns early when event is not enabled', async () => {
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: false },
       logChannels: { memberJoin: 'log-ch' },
     });
@@ -52,6 +58,7 @@ describe('sendLog', () => {
   it('sends log embed to configured channel', async () => {
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: true },
       logChannels: { memberJoin: 'log-ch' },
     });
@@ -64,6 +71,7 @@ describe('sendLog', () => {
   it('returns early when logChannel is not configured for event', async () => {
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: true },
       logChannels: {},
     });
@@ -74,6 +82,7 @@ describe('sendLog', () => {
   it('returns early when guild not found', async () => {
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: true },
       logChannels: { memberJoin: 'log-ch' },
     });
@@ -84,6 +93,7 @@ describe('sendLog', () => {
   it('returns early when channel not found', async () => {
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: true },
       logChannels: { memberJoin: 'log-ch' },
     });
@@ -94,6 +104,7 @@ describe('sendLog', () => {
   it('skips when context channel is ignored', async () => {
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: true },
       logChannels: { memberJoin: 'log-ch' },
       ignoredChannels: ['ch-ignored'],
@@ -105,6 +116,7 @@ describe('sendLog', () => {
   it('skips when context user is ignored', async () => {
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: true },
       logChannels: { memberJoin: 'log-ch' },
       ignoredUsers: ['u-ignored'],
@@ -119,6 +131,7 @@ describe('sendLog', () => {
     } as any;
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: true },
       logChannels: { memberJoin: 'log-ch' },
       ignoredRoles: ['r-ignored'],
@@ -133,6 +146,7 @@ describe('sendLog', () => {
     } as any;
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: true },
       logChannels: { memberJoin: 'log-ch' },
       ignoredRoles: ['r-ignored'],
@@ -144,6 +158,7 @@ describe('sendLog', () => {
   it('handles send error gracefully', async () => {
     leanReturns({
       guildId: 'g1',
+      enabled: true, // przełącznik całego modułu Logi (sprawdzany przed enabledEvents)
       enabledEvents: { memberJoin: true },
       logChannels: { memberJoin: 'log-ch' },
     });

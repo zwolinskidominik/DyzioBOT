@@ -12,6 +12,9 @@
 
 jest.mock('../../../src/utils/logHelpers', () => ({
   sendLog: jest.fn().mockResolvedValue(undefined),
+  // Handlery logów budują pole moderatora tym helperem — bez niego rzucają TypeError.
+  moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
+  truncate: jest.fn((text: string) => text),
 }));
 jest.mock('../../../src/utils/auditLogHelpers', () => ({
   getModerator: jest.fn().mockResolvedValue(null),
@@ -174,8 +177,11 @@ describe('guildMemberAdd / autoRole', () => {
 
   it('assigns roles when config exists', async () => {
     const { AutoRoleModel } = require('../../../src/models/AutoRole');
+    // Konfiguracja Auto ról ma dziś przełącznik `enabled` i osobne listy dla ludzi i botów.
     AutoRoleModel.findOne.mockResolvedValueOnce({
-      roleIds: ['bot-role', 'user-role-1', 'user-role-2'],
+      enabled: true,
+      userRoleIds: ['user-role-1', 'user-role-2'],
+      botRoleIds: ['bot-role'],
     });
 
     const guild = mockGuild();
@@ -254,6 +260,8 @@ describe('guildMemberAdd / welcomeCard', () => {
 
     const { GreetingsConfigurationModel } = require('../../../src/models/GreetingsConfiguration');
     GreetingsConfigurationModel.findOne.mockResolvedValueOnce({
+      // enabled: przełącznik całego modułu Powitania (handler sprawdza go jako pierwszy).
+      enabled: true,
       greetingsChannelId: 'ch-greet',
       welcomeEnabled: true,
       dmEnabled: false,

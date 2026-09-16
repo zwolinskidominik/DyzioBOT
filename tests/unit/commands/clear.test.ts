@@ -22,6 +22,19 @@ jest.mock('../../../src/config/constants/colors', () => ({
   COLORS: { DEFAULT: '#4C4C54', ERROR: '#E74D3C' },
 }));
 
+// Komendy moderacyjne sprawdzają dostęp ręcznie przez checkCommandAccess() (ModerationConfig
+// z bazy + extraRoleIds). W teście jednostkowym nie ma bazy, więc przepuszczamy dostęp —
+// testy scenariuszy odmowy nadpisują ten mock lokalnie.
+const mockCheckCommandAccess = jest.fn().mockResolvedValue({ allowed: true, config: {} });
+jest.mock('../../../src/services/moderationConfigService', () => ({
+  checkCommandAccess: mockCheckCommandAccess,
+}));
+
+const mockLogModerationAction = jest.fn().mockResolvedValue(undefined);
+jest.mock('../../../src/services/moderationLogService', () => ({
+  logModerationAction: mockLogModerationAction,
+}));
+
 import { mockInteraction, mockUser, mockTextChannel } from '../../helpers/discordMocks';
 import { Collection } from 'discord.js';
 

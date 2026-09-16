@@ -60,7 +60,7 @@ describe('commandToggle', () => {
       lean: jest.fn().mockResolvedValue({ guildId: 'g1', enabled: false, disabledCommands: [] }),
     });
     const result = await commandToggle(makeInteraction('g1'), makeCommand('meme', 'fun'));
-    expect(result).toBe('🔧 Moduł Narzędzia jest wyłączony na tym serwerze.');
+    expect(result).toBe('🔧 Moduł Komendy jest wyłączony na tym serwerze.');
   });
 
   it('blocks an individually disabled command', async () => {
@@ -93,7 +93,7 @@ describe('commandToggle', () => {
           lean: jest.fn().mockResolvedValue({ guildId: 'g1', enabled: false, disabledCommands: [] }),
         });
         const result = await commandToggle(makeInteraction('g1'), makeCommand(name, 'admin'));
-        expect(result).toBe('🔧 Moduł Narzędzia jest wyłączony na tym serwerze.');
+        expect(result).toBe('🔧 Moduł Komendy jest wyłączony na tym serwerze.');
         expect(mockFindOne).toHaveBeenCalledWith({ guildId: 'g1' });
       }
     );

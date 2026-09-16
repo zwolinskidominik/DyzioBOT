@@ -63,6 +63,48 @@ jest.mock('../../../src/services/warnService', () => ({
   getWarns: jest.fn(),
 }));
 
+// Komendy moderacyjne sprawdzają dostęp ręcznie przez checkCommandAccess() (ModerationConfig
+// z bazy + extraRoleIds) — w teście jednostkowym nie ma bazy, więc przepuszczamy dostęp.
+// Konfiguracja kary za ostrzeżenie jest brana z tego samego wyniku (tryb "jedna kara").
+const modCommandDefaults = { on: true, dm: false, log: false, extraRoleIds: [] };
+const mockCheckCommandAccess = jest.fn().mockResolvedValue({
+  allowed: true,
+  config: {
+    enabled: true,
+    // Komendy czytają z tego wyniku swoje ustawienia (np. config.ban.dm, config.kick.log).
+    warn: { ...modCommandDefaults },
+    warnRemove: { ...modCommandDefaults },
+    mute: { ...modCommandDefaults },
+    kick: { ...modCommandDefaults },
+    ban: { ...modCommandDefaults },
+    unban: { ...modCommandDefaults },
+    clear: { ...modCommandDefaults },
+    warnMode: 'single',
+    warnSingle: { action: 'none', durationMinutes: 0 },
+    warnSteps: [],
+    warnDm: true, // testy zakładają wysyłkę DM przy ostrzeżeniu
+    warnExpiryOn: false,
+    warnExpiryDays: 90,
+  },
+});
+jest.mock('../../../src/services/moderationConfigService', () => ({
+  checkCommandAccess: mockCheckCommandAccess,
+}));
+
+const mockLogModerationAction = jest.fn().mockResolvedValue(undefined);
+jest.mock('../../../src/services/moderationLogService', () => ({
+  logModerationAction: mockLogModerationAction,
+}));
+
+// Komendy wysyłają też wpis na kanał logów Discorda. Bez tego mocka realny sendLog odpytuje
+// LogConfiguration w Mongo i test wisi do timeoutu.
+const mockSendLog = jest.fn().mockResolvedValue(undefined);
+jest.mock('../../../src/utils/logHelpers', () => ({
+  sendLog: mockSendLog,
+  moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
+  truncate: jest.fn((text: string) => text),
+}));
+
 import { mockInteraction, mockGuildMember, mockUser, mockGuild } from '../../helpers/discordMocks';
 
 /* ── helpers for embed mocking ──────────────────────────────── */
@@ -600,9 +642,17 @@ describe('warn command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(targetUser);
     interaction.options.getString = jest.fn().mockReturnValue('Spam');
+    // Kontrakt addWarn: { count, step, nextStep, isFinal, warnEntryId } — dawne
+    // shouldBan/punishment/nextPunishment już nie istnieją.
     mockAddWarn.mockResolvedValue({
       ok: true,
-      data: { count: 1, shouldBan: false, punishment: null, nextPunishment: { label: '1h timeout' } },
+      data: {
+        count: 1,
+        step: { action: 'none', durationMinutes: 0, durationMs: 0, label: 'Brak dodatkowej kary' },
+        nextStep: { action: 'mute', durationMinutes: 60, durationMs: 3_600_000, label: '1 godzina' },
+        isFinal: false,
+        warnEntryId: 'warn-1',
+      },
     });
 
     await run({ interaction, client: interaction.client });
@@ -613,6 +663,8 @@ describe('warn command', () => {
       reason: 'Spam',
       moderatorId: interaction.user.id,
       moderatorTag: interaction.user.tag,
+      // Drabinka kar przekazywana z ModerationConfig (tryb "jedna kara" → jeden stopień).
+      steps: expect.any(Array),
     });
     expect(targetUser.send).toHaveBeenCalled();
     expect(interaction.editReply).toHaveBeenCalled();
@@ -631,7 +683,13 @@ describe('warn command', () => {
     interaction.options.getString = jest.fn().mockReturnValue('Too many warnings');
     mockAddWarn.mockResolvedValue({
       ok: true,
-      data: { count: 4, shouldBan: true, punishment: null, nextPunishment: null },
+      data: {
+        count: 4,
+        step: { action: 'ban', durationMinutes: 0, durationMs: 0, label: 'Permanentny ban' },
+        nextStep: { action: 'ban', durationMinutes: 0, durationMs: 0, label: 'Permanentny ban' },
+        isFinal: true,
+        warnEntryId: 'warn-4',
+      },
     });
 
     await run({ interaction, client: interaction.client });
@@ -654,12 +712,19 @@ describe('warn command', () => {
     interaction.options.getString = jest.fn().mockReturnValue('Spam');
     mockAddWarn.mockResolvedValue({
       ok: true,
-      data: { count: 2, shouldBan: false, punishment: { duration: 3600000, label: '1h' }, nextPunishment: null },
+      data: {
+        count: 2,
+        step: { action: 'mute', durationMinutes: 60, durationMs: 3_600_000, label: '1 godzina' },
+        nextStep: { action: 'ban', durationMinutes: 0, durationMs: 0, label: 'Permanentny ban' },
+        isFinal: false,
+        warnEntryId: 'warn-2',
+      },
     });
 
     await run({ interaction, client: interaction.client });
 
-    expect(targetMember.timeout).toHaveBeenCalledWith(3600000, 'Spam');
+    // Timeout nakłada helper applyTimeoutSafely (obsługuje brak uprawnień), nie member.timeout().
+    expect(mockApplyTimeoutSafely).toHaveBeenCalledWith(targetMember, 3_600_000, 'Spam');
     expect(interaction.editReply).toHaveBeenCalled();
   });
 
@@ -676,7 +741,13 @@ describe('warn command', () => {
     interaction.options.getString = jest.fn().mockReturnValue('Spam');
     mockAddWarn.mockResolvedValue({
       ok: true,
-      data: { count: 1, shouldBan: false, punishment: { duration: 900000, label: '15 minut' }, nextPunishment: null },
+      data: {
+        count: 1,
+        step: { action: 'mute', durationMinutes: 15, durationMs: 900_000, label: '15 minut' },
+        nextStep: { action: 'ban', durationMinutes: 0, durationMs: 0, label: 'Permanentny ban' },
+        isFinal: false,
+        warnEntryId: 'warn-1',
+      },
     });
 
     await run({ interaction, client: interaction.client });
@@ -771,7 +842,13 @@ describe('warn command', () => {
     interaction.options.getString = jest.fn().mockReturnValue('Spam');
     mockAddWarn.mockResolvedValue({
       ok: true,
-      data: { count: 1, shouldBan: false, punishment: null, nextPunishment: null },
+      data: {
+        count: 1,
+        step: { action: 'none', durationMinutes: 0, durationMs: 0, label: 'Brak dodatkowej kary' },
+        nextStep: { action: 'mute', durationMinutes: 15, durationMs: 900_000, label: '15 minut' },
+        isFinal: false,
+        warnEntryId: 'warn-1',
+      },
     });
 
     await run({ interaction, client: interaction.client });

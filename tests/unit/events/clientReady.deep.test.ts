@@ -576,7 +576,8 @@ describe('questionScheduler', () => {
     });
 
     (QuestionConfigurationModel.find as jest.Mock).mockResolvedValue([
-      { questionChannelId: 'qCh1', pingRoleId: 'role1' },
+      // guildId: pytania są dziś scope'owane per serwer i trafia do markUsed().
+      { guildId: 'g1', questionChannelId: 'qCh1', pingRoleId: 'role1' },
     ]);
     mockGetRandomQuestion.mockResolvedValue({
       ok: true,
@@ -588,7 +589,8 @@ describe('questionScheduler', () => {
     await cronCallbacks[cronCallbacks.length - 1]();
     expect(sendFn).toHaveBeenCalled();
     expect(createThreadFn).toHaveBeenCalled();
-    expect(mockMarkUsed).toHaveBeenCalledWith('q1');
+    // markUsed(guildId, questionId) — pierwszy argument doszedł wraz ze scope'owaniem pytań per serwer.
+    expect(mockMarkUsed).toHaveBeenCalledWith('g1', 'q1');
   });
 
   it('handles no available questions', async () => {
@@ -699,7 +701,7 @@ describe('sendTournamentRules', () => {
    ═══════════════════════════════════════════════════════════════════ */
 describe('vcMinuteTick', () => {
   it('adds XP for voice channel members when at least 2 eligible users', async () => {
-    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
+    mockGetXpConfig.mockResolvedValue({ enabled: true, xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
     const member1 = {
       id: 'u1',
       user: { bot: false },
@@ -729,7 +731,7 @@ describe('vcMinuteTick', () => {
   });
 
   it('skips solo user in voice channel (anti-farm)', async () => {
-    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
+    mockGetXpConfig.mockResolvedValue({ enabled: true, xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
     const member = {
       id: 'u1',
       user: { bot: false },
@@ -753,7 +755,7 @@ describe('vcMinuteTick', () => {
   });
 
   it('skips user alone with bots (only 1 eligible human)', async () => {
-    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
+    mockGetXpConfig.mockResolvedValue({ enabled: true, xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
     const human = {
       id: 'u1',
       user: { bot: false },
@@ -783,7 +785,7 @@ describe('vcMinuteTick', () => {
   });
 
   it('skips bots and muted members', async () => {
-    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
+    mockGetXpConfig.mockResolvedValue({ enabled: true, xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
     const botMember = { id: 'b1', user: { bot: true }, voice: { serverMute: false, serverDeaf: false }, roles: { cache: { has: jest.fn().mockReturnValue(false) } } };
     const mutedMember = { id: 'u2', user: { bot: false }, voice: { serverMute: true, serverDeaf: false }, roles: { cache: { has: jest.fn().mockReturnValue(false) } } };
     const deafMember = { id: 'u3', user: { bot: false }, voice: { serverMute: false, serverDeaf: true }, roles: { cache: { has: jest.fn().mockReturnValue(false) } } };
@@ -805,7 +807,7 @@ describe('vcMinuteTick', () => {
   });
 
   it('awards XP to both users including muted when 2 humans present', async () => {
-    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
+    mockGetXpConfig.mockResolvedValue({ enabled: true, xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
     const normalMember = {
       id: 'u1',
       user: { bot: false },
@@ -838,7 +840,7 @@ describe('vcMinuteTick', () => {
   });
 
   it('skips AFK channel and ignored channels', async () => {
-    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: ['vc2'], ignoredRoles: [] });
+    mockGetXpConfig.mockResolvedValue({ enabled: true, xpPerMinVc: 10, ignoredChannels: ['vc2'], ignoredRoles: [] });
     const vc1 = { id: 'afk1', isVoiceBased: () => true, members: new Map([['u1', { id: 'u1', user: { bot: false }, voice: { serverMute: false, serverDeaf: false }, roles: { cache: { has: jest.fn() } } }]]) };
     const vc2 = { id: 'vc2', isVoiceBased: () => true, members: new Map([['u2', { id: 'u2', user: { bot: false }, voice: { serverMute: false, serverDeaf: false }, roles: { cache: { has: jest.fn() } } }]]) };
     const guild = {
@@ -853,7 +855,7 @@ describe('vcMinuteTick', () => {
   });
 
   it('skips non-voice channels', async () => {
-    mockGetXpConfig.mockResolvedValue({ xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
+    mockGetXpConfig.mockResolvedValue({ enabled: true, xpPerMinVc: 10, ignoredChannels: [], ignoredRoles: [] });
     const textChannel = { id: 'tc1', isVoiceBased: () => false, members: new Map() };
     const guild = {
       id: 'g1',
@@ -922,81 +924,15 @@ describe('xpFlush', () => {
 /* ═══════════════════════════════════════════════════════════════════
    monthlyStats
    ═══════════════════════════════════════════════════════════════════ */
-describe('monthlyStats', () => {
-  it('generates and sends monthly leaderboard', async () => {
-    const sendFn = jest.fn().mockResolvedValue(undefined);
-    const guild = {
-      id: 'g1',
-      client: { user: { id: 'bot1' } },
-      channels: { cache: new Map([['msCh1', { id: 'msCh1', send: sendFn }]]) },
-    };
-    const client = makeClient([guild]);
-
-    mockGetConfigMonthly.mockResolvedValue({
-      ok: true,
-      data: { enabled: true, channelId: 'msCh1', topCount: 5 },
-    });
-    mockGetMonthString.mockReturnValue('2024-01');
-    mockGenerateLeaderboard.mockResolvedValue({
-      ok: true,
-      data: {
-        topMessages: [{ userId: 'u1', messageCount: 100, rank: 1 }],
-        topVoice: [{ userId: 'u1', voiceMinutes: 300, rank: 1 }],
-        totalMessages: 500,
-      },
-    });
-    mockGetTrendEmoji.mockReturnValue('📈');
-    mockIsNewUser.mockReturnValue(false);
-    mockFormatVoiceTime.mockReturnValue('5h');
-    mockGetUserRank.mockResolvedValue(1);
-
+describe('monthlyStats (legacy, wyłączony)', () => {
+  // monthlyStats.ts ma ENABLED = false — zastąpił go monthlyStatsV3.ts (grafika, wspólny ranking).
+  // Plik zostaje w repo sprawny na wypadek powrotu do starego formatu, ale NIE MOŻE rejestrować
+  // crona, bo oznaczałoby to podwójną wysyłkę co miesiąc. Poprzednie testy wołały callback crona,
+  // który od tej zmiany nigdy nie powstaje.
+  it('does not register a cron schedule while disabled', () => {
+    const client = makeClient([{ id: 'g1', client: { user: { id: 'bot1' } }, channels: { cache: new Map() } }]);
+    const before = cronCallbacks.length;
     monthlyStats(client as any);
-    await cronCallbacks[cronCallbacks.length - 1]();
-    expect(sendFn).toHaveBeenCalled();
-  });
-
-  it('skips when config disabled', async () => {
-    const guild = {
-      id: 'g1',
-      client: { user: { id: 'bot1' } },
-      channels: { cache: new Map() },
-    };
-    const client = makeClient([guild]);
-    mockGetConfigMonthly.mockResolvedValue({ ok: true, data: { enabled: false } });
-    monthlyStats(client as any);
-    await cronCallbacks[cronCallbacks.length - 1]();
-    expect(mockGenerateLeaderboard).not.toHaveBeenCalled();
-  });
-
-  it('skips when no channel', async () => {
-    const guild = {
-      id: 'g1',
-      client: { user: { id: 'bot1' } },
-      channels: { cache: new Map() },
-    };
-    const client = makeClient([guild]);
-    mockGetConfigMonthly.mockResolvedValue({ ok: true, data: { enabled: true, channelId: 'missing', topCount: 5 } });
-    monthlyStats(client as any);
-    await cronCallbacks[cronCallbacks.length - 1]();
-    expect(mockGenerateLeaderboard).not.toHaveBeenCalled();
-  });
-
-  it('skips when leaderboard empty', async () => {
-    const sendFn = jest.fn();
-    const guild = {
-      id: 'g1',
-      client: { user: { id: 'bot1' } },
-      channels: { cache: new Map([['msCh1', { id: 'msCh1', send: sendFn }]]) },
-    };
-    const client = makeClient([guild]);
-    mockGetConfigMonthly.mockResolvedValue({ ok: true, data: { enabled: true, channelId: 'msCh1', topCount: 5 } });
-    mockGetMonthString.mockReturnValue('2024-01');
-    mockGenerateLeaderboard.mockResolvedValue({
-      ok: true,
-      data: { topMessages: [], topVoice: [], totalMessages: 0 },
-    });
-    monthlyStats(client as any);
-    await cronCallbacks[cronCallbacks.length - 1]();
-    expect(sendFn).not.toHaveBeenCalled();
+    expect(cronCallbacks.length).toBe(before);
   });
 });

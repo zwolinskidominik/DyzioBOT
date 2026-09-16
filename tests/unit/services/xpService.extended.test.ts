@@ -160,7 +160,7 @@ describe('getCurrentXp', () => {
 
 describe('trackMessage', () => {
   it('tracks message and returns true', async () => {
-    await LevelConfigModel.create({ guildId: GID, xpPerMsg: 10 });
+    await LevelConfigModel.create({ guildId: GID, enabled: true, xpPerMsg: 10 });
     const member = makeMember();
     const result = await trackMessage(GID, 'u1', 'ch1', member);
     expect(result).toBe(true);
@@ -169,6 +169,7 @@ describe('trackMessage', () => {
   it('returns false if channel is ignored', async () => {
     await LevelConfigModel.create({
       guildId: GID,
+      enabled: true,
       ignoredChannels: ['ch-ignored'],
     });
     const result = await trackMessage(GID, 'u1', 'ch-ignored', makeMember());
@@ -178,6 +179,7 @@ describe('trackMessage', () => {
   it('returns false if user has ignored role', async () => {
     await LevelConfigModel.create({
       guildId: GID,
+      enabled: true,
       ignoredRoles: ['r-ignored'],
     });
     const member = makeMember(['r-ignored']);
@@ -186,7 +188,7 @@ describe('trackMessage', () => {
   });
 
   it('returns false when on cooldown', async () => {
-    await LevelConfigModel.create({ guildId: GID, cooldownSec: 60 });
+    await LevelConfigModel.create({ guildId: GID, enabled: true, cooldownSec: 60 });
     await LevelModel.create({
       guildId: GID,
       userId: 'u1',
@@ -201,6 +203,7 @@ describe('trackMessage', () => {
   it('applies multipliers from config', async () => {
     await LevelConfigModel.create({
       guildId: GID,
+      enabled: true,
       xpPerMsg: 10,
       channelMultipliers: [{ channelId: 'ch-bonus', multiplier: 2 }],
     });
@@ -212,8 +215,11 @@ describe('trackMessage', () => {
     expect(entries.length).toBeGreaterThan(0);
   });
 
-  it('uses defaults when no config exists', async () => {
+  // Moduł Poziomy jest domyślnie wyłączony (LevelConfig.enabled = false), a przy zupełnym braku
+  // konfiguracji trackMessage nie ma czego włączyć — XP nie jest naliczane, dopóki ktoś nie
+  // włączy modułu w panelu.
+  it('returns false when no config exists (module stays off until enabled)', async () => {
     const result = await trackMessage(GID, 'u1', 'ch1', makeMember());
-    expect(result).toBe(true);
+    expect(result).toBe(false);
   });
 });

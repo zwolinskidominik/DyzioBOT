@@ -31,6 +31,8 @@ jest.mock('../../../src/models/Level', () => ({
 }));
 jest.mock('../../../src/services/xpService', () => ({
   getCurrentXp: jest.fn().mockResolvedValue({ level: 5, xp: 500 }),
+  // Konfiguracja karty rangi (nowszy eksport serwisu); null = brak własnych ustawień.
+  getConfig: jest.fn().mockResolvedValue(null),
   getUserRank: jest.fn().mockResolvedValue({ ok: true, data: { rank: 1, totalUsers: 10 } }),
   getLeaderboard: jest.fn().mockResolvedValue({
     ok: true,

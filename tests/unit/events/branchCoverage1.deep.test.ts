@@ -21,7 +21,13 @@
 
 /* ── mocks ──────────────────────────────────────────────────── */
 
-jest.mock('../../../src/utils/logHelpers', () => ({ sendLog: jest.fn() }));
+// moderatorField/truncate: handlery logów budują nimi pola embeda — bez nich fabryka zwraca
+// undefined, wywołanie rzuca TypeError i sendLog nigdy nie dochodzi do skutku.
+jest.mock('../../../src/utils/logHelpers', () => ({
+  sendLog: jest.fn(),
+  moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
+  truncate: jest.fn((text: string) => text),
+}));
 jest.mock('../../../src/utils/auditLogHelpers', () => ({
   getModerator: jest.fn(),
   getAuditLogEntry: jest.fn(),
