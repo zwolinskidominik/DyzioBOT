@@ -4,6 +4,8 @@ jest.mock('../../../src/cache/inviteCache', () => ({
   detectUsedInvite: jest.fn(),
   cacheAllGuildInvites: jest.fn(),
   cacheGuildInvites: jest.fn(),
+  // Zwraca null = serwer bez niestandardowego linku (tak wyglądają mocki gildii w tym pliku).
+  fetchGuildVanity: jest.fn().mockResolvedValue(null),
 }));
 
 jest.mock('../../../src/services/inviteTrackerService', () => {
@@ -211,6 +213,45 @@ describe('guildMemberAdd/inviteTracker', () => {
     expect(logChannel!.send).toHaveBeenCalledWith('<@member-1> zaproszony przez Inviter, ma 334 zaproszeń!');
   });
 
+  it('counts invites from Discord (whole server history), not only joins recorded by the bot', async () => {
+    mockGetConfig.mockResolvedValue({ ok: true, data: makeConfig() });
+    mockDetectUsedInvite.mockResolvedValue({ code: 'abc', inviterId: 'inv-1' });
+    mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', fake: false } });
+    // Baza Deezy zna tylko 8 dołączeń (od wdrożenia bota)...
+    mockGetInviterStats.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', total: 8, active: 8, left: 0, fake: 0 } });
+
+    const member = makeMember();
+    // ...ale Discord pamięta 386 użyć zaproszeń tej osoby (200 + 186); cudze zaproszenie się nie liczy.
+    member.guild.invites.fetch = jest.fn().mockResolvedValue(new Map<string, any>([
+      ['abc', { code: 'abc', uses: 200, inviter: { id: 'inv-1' } }],
+      ['def', { code: 'def', uses: 186, inviter: { id: 'inv-1' } }],
+      ['ghi', { code: 'ghi', uses: 99, inviter: { id: 'someone-else' } }],
+    ]));
+
+    await inviteTrackerJoin(member as any, {} as any);
+
+    const logChannel = member.guild.channels.cache.get('log-ch');
+    expect(logChannel!.send).toHaveBeenCalledWith('**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **386 zaproszeń**!');
+    expect(mockGetInviterStats).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the database counter when the inviter has no invites left on the server', async () => {
+    mockGetConfig.mockResolvedValue({ ok: true, data: makeConfig() });
+    mockDetectUsedInvite.mockResolvedValue({ code: 'gone', inviterId: 'inv-1' });
+    mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', fake: false } });
+    mockGetInviterStats.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', total: 5, active: 3, left: 1, fake: 1 } });
+
+    const member = makeMember();
+    member.guild.invites.fetch = jest.fn().mockResolvedValue(new Map<string, any>([
+      ['ghi', { code: 'ghi', uses: 99, inviter: { id: 'someone-else' } }],
+    ]));
+
+    await inviteTrackerJoin(member as any, {} as any);
+
+    const logChannel = member.guild.channels.cache.get('log-ch');
+    expect(logChannel!.send).toHaveBeenCalledWith('**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **3 zaproszeń**!');
+  });
+
   it('does nothing when guild is missing', async () => {
     const member = makeMember({ guild: undefined });
     await inviteTrackerJoin(member as any, {} as any);
@@ -345,7 +386,9 @@ describe('guildMemberRemove/inviteTracker', () => {
 
   it('sends custom leave message', async () => {
     mockGetConfig.mockResolvedValue({ ok: true, data: makeConfig({ leave: { messages: { normal: '{memberName} opuścił serwer!', unknown: '', vanity: '', botRemove: '' } } }) });
-    mockRecordLeave.mockResolvedValue({ ok: true, data: { inviterId: null, inviteCode: null } });
+    // Własny szablon ustawiony jest dla sytuacji "normal", więc zapraszający MUSI być znany —
+    // przy inviterId: null handler poprawnie wybiera "unknown" i test nie mógł przejść.
+    mockRecordLeave.mockResolvedValue({ ok: true, data: { inviterId: 'inviter-1', inviteCode: 'abc' } });
 
     const member = makeMember();
     await inviteTrackerLeave(member as any, {} as any);

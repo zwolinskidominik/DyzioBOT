@@ -2,6 +2,7 @@ import { Collection, Invite } from 'discord.js';
 import {
   cacheGuildInvites,
   getCachedInvites,
+  getCachedVanityUses,
   detectUsedInvite,
   clearGuildCache,
   _resetCache,
@@ -95,6 +96,57 @@ describe('inviteCache', () => {
       // Same state — no change
       const result = await detectUsedInvite('g1', invites);
       expect(result).toBeNull();
+    });
+
+    it('detects a join through the vanity link (uses counter went up)', async () => {
+      const invites = createMockInvites([{ code: 'abc', uses: 5 }]);
+      await cacheGuildInvites('g1', invites, 40);
+
+      // Zwykłe zaproszenia bez zmian, ale licznik vanity 40 → 41
+      const result = await detectUsedInvite('g1', invites, { code: 'gamezone', uses: 41 });
+
+      expect(result).not.toBeNull();
+      expect(result?.code).toBe('gamezone');
+      expect(result?.inviterId).toBeNull();
+      expect(getCachedVanityUses('g1')).toBe(41);
+    });
+
+    it('prefers a regular invite over vanity when both could match', async () => {
+      const oldInvites = createMockInvites([{ code: 'abc', uses: 5, inviterId: 'user-1' }]);
+      await cacheGuildInvites('g1', oldInvites, 40);
+
+      const newInvites = createMockInvites([{ code: 'abc', uses: 6, inviterId: 'user-1' }]);
+      const result = await detectUsedInvite('g1', newInvites, { code: 'gamezone', uses: 41 });
+
+      expect(result?.code).toBe('abc');
+      expect(result?.inviterId).toBe('user-1');
+    });
+
+    it('ignores vanity when its uses did not change', async () => {
+      const invites = createMockInvites([{ code: 'abc', uses: 5 }]);
+      await cacheGuildInvites('g1', invites, 40);
+
+      const result = await detectUsedInvite('g1', invites, { code: 'gamezone', uses: 40 });
+      expect(result).toBeNull();
+    });
+
+    it('does not report vanity on the first join after restart (no baseline yet)', async () => {
+      const invites = createMockInvites([{ code: 'abc', uses: 5 }]);
+      await cacheGuildInvites('g1', invites); // brak licznika vanity w cache
+
+      const result = await detectUsedInvite('g1', invites, { code: 'gamezone', uses: 41 });
+      expect(result).toBeNull();
+      // ...ale stan wyjściowy zostaje zapamiętany, więc kolejne dołączenie już się wykryje
+      expect(getCachedVanityUses('g1')).toBe(41);
+    });
+
+    it('keeps the vanity counter untouched when caching without it (inviteCreate/Delete)', async () => {
+      const invites = createMockInvites([{ code: 'abc', uses: 5 }]);
+      await cacheGuildInvites('g1', invites, 40);
+
+      await cacheGuildInvites('g1', createMockInvites([{ code: 'abc', uses: 5 }, { code: 'new', uses: 0 }]));
+
+      expect(getCachedVanityUses('g1')).toBe(40);
     });
 
     it('returns null and seeds cache when no prior cache exists', async () => {
