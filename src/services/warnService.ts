@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { WarnModel, WarnDocument } from '../models/Warn';
 import { ServiceResult, ok, fail } from '../types/serviceResult';
 import { formatDurationPl } from '../utils/moderationHelpers';
@@ -169,6 +170,13 @@ export async function removeWarnById(params: {
 }): Promise<ServiceResult<RemoveWarnData>> {
   const { guildId, userId, warnEntryId } = params;
 
+  // Bez tej walidacji pusty lub niepoprawny identyfikator (np. "undefined" z wpisu sprzed
+  // naprawy `_id` w modelu) dopasowywałby się do KAŻDEGO ostrzeżenia i filtr poniżej wyczyściłby
+  // całą kartotekę użytkownika zamiast usunąć jeden wpis.
+  if (!Types.ObjectId.isValid(warnEntryId)) {
+    return fail('INVALID_INDEX', 'Nie znaleziono tego ostrzeżenia.');
+  }
+
   const record = (await WarnModel.findOne({ userId, guildId }).exec()) as WarnDocument | null;
   if (!record) {
     return fail('NO_WARNINGS', 'Użytkownik nie posiada żadnych ostrzeżeń.');
@@ -176,8 +184,18 @@ export async function removeWarnById(params: {
 
   const before = record.warnings.length;
   record.warnings = record.warnings.filter((w) => String(w._id) !== warnEntryId);
-  if (record.warnings.length === before) {
+  const removed = before - record.warnings.length;
+
+  if (removed === 0) {
     return fail('INVALID_INDEX', 'Nie znaleziono tego ostrzeżenia.');
+  }
+  // Pas bezpieczeństwa: jedno ID musi trafiać w dokładnie jeden wpis. Gdyby kiedykolwiek
+  // trafiło w kilka, lepiej nie zapisać nic i zgłosić błąd niż po cichu skasować historię.
+  if (removed > 1) {
+    logger.error(
+      `removeWarnById: ID ${warnEntryId} dopasowało ${removed} wpisów (guild=${guildId}, user=${userId}) — przerwano bez zapisu.`
+    );
+    return fail('INTERNAL_ERROR', 'Nie udało się usunąć ostrzeżenia.');
   }
 
   await record.save();

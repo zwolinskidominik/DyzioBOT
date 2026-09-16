@@ -2,10 +2,13 @@ import { getModelForClass, index, prop, DocumentType } from '@typegoose/typegoos
 import { Types } from 'mongoose';
 
 export class WarnEntry {
-  /** Mongoose nadaje to automatycznie każdemu elementowi tablicy — deklarujemy jawnie,
-   * żeby dashboard i /warn-remove z dashboardu mogły odwołać się po stabilnym ID zamiast
-   * po pozycji w tablicy (pozycja przesuwa się przy wygasaniu/usuwaniu innych wpisów). */
-  @prop({ type: () => Types.ObjectId })
+  /** Deklarujemy jawnie, żeby dashboard i /warn-remove mogły odwołać się po stabilnym ID
+   * zamiast po pozycji w tablicy (pozycja przesuwa się przy wygasaniu/usuwaniu innych wpisów).
+   *
+   * `default` jest KONIECZNY: jawna deklaracja `_id` wyłącza automatyczne nadawanie go przez
+   * Mongoose, więc bez tego każdy wpis miał `_id: undefined`, a `String(w._id)` dawało
+   * dla wszystkich ten sam string "undefined" — czyli dokładne przeciwieństwo stabilnego ID. */
+  @prop({ type: () => Types.ObjectId, default: () => new Types.ObjectId() })
   public _id?: Types.ObjectId;
 
   @prop({ required: true, type: () => String })
