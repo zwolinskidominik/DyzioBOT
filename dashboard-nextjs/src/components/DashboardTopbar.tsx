@@ -65,7 +65,7 @@ export function DashboardTopbar({
 
   return (
     <nav className={`z-40 w-full shrink-0 ${className ?? "bg-dark-900"}`}>
-      <div className="flex h-20 w-full items-center justify-between gap-2 px-3 sm:px-6">
+      <div className="flex h-16 w-full items-center justify-between gap-2 px-3 sm:px-6 lg:h-20">
         <div className="flex min-w-0 items-center gap-2">
           {showSidebarToggle && (
             <button

@@ -469,7 +469,10 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <div style={{ display: "flex", gap: 10 }}>
+                {/* Poniżej lg kafelki idą jeden pod drugim — obok siebie zostaje na tekst kilka px
+                    (miniatura + odstępy + padding + przycisk zjadają całą szerokość). Od lg układ
+                    bez zmian: dwie kolumny obok siebie. */}
+                <div className="flex flex-col gap-2.5 lg:flex-row">
                   <div
                     style={{
                       flex: 1,

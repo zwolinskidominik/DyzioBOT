@@ -137,11 +137,15 @@ export function GreetingMessagePreview({
     );
   }
 
+  // grid-cols-[minmax(0,1fr)] poniżej: bez tego niejawna kolumna grida ma rozmiar `auto`
+  // (= 427px treści) i może przekroczyć przycisk — procentowe max-width dzieci liczyły się wtedy
+  // względem niej, a nie względem realnej szerokości, więc treść była ucinana przez overflow-hidden.
+  // Na desktopie kolumna i tak wychodzi 427px, więc render bez zmian.
   return (
     <button
       type="button"
       onClick={onClick}
-      className="grid w-[432px] max-w-full cursor-pointer overflow-hidden rounded-[4px] border-l-[4px] bg-dark-900 text-left text-discord-text shadow-none whitespace-pre-wrap break-words text-[16px] leading-[22px]"
+      className="grid w-[432px] max-w-full grid-cols-[minmax(0,1fr)] cursor-pointer overflow-hidden rounded-[4px] border-l-[4px] bg-dark-900 text-left text-discord-text shadow-none whitespace-pre-wrap break-words text-[16px] leading-[22px]"
       style={{ borderLeftColor: embedColor, fontFamily: DISCORD_FONT_FAMILY }}
     >
       <div className="box-content w-[399px] max-w-[calc(100%_-_28px)] pt-2 pr-4 pb-4 pl-3">
@@ -151,7 +155,7 @@ export function GreetingMessagePreview({
             thumbnailUrl && "grid-cols-[minmax(0,303px)_96px]"
           )}
         >
-          <div className={cn("min-w-0", thumbnailUrl ? "w-[303px]" : "w-[399px]")}>
+          <div className={cn("min-w-0 max-w-full", thumbnailUrl ? "w-[303px]" : "w-[399px]")}>
             {hasHeader ? (
               <div className="flex items-center gap-2 text-[12px] leading-4 text-discord-muted">
                 {headerIconUrl ? <img src={headerIconUrl} alt="Ikona headera" className="h-8 w-8 rounded-[3px] object-cover" /> : null}
@@ -174,7 +178,7 @@ export function GreetingMessagePreview({
         </div>
 
         {imageUrl ? (
-          <img src={imageUrl} alt="Obraz embeda" className="mt-4 h-[213px] w-[399px] max-w-[400px] rounded-[3px] object-cover" />
+          <img src={imageUrl} alt="Obraz embeda" className="mt-4 h-[213px] w-[399px] max-w-full rounded-[3px] object-cover" />
         ) : null}
 
         {hasFooter ? (

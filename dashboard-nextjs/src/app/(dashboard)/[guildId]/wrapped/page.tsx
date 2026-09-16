@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
 import { Settings, ChevronDown, Info, Loader2 } from "lucide-react";
@@ -166,6 +166,33 @@ export default function WrappedPage() {
     colorTheme: DEFAULT_WRAPPED_THEME,
   });
 
+  // Karta podglądu grafiki (PREVIEW_W×PREVIEW_H) na mobile/tablecie (<1024px) skaluje się dodatkowo
+  // w dół, żeby zmieścić się w dostępnej szerokości bez poziomego overflow, z zachowaniem proporcji
+  // (ten sam mechanizm transform:scale co już jest użyty do BASE→PREVIEW). Na desktopie (>=1024px,
+  // LOCKED) extraScale=1 — wymiary i transform identyczne jak dotychczas.
+  // Uwaga: karta z podglądem renderuje się dopiero PO załadowaniu danych (poza wczesnym returnem
+  // `if (loading)`), więc zwykły useRef + useEffect(() => {...}, []) nigdy by jej nie złapał —
+  // stąd callback ref + stan węzła, które reagują na realne (za)montowanie elementu.
+  const [previewCardEl, setPreviewCardEl] = useState<HTMLDivElement | null>(null);
+  const previewCardRef = useCallback((el: HTMLDivElement | null) => setPreviewCardEl(el), []);
+  const [previewCardW, setPreviewCardW] = useState(PREVIEW_W + 32);
+  const [isDesktop, setIsDesktop] = useState(true);
+  useEffect(() => {
+    const updateDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+    updateDesktop();
+    window.addEventListener("resize", updateDesktop);
+    return () => window.removeEventListener("resize", updateDesktop);
+  }, []);
+  useEffect(() => {
+    if (!previewCardEl) return;
+    const update = () => setPreviewCardW(previewCardEl.clientWidth || PREVIEW_W + 32);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(previewCardEl);
+    return () => ro.disconnect();
+  }, [previewCardEl]);
+  const extraScale = isDesktop ? 1 : Math.max(0.5, Math.min(1, (previewCardW - 32) / PREVIEW_W));
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -313,7 +340,7 @@ export default function WrappedPage() {
             </div>
           </div>
           <Skeleton className="h-24 w-full rounded-md bg-dark-800" />
-          <div style={{ display: "grid", gridTemplateColumns: "500px minmax(0,1fr)", gap: 16 }}>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[500px_minmax(0,1fr)]">
             <Skeleton className="h-[500px] w-full rounded-md bg-dark-800" />
             <Skeleton className="h-[500px] w-full rounded-md bg-dark-800" />
           </div>
@@ -326,7 +353,7 @@ export default function WrappedPage() {
     <div className="min-h-full pb-16">
       <div className="flex w-full flex-col gap-4">
         <SlideIn direction="up" delay={100}>
-          <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24 }}>
+          <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
             <div style={{ minWidth: 0 }}>
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#fff" }}>Server Wrapped</h1>
               <p style={{ margin: "8px 0 0", maxWidth: 640, fontSize: 14, lineHeight: 1.6, color: "#969db0" }}>
@@ -456,9 +483,9 @@ export default function WrappedPage() {
         </SlideIn>
 
         <SlideIn direction="up" delay={180}>
-          <div style={{ display: "grid", gridTemplateColumns: "500px minmax(0,1fr)", gap: 16, alignItems: "start" }}>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[500px_minmax(0,1fr)] lg:items-start">
             {/* Lewa kolumna: podgląd + motyw */}
-            <div style={{ borderRadius: 10, background: "#17181E", padding: 16, boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
+            <div ref={previewCardRef} style={{ borderRadius: 10, background: "#17181E", padding: 16, boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
               <div
                 style={{
                   display: "flex",
@@ -478,8 +505,8 @@ export default function WrappedPage() {
 
               <div
                 style={{
-                  width: PREVIEW_W,
-                  height: PREVIEW_H,
+                  width: PREVIEW_W * extraScale,
+                  height: PREVIEW_H * extraScale,
                   margin: "0 auto",
                   boxSizing: "border-box",
                   borderRadius: 8,
@@ -495,7 +522,7 @@ export default function WrappedPage() {
                     height: PREVIEW_BASE_H,
                     boxSizing: "border-box",
                     padding: "19px 20px 15px",
-                    transform: `scale(${PREVIEW_SCALE})`,
+                    transform: `scale(${PREVIEW_SCALE * extraScale})`,
                     transformOrigin: "top left",
                     position: "relative",
                   }}

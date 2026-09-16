@@ -164,16 +164,18 @@ function SettingRow({ title, description, icon, isOpen = false, onToggle, childr
 
   return (
     <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
-      <div className={cn("flex min-h-[68px] items-center gap-4 border border-transparent px-5 py-3 transition-colors", isOpen && "border-[#2f3341] bg-dark-800")}>
+      {/* Poniżej lg: ciaśniejsze odstępy i zawijanie tekstu — strzałka rozwijania zostawiała na
+          telefonie za mało miejsca, więc tytuł i opis były ucinane. Od lg bez zmian. */}
+      <div className={cn("flex min-h-[68px] items-center gap-2.5 border border-transparent px-5 py-3 transition-colors lg:gap-4", isOpen && "border-[#2f3341] bg-dark-800")}>
         <button
           type="button"
           onClick={isExpandable ? onToggle : undefined}
-          className={cn("flex min-w-0 flex-1 items-center gap-3 text-left", isExpandable ? "cursor-pointer" : "cursor-default")}
+          className={cn("flex min-w-0 flex-1 items-center gap-2.5 text-left lg:gap-3", isExpandable ? "cursor-pointer" : "cursor-default")}
         >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-dark-900 text-[#aab2c8]">{icon}</span>
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-white/90">{title}</span>
-            {description ? <span className="mt-1 block truncate text-xs text-[#8d94a8]">{description}</span> : null}
+            <span className="block break-words text-sm font-semibold text-white/90 lg:truncate">{title}</span>
+            {description ? <span className="mt-1 block break-words text-xs text-[#8d94a8] lg:truncate">{description}</span> : null}
           </span>
         </button>
 
@@ -1125,7 +1127,7 @@ export default function QOTDPage() {
                           ) : (
                             <div className="flex items-center gap-3">
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm text-white/90">{question.content}</p>
+                                <p className="break-words text-sm text-white/90 lg:truncate">{question.content}</p>
                               </div>
                               <div className="flex shrink-0 items-center gap-1.5">
                                 {question.reactions.length > 0 ? <EmojiList emojis={question.reactions} size={16} /> : null}
@@ -1205,7 +1207,9 @@ export default function QOTDPage() {
                                   }}
                                 />
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm text-white/90">
+                                  {/* Poniżej lg treść pytania się zawija — checkbox, emoji i trzy
+                                      przyciski zostawiały na telefonie ok. 90px. Od lg bez zmian. */}
+                                  <p className="break-words text-sm text-white/90 lg:truncate">
                                     {question.content}
                                     {external ? (
                                       <span className="ml-2 rounded border border-red-500/40 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-medium text-red-400">

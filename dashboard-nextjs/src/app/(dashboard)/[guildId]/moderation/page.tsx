@@ -433,11 +433,17 @@ function LadderEditor({ steps, onChange }: { steps: WarnStep[]; onChange: (steps
         const meta = WARN_ACTIONS.find((a) => a.id === step.action) ?? WARN_ACTIONS[0];
         const last = i === steps.length - 1;
         return (
-          <div key={i} className="flex items-center gap-[11px] rounded-lg py-2.5 pl-3 pr-2.5" style={{ background: "#1d202b", borderLeft: `3px solid ${meta.color}` }}>
-            <span className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-md text-[11px] font-extrabold" style={{ background: rgba(meta.color, 0.16), color: meta.color }}>
-              {i + 1}
-            </span>
-            <span className="min-w-0 flex-1 text-xs text-[#8d94a8]">{last ? `${i + 1}. i kolejne` : `${i + 1}. ostrzeżenie`}</span>
+          // Poniżej lg wiersz łamie się na dwa: [numer + opis] i [lista wyboru + usuń]. Wcześniej
+          // select miał sztywne 160px i shrink-0, więc na opis zostawało ok. 30px. lg:contents
+          // sprawia, że od lg opakowania znikają z układu i rząd wygląda dokładnie jak dotąd.
+          <div key={i} className="flex flex-col gap-2 rounded-lg py-2.5 pl-3 pr-2.5 lg:flex-row lg:items-center lg:gap-[11px]" style={{ background: "#1d202b", borderLeft: `3px solid ${meta.color}` }}>
+            <div className="flex min-w-0 items-center gap-[11px] lg:contents">
+              <span className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-md text-[11px] font-extrabold" style={{ background: rgba(meta.color, 0.16), color: meta.color }}>
+                {i + 1}
+              </span>
+              <span className="min-w-0 flex-1 text-xs text-[#8d94a8]">{last ? `${i + 1}. i kolejne` : `${i + 1}. ostrzeżenie`}</span>
+            </div>
+            <div className="flex items-center gap-2 lg:contents">
             <Select
               value={step.action === "mute" ? `mute-${step.durationMinutes}` : step.action}
               onValueChange={(v) => {
@@ -445,7 +451,7 @@ function LadderEditor({ steps, onChange }: { steps: WarnStep[]; onChange: (steps
                 else setStep(i, { action: v as WarnAction, durationMinutes: 0 });
               }}
             >
-              <SelectTrigger className="h-8 w-[160px] shrink-0 border text-xs" style={{ borderColor: "#2f3341", background: "#17181E" }}>
+              <SelectTrigger className="h-8 w-full shrink-0 border text-xs lg:w-[160px]" style={{ borderColor: "#2f3341", background: "#17181E" }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -462,6 +468,7 @@ function LadderEditor({ steps, onChange }: { steps: WarnStep[]; onChange: (steps
                 ✕
               </button>
             ) : null}
+            </div>
           </div>
         );
       })}
@@ -497,7 +504,7 @@ function CommandsTab({
   // dublującej to samo ustawienie.
   const warnLadder = (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
         <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">Kara przy ostrzeżeniu</span>
         <span className="flex-1" />
         <span className="flex gap-[3px] rounded-[7px] p-[3px]" style={{ background: "#1d202b" }}>
@@ -724,7 +731,7 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
             const nearLimit = ladder && g.totalForUser >= stepsTotal - 1;
             return (
               <div key={g.userId} className="rounded-[8px] p-3.5" style={{ background: "#17181E" }}>
-                <div className="flex items-center gap-[11px]">
+                <div className="flex flex-wrap items-center gap-x-[11px] gap-y-1.5">
                   <img src={getAvatarUrl(g.userId, g.avatar)} alt="" className="h-7 w-7 shrink-0 rounded-full" />
                   <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white">{g.username ?? g.userId}</span>
                   <span className="shrink-0 text-xs font-bold" style={{ color: nearLimit ? "#fca5a5" : "#b9c0d0" }}>
@@ -751,10 +758,10 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
                   {g.entries.map((en) => {
                     const expiry = warningExpiry(config, en.date);
                     return (
-                      <div key={en.warnEntryId} className="flex items-center gap-2.5 text-[11px] text-[#8d94a8]">
+                      <div key={en.warnEntryId} className="flex flex-wrap items-center gap-2.5 text-[11px] text-[#8d94a8]">
                         <span className="shrink-0 truncate text-[#6b7280]">{formatDate(en.date)}</span>
                         <span className="min-w-0 flex-1 truncate">{en.reason}</span>
-                        <span className="shrink-0 text-[#6b7280]">{en.moderatorTag ?? en.moderatorId}</span>
+                        <span className="shrink-0 truncate text-[#6b7280] max-sm:max-w-[45%]">{en.moderatorTag ?? en.moderatorId}</span>
                         {expiry ? (
                           <span className="shrink-0 rounded px-[7px] py-0.5 text-[10px]" style={{ background: "#1d202b", color: expiry.soon ? "#fcd34d" : "#5f6b85" }}>
                             {expiry.text}
@@ -918,46 +925,94 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
         ) : (
           items.map((l) => {
             const kindMeta = LOG_KINDS.find((k) => k.id === l.kind)!;
-            return (
-              <div
-                key={l._id}
-                className="grid grid-cols-1 items-center gap-1.5 border-b px-3.5 py-2.5 sm:grid-cols-none sm:gap-2.5"
-                style={{ gridTemplateColumns: GRID_COLS, borderLeft: `3px solid ${kindMeta.color}`, borderBottomColor: "#23252f", opacity: l.undone ? 0.5 : 1 }}
-              >
-                <span className="w-fit justify-self-start rounded-full px-2 py-[3px] text-[10px] font-bold" style={{ background: rgba(kindMeta.color, 0.15), color: kindMeta.color }}>
-                  {kindMeta.label}
-                </span>
-                <span className="flex min-w-0 items-center gap-2">
-                  {l.kind !== "clear" ? (
-                    <img src={getAvatarUrl(l.targetId, l.targetAvatar)} alt="" className="h-[22px] w-[22px] shrink-0 rounded-full" />
-                  ) : null}
-                  <span className="min-w-0 truncate text-xs font-semibold text-white">
-                    {l.kind === "clear" ? `#${l.targetTag.replace(/^#/, "")}` : (l.targetUsername ?? l.targetTag)}
-                  </span>
-                  {l.undone ? <span className="shrink-0 text-[10px] text-[#6b7280]">cofn.</span> : null}
-                </span>
-                <span className="min-w-0 truncate text-xs" style={{ color: l.moderatorTag.startsWith("Anti-Spam") ? "#a5b4fc" : "#b9c0d0" }}>
-                  {l.moderatorTag}
-                </span>
-                <span className="min-w-0 truncate text-xs text-[#8d94a8]">
-                  {l.reason || "—"}{l.extra ? ` · ${l.extra}` : ""}
-                </span>
-                <span className="text-[11px] text-[#6b7280]">{formatDate(l.createdAt)}</span>
-                {canUndo(l) ? (
-                  <button
-                    type="button"
-                    onClick={() => handleUndo(l)}
-                    title={confirmId === l._id ? "Na pewno?" : "Cofnij"}
-                    className="flex h-[26px] w-[26px] shrink-0 items-center justify-center justify-self-end rounded-[5px] transition-colors"
-                    style={
-                      confirmId === l._id
-                        ? { background: "#3b82f6", color: "#fff" }
+            const undoBtn = (mobile: boolean) =>
+              canUndo(l) ? (
+                <button
+                  type="button"
+                  onClick={() => handleUndo(l)}
+                  title={confirmId === l._id ? "Na pewno?" : "Cofnij"}
+                  className={
+                    mobile
+                      ? "relative flex h-9 shrink-0 items-center justify-center gap-1.5 self-start rounded-[6px] px-3 text-xs font-semibold transition-colors"
+                      : "flex h-[26px] w-[26px] shrink-0 items-center justify-center justify-self-end rounded-[5px] transition-colors"
+                  }
+                  style={
+                    confirmId === l._id
+                      ? { background: "#3b82f6", color: "#fff" }
+                      : mobile
+                        ? { background: "#1d202b", color: "#c4cad8" }
                         : { background: "transparent", color: "#6b7280" }
-                    }
-                  >
-                    <Undo2 className="h-3.5 w-3.5" />
-                  </button>
-                ) : null}
+                  }
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                  {mobile ? <span>{confirmId === l._id ? "Na pewno?" : "Cofnij"}</span> : null}
+                </button>
+              ) : null;
+
+            return (
+              <div key={l._id}>
+                {/* ≥640px (tablet/desktop) — istniejący układ siatki, bez zmian */}
+                <div
+                  className="hidden items-center gap-2.5 border-b px-3.5 py-2.5 sm:grid"
+                  style={{ gridTemplateColumns: GRID_COLS, borderLeft: `3px solid ${kindMeta.color}`, borderBottomColor: "#23252f", opacity: l.undone ? 0.5 : 1 }}
+                >
+                  <span className="w-fit justify-self-start rounded-full px-2 py-[3px] text-[10px] font-bold" style={{ background: rgba(kindMeta.color, 0.15), color: kindMeta.color }}>
+                    {kindMeta.label}
+                  </span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    {l.kind !== "clear" ? (
+                      <img src={getAvatarUrl(l.targetId, l.targetAvatar)} alt="" className="h-[22px] w-[22px] shrink-0 rounded-full" />
+                    ) : null}
+                    <span className="min-w-0 truncate text-xs font-semibold text-white">
+                      {l.kind === "clear" ? `#${l.targetTag.replace(/^#/, "")}` : (l.targetUsername ?? l.targetTag)}
+                    </span>
+                    {l.undone ? <span className="shrink-0 text-[10px] text-[#6b7280]">cofn.</span> : null}
+                  </span>
+                  <span className="min-w-0 truncate text-xs" style={{ color: l.moderatorTag.startsWith("Anti-Spam") ? "#a5b4fc" : "#b9c0d0" }}>
+                    {l.moderatorTag}
+                  </span>
+                  <span className="min-w-0 truncate text-xs text-[#8d94a8]">
+                    {l.reason || "—"}{l.extra ? ` · ${l.extra}` : ""}
+                  </span>
+                  <span className="text-[11px] text-[#6b7280]">{formatDate(l.createdAt)}</span>
+                  {undoBtn(false)}
+                </div>
+
+                {/* <640px (mobile) — karta: te same informacje, inna geometria */}
+                <div
+                  className="flex flex-col gap-2 border-b p-3.5 sm:hidden"
+                  style={{ borderLeft: `3px solid ${kindMeta.color}`, borderBottomColor: "#23252f", opacity: l.undone ? 0.5 : 1 }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-fit shrink-0 rounded-full px-2 py-[3px] text-[10px] font-bold" style={{ background: rgba(kindMeta.color, 0.15), color: kindMeta.color }}>
+                      {kindMeta.label}
+                    </span>
+                    {l.undone ? <span className="shrink-0 text-[10px] text-[#6b7280]">cofn.</span> : null}
+                    <span className="ml-auto shrink-0 text-[11px] text-[#6b7280]">{formatDate(l.createdAt)}</span>
+                  </div>
+
+                  <div className="flex min-w-0 items-center gap-2">
+                    {l.kind !== "clear" ? (
+                      <img src={getAvatarUrl(l.targetId, l.targetAvatar)} alt="" className="h-6 w-6 shrink-0 rounded-full" />
+                    ) : null}
+                    <span className="min-w-0 truncate text-sm font-semibold text-white">
+                      {l.kind === "clear" ? `#${l.targetTag.replace(/^#/, "")}` : (l.targetUsername ?? l.targetTag)}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 text-xs leading-5 text-[#8d94a8]">
+                    <p className="break-words">
+                      <span className="text-[#5f6b85]">Moderator: </span>
+                      <span style={{ color: l.moderatorTag.startsWith("Anti-Spam") ? "#a5b4fc" : "#b9c0d0" }}>{l.moderatorTag}</span>
+                    </p>
+                    <p className="break-words">
+                      <span className="text-[#5f6b85]">Powód: </span>
+                      {l.reason || "—"}{l.extra ? ` · ${l.extra}` : ""}
+                    </p>
+                  </div>
+
+                  {undoBtn(true)}
+                </div>
               </div>
             );
           })

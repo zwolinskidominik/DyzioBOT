@@ -513,7 +513,7 @@ export default function ReactionRolesPage() {
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Wybierz swoją rolę"
                     maxLength={256}
-                    className="h-11 border-transparent bg-dark-900 text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
+                    className="h-11 border-transparent bg-dark-900 text-sm text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
                   />
                 </div>
 
@@ -531,7 +531,7 @@ export default function ReactionRolesPage() {
                           onChange={(e) => setCurrentEmoji(e.target.value)}
                           placeholder="Lub wpisz własne emoji"
                           maxLength={10}
-                          className="h-11 flex-1 border-transparent bg-dark-800 text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
+                          className="h-11 flex-1 border-transparent bg-dark-800 text-sm text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
                         />
                         <div className="[&_button]:h-11 [&_button]:flex [&_button]:items-center [&_button]:justify-center">
                           <EmojiPicker onEmojiSelect={setCurrentEmoji} buttonText={currentEmoji} />
@@ -573,7 +573,7 @@ export default function ReactionRolesPage() {
                                   handleRoleSelect(filteredRoles[0]);
                                 }
                               }}
-                              className="h-11 border-transparent bg-dark-800 pl-9 text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
+                              className="h-11 border-transparent bg-dark-800 pl-9 text-sm text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
                             />
                           </div>
                         </PopoverAnchor>
@@ -615,7 +615,7 @@ export default function ReactionRolesPage() {
                         onChange={(e) => setCurrentDescription(e.target.value)}
                         placeholder="Opcjonalny opis..."
                         maxLength={100}
-                        className="h-11 border-transparent bg-dark-800 text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
+                        className="h-11 border-transparent bg-dark-800 text-sm text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
                       />
                     </div>
                   </div>

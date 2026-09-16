@@ -102,6 +102,32 @@ export default function MonthlyStatsPage() {
   const [metric, setMetric] = useState<MetricId>("score");
   const [selectedMonthId, setSelectedMonthId] = useState<string>("");
 
+  // Podgląd grafiki (900px "canvas" skalowany transformem) na mobile/tablecie (<1024px) mierzy
+  // realną dostępną szerokość swojego kontenera, żeby zmieścić się bez poziomego overflow.
+  // Na desktopie (>=1024px, LOCKED) zostaje dokładnie shotW=700 jak dotychczas — bez pomiaru.
+  // Uwaga: element mierzony renderuje się dopiero po załadowaniu danych i wybraniu miesiąca z
+  // wynikami (poza wczesnym returnem `if (loading)` i warunkiem `!selected || shown.length===0`),
+  // więc zwykły useRef + useEffect(() => {...}, []) nigdy by go nie złapał przy pierwszym montowaniu
+  // — stąd callback ref + stan węzła, reagujące na realne (za)montowanie elementu.
+  const [previewMeasureEl, setPreviewMeasureEl] = useState<HTMLDivElement | null>(null);
+  const previewMeasureRef = useCallback((el: HTMLDivElement | null) => setPreviewMeasureEl(el), []);
+  const [previewAvailW, setPreviewAvailW] = useState(700);
+  const [isDesktop, setIsDesktop] = useState(true);
+  useEffect(() => {
+    const updateDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+    updateDesktop();
+    window.addEventListener("resize", updateDesktop);
+    return () => window.removeEventListener("resize", updateDesktop);
+  }, []);
+  useEffect(() => {
+    if (!previewMeasureEl) return;
+    const update = () => setPreviewAvailW(previewMeasureEl.clientWidth || 700);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(previewMeasureEl);
+    return () => ro.disconnect();
+  }, [previewMeasureEl]);
+
   const savedRef = useRef<SavedConfigState>({
     channelId: "",
     enabled: false,
@@ -223,7 +249,7 @@ export default function MonthlyStatsPage() {
 
   const estH = estimateCardHeight(shown.length);
   const tight = config.topCount > 12;
-  const shotW = 700;
+  const shotW = isDesktop ? 700 : Math.max(220, Math.min(700, previewAvailW));
   const shotScale = shotW / 900;
   const shotH = Math.ceil(estH * shotScale);
 
@@ -377,7 +403,10 @@ export default function MonthlyStatsPage() {
         {/* Wykres */}
         <SlideIn direction="up" delay={50}>
           <div className="rounded-lg p-5" style={{ background: "#1F2129", boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
-            <div className="flex items-end justify-between gap-5 mb-4">
+            {/* Poniżej lg nagłówek i przełączniki metryk układają się pionowo. Wcześniej grupa
+                przycisków miała shrink-0, więc jej szerokość bazowa = max-content (4 przyciski w
+                jednym rzędzie) — wychodziła poza kartę i ściskała lewą kolumnę. Od lg bez zmian. */}
+            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-5">
               <div className="min-w-0">
                 <div className="text-[11px] font-bold uppercase" style={{ letterSpacing: "0.08em", color: "#6b7280" }}>
                   {METRICS.find((m) => m.id === metric)?.head}
@@ -389,7 +418,7 @@ export default function MonthlyStatsPage() {
                   </span>
                 </div>
               </div>
-              <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+              <div className="flex flex-wrap gap-1.5 lg:shrink-0 lg:justify-end">
                 {METRICS.map((m) => (
                   <button
                     key={m.id}
@@ -572,7 +601,7 @@ export default function MonthlyStatsPage() {
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ background: "#5865F2" }}>
                     D
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1" ref={previewMeasureRef}>
                     <div className="text-xs font-semibold text-white">
                       Deezy{" "}
                       <span className="rounded px-1 py-px text-[8px] font-bold text-white" style={{ background: "#5865F2" }}>

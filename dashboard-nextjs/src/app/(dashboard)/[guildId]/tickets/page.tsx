@@ -550,20 +550,23 @@ export default function TicketsPage() {
               </div>
 
               <div className="overflow-hidden rounded-md border border-[#2f3341]">
-                <div className="flex items-center justify-between gap-3 bg-dark-900 px-3 py-2.5">
+                {/* Poniżej lg: przycisk „Personalizuj wiadomość" (~190px) zostawiał na tekst ok. 85px,
+                    więc tytuł i opis schodziły do „Ko…"/„Tyt…". Układ pionowy, przycisk pełnej
+                    szerokości. Od lg bez zmian: jeden rząd z tekstem po lewej i przyciskiem po prawej. */}
+                <div className="flex flex-col items-start gap-2 bg-dark-900 px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-medium text-white/90">
+                    <p className="break-words text-xs font-medium text-white/90 lg:truncate">
                       {panelMessage.emoji ? `${panelMessage.emoji} ` : ""}
                       {panelMessage.title}
                     </p>
-                    <p className="mt-0.5 truncate text-[11px] text-[#6f7690]">Tytuł, opis, kolor, baner i placeholder dropdownu</p>
+                    <p className="mt-0.5 break-words text-[11px] text-[#6f7690] lg:truncate">Tytuł, opis, kolor, baner i placeholder dropdownu</p>
                   </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setPanelMessageDrawerOpen((v) => !v)}
-                    className="shrink-0 border-[#3a3f4e] bg-transparent text-[#c4cad8] hover:bg-dark-800 hover:text-white"
+                    className="w-full shrink-0 border-[#3a3f4e] bg-transparent text-[#c4cad8] hover:bg-dark-800 hover:text-white lg:w-auto"
                   >
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />
                     {panelMessageDrawerOpen ? "Zwiń" : "Personalizuj wiadomość"}

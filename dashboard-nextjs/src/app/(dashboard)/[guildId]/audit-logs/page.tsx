@@ -432,19 +432,23 @@ export default function AuditLogsPage() {
                                   {hasChanges && (
                                     <div className="flex flex-wrap gap-1.5 mt-2">
                                       {(isExpanded ? log.changes! : log.changes!.slice(0, 3)).map((change, i) => (
+                                        // max-w-full + flex-wrap + break-all: wartości bywają 19-cyfrowymi
+                                        // ID Discorda (nierozdzielny token), więc chip robił się szerszy
+                                        // niż karta i wychodził poza nią. Przy krótkich wartościach nic
+                                        // się nie zmienia — zawijanie włącza się dopiero, gdy brak miejsca.
                                         <span
                                           key={`${change.field}-${i}`}
-                                          className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded"
+                                          className="inline-flex max-w-full flex-wrap items-center gap-1 text-[11px] px-2 py-1 rounded"
                                           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                                         >
                                           <span className="text-muted-foreground">{change.label}:</span>
                                           {change.from !== undefined && (
                                             <>
-                                              <span className="text-muted-foreground">{formatChangeValue(change.from)}</span>
-                                              <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                                              <span className="break-all text-muted-foreground">{formatChangeValue(change.from)}</span>
+                                              <ArrowRight className="w-3 h-3 shrink-0 text-muted-foreground" />
                                             </>
                                           )}
-                                          <span className="font-medium">{formatChangeValue(change.to)}</span>
+                                          <span className="break-all font-medium">{formatChangeValue(change.to)}</span>
                                         </span>
                                       ))}
                                       {!isExpanded && log.changes!.length > 3 && (

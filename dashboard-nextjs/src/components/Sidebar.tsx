@@ -239,7 +239,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
         />
       )}
       <aside
-        className={`dashboard-sidebar absolute left-0 top-0 z-[50] m-0 flex h-screen w-[300px] min-w-[300px] transform flex-col overflow-y-auto overscroll-contain bg-dark-800 p-0 transition-all duration-200 ease-out no-scrollbar lg:relative ${
+        className={`dashboard-sidebar absolute left-0 top-0 z-[50] m-0 flex h-dvh w-[300px] min-w-[300px] transform flex-col overflow-y-auto overscroll-contain bg-dark-800 p-0 transition-all duration-200 ease-out no-scrollbar lg:relative ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } lg:!translate-x-0`}
       >

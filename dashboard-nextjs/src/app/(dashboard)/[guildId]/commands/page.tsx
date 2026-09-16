@@ -299,7 +299,7 @@ export default function NarzedziaPage() {
             const allOn = onN === names.length;
             return (
               <div key={category}>
-                <div className="flex items-center gap-2.5 border-b border-[#2f3341] px-4 py-3">
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[#2f3341] px-4 py-3">
                   <span className="text-sm font-bold text-white">{CATEGORY_LABELS[category]}</span>
                   <span className="text-[11px] text-[#6b7280]">
                     {names.length} {plural(names.length, "komenda", "komendy", "komend")} · {onN} włączonych
@@ -324,7 +324,9 @@ export default function NarzedziaPage() {
                       >
                         <div className="min-w-0 flex-1" style={{ opacity: isOn ? 1 : 0.5 }}>
                           <span className="block truncate text-base font-semibold text-white">/{cmd.name}</span>
-                          <span className="block truncate text-sm text-[#8d94a8]">{cmd.description}</span>
+                          {/* Poniżej lg opis zawija się do kilku linii (na telefonie „truncate" ucinał
+                              go w połowie); od lg bez zmian — jedna linia z wielokropkiem. */}
+                          <span className="block break-words text-sm text-[#8d94a8] lg:truncate">{cmd.description}</span>
                         </div>
                         <Switch
                           checked={isOn}

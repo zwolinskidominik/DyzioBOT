@@ -413,7 +413,10 @@ export default function SuggestionsPage() {
                 <div className="space-y-2">
                   <Label>Format głosowania</Label>
                   <Tabs value={votingFormat} onValueChange={(value) => setVotingFormat(value as SuggestionVotingFormat)}>
-                    <TabsList className="bg-dark-900">
+                    {/* Poniżej lg lista przełączników zawija się (trzy etykiety z ikonami nie mieszczą
+                        się w jednym rzędzie na telefonie i „Pasek głosowania" był ucinany).
+                        Od lg wracają dokładnie oryginalne klasy: inline-flex, h-10, bez zawijania. */}
+                    <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-dark-900 lg:inline-flex lg:h-10 lg:w-auto lg:flex-nowrap lg:justify-center lg:gap-0">
                       {votingFormatOptions.map(({ value, label, icon: Icon }) => (
                         <TabsTrigger key={value} value={value}>
                           <Icon className="mr-1.5 h-3.5 w-3.5" />

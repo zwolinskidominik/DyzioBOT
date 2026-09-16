@@ -46,7 +46,9 @@ export function TempChannelListItem({
       <div className="flex items-center justify-between gap-3 px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <Mic className="h-4 w-4 shrink-0 text-[#8d94a8]" />
-          <span className="truncate text-sm font-medium text-white/90">{channelName}</span>
+          {/* Poniżej lg nazwa kanału zawija się zamiast być ucinana — odznaka typu i dwa przyciski
+              po prawej zabierają na telefonie większość szerokości. Od lg bez zmian. */}
+          <span className="break-words text-sm font-medium text-white/90 lg:truncate">{channelName}</span>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">

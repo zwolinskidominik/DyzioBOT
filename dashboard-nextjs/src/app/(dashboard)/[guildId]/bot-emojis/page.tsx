@@ -545,7 +545,7 @@ export default function BotEmojisPage() {
                 <div className="grid grid-cols-1 items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
                   {/* Tabela */}
                   <div className="overflow-hidden rounded-[10px] bg-dark-800" style={{ boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
-                    <div className="grid grid-cols-[56px_minmax(0,1fr)_180px_76px] gap-3 border-b border-[#2f3341] px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-[#5f6b85]">
+                    <div className="hidden grid-cols-[56px_minmax(0,1fr)_180px_76px] gap-3 border-b border-[#2f3341] px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-[#5f6b85] sm:grid">
                       <span />
                       <span>Nazwa</span>
                       <span>Klucz w konfiguracji</span>
@@ -556,50 +556,103 @@ export default function BotEmojisPage() {
                       const on = e.id === selectedId;
                       const isConfirming = confirmDeleteId === e.id;
                       return (
-                        <div
-                          key={e.id}
-                          className="grid grid-cols-[56px_minmax(0,1fr)_180px_76px] items-center gap-3 border-b border-[#23252f] px-4 py-3"
-                          style={{ background: on ? "rgba(99,102,241,0.12)" : "transparent", borderLeft: `3px solid ${on ? "#6366f1" : "transparent"}` }}
-                        >
-                          <button type="button" onClick={() => setSelectedId(e.id)} title="Pokaż szczegóły" className="flex items-center justify-center border-none bg-transparent p-0">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={emojiUrl(e)} alt={e.name} className="h-10 w-10 rounded object-contain" />
-                          </button>
-                          <button type="button" onClick={() => setSelectedId(e.id)} className="block min-w-0 border-none bg-transparent p-0 text-left">
-                            <span className={cn("block truncate text-base font-semibold", on ? "text-white" : "text-[#d8dbe6]")}>
-                              :{e.name}:
-                            </span>
-                            <span className={cn("mt-0.5 block text-xs", e.animated ? "text-[#f9a8d4]" : hasOddName(e.name) ? "text-[#fcd34d]" : "text-[#6b7280]")}>
-                              {e.animated ? "GIF · animowane" : hasOddName(e.name) ? "⚠ nietypowa nazwa" : "PNG · statyczne"}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedId(e.id)}
-                            className={cn("block min-w-0 truncate border-none bg-transparent p-0 text-left font-mono text-xs", e.key ? "text-[#9cc2ff]" : "text-[#4b5563]")}
+                        <div key={e.id}>
+                          {/* ≥640px (tablet/desktop) — istniejący wiersz siatki, bez zmian */}
+                          <div
+                            className="hidden items-center gap-3 border-b border-[#23252f] px-4 py-3 sm:grid"
+                            style={{ gridTemplateColumns: "56px minmax(0,1fr) 180px 76px", background: on ? "rgba(99,102,241,0.12)" : "transparent", borderLeft: `3px solid ${on ? "#6366f1" : "transparent"}` }}
                           >
-                            {e.key || "brak odwołania"}
-                          </button>
-                          <div className="flex justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleCopy(e)}
-                              title="Kopiuj kod"
-                              className="flex h-8 w-8 items-center justify-center rounded-md text-[#6b7280] transition-colors hover:bg-[rgba(99,102,241,0.15)] hover:text-[#a5b4fc]"
-                            >
-                              <Copy className="h-4 w-4" />
+                            <button type="button" onClick={() => setSelectedId(e.id)} title="Pokaż szczegóły" className="flex items-center justify-center border-none bg-transparent p-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={emojiUrl(e)} alt={e.name} className="h-10 w-10 rounded object-contain" />
+                            </button>
+                            <button type="button" onClick={() => setSelectedId(e.id)} className="block min-w-0 border-none bg-transparent p-0 text-left">
+                              <span className={cn("block truncate text-base font-semibold", on ? "text-white" : "text-[#d8dbe6]")}>
+                                :{e.name}:
+                              </span>
+                              <span className={cn("mt-0.5 block text-xs", e.animated ? "text-[#f9a8d4]" : hasOddName(e.name) ? "text-[#fcd34d]" : "text-[#6b7280]")}>
+                                {e.animated ? "GIF · animowane" : hasOddName(e.name) ? "⚠ nietypowa nazwa" : "PNG · statyczne"}
+                              </span>
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDelete(e)}
-                              disabled={deletingId === e.id}
-                              title={isConfirming ? "Kliknij ponownie, aby potwierdzić" : "Usuń emoji"}
-                              className={cn(
-                                "flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50",
-                                isConfirming ? "bg-red-500/20 text-red-400" : "text-[#6b7280] hover:bg-red-500/10 hover:text-red-400"
-                              )}
+                              onClick={() => setSelectedId(e.id)}
+                              className={cn("block min-w-0 truncate border-none bg-transparent p-0 text-left font-mono text-xs", e.key ? "text-[#9cc2ff]" : "text-[#4b5563]")}
                             >
-                              {deletingId === e.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                              {e.key || "brak odwołania"}
+                            </button>
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(e)}
+                                title="Kopiuj kod"
+                                className="flex h-8 w-8 items-center justify-center rounded-md text-[#6b7280] transition-colors hover:bg-[rgba(99,102,241,0.15)] hover:text-[#a5b4fc]"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(e)}
+                                disabled={deletingId === e.id}
+                                title={isConfirming ? "Kliknij ponownie, aby potwierdzić" : "Usuń emoji"}
+                                className={cn(
+                                  "flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50",
+                                  isConfirming ? "bg-red-500/20 text-red-400" : "text-[#6b7280] hover:bg-red-500/10 hover:text-red-400"
+                                )}
+                              >
+                                {deletingId === e.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* <640px (mobile) — karta: te same informacje, pionowy układ */}
+                          <div
+                            className="flex flex-col gap-2 border-b border-[#23252f] px-4 py-3 sm:hidden"
+                            style={{ background: on ? "rgba(99,102,241,0.12)" : "transparent", borderLeft: `3px solid ${on ? "#6366f1" : "transparent"}` }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <button type="button" onClick={() => setSelectedId(e.id)} title="Pokaż szczegóły" className="shrink-0 border-none bg-transparent p-0">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={emojiUrl(e)} alt={e.name} className="h-10 w-10 rounded object-contain" />
+                              </button>
+                              <button type="button" onClick={() => setSelectedId(e.id)} className="block min-w-0 flex-1 border-none bg-transparent p-0 text-left">
+                                <span className={cn("block truncate text-base font-semibold", on ? "text-white" : "text-[#d8dbe6]")}>
+                                  :{e.name}:
+                                </span>
+                                <span className={cn("mt-0.5 block text-xs", e.animated ? "text-[#f9a8d4]" : hasOddName(e.name) ? "text-[#fcd34d]" : "text-[#6b7280]")}>
+                                  {e.animated ? "GIF · animowane" : hasOddName(e.name) ? "⚠ nietypowa nazwa" : "PNG · statyczne"}
+                                </span>
+                              </button>
+                              <div className="flex shrink-0 gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(e)}
+                                  title="Kopiuj kod"
+                                  className="flex h-9 w-9 items-center justify-center rounded-md text-[#6b7280] transition-colors hover:bg-[rgba(99,102,241,0.15)] hover:text-[#a5b4fc]"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(e)}
+                                  disabled={deletingId === e.id}
+                                  title={isConfirming ? "Kliknij ponownie, aby potwierdzić" : "Usuń emoji"}
+                                  className={cn(
+                                    "flex h-9 w-9 items-center justify-center rounded-md transition-colors disabled:opacity-50",
+                                    isConfirming ? "bg-red-500/20 text-red-400" : "text-[#6b7280] hover:bg-red-500/10 hover:text-red-400"
+                                  )}
+                                >
+                                  {deletingId === e.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                </button>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedId(e.id)}
+                              className="block min-w-0 truncate border-none bg-transparent p-0 text-left font-mono text-xs"
+                              style={{ color: e.key ? "#9cc2ff" : "#4b5563" }}
+                            >
+                              <span className="font-sans text-[#5f6b85]">Klucz: </span>{e.key || "brak odwołania"}
                             </button>
                           </div>
                         </div>

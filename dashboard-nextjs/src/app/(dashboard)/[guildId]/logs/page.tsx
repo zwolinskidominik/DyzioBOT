@@ -767,12 +767,15 @@ function LogsPageContent() {
                           key={i}
                           className={
                             row.length > 1
-                              ? `grid gap-x-3 ${row.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`
+                              // Poniżej lg pola idą jeden pod drugim — w wąskiej kolumnie podglądu
+                              // wzmianki („pigułki") nie łamią się i nachodziły na sąsiednią kolumnę.
+                              // Discord na wąskim ekranie też układa pola inline pionowo.
+                              ? `grid gap-x-3 gap-y-1.5 grid-cols-1 ${row.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`
                               : 'flex flex-col gap-1.5'
                           }
                         >
                           {row.map((f) => (
-                            <span key={f.k} className="min-w-0 text-xs text-[#d8dbe6]">
+                            <span key={f.k} className="min-w-0 break-words text-xs text-[#d8dbe6]">
                               <span className="block text-[10px] font-bold text-white">{f.k}</span>
                               {f.code ? (
                                 <span

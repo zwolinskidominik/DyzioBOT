@@ -509,32 +509,40 @@ function InviteSection<M extends Record<string, string>>({
 
   return (
     <div className="rounded-md bg-dark-800 p-5 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
-      <div className="flex items-center gap-3">
-        <span
-          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px]"
-          style={{ background: live ? iconBg : "#23252f", color: live ? iconColor : "#636a80" }}
-        >
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-bold text-white">{title}</div>
-          <div className="mt-0.5 text-xs" style={{ color: live ? "#8d94a8" : "#fcd34d" }}>
-            {live ? `${situations.length} sytuacji${customCount ? ` · ${customCount} zmienione` : ""}` : "wyłączone"}
+      {/* Poniżej lg nagłówek łamie się na dwa rzędy: [ikona + tytuł] i [wybór kanału + przełącznik].
+          Wcześniej ikona (34px), select (200px) i switch (~44px) miały shrink-0 i razem z odstępami
+          nie mieściły się w karcie (~287px na telefonie), więc nachodziły na tytuł.
+          lg:contents sprawia, że od lg oba opakowania znikają z układu i rząd wygląda jak dotąd. */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-3">
+        <div className="flex min-w-0 items-center gap-3 lg:contents">
+          <span
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px]"
+            style={{ background: live ? iconBg : "#23252f", color: live ? iconColor : "#636a80" }}
+          >
+            {icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-bold text-white">{title}</div>
+            <div className="mt-0.5 text-xs" style={{ color: live ? "#8d94a8" : "#fcd34d" }}>
+              {live ? `${situations.length} sytuacji${customCount ? ` · ${customCount} zmienione` : ""}` : "wyłączone"}
+            </div>
           </div>
         </div>
-        <Select value={state.logChannelId || undefined} onValueChange={onChannelChange}>
-          <SelectTrigger className={cn("h-[38px] w-[200px] shrink-0 border bg-dark-900 text-xs text-white/90", channelError ? "border-red-500/60" : "border-[#2f3341]")}>
-            <SelectValue placeholder="Wybierz kanał..." />
-          </SelectTrigger>
-          <SelectContent>
-            {channels.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                # {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <SectionSwitch checked={live} onCheckedChange={onToggleSection} aria-label="Włącz lub wyłącz sekcję" />
+        <div className="flex items-center gap-3 lg:contents">
+          <Select value={state.logChannelId || undefined} onValueChange={onChannelChange}>
+            <SelectTrigger className={cn("h-[38px] w-full shrink-0 border bg-dark-900 text-xs text-white/90 lg:w-[200px]", channelError ? "border-red-500/60" : "border-[#2f3341]")}>
+              <SelectValue placeholder="Wybierz kanał..." />
+            </SelectTrigger>
+            <SelectContent>
+              {channels.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  # {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <SectionSwitch checked={live} onCheckedChange={onToggleSection} aria-label="Włącz lub wyłącz sekcję" />
+        </div>
       </div>
 
       {!live ? (

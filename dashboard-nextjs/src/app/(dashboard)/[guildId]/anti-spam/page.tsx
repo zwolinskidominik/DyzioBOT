@@ -98,12 +98,14 @@ const RULE_SLIDERS: Record<RuleId, { key: "threshold" | "windowSeconds"; label: 
   repeat: [{ key: "threshold", label: "Identyczne pod rząd", min: 2, max: 10, unit: "" }],
 };
 
-const ACTIONS: { id: Punishment; label: string; chip: string; color?: string }[] = [
+// `emoji` to skrócona wersja odznaki pokazywana poniżej lg — pełny tekst („⚠️ Ostrzeżenie")
+// zabierał na telefonie tyle miejsca, że nazwa reguły łamała się po jednym słowie w linii.
+const ACTIONS: { id: Punishment; label: string; chip: string; emoji?: string; color?: string }[] = [
   { id: "none", label: "Bez dodatkowej kary", chip: "Bez kary" },
-  { id: "warn", label: "⚠️ Ostrzeżenie", chip: "⚠️ Ostrzeżenie", color: "#facc15" },
-  { id: "mute", label: "🔇 Wyciszenie", chip: "🔇 Wyciszenie", color: "#a970ff" },
-  { id: "kick", label: "👢 Wyrzucenie", chip: "👢 Wyrzucenie", color: "#ef4444" },
-  { id: "ban", label: "🔨 Ban", chip: "🔨 Ban", color: "#dc2626" },
+  { id: "warn", label: "⚠️ Ostrzeżenie", chip: "⚠️ Ostrzeżenie", emoji: "⚠️", color: "#facc15" },
+  { id: "mute", label: "🔇 Wyciszenie", chip: "🔇 Wyciszenie", emoji: "🔇", color: "#a970ff" },
+  { id: "kick", label: "👢 Wyrzucenie", chip: "👢 Wyrzucenie", emoji: "👢", color: "#ef4444" },
+  { id: "ban", label: "🔨 Ban", chip: "🔨 Ban", emoji: "🔨", color: "#dc2626" },
 ];
 const DURATIONS = [
   { id: "5", label: "5 min" },
@@ -353,6 +355,11 @@ function RuleCard({
     ladder && rule.steps.length > 1
       ? `${rule.steps.length} stopnie`
       : (rule.deleteMessage ? "🗑️ + " : "") + (badgeMeta.chip || "Bez kary");
+  // Wersja na mobile — same ikony, bez słownego opisu kary.
+  const badgeTextShort =
+    ladder && rule.steps.length > 1
+      ? `${rule.steps.length}`
+      : (rule.deleteMessage ? "🗑️ " : "") + (badgeMeta.emoji ?? badgeMeta.chip ?? "Bez kary");
 
   return (
     <div className="rounded-[10px] p-4" style={{ background: "#1F2129", border: `1px solid ${rule.on ? "transparent" : "#2a2d38"}`, boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
@@ -388,7 +395,8 @@ function RuleCard({
                     ))}
                   </span>
                 ) : null}
-                {badgeText}
+                <span className="hidden lg:inline">{badgeText}</span>
+                <span className="lg:hidden">{badgeTextShort}</span>
               </span>
             </>
           ) : null}

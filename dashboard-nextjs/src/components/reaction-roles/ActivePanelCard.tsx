@@ -76,20 +76,22 @@ export function ActivePanelCard({
           onClick={() => setIsOpen((prev) => !prev)}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
         >
+          {/* Poniżej lg tytuł zawija się zamiast być ucinany, a wiersz z kanałem może przejść do
+              drugiej linii — długa nazwa kanału rozpychała wcześniej cały nagłówek. Od lg bez zmian. */}
           <div className="min-w-0 space-y-0.5">
-            <p className="truncate text-sm font-semibold text-white/90">
+            <p className="break-words text-sm font-semibold text-white/90 lg:truncate">
               {reactionRole.title ?? "Wybierz swoją rolę"}
             </p>
-            <div className="flex items-center gap-1.5 text-xs text-[#8d94a8]">
-              <Hash className="h-3 w-3" />
-              <span>{channelName}</span>
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-[#8d94a8]">
+              <Hash className="h-3 w-3 shrink-0" />
+              <span className="min-w-0 break-all">{channelName}</span>
               <span>·</span>
-              <span>{formatRoleCount(reactionRole.reactions.length)}</span>
+              <span className="shrink-0">{formatRoleCount(reactionRole.reactions.length)}</span>
             </div>
           </div>
         </button>
 
-        <div className="flex shrink-0 items-center gap-1 pl-4">
+        <div className="flex shrink-0 items-center gap-1 pl-2 lg:pl-4">
           <button
             type="button"
             onClick={onResend}
@@ -130,7 +132,7 @@ export function ActivePanelCard({
       {isOpen ? (
         <div className="space-y-2 border-t border-[#2f3341] px-5 py-3">
           {reactionRole.reactions.map((reaction, idx) => (
-            <div key={idx} className="flex items-center gap-3">
+            <div key={idx} className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center">
                 <EmojiDisplay emoji={reaction.emoji} size={20} />
               </span>
@@ -138,9 +140,9 @@ export function ActivePanelCard({
                 className="h-2.5 w-2.5 shrink-0 rounded-full border border-white/20"
                 style={{ backgroundColor: roleColorStyle(reaction.roleId) }}
               />
-              <span className="text-sm font-medium text-white/90">{getRoleName(reaction.roleId)}</span>
+              <span className="min-w-0 break-words text-sm font-medium text-white/90">{getRoleName(reaction.roleId)}</span>
               {reaction.description ? (
-                <span className="text-xs text-[#8d94a8]">• {reaction.description}</span>
+                <span className="min-w-0 break-words text-xs text-[#8d94a8]">• {reaction.description}</span>
               ) : null}
             </div>
           ))}
