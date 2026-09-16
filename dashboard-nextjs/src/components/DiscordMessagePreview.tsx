@@ -277,6 +277,10 @@ interface DiscordMessagePreviewProps {
   /** Tylko w trybie compact: gdy false, pomija własną ramkę (border) — przydatne, gdy element nadrzędny
    * już rysuje wspólną ramkę wokół dymka i doklejonego pod nim elementu (np. rząd reakcji w Turnieju). */
   bordered?: boolean;
+  /** Tylko w trybie compact: pomija avatar + wiersz nazwa/BOT/znacznik czasu, renderuje samą treść bez tła/obramowania —
+   * dla widoków, gdzie ten sam nagłówek (avatar + nazwa) jest już wyświetlony raz przez element nadrzędny (np. edytor
+   * z podglądem w Disboard/Turnieju) i nie chcemy duplikować bota. */
+  hideAuthor?: boolean;
 }
 
 export function DiscordMessagePreview({
@@ -290,6 +294,7 @@ export function DiscordMessagePreview({
   roundBottom = true,
   compact = false,
   bordered = true,
+  hideAuthor = false,
 }: DiscordMessagePreviewProps) {
   const embedTitle = embed?.title;
   const embedFooter = embed?.footer;
@@ -340,6 +345,11 @@ export function DiscordMessagePreview({
   );
 
   if (compact) {
+    if (hideAuthor) {
+      // Bez avatara/nazwy/tła/obramowania — element nadrzędny już je narysował raz.
+      return <div className="break-words text-sm leading-6 text-[#dbdee1]">{bodyContent}</div>;
+    }
+
     // Struktura i klasy 1:1 wzorowane na lokalnym podglądzie z modułu Urodziny:
     // brak timestampu, avatar h-9 z object-cover, nazwa+treść w jednej kolumnie
     // obok avatara (bez osobnego "wiersza autora" o wysokości avatara).

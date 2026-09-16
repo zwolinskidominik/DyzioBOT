@@ -721,126 +721,114 @@ export default function TournamentPage() {
               </div>
 
               <div className="w-full max-w-[880px]">
-                <div className="flex items-start gap-3">
-                  <div className="flex w-10 shrink-0 flex-col items-center gap-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/deezy.png" alt="Deezy" className="h-10 w-10 rounded-full object-cover" />
-                    {config.messageMode === "embed" ? (
-                      <EmbedColorPicker
-                        value={config.embedColor}
-                        onPreviewChange={setDraftEmbedColor}
-                        onChange={(color) => {
-                          setConfig((c) => ({ ...c, embedColor: color }));
-                          setDraftEmbedColor(null);
-                        }}
-                      />
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => setEditorMode((mode) => (mode === "editor" ? "preview" : "editor"))}
-                      className="flex h-8 w-8 items-center justify-center rounded-md bg-[#3b82f6] text-white transition-colors hover:bg-[#2563eb]"
-                      aria-label={editorMode === "editor" ? "Pokaż podgląd wiadomości" : "Wróć do edytora"}
-                      title={editorMode === "editor" ? "PODGLĄD" : "EDYTOR"}
-                    >
-                      {editorMode === "editor" ? <Eye className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
-                    </button>
-                  </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start">
+                  {/* Dymek wiadomości — avatar, przełącznik i treść w jednej szarej karcie (bez duplikowania bota) */}
+                  <div className="flex w-full items-start gap-3 overflow-hidden rounded-md border border-[#2f3341] bg-[#313338] p-4 sm:w-[508px] sm:flex-none">
+                    <div className="flex w-10 shrink-0 flex-col items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/deezy.png" alt="Deezy" className="h-10 w-10 rounded-full object-cover" />
+                      {config.messageMode === "embed" ? (
+                        <EmbedColorPicker
+                          value={config.embedColor}
+                          onPreviewChange={setDraftEmbedColor}
+                          onChange={(color) => {
+                            setConfig((c) => ({ ...c, embedColor: color }));
+                            setDraftEmbedColor(null);
+                          }}
+                        />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setEditorMode((mode) => (mode === "editor" ? "preview" : "editor"))}
+                        className="flex h-8 w-8 items-center justify-center rounded-md bg-[#3b82f6] text-white transition-colors hover:bg-[#2563eb]"
+                        aria-label={editorMode === "editor" ? "Pokaż podgląd wiadomości" : "Wróć do edytora"}
+                        title={editorMode === "editor" ? "PODGLĄD" : "EDYTOR"}
+                      >
+                        {editorMode === "editor" ? <Eye className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
+                      </button>
+                    </div>
 
-                  <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start">
-                    <div className="min-w-0 w-full sm:w-[508px] sm:flex-none">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-white">Deezy</span>
+                        <span className="rounded bg-[#5865f2] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">BOT</span>
+                        <span className="text-xs text-[#8d94a8]">dziś</span>
+                      </div>
+
                       {editorMode === "preview" ? (
-                        <>
-                          <div className="flex min-h-10 flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold text-white">Deezy</span>
-                            <span className="rounded bg-[#5865f2] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">BOT</span>
-                            <span className="text-xs text-[#8d94a8]">dziś</span>
+                        <div className="mt-1.5">
+                          <DiscordMessagePreview
+                            content={previewContent}
+                            roles={roleMap}
+                            users={userMap}
+                            channels={channelMap}
+                            compact
+                            hideAuthor
+                            embed={
+                              config.messageMode === "embed"
+                                ? { color: activeEmbedColor, title: previewTitle, footer: previewFooter }
+                                : undefined
+                            }
+                          />
+                          <div className="mt-1.5 flex flex-wrap gap-1">
+                            <span
+                              className="flex items-center gap-1.5 px-1.5 py-1 text-xs text-[#c4cad8]"
+                              style={{
+                                backgroundColor: "rgba(255,255,255,0.06)",
+                                border: "1px solid transparent",
+                                borderRadius: "0.5rem",
+                              }}
+                            >
+                              <EmojiDisplay emoji={config.reactionEmoji || "🎮"} size={14} />
+                              <span>1</span>
+                            </span>
                           </div>
-
-                          <div className="mt-2 overflow-hidden rounded-md border border-[#2f3341]">
-                            <DiscordMessagePreview
-                              content={previewContent}
-                              avatarUrl="/deezy.png"
-                              roles={roleMap}
-                              users={userMap}
-                              channels={channelMap}
-                              roundBottom={false}
-                              compact
-                              bordered={false}
-                              embed={
-                                config.messageMode === "embed"
-                                  ? { color: activeEmbedColor, title: previewTitle, footer: previewFooter }
-                                  : undefined
-                              }
+                        </div>
+                      ) : config.messageMode === "embed" ? (
+                        <div className="relative mt-1.5 w-full max-w-full overflow-hidden rounded-md bg-dark-900 shadow-[0_10px_30px_rgba(6,8,14,0.35)]">
+                          <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: activeEmbedColor }} />
+                          <div className="space-y-2 p-3 pl-5">
+                            <InlineToolbarField
+                              value={config.titleText}
+                              onChange={(next) => setConfig((c) => ({ ...c, titleText: next }))}
+                              placeholder="Tytuł embeda"
+                              variables={TOURNAMENT_VARIABLES}
+                              inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-sm font-semibold text-white outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]/30 focus:ring-offset-0"
                             />
-                            <div className="flex flex-wrap gap-1 bg-[#313338] pb-3 pl-16 pr-4 pt-0.5">
-                              <span
-                                className="flex items-center gap-1.5 px-1.5 py-1 text-xs text-[#c4cad8]"
-                                style={{
-                                  backgroundColor: "rgba(255,255,255,0.06)",
-                                  border: "1px solid transparent",
-                                  borderRadius: "0.5rem",
-                                }}
-                              >
-                                <EmojiDisplay emoji={config.reactionEmoji || "🎮"} size={14} />
-                                <span>1</span>
-                              </span>
-                            </div>
+                            <VariableInserter
+                              value={config.messageTemplate}
+                              onChange={(value) => setConfig((c) => ({ ...c, messageTemplate: value }))}
+                              variables={TOURNAMENT_VARIABLES}
+                              placeholder="Wpisz treść wiadomości turnieju..."
+                              rows={6}
+                              unstyled
+                              className="rounded-md border border-[#3f4455] bg-dark-800 text-sm leading-6 text-[#d8dbe6] transition-colors hover:border-[#3b82f6]/70 focus:border-[#3b82f6] font-mono"
+                            />
+                            <InlineToolbarField
+                              value={config.footerText}
+                              onChange={(next) => setConfig((c) => ({ ...c, footerText: next }))}
+                              placeholder="Footer (opcjonalnie)"
+                              variables={TOURNAMENT_VARIABLES}
+                              containerClassName="mt-1"
+                              inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-xs text-[#c4cad8] outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]/30 focus:ring-offset-0"
+                            />
                           </div>
-                        </>
+                        </div>
                       ) : (
-                        <>
-                          <div className="flex min-h-10 flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold text-white">Deezy</span>
-                            <span className="rounded bg-[#5865f2] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">BOT</span>
-                            <span className="text-xs text-[#8d94a8]">dziś</span>
-                          </div>
-
-                          {config.messageMode === "embed" ? (
-                            <div className="relative mt-2 w-full max-w-full overflow-hidden rounded-md bg-dark-900 shadow-[0_10px_30px_rgba(6,8,14,0.35)]">
-                              <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: activeEmbedColor }} />
-                              <div className="space-y-2 p-3 pl-5">
-                                <InlineToolbarField
-                                  value={config.titleText}
-                                  onChange={(next) => setConfig((c) => ({ ...c, titleText: next }))}
-                                  placeholder="Tytuł embeda"
-                                  variables={TOURNAMENT_VARIABLES}
-                                  inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-sm font-semibold text-white outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]/30 focus:ring-offset-0"
-                                />
-                                <VariableInserter
-                                  value={config.messageTemplate}
-                                  onChange={(value) => setConfig((c) => ({ ...c, messageTemplate: value }))}
-                                  variables={TOURNAMENT_VARIABLES}
-                                  placeholder="Wpisz treść wiadomości turnieju..."
-                                  rows={6}
-                                  unstyled
-                                  className="rounded-md border border-[#3f4455] bg-dark-800 text-sm leading-6 text-[#d8dbe6] transition-colors hover:border-[#3b82f6]/70 focus:border-[#3b82f6] font-mono"
-                                />
-                                <InlineToolbarField
-                                  value={config.footerText}
-                                  onChange={(next) => setConfig((c) => ({ ...c, footerText: next }))}
-                                  placeholder="Footer (opcjonalnie)"
-                                  variables={TOURNAMENT_VARIABLES}
-                                  containerClassName="mt-1"
-                                  inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-xs text-[#c4cad8] outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]/30 focus:ring-offset-0"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="mt-2">
-                              <VariableInserter
-                                value={config.messageTemplate}
-                                onChange={(value) => setConfig((c) => ({ ...c, messageTemplate: value }))}
-                                variables={TOURNAMENT_VARIABLES}
-                                placeholder="Wpisz treść wiadomości turnieju..."
-                                rows={8}
-                                unstyled
-                                className="rounded-md border border-[#3f4455] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors hover:border-[#3b82f6]/70 focus:border-[#3b82f6] font-mono"
-                              />
-                            </div>
-                          )}
-                        </>
+                        <div className="mt-1.5">
+                          <VariableInserter
+                            value={config.messageTemplate}
+                            onChange={(value) => setConfig((c) => ({ ...c, messageTemplate: value }))}
+                            variables={TOURNAMENT_VARIABLES}
+                            placeholder="Wpisz treść wiadomości turnieju..."
+                            rows={8}
+                            unstyled
+                            className="rounded-md border border-[#3f4455] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors hover:border-[#3b82f6]/70 focus:border-[#3b82f6] font-mono"
+                          />
+                        </div>
                       )}
                     </div>
+                  </div>
 
                     {/* Konfiguracja zmiennych — zawsze widoczna po prawej, niezależnie od trybu edytor/podgląd */}
                     <div className="w-full shrink-0 space-y-3 rounded-md border border-[#2f3341] bg-dark-900 p-3 sm:w-[260px]">
@@ -993,7 +981,6 @@ export default function TournamentPage() {
                 Wiadomość wspiera markdown Discord (pogrubienie **tekst**, nagłówki ###). Kliknij ikonę oka, aby zobaczyć podgląd na żywo.
               </p>
             </div>
-          </div>
         </SlideIn>
       </div>
 

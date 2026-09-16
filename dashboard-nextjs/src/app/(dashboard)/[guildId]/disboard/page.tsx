@@ -323,7 +323,7 @@ export default function DisboardPage() {
               </p>
 
               <div className="w-full max-w-[880px]">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 overflow-hidden rounded-md border border-[#2f3341] bg-[#313338] p-4">
                   <div className="flex w-10 shrink-0 flex-col items-center gap-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/deezy.png" alt="Deezy" className="h-10 w-10 rounded-full object-cover" />
@@ -339,23 +339,18 @@ export default function DisboardPage() {
                   </div>
 
                   <div className="min-w-0 w-full flex-1">
-                    <div className="flex min-h-10 flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-white">Deezy</span>
                       <span className="rounded bg-[#5865f2] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">BOT</span>
                       <span className="text-xs text-[#8d94a8]">dziś</span>
                     </div>
 
                     {editorMode === "preview" ? (
-                      <div className="mt-2 overflow-hidden rounded-md border border-[#2f3341]">
-                        <DiscordMessagePreview
-                          content={config.message}
-                          avatarUrl="/deezy.png"
-                          compact
-                          bordered={false}
-                        />
+                      <div className="mt-1.5">
+                        <DiscordMessagePreview content={config.message} compact hideAuthor />
                       </div>
                     ) : (
-                      <div className="mt-2">
+                      <div className="mt-1.5">
                         <VariableInserter
                           value={config.message}
                           onChange={(value) => setConfig((c) => ({ ...c, message: value }))}
