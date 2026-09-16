@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
-import { Search, Lock, Plus, X, Trash2, Pencil, Save, Loader2 } from "lucide-react";
+import { Search, Lock, Plus, X, Trash2, Pencil, Save, Loader2, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HangmanCategory {
@@ -109,6 +109,9 @@ export default function HangmanBrowserPage() {
     word?: string;
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Drag-to-reorder kategorii (tylko poza wyszukiwaniem — patrz handleReorderCategories).
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const fetchData = useCallback(async (silent = false) => {
     try {
@@ -331,6 +334,29 @@ export default function HangmanBrowserPage() {
     }
   };
 
+  // Kolejność nie wpływa na grę (/wisielec losuje kategorię) — to czysto organizacyjne
+  // ułatwienie w panelu. fromIndex/toIndex liczone są względem pełnej, nieprzefiltrowanej
+  // listy (data.categories) — przeciąganie jest wyłączone podczas wyszukiwania (patrz JSX
+  // niżej), więc filteredCategories === data.categories w każdym momencie, gdy to wywołujemy.
+  const handleReorderCategories = async (fromIndex: number, toIndex: number) => {
+    if (!data || fromIndex === toIndex) return;
+    const next = [...data.categories];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setData({ ...data, categories: next });
+
+    try {
+      const res = await fetchWithAuth(`/api/guild/${guildId}/hangman`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reorderCategories", names: next.map((c) => c.name) }),
+      });
+      if (!res.ok) throw new Error("Failed to reorder");
+    } catch {
+      await fetchData(true);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-full">
@@ -436,27 +462,56 @@ export default function HangmanBrowserPage() {
                 <div className="space-y-1 rounded-md bg-dark-800 p-2">
                   {filteredCategories.map((cat) => {
                     const isActive = cat.name === selectedCategory;
+                    const canDrag = !normalizedSearch;
+                    const fullIndex = data.categories.findIndex((c) => c.name === cat.name);
                     return (
-                      <button
+                      <div
                         key={cat.name}
-                        type="button"
-                        onClick={() => { setSelectedCategory(cat.name); setEditingCategory(false); setWordError(""); }}
+                        draggable={canDrag}
+                        onDragStart={canDrag ? () => setDragIndex(fullIndex) : undefined}
+                        onDragOver={canDrag ? (e) => e.preventDefault() : undefined}
+                        onDrop={
+                          canDrag
+                            ? () => {
+                                if (dragIndex !== null) void handleReorderCategories(dragIndex, fullIndex);
+                                setDragIndex(null);
+                              }
+                            : undefined
+                        }
+                        onDragEnd={canDrag ? () => setDragIndex(null) : undefined}
                         className={cn(
-                          "flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm transition-colors",
-                          isActive ? "bg-[#3b82f6] text-white" : "text-[#c4cad8] hover:bg-dark-900"
+                          "flex items-center rounded-md transition-opacity",
+                          dragIndex === fullIndex && "opacity-40"
                         )}
                       >
-                        <span className="text-lg leading-none">{cat.emoji}</span>
-                        <span className="min-w-0 flex-1 truncate font-medium">{cat.name}</span>
-                        <span
+                        {canDrag ? (
+                          <span
+                            className="flex h-9 w-6 shrink-0 cursor-grab items-center justify-center text-[#6f7690] active:cursor-grabbing"
+                            title="Przeciągnij, aby zmienić kolejność"
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedCategory(cat.name); setEditingCategory(false); setWordError(""); }}
                           className={cn(
-                            "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
-                            isActive ? "bg-white/20 text-white" : "bg-dark-900 text-[#9aa2b8]"
+                            "flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm transition-colors",
+                            isActive ? "bg-[#3b82f6] text-white" : "text-[#c4cad8] hover:bg-dark-900"
                           )}
                         >
-                          {cat.wordCount}
-                        </span>
-                      </button>
+                          <span className="text-lg leading-none">{cat.emoji}</span>
+                          <span className="min-w-0 flex-1 truncate font-medium">{cat.name}</span>
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+                              isActive ? "bg-white/20 text-white" : "bg-dark-900 text-[#9aa2b8]"
+                            )}
+                          >
+                            {cat.wordCount}
+                          </span>
+                        </button>
+                      </div>
                     );
                   })}
                 </div>

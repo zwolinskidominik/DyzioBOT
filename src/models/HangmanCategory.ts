@@ -9,6 +9,10 @@ class HangmanCategory {
 
   @prop({ type: () => [String], default: [] })
   public words!: string[];
+
+  /** Kolejność wyświetlania w panelu (nie wpływa na grę — /wisielec losuje kategorię niezależnie od kolejności). */
+  @prop({ type: () => Number, default: 0 })
+  public order!: number;
 }
 
 export const HangmanCategoryModel = getModelForClass(HangmanCategory);

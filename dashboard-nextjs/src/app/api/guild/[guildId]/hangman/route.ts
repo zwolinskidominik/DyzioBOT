@@ -21,7 +21,7 @@ export async function GET(
 
     await dbConnect();
 
-    const categories = await HangmanCategory.find().lean();
+    const categories = await HangmanCategory.find().sort({ order: 1, _id: 1 }).lean();
 
     const summary = categories.map((c: any) => ({
       name: c.name,
@@ -125,7 +125,9 @@ export async function POST(
         return NextResponse.json({ error: "Kategoria o tej nazwie już istnieje" }, { status: 409 });
       }
 
-      const cat = await HangmanCategory.create({ name, emoji, words: [] });
+      // Nowa kategoria trafia na koniec listy, nie na początek (order domyślnie 0 zepchnąłby ją przed inne).
+      const count = await HangmanCategory.countDocuments();
+      const cat = await HangmanCategory.create({ name, emoji, words: [], order: count });
       return NextResponse.json({ success: true, category: cat.toObject() });
     }
 
@@ -167,6 +169,21 @@ export async function POST(
       await cat.save();
 
       return NextResponse.json({ success: true, category: cat.toObject() });
+    }
+
+    if (action === "reorderCategories") {
+      const { names } = body;
+      if (!Array.isArray(names) || names.some((n) => typeof n !== "string")) {
+        return NextResponse.json({ error: "Wymagane: names (tablica stringów)" }, { status: 400 });
+      }
+
+      // Explicit whitelist — jedyne pole, które ta akcja modyfikuje, to `order`, po nazwie
+      // z listy przysłanej przez klienta (bez mass assignment reszty dokumentu).
+      await Promise.all(
+        names.map((name: string, index: number) => HangmanCategory.updateOne({ name }, { order: index }))
+      );
+
+      return NextResponse.json({ success: true });
     }
 
     if (action === "removeCategory") {
