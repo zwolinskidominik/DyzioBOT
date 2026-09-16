@@ -425,7 +425,7 @@ export default function StreamConfigPage() {
             <Skeleton className="w-11 h-6 rounded-full" />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start">
+          <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_460px]">
             <div className="space-y-4 min-w-0">
               <Skeleton className="h-24 w-full rounded-lg" />
               <div className="grid grid-cols-3 gap-3">
@@ -581,7 +581,7 @@ export default function StreamConfigPage() {
           </div>
         </SlideIn>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start">
+        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_460px]">
           {/* Main column */}
           <div className="flex flex-col gap-4 min-w-0">
             <SlideIn direction="up" delay={100}>
@@ -629,7 +629,9 @@ export default function StreamConfigPage() {
                     rows={2}
                     emojiPicker
                     unstyled
-                    className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
+                    /* max-lg:min-h-[104px]: dwa wiersze wystarczają na desktopie, ale na telefonie
+                       ten sam placeholder zajmuje 4 linie i pole dostawało wewnętrzny scroll. */
+                    className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6] max-lg:min-h-[104px]"
                     placeholder={DEFAULT_MESSAGE_TEMPLATE}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -664,7 +666,7 @@ export default function StreamConfigPage() {
                 <CardContent className="space-y-4">
                   {showAddForm && (
                     <div className="space-y-3 p-4 rounded-lg" style={{ background: '#17181E', border: '1px solid rgba(99,102,241,0.4)' }}>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">
                           <Label htmlFor="twitchChannel" className="text-xs">Kanał Twitch</Label>
                           <Input
@@ -805,15 +807,18 @@ export default function StreamConfigPage() {
                                   </div>
                                 )}
                                 <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[13px] font-semibold text-white truncate">twitch.tv/{streamer.twitchChannel}</span>
+                                  {/* Poniżej lg nazwa kanału i wiersz z użytkownikiem zawijają się —
+                                      awatar i trzy przyciski akcji zostawiały na telefonie ok. 90px.
+                                      Od lg bez zmian. */}
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span className="break-all text-[13px] font-semibold text-white lg:truncate">twitch.tv/{streamer.twitchChannel}</span>
                                     {streamer.isLive && (
                                       <span className="px-1.5 py-0.5 text-[9px] font-extrabold rounded bg-discord-red text-white shrink-0">
                                         LIVE
                                       </span>
                                     )}
                                   </div>
-                                  <p className="mt-0.5 text-[11px] text-[#8d94a8] truncate">
+                                  <p className="mt-0.5 break-words text-[11px] text-[#8d94a8] lg:truncate">
                                     @{getMemberDisplay(streamer.userId)} ·{' '}
                                     {streamer.isLive
                                       ? typeof streamer.viewerCount === 'number'
@@ -913,14 +918,31 @@ export default function StreamConfigPage() {
                             </p>
                           ) : null}
 
-                          <div className="overflow-hidden rounded-md" style={{ background: '#2b2d31', borderLeft: '3px solid #a970ff' }}>
-                            <div className="p-3 space-y-2">
-                              <p className="text-[11px] text-[#b9c0d0] truncate">{previewStreamer.twitchChannel}</p>
-                              <p className="text-[13px] font-bold truncate" style={{ color: '#a970ff' }}>{previewStreamer.title || 'Tytuł streamu'}</p>
-                              <div className="flex gap-4 text-[11px] text-[#b9c0d0]">
-                                <span><span className="block font-bold text-white text-[10px]">GRA</span>{previewStreamer.game || '—'}</span>
-                                <span><span className="block font-bold text-white text-[10px]">WIDZOWIE</span>{typeof previewStreamer.viewerCount === 'number' ? previewStreamer.viewerCount.toLocaleString('pl-PL') : '—'}</span>
+                          <div className="overflow-hidden rounded-md" style={{ background: '#2b2d31', borderLeft: '4px solid #9146FF' }}>
+                            <div className="space-y-1.5 p-3">
+                              <div className="flex items-center gap-1.5">
+                                {previewStreamer.avatarUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={previewStreamer.avatarUrl}
+                                    alt=""
+                                    className="h-5 w-5 shrink-0 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-5 w-5 shrink-0 rounded-full" style={{ background: '#9146FF' }} />
+                                )}
+                                {/* Poniżej lg linia autora i tytuł zawijają się (na Discordzie też się
+                                    zawijają, więc podgląd jest wtedy nawet wierniejszy). Od lg bez zmian. */}
+                                <p className="break-words text-[13px] text-[#dbdee1] lg:truncate">
+                                  {previewStreamer.twitchChannel} jest teraz live na Twitch! 🔴
+                                </p>
                               </div>
+                              <p className="break-words text-[15px] font-semibold lg:truncate" style={{ color: '#00a8fc' }}>
+                                {previewStreamer.title || 'Tytuł streamu'}
+                              </p>
+                              <p className="text-[13px] text-[#dbdee1]">
+                                <span className="font-bold">Streamuje:</span> {previewStreamer.game || 'Nieznana gra'}
+                              </p>
                             </div>
                             {previewStreamer.thumbnailUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
