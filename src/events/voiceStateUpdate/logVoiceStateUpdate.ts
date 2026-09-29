@@ -18,7 +18,9 @@ import logger from '../../utils/logger';
 function channelRef(state: VoiceState): string {
   const channel = state.channel;
   if (!channel) return '**nieznany kanał**';
-  return channel.members.size === 0 ? `**${channel.name}**` : `<#${channel.id}>`;
+  // `?.` celowo: helper jest wołany w trakcie budowania treści logu, więc wyjątek tutaj
+  // (np. przy niepełnym obiekcie kanału) zabiłby cały wpis. Brak danych o członkach → wzmianka.
+  return channel.members?.size === 0 ? `**${channel.name}**` : `<#${channel.id}>`;
 }
 
 export default async function run(

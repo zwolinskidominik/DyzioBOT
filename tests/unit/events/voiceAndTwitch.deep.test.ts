@@ -585,6 +585,25 @@ describe('logVoiceStateUpdate', () => {
     expect(mockSendLog).toHaveBeenCalledWith(expect.anything(), 'g1', 'voiceMemberMove', expect.anything(), expect.anything());
   });
 
+  // Kanał pusty po wyjściu to ten, który tempChannel.ts zaraz skasuje — wzmianka <#id> pokazałaby
+  // wtedy „nieznane", więc w logu ma trafić jego nazwa. Kanał z ludźmi zostaje klikalną wzmianką.
+  it('writes the channel name when the left channel is now empty (temp channel about to be deleted)', async () => {
+    const oldState = makeState({ channel: { id: 'ch1', name: 'Kanał Ani', members: { size: 0 } }, channelId: 'ch1' });
+    const newState = makeState({ channel: null, channelId: null });
+    await logVoice(oldState, newState, {});
+    const payload = mockSendLog.mock.calls.at(-1)[3];
+    expect(payload.description).toContain('**Kanał Ani**');
+    expect(payload.description).not.toContain('<#ch1>');
+  });
+
+  it('keeps the clickable mention when someone is still in the left channel', async () => {
+    const oldState = makeState({ channel: { id: 'ch1', name: 'Ogólny', members: { size: 2 } }, channelId: 'ch1' });
+    const newState = makeState({ channel: null, channelId: null });
+    await logVoice(oldState, newState, {});
+    const payload = mockSendLog.mock.calls.at(-1)[3];
+    expect(payload.description).toContain('<#ch1>');
+  });
+
   it('logs state changes (mute, deaf, stream, video)', async () => {
     const oldState = makeState({
       channel: { id: 'ch1' }, channelId: 'ch1',
