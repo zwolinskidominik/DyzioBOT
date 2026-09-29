@@ -3,6 +3,24 @@ import { sendLog, moderatorField } from '../../utils/logHelpers';
 import { getModerator } from '../../utils/auditLogHelpers';
 import logger from '../../utils/logger';
 
+/**
+ * Zwraca odwołanie do kanału głosowego nadające się do wstawienia w treść logu.
+ *
+ * Wzmianka `<#id>` jest wygodna, bo klikalna, ale Discord rozwiązuje ją dopiero w momencie
+ * WYŚWIETLANIA embeda — nie w momencie wysłania. Kanały tymczasowe (tempChannel.ts) są kasowane
+ * zaraz po wyjściu ostatniej osoby, więc zanim log dotrze do odbiorcy, kanału już nie ma i
+ * zamiast nazwy widać "nieznane".
+ *
+ * Nie da się przewidzieć, czy kanał przetrwa, ale cleanup usuwa go dokładnie wtedy, gdy zrobi
+ * się pusty. Dlatego dla pustego kanału wstawiamy zapamiętaną nazwę (czytelną niezależnie od
+ * tego, czy kanał zaraz zniknie), a dla kanału, w którym ktoś został, zostawiamy wzmiankę.
+ */
+function channelRef(state: VoiceState): string {
+  const channel = state.channel;
+  if (!channel) return '**nieznany kanał**';
+  return channel.members.size === 0 ? `**${channel.name}**` : `<#${channel.id}>`;
+}
+
 export default async function run(
   oldState: VoiceState,
   newState: VoiceState,
@@ -33,7 +51,7 @@ export default async function run(
       if (moderator) {
         await sendLog(client, oldState.guild.id, 'voiceDisconnect', {
           title: null,
-          description: `**⚡ <@${member.id}> został odłączony od kanału głosowego <#${oldState.channelId}>.**`,
+          description: `**⚡ <@${member.id}> został odłączony od kanału głosowego ${channelRef(oldState)}.**`,
           fields: [moderatorField(moderator.id)],
           authorName: member.user.tag,
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
@@ -41,7 +59,7 @@ export default async function run(
       } else {
         await sendLog(client, oldState.guild.id, 'voiceLeave', {
           title: null,
-          description: `**🔇 <@${member.id}> wyszedł z kanału głosowego <#${oldState.channelId}>.**`,
+          description: `**🔇 <@${member.id}> wyszedł z kanału głosowego ${channelRef(oldState)}.**`,
           authorName: member.user.tag,
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
         }, ctx);
@@ -58,7 +76,7 @@ export default async function run(
       if (moderator) {
         await sendLog(client, newState.guild.id, 'voiceMemberMove', {
           title: null,
-          description: `**👉 <@${member.id}> został przeniesiony z <#${oldState.channelId}> na <#${newState.channelId}>.**`,
+          description: `**👉 <@${member.id}> został przeniesiony z ${channelRef(oldState)} na <#${newState.channelId}>.**`,
           fields: [moderatorField(moderator.id)],
           authorName: member.user.tag,
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
@@ -66,7 +84,7 @@ export default async function run(
       } else {
         await sendLog(client, newState.guild.id, 'voiceMove', {
           title: null,
-          description: `**🔀 <@${member.id}> przeniósł się z kanału <#${oldState.channelId}> na <#${newState.channelId}>.**`,
+          description: `**🔀 <@${member.id}> przeniósł się z kanału ${channelRef(oldState)} na <#${newState.channelId}>.**`,
           authorName: member.user.tag,
           authorIcon: member.user.displayAvatarURL({ size: 64 }),
         }, ctx);

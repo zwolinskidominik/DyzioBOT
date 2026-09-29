@@ -12,7 +12,15 @@ export default async function run(
 
   if (oldMessage.content === newMessage.content) return;
 
-  const oldContent = oldMessage.content || '*Brak treści*';
+  // Cache wiadomości obejmuje tylko to, co bot widział od swojego startu. Dla starszych
+  // wiadomości `oldMessage` przychodzi jako partial (patrz `partials` w src/index.ts) i ma
+  // `content === null` — nie wiemy, jak wyglądała treść przed zmianą. Wcześniej wpisywaliśmy
+  // w takim przypadku "*Brak treści*", co sugerowało, że wiadomość była pusta. To nieprawda:
+  // treści po prostu nie znamy. Discord wysyła messageUpdate także przy samym przegenerowaniu
+  // podglądu linku, więc takie wpisy potrafią dotyczyć wiadomości, których nikt nie edytował.
+  const oldContent = oldMessage.partial
+    ? '(treść nieznana — wiadomość spoza pamięci bota)'
+    : oldMessage.content || '*Brak treści*';
   const newContent = newMessage.content || '*Brak treści*';
 
   await sendLog(client, newMessage.guild.id, 'messageEdit', {
