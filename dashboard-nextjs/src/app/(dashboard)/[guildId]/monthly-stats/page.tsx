@@ -128,6 +128,25 @@ export default function MonthlyStatsPage() {
     return () => ro.disconnect();
   }, [previewMeasureEl]);
 
+  // Wysokość ramki podglądu brała się wyłącznie z estimateCardHeight(). Gdy realny HTML karty był
+  // wyższy od szacunku (dłuższe nicki, zawijanie tekstu, fonty), overflow-hidden ramki ucinał dół
+  // grafiki. Mierzymy więc faktyczną wysokość niezeskalowanej karty (offsetHeight ignoruje
+  // transform) i dopiero przed pomiarem używamy szacunku.
+  const [previewCardEl, setPreviewCardEl] = useState<HTMLDivElement | null>(null);
+  const previewCardRef = useCallback((el: HTMLDivElement | null) => setPreviewCardEl(el), []);
+  const [previewCardH, setPreviewCardH] = useState<number | null>(null);
+  useEffect(() => {
+    if (!previewCardEl) {
+      setPreviewCardH(null);
+      return;
+    }
+    const update = () => setPreviewCardH(previewCardEl.offsetHeight || null);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(previewCardEl);
+    return () => ro.disconnect();
+  }, [previewCardEl]);
+
   const savedRef = useRef<SavedConfigState>({
     channelId: "",
     enabled: false,
@@ -251,7 +270,7 @@ export default function MonthlyStatsPage() {
   const tight = config.topCount > 12;
   const shotW = isDesktop ? 700 : Math.max(220, Math.min(700, previewAvailW));
   const shotScale = shotW / 900;
-  const shotH = Math.ceil(estH * shotScale);
+  const shotH = Math.ceil((previewCardH ?? estH) * shotScale);
 
   const isDirty =
     config.enabled !== savedRef.current.enabled ||
@@ -616,7 +635,7 @@ export default function MonthlyStatsPage() {
                     </div>
 
                     <div className="mt-2 relative overflow-hidden rounded-xl" style={{ width: shotW, height: shotH }}>
-                      <div style={{ position: "absolute", top: 0, left: 0, width: 900, transform: `scale(${shotScale})`, transformOrigin: "top left" }}>
+                      <div ref={previewCardRef} style={{ position: "absolute", top: 0, left: 0, width: 900, transform: `scale(${shotScale})`, transformOrigin: "top left" }}>
                         <PreviewCard
                           guildName={guildName}
                           guildIconURL={guildIconURL}

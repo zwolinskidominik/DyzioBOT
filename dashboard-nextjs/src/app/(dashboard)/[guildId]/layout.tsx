@@ -45,17 +45,18 @@ export default function GuildLayout({ children }: GuildLayoutProps) {
             className="bg-dark-800"
           />
 
-          <main className="relative flex flex-1 overflow-y-auto bg-dark-700 px-6 pt-4 lg:px-10 lg:py-10">
+          <main className="relative flex flex-1 overflow-y-auto bg-dark-700 px-6 pt-4 lg:px-10 lg:pt-10">
             <div className="min-h-full w-full max-w-[1540px]">
               <EmojiProvider>
                 <GuildAvailabilityGuard>{children}</GuildAvailabilityGuard>
               </EmojiProvider>
-              {/* Odstęp na dole (mobile/tablet). NIE da się tego zrobić przez padding-bottom tego
-                  wrappera: <main> jest flex-kontenerem, więc wrapper przez align-items:stretch ma
-                  wysokość widocznego obszaru, a nie swojej treści — treść wylewa się poza jego box,
-                  a padding ląduje w połowie pierwszego ekranu (potwierdzone: scrollHeight nie rósł).
-                  Element w przepływie realnie powiększa obszar przewijania. */}
-              <div aria-hidden className="h-16 lg:hidden" />
+              {/* Odstęp na dole — na wszystkich szerokościach. NIE da się tego zrobić paddingiem:
+                  <main> jest flex-kontenerem, więc wrapper przez align-items:stretch ma wysokość
+                  widocznego obszaru, a nie swojej treści — treść wylewa się poza jego box, a
+                  padding-bottom (tego wrappera albo <main>) ląduje w połowie pierwszego ekranu
+                  zamiast pod ostatnim elementem (potwierdzone: scrollHeight nie rósł). Dlatego
+                  <main> ma na desktopie tylko lg:pt-10, a dolne 40px daje ten element w przepływie. */}
+              <div aria-hidden className="h-16 lg:h-10" />
             </div>
           </main>
         </div>
