@@ -113,6 +113,8 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/((?!$|login|api/auth|api/health|_next/static|_next/image|deezy\\.png|favicon).*)",
+    // privacy/terms muszą być publiczne: linkują do nich Discord Developer Portal i Stripe,
+    // a prawo wymaga udostępnienia regulaminu przed zawarciem umowy (czyli przed logowaniem).
+    "/((?!$|login|privacy$|terms$|api/auth|api/health|_next/static|_next/image|deezy\\.png|favicon).*)",
   ],
 };

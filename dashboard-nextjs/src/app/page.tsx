@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Shield, Zap, Users, Gift, MessageSquare } from "lucide-react";
@@ -188,6 +189,10 @@ export default function HomePage() {
         <footer className="border-t border-bot-blue/20 py-8 backdrop-blur-sm">
           <div className="container mx-auto px-4 text-center text-muted-foreground">
             <p>&copy; 2025 Deezy. Wszystkie prawa zastrzeżone.</p>
+            <nav aria-label="Dokumenty" className="mt-2 flex justify-center gap-4 text-sm">
+              <Link href="/terms" className="hover:text-foreground">Regulamin</Link>
+              <Link href="/privacy" className="hover:text-foreground">Polityka prywatności</Link>
+            </nav>
           </div>
         </footer>
       </div>
