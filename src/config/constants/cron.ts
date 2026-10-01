@@ -52,4 +52,7 @@ export const CRON = {
 
   /** Every 20 seconds (6-field) — write bot ping/online heartbeat for dashboard */
   BOT_STATUS_HEARTBEAT: '*/20 * * * * *',
+
+  /** Daily at 04:00 — detect guilds the bot left and purge data past the retention period */
+  GUILD_DATA_RETENTION: '0 4 * * *',
 } as const;
