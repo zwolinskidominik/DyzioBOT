@@ -14,7 +14,11 @@ import { GiveawayConfigModel } from '../../models/GiveawayConfig';
 import { AutoRoleModel } from '../../models/AutoRole';
 import logger from '../../utils/logger';
 
-export default async (_client: Client, guild: Guild) => {
+// Kolejność argumentów jak w każdym evencie: EventHandler woła handler(...argsEventu, client),
+// więc dla guildCreate najpierw przychodzi Guild, a Client na końcu. Wcześniej parametry były
+// zamienione — `guild` był tak naprawdę Clientem, guildId === undefined i konfiguracje nowego
+// serwera nie były tworzone.
+export default async (guild: Guild, _client: Client) => {
   try {
     const guildId = guild.id;
     logger.info(`Bot joined new guild: ${guild.name} (${guildId}). Initializing module configurations...`);

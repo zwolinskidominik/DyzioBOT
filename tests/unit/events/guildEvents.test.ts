@@ -153,10 +153,15 @@ describe('guildCreate / initializeGuildConfigs', () => {
     const client = mockClient();
     const guild = mockGuild();
     mockFindOneAndUpdate.mockClear();
-    await run(client, guild);
+    // EventHandler woła handler(...argsEventu, client) — dla guildCreate: (guild, client).
+    await run(guild, client);
     // 13 models are initialized (Birthday, Greetings, Level, MonthlyStats, Question, Suggestion, Ticket, Stream, ReactionRole, Log, Tournament, Giveaway, AutoRole)
     expect(mockFindOneAndUpdate).toHaveBeenCalled();
     expect(mockFindOneAndUpdate.mock.calls.length).toBeGreaterThanOrEqual(10);
+    // Każda konfiguracja musi trafić do TEGO serwera, a nie do guildId === undefined.
+    for (const [filter] of mockFindOneAndUpdate.mock.calls) {
+      expect(filter).toEqual({ guildId: guild.id });
+    }
   });
 });
 
