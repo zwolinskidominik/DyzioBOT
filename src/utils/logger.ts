@@ -20,7 +20,16 @@ const logger = createLogger({
   ),
   transports: [
     new transports.Console({ level: LOG_LEVEL }),
-    new transports.File({ filename: 'logs/bot.log', level: LOG_LEVEL }),
+    // Logi zawierają ID użytkowników i serwerów, więc ich objętość (a tym samym czas
+    // przechowywania) musi być ograniczona: max 5 plików po 10 MB, najstarszy jest nadpisywany.
+    // Polityka prywatności opisuje logi techniczne jako przechowywane w ograniczonym zakresie.
+    new transports.File({
+      filename: 'logs/bot.log',
+      level: LOG_LEVEL,
+      maxsize: 10 * 1024 * 1024,
+      maxFiles: 5,
+      tailable: true,
+    }),
   ],
 });
 
