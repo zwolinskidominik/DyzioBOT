@@ -617,9 +617,8 @@ export default function MonthlyStatsPage() {
                 </div>
               ) : (
                 <div className="flex gap-2.5">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ background: "#5865F2" }}>
-                    D
-                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/deezy.png" alt="Deezy" className="h-8 w-8 shrink-0 rounded-full object-cover" />
                   <div className="min-w-0 flex-1" ref={previewMeasureRef}>
                     <div className="text-xs font-semibold text-white">
                       Deezy{" "}
