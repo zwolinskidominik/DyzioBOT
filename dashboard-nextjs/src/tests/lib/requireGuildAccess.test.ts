@@ -41,7 +41,7 @@ describe("requireGuildAccess", () => {
 
   it("blocks a logged-in user who is not a member of the guild (IDOR case)", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
-      jsonResponse([{ id: "other-guild", name: "Not this one", icon: null, permissions: "2147483647" }])
+      jsonResponse([{ id: "other-guild", name: "Not this one", icon: null, permissions: "2147483647", owner: false }])
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -53,7 +53,7 @@ describe("requireGuildAccess", () => {
   it("blocks a guild member who lacks MANAGE_GUILD / ADMINISTRATOR", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       // permissions "1024" = VIEW_CHANNEL only, no MANAGE_GUILD(0x20) / ADMINISTRATOR(0x8)
-      jsonResponse([{ id: "victim-guild", name: "Some server", icon: null, permissions: "1024" }])
+      jsonResponse([{ id: "victim-guild", name: "Some server", icon: null, permissions: "1024", owner: false }])
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -64,7 +64,7 @@ describe("requireGuildAccess", () => {
 
   it("allows a member with MANAGE_GUILD permission", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
-      jsonResponse([{ id: "my-guild", name: "My server", icon: null, permissions: String(0x20) }])
+      jsonResponse([{ id: "my-guild", name: "My server", icon: null, permissions: String(0x20), owner: false }])
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -75,7 +75,7 @@ describe("requireGuildAccess", () => {
 
   it("allows a member with ADMINISTRATOR permission", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
-      jsonResponse([{ id: "my-guild", name: "My server", icon: null, permissions: String(0x8) }])
+      jsonResponse([{ id: "my-guild", name: "My server", icon: null, permissions: String(0x8), owner: false }])
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -88,7 +88,7 @@ describe("requireGuildAccess", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     setCachedGuildList("regular-user-5", [
-      { id: "cached-guild", name: "Cached", icon: null, permissions: String(0x20) },
+      { id: "cached-guild", name: "Cached", icon: null, permissions: String(0x20), owner: false },
     ]);
 
     const res = await requireGuildAccess(session("regular-user-5"), "cached-guild");

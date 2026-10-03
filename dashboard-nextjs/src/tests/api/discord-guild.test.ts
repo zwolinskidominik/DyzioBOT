@@ -38,7 +38,7 @@ describe("GET /api/discord/guild/[guildId]", () => {
     const guildId = "guild-no-bot";
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse([
-        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8" },
+        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8", owner: false },
       ]))
       .mockResolvedValueOnce(jsonResponse({ message: "Unknown Guild" }, 404));
     vi.stubGlobal("fetch", fetchMock);
@@ -72,11 +72,11 @@ describe("GET /api/discord/guild/[guildId]", () => {
     const guildId = "guild-force-refresh";
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse([
-        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8" },
+        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8", owner: false },
       ]))
       .mockResolvedValueOnce(jsonResponse({ id: guildId }))
       .mockResolvedValueOnce(jsonResponse([
-        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8" },
+        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8", owner: false },
       ]))
       .mockResolvedValueOnce(jsonResponse({ message: "Unknown Guild" }, 404));
     vi.stubGlobal("fetch", fetchMock);
@@ -94,7 +94,7 @@ describe("GET /api/discord/guild/[guildId]", () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse([
-        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8" },
+        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8", owner: false },
       ]))
       .mockResolvedValueOnce(jsonResponse({ id: guildId }))
       .mockResolvedValueOnce(jsonResponse({ message: "Rate limited" }, 429));
@@ -114,7 +114,7 @@ describe("GET /api/discord/guild/[guildId]", () => {
     const guildId = "guild-bot-presence-429";
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse([
-        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8" },
+        { id: guildId, name: "Testowy serwer", icon: null, permissions: "8", owner: false },
       ]))
       .mockResolvedValueOnce(jsonResponse({ message: "Rate limited" }, 429));
     vi.stubGlobal("fetch", fetchMock);
