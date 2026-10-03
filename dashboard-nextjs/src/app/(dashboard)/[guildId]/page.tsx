@@ -853,7 +853,9 @@ export default function GuildDashboard() {
                             <span style={{ fontSize: 14 }}>{MODULE_EMOJI[key] ?? "⚙️"}</span>
                             <div className="flex-1 min-w-0">
                               <p style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>{MODULE_LABELS[key] ?? key}</p>
-                              <p className="truncate" style={{ fontSize: 11, color: COLOR.secondary }}>{reason}</p>
+                              {/* Bez truncate: opis problemu to właśnie to, co ma przeczytać admin —
+                                  w wąskiej karcie ucinało go po kilku słowach. Zawija się do kolejnych linii. */}
+                              <p className="break-words" style={{ fontSize: 11, lineHeight: 1.4, color: COLOR.secondary }}>{reason}</p>
                             </div>
                             <Link
                               href={`/${guildId}${MODULE_HREF[key] ?? ""}`}
