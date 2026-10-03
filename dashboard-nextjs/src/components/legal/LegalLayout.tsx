@@ -68,7 +68,7 @@ export function LegalLayout({ lang, path, title, version, children }: LegalLayou
         <p className="mt-2 text-sm text-muted-foreground">
           {t.version} {version}, {t.effective} {LEGAL.effectiveDate}
         </p>
-        <div className="mt-8 space-y-8 break-words text-[15px] leading-7 text-muted-foreground">{children}</div>
+        <div className="mt-8 space-y-8 break-words text-[15px] leading-7 text-foreground">{children}</div>
       </main>
 
       <footer className="border-t border-border">
