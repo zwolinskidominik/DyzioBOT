@@ -273,6 +273,10 @@ export function TermsPl() {
           przepisy państwa jego zwykłego pobytu.
         </p>
         <p>
+          Jeśli coś poszło nie tak, napisz do nas — prawie każdą sprawę da się załatwić jedną rozmową. Poniższe zasady
+          wymagają przepisy i mają znaczenie tylko wtedy, gdyby rozmowa nie wystarczyła.
+        </p>
+        <p>
           Spory z konsumentami rozstrzyga sąd właściwy według przepisów ogólnych — konsument z innego państwa Unii
           Europejskiej może pozwać Usługodawcę także przed sądem swojego miejsca zamieszkania. Spory z Użytkownikami
           niebędącymi konsumentami rozstrzyga sąd właściwy dla miejsca zamieszkania Usługodawcy.

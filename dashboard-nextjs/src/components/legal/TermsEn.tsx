@@ -264,6 +264,10 @@ export function TermsEn() {
           law of their country of habitual residence.
         </p>
         <p>
+          If something goes wrong, just write to us — almost anything can be sorted out in one conversation. The rules below
+          are required by law and only matter if talking it through is not enough.
+        </p>
+        <p>
           Disputes with consumers are resolved by the court with jurisdiction under general rules — a consumer from another
           European Union country may also sue the service provider in the courts of their own place of residence. Disputes
           with Users who are not consumers are resolved by the court competent for the service provider&apos;s place of
