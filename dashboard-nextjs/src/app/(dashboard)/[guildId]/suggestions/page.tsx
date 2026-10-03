@@ -271,13 +271,7 @@ export default function SuggestionsPage() {
         <div className="w-full">
           <Skeleton className="h-10 w-40 mb-6" />
           
-          <Card
-            className="backdrop-blur mb-6"
-            style={{
-              boxShadow: '0 0 10px #00000026',
-              border: '1px solid transparent'
-            }}
-          >
+          <Card className="mb-6 rounded-md border-0 bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
             <CardHeader>
               <Skeleton className="h-8 w-48 mb-2" />
               <Skeleton className="h-4 w-96" />
@@ -295,13 +289,7 @@ export default function SuggestionsPage() {
             </CardContent>
           </Card>
           
-          <Card
-            className="backdrop-blur"
-            style={{
-              boxShadow: '0 0 10px #00000026',
-              border: '1px solid transparent'
-            }}
-          >
+          <Card className="rounded-md border-0 bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
             <CardHeader>
               <Skeleton className="h-7 w-40" />
             </CardHeader>
@@ -368,20 +356,17 @@ export default function SuggestionsPage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
           {/* Configuration Card */}
           <SlideIn direction="up" delay={150}>
-            <Card
-              className="backdrop-blur"
-              style={{
-                boxShadow: '0 0 10px #00000026',
-                border: '1px solid transparent'
-              }}
-            >
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5 text-bot-primary" />
-                  <span className="text-white/90">
-                    Konfiguracja
-                  </span>
-                </CardTitle>
+            {/* Wygląd jak sekcje innych modułów (np. SettingRow w ticketach): tło dark-800,
+                szara ikona w ciemnym kwadracie, tytuł + opis. */}
+            <Card className="rounded-md border-0 bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
+              <CardHeader className="flex-row items-center gap-3 space-y-0">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-dark-900 text-[#aab2c8]">
+                  <Lightbulb className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm font-semibold text-white/90">Konfiguracja</CardTitle>
+                  <p className="mt-1 text-xs text-[#8d94a8]">Kanał sugestii, format głosowania, kolor embeda</p>
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Channel Select */}
@@ -468,13 +453,7 @@ export default function SuggestionsPage() {
 
           {/* Live Preview */}
           <SlideIn direction="up" delay={150}>
-            <Card
-              className="backdrop-blur lg:sticky lg:top-6"
-              style={{
-                boxShadow: '0 0 10px #00000026',
-                border: '1px solid transparent'
-              }}
-            >
+            <Card className="rounded-md border-0 bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)] lg:sticky lg:top-6">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold uppercase tracking-wide text-[#8d94a8]">
                   Podgląd na żywo
