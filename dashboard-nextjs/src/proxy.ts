@@ -115,6 +115,8 @@ export const config = {
   matcher: [
     // privacy/terms muszą być publiczne: linkują do nich Discord Developer Portal i Stripe,
     // a prawo wymaga udostępnienia regulaminu przed zawarciem umowy (czyli przed logowaniem).
-    "/((?!$|login|privacy$|terms$|api/auth|api/health|_next/static|_next/image|deezy\\.png|favicon).*)",
+    // flags/ i twemoji/ to statyczne pliki z public/ używane także przed zalogowaniem (navbar
+    // na stronie głównej) — bez wyjątku proxy przekierowywało je na /login i obrazek się nie ładował.
+    "/((?!$|login|privacy$|terms$|flags/|twemoji/|api/auth|api/health|_next/static|_next/image|deezy\\.png|favicon).*)",
   ],
 };
