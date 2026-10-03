@@ -1,5 +1,6 @@
 import { createCanvas, loadImage, Canvas, Image } from 'canvas';
 import { Ctx2D, registerProjectFonts, roundRect } from './canvasHelpers';
+import { fillTextWithEmojiTracked, isEmojiGrapheme, splitGraphemes } from './canvasEmojiText';
 import logger from './logger';
 
 /**
@@ -227,41 +228,16 @@ export class MonthlyTopkaCardV3 {
     this.ctx.clip();
   }
 
-  /** Rysuje tekst z ręcznym letter-spacingiem (Canvas2D/Cairo nie wspiera CSS letter-spacing w skrócie fontu). */
-  private fillTextTracked(
-    text: string,
-    x: number,
-    y: number,
-    letterSpacingPx: number,
-    align: 'left' | 'right' | 'center' = 'left',
-  ): number {
-    const chars = Array.from(text);
-    const savedAlign = this.ctx.textAlign;
-    this.ctx.textAlign = 'left';
-
-    const widths = chars.map((c) => this.ctx.measureText(c).width);
-    const totalWidth = widths.reduce((a, b) => a + b, 0) + letterSpacingPx * Math.max(0, chars.length - 1);
-
-    let cx = x;
-    if (align === 'right') cx = x - totalWidth;
-    else if (align === 'center') cx = x - totalWidth / 2;
-
-    for (let i = 0; i < chars.length; i++) {
-      this.ctx.fillText(chars[i], cx, y);
-      cx += widths[i] + letterSpacingPx;
-    }
-
-    this.ctx.textAlign = savedAlign;
-    return totalWidth;
-  }
-
   private async drawHeader(y: number): Promise<number> {
     const { guildName, guildIconURL, monthName, year, totalMessages, totalVoiceMinutes, activeUsers } =
       this.options;
     const x = this.padX;
     const logoSize = 60;
 
-    await this.drawCircleImage(guildIconURL ?? null, x, y, logoSize, guildName.charAt(0).toUpperCase(), {
+    // Inicjał zastępczy (gdy serwer nie ma ikony) — pierwszy znak, który nie jest emoji;
+    // charAt(0) przy nazwie zaczynającej się od emoji zwróciłby połówkę pary surogatów.
+    const initial = splitGraphemes(guildName).find((g) => g.trim() && !isEmojiGrapheme(g)) ?? '?';
+    await this.drawCircleImage(guildIconURL ?? null, x, y, logoSize, initial.toUpperCase(), {
       borderColor: this.colors.border,
       borderWidth: 2,
     });
@@ -270,7 +246,12 @@ export class MonthlyTopkaCardV3 {
 
     this.ctx.fillStyle = this.colors.textMuted;
     this.ctx.font = `bold 11px ${FONT}`;
-    this.fillTextTracked(guildName.toUpperCase(), textX, y + 16, 0.18 * 11, 'left');
+    // Nazwy serwerów często zawierają emoji (np. „🎮GAMEZONE🎮") — fillText narysowałby je jako
+    // prostokąty z kodem, więc emoji idą jako obrazki Twemoji.
+    await fillTextWithEmojiTracked(this.ctx, guildName.toUpperCase(), textX, y + 16, {
+      fontSize: 11,
+      letterSpacing: 0.18 * 11,
+    });
 
     this.ctx.fillStyle = this.colors.textPrimary;
     this.ctx.font = `bold 34px ${FONT}`;
