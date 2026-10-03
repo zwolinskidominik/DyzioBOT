@@ -49,7 +49,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-bot-blue/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo & Name */}
-        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+        <Link href="/" className="flex shrink-0 items-center gap-3 hover:opacity-80 transition-opacity">
           <Image
             src="/deezy.png"
             alt="Deezy"
@@ -63,7 +63,7 @@ export default function Navbar() {
         </Link>
 
         {/* Right side - Language & Login */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {/* Language Selector */}
           <div className="relative" ref={langDropdownRef}>
             <button
@@ -119,21 +119,22 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Login / Dashboard Button */}
+          {/* Login / Dashboard Button — na telefonie (<640px) sama ikona, żeby nie nachodziła na logo. */}
           {isLoggedIn ? (
-            <Button asChild className="btn-gradient shadow-lg shadow-bot-primary/30 hover:scale-105">
-              <Link href="/guilds">
-                <LayoutDashboard className="mr-2 w-4 h-4" />
-                Moje serwery
+            <Button asChild className="btn-gradient px-3 shadow-lg shadow-bot-primary/30 hover:scale-105 sm:px-4">
+              <Link href="/guilds" aria-label="Moje serwery">
+                <LayoutDashboard className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Moje serwery</span>
               </Link>
             </Button>
           ) : (
             <Button
               onClick={() => signIn("discord", { callbackUrl: "/guilds" })}
-              className="btn-gradient shadow-lg shadow-bot-primary/30 hover:scale-105"
+              aria-label="Zaloguj się"
+              className="btn-gradient px-3 shadow-lg shadow-bot-primary/30 hover:scale-105 sm:px-4"
             >
-              <LogIn className="mr-2 w-4 h-4" />
-              Zaloguj się
+              <LogIn className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Zaloguj się</span>
             </Button>
           )}
         </div>
