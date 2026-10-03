@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import Navbar from "@/components/Navbar";
 import { LEGAL, LEGAL_HAS_PLACEHOLDERS, type LegalLang } from "@/lib/legal";
 
 interface LegalLayoutProps {
@@ -13,7 +14,7 @@ interface LegalLayoutProps {
 
 const LABELS = {
   pl: {
-    back: "Strona główna",
+    language: "Język dokumentu",
     version: "Wersja",
     effective: "obowiązuje od",
     privacy: "Polityka prywatności",
@@ -21,7 +22,7 @@ const LABELS = {
     draft: "Wersja robocza — dane usługodawcy nie zostały jeszcze uzupełnione.",
   },
   en: {
-    back: "Home",
+    language: "Document language",
     version: "Version",
     effective: "effective from",
     privacy: "Privacy Policy",
@@ -34,12 +35,19 @@ export function LegalLayout({ lang, path, title, version, children }: LegalLayou
   const t = LABELS[lang];
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-4">
-          <Link href="/" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-            ← {t.back}
-          </Link>
-          <nav aria-label="Language" className="flex gap-1 text-sm">
+      {/* Ten sam navbar co na stronie głównej. Jego przełącznik języka dotyczy całego serwisu
+          (na razie tylko PL), dlatego dokumenty mają własny przełącznik PL/EN przy tytule. */}
+      <Navbar />
+
+      <main className="mx-auto max-w-3xl px-4 py-10">
+        {LEGAL_HAS_PLACEHOLDERS && (
+          <p role="note" className="mb-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+            {t.draft}
+          </p>
+        )}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <h1 className="text-3xl font-bold text-bot-blue">{title}</h1>
+          <nav aria-label={t.language} className="flex gap-1 text-sm">
             {(["pl", "en"] as const).map((code) => (
               <Link
                 key={code}
@@ -56,15 +64,6 @@ export function LegalLayout({ lang, path, title, version, children }: LegalLayou
             ))}
           </nav>
         </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-4 py-10">
-        {LEGAL_HAS_PLACEHOLDERS && (
-          <p role="note" className="mb-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-            {t.draft}
-          </p>
-        )}
-        <h1 className="text-3xl font-bold text-bot-blue">{title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {t.version} {version}, {t.effective} {LEGAL.effectiveDate}
         </p>
