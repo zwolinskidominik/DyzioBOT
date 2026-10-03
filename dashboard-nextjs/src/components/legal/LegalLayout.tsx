@@ -64,9 +64,7 @@ export function LegalLayout({ lang, path, title, version, children }: LegalLayou
             {t.draft}
           </p>
         )}
-        <h1 className="text-3xl font-bold">
-          <GradientText>{title}</GradientText>
-        </h1>
+        <h1 className="text-3xl font-bold text-bot-blue">{title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {t.version} {version}, {t.effective} {LEGAL.effectiveDate}
         </p>
@@ -91,24 +89,14 @@ export function LegalLayout({ lang, path, title, version, children }: LegalLayou
 }
 
 /**
- * Gradient jak w nagłówku strony głównej („Kompletny bot"). Inline span, żeby gradient
- * rozciągał się na szerokość tekstu, a nie całego wiersza.
+ * Sekcja dokumentu z numerowanym nagłówkiem. Nagłówki w kolorze bota: bot-blue (#818cf8)
+ * zamiast bot-primary (#6366f1), bo jaśniejszy odcień tej samej barwy ma lepszy kontrast
+ * na ciemnym tle.
  */
-function GradientText({ children }: { children: ReactNode }) {
-  return (
-    <span className="bg-gradient-to-r from-bot-light via-bot-primary to-bot-blue bg-clip-text text-transparent">
-      {children}
-    </span>
-  );
-}
-
-/** Sekcja dokumentu z numerowanym nagłówkiem. */
 export function LegalSection({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section id={id} className="scroll-mt-6 space-y-3">
-      <h2 className="text-xl font-semibold">
-        <GradientText>{title}</GradientText>
-      </h2>
+      <h2 className="text-xl font-semibold text-bot-blue">{title}</h2>
       {children}
     </section>
   );
