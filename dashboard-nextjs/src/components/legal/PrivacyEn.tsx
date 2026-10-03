@@ -198,7 +198,9 @@ export function PrivacyEn() {
             separate controller.
           </li>
           <li>
-            <Strong>Twitch</Strong> — streamer channel names set by a server's staff in the notifications module.
+            <Strong>Twitch</Strong> — streamer channel names set by a server's staff in the notifications module. On that
+            module's page in the panel your browser loads avatars and thumbnails directly from Twitch's servers, so Twitch
+            receives your IP address.
           </li>
           <li>
             <Strong>External services for selected commands</Strong> — for example weather (a town name), FACEIT statistics

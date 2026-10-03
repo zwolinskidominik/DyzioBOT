@@ -43,7 +43,7 @@ interface UnicodeEmoji {
 
 // Self-hosted from public/twemoji/svg/ (via `npm run emoji:assets`) instead of
 // a third-party CDN like jsDelivr — CSP img-src intentionally only allows
-// 'self' plus a short allowlist (cdn.discordapp.com, flagcdn.com,
+// 'self' plus a short allowlist (cdn.discordapp.com,
 // static-cdn.jtvnw.net), see next.config.ts. Same asset source as EmojiDisplay
 // (src/lib/emojiCodepoints.ts), so both render identically.
 function twemojiUrl(emoji: UnicodeEmoji) {

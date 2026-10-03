@@ -22,9 +22,9 @@ interface DashboardTopbarProps {
 }
 
 const languages: Record<string, Language> = {
-  pl: { flag: "https://flagcdn.com/pl.svg", name: "Polski", code: "PL" },
-  en: { flag: "https://flagcdn.com/us.svg", name: "English", code: "US", disabled: true },
-  de: { flag: "https://flagcdn.com/de.svg", name: "Deutsch", code: "DE", disabled: true },
+  pl: { flag: "/flags/pl.svg", name: "Polski", code: "PL" },
+  en: { flag: "/flags/us.svg", name: "English", code: "US", disabled: true },
+  de: { flag: "/flags/de.svg", name: "Deutsch", code: "DE", disabled: true },
 };
 
 export function DashboardTopbar({

@@ -14,7 +14,7 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https://cdn.discordapp.com https://flagcdn.com https://static-cdn.jtvnw.net",
+  "img-src 'self' data: https://cdn.discordapp.com https://static-cdn.jtvnw.net",
   "font-src 'self' data:",
   "connect-src 'self' https://discord.com https://cdn.discordapp.com",
   "object-src 'none'",
@@ -46,10 +46,6 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "cdn.discordapp.com",
-      },
-      {
-        protocol: "https",
-        hostname: "flagcdn.com",
       },
       {
         protocol: "https",

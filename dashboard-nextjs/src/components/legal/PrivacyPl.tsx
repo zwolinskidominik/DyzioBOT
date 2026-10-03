@@ -206,6 +206,8 @@ export function PrivacyPl() {
           </li>
           <li>
             <Strong>Twitch</Strong> — nazwy kanałów streamerów ustawione przez administrację serwera w module powiadomień.
+            Na stronie tego modułu w panelu przeglądarka wczytuje awatary i miniatury bezpośrednio z serwerów Twitcha, więc
+            Twitch otrzymuje wtedy Twój adres IP.
           </li>
           <li>
             <Strong>Serwisy zewnętrzne przy wybranych komendach</Strong> — na przykład pogoda (nazwa miejscowości), statystyki
