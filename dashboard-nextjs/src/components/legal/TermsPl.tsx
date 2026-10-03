@@ -273,8 +273,14 @@ export function TermsPl() {
           przepisy państwa jego zwykłego pobytu.
         </p>
         <p>
-          Spory rozstrzyga sąd właściwy według przepisów ogólnych. Konsument może skorzystać także z pozasądowych sposobów
-          rozwiązywania sporów, na przykład z pomocy miejskiego lub powiatowego rzecznika konsumentów.
+          Spory z konsumentami rozstrzyga sąd właściwy według przepisów ogólnych — konsument z innego państwa Unii
+          Europejskiej może pozwać Usługodawcę także przed sądem swojego miejsca zamieszkania. Spory z Użytkownikami
+          niebędącymi konsumentami rozstrzyga sąd właściwy dla miejsca zamieszkania Usługodawcy.
+        </p>
+        <p>
+          Konsument może skorzystać także z pozasądowych sposobów rozwiązywania sporów: w Polsce na przykład z pomocy
+          miejskiego lub powiatowego rzecznika konsumentów, a konsument z innego państwa Unii Europejskiej, Islandii lub
+          Norwegii — z pomocy Europejskiego Centrum Konsumenckiego w swoim kraju.
         </p>
         <p>
           Wiążąca jest polska wersja Regulaminu. Wersja angielska jest tłumaczeniem udostępnionym dla wygody Użytkowników.

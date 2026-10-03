@@ -264,8 +264,15 @@ export function TermsEn() {
           law of their country of habitual residence.
         </p>
         <p>
-          Disputes are resolved by the court with jurisdiction under general rules. Consumers may also use out-of-court
-          dispute resolution, for example consumer ombudsmen in their country.
+          Disputes with consumers are resolved by the court with jurisdiction under general rules — a consumer from another
+          European Union country may also sue the service provider in the courts of their own place of residence. Disputes
+          with Users who are not consumers are resolved by the court competent for the service provider&apos;s place of
+          residence.
+        </p>
+        <p>
+          Consumers may also use out-of-court dispute resolution: in Poland, for example, municipal or district consumer
+          ombudsmen, and consumers from another European Union country, Iceland or Norway can turn to the European Consumer
+          Centre in their own country.
         </p>
         <p>The Polish version of these Terms is binding. The English version is a translation provided for convenience.</p>
         <p>These Terms are effective from {LEGAL.effectiveDate}.</p>
