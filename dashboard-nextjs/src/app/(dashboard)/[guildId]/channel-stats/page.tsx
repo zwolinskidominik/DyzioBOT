@@ -64,7 +64,6 @@ const STAT_CATEGORIES: Record<
   {
     name: string;
     emoji: string;
-    badgeBg: string;
     variables: StatVariable[];
     presets: string[];
   }
@@ -72,28 +71,24 @@ const STAT_CATEGORIES: Record<
   lastJoined: {
     name: "Ostatnio dołączył",
     emoji: "👤",
-    badgeBg: "rgba(255,255,255,0.08)",
     variables: [{ name: "Użytkownik", display: "Użytkownik", value: "{member}", description: "Nazwa ostatnio dołączonego użytkownika" }],
     presets: ["👤 Ostatni: {member}", "🆕 Nowy: {member}"],
   },
   users: {
     name: "Liczba użytkowników",
     emoji: "👥",
-    badgeBg: "rgba(255,255,255,0.08)",
     variables: [{ name: "Liczba", display: "Liczba", value: "{count}", description: "Liczba użytkowników na serwerze" }],
     presets: ["👥 Użytkownicy: {count}", "Użytkowników: {count}"],
   },
   bots: {
     name: "Liczba botów",
     emoji: "🤖",
-    badgeBg: "rgba(255,255,255,0.08)",
     variables: [{ name: "Liczba", display: "Liczba", value: "{count}", description: "Liczba botów na serwerze" }],
     presets: ["🤖 Boty: {count}", "Botów: {count}"],
   },
   bans: {
     name: "Liczba banów",
     emoji: "🔨",
-    badgeBg: "rgba(255,255,255,0.08)",
     variables: [{ name: "Liczba", display: "Liczba", value: "{count}", description: "Liczba banów na serwerze" }],
     presets: ["🔨 Bany: {count}", "Banów: {count}"],
   },
@@ -443,8 +438,7 @@ export default function ChannelStatsPage() {
                   >
                     <div className="flex items-center gap-2.5 mb-2.5">
                       <span
-                        className="w-[26px] h-[26px] shrink-0 rounded-[7px] flex items-center justify-center text-[13px]"
-                        style={{ background: category.badgeBg }}
+                        className="w-[26px] h-[26px] shrink-0 rounded-[7px] flex items-center justify-center bg-dark-900 text-[13px]"
                       >
                         {category.emoji}
                       </span>
