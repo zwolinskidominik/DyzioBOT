@@ -48,7 +48,7 @@ export function TermsPl() {
             Bota do serwera i konfiguruje go w Panelu.
           </li>
           <li>
-            <Strong>Dane konfiguracyjne</Strong> — ustawienia, reguły i treści wprowadzone w Panelu lub komendami Bota dla
+            <Strong>Dane konfiguracyjne</Strong> — ustawienia, reguły i treści wprowadzone w Panelu lub za pomocą komend Bota dla
             danego serwera, w tym wgrane pliki (np. obrazy w module Powitania).
           </li>
           <li>
