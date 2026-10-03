@@ -1,16 +1,17 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
-import { Settings, ChevronDown, Info, Loader2 } from "lucide-react";
+import { Settings, ChevronDown, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
 import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import { useDirtyState } from "@/components/DirtyStateProvider";
 import { plural } from "@/lib/plural";
 import {
   WRAPPED_THEMES,
@@ -159,12 +160,17 @@ export default function WrappedPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const preview = FAKE_PREVIEW;
 
+  const { registerDirtyController } = useDirtyState();
+
   const [config, setConfig] = useState<WrappedConfig>({
     guildId,
     channelId: undefined,
     enabled: false,
     colorTheme: DEFAULT_WRAPPED_THEME,
   });
+  // Ostatnio zapisany stan — porównanie z nim decyduje o pokazaniu pływającego paska
+  // Zapisz/Anuluj (tak jak w pozostałych modułach), a Anuluj do niego wraca.
+  const savedConfigRef = useRef<WrappedConfig>(config);
 
   // Karta podglądu grafiki (PREVIEW_W×PREVIEW_H) na mobile/tablecie (<1024px) skaluje się dodatkowo
   // w dół, żeby zmieścić się w dostępnej szerokości bez poziomego overflow, z zachowaniem proporcji
@@ -209,14 +215,16 @@ export default function WrappedPage() {
 
         if (configRes.ok) {
           const data = await configRes.json();
-          setConfig({
+          const loaded: WrappedConfig = {
             guildId,
             channelId: data.channelId || undefined,
             enabled: data.enabled ?? false,
             colorTheme: (WRAPPED_THEMES as readonly string[]).includes(data.colorTheme)
               ? data.colorTheme
               : DEFAULT_WRAPPED_THEME,
-          });
+          };
+          setConfig(loaded);
+          savedConfigRef.current = loaded;
         }
       } catch (fetchError) {
         console.error("Error loading wrapped config:", fetchError);
@@ -229,7 +237,7 @@ export default function WrappedPage() {
     if (guildId) void fetchData();
   }, [guildId]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!config.channelId) {
       setChannelError(true);
       toast.error("Wybierz kanał docelowy");
@@ -244,12 +252,14 @@ export default function WrappedPage() {
       });
       if (!response.ok) throw new Error("Failed to save configuration");
       const saved = await response.json();
-      setConfig({
+      const next: WrappedConfig = {
         guildId,
         channelId: saved.channelId || undefined,
         enabled: saved.enabled ?? config.enabled,
         colorTheme: saved.colorTheme ?? config.colorTheme,
-      });
+      };
+      setConfig(next);
+      savedConfigRef.current = next;
       toast.success("Konfiguracja Wrapped została zapisana!");
     } catch (saveError) {
       console.error("Error saving config:", saveError);
@@ -257,7 +267,26 @@ export default function WrappedPage() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [config, guildId]);
+
+  const handleCancel = useCallback(() => {
+    setConfig(savedConfigRef.current);
+    setChannelError(false);
+  }, []);
+
+  const isDirty = useMemo(
+    () => JSON.stringify(config) !== JSON.stringify(savedConfigRef.current),
+    [config]
+  );
+
+  useEffect(() => registerDirtyController({
+    id: `wrapped-${guildId}`,
+    isDirty,
+    isSaving: saving,
+    label: "Server Wrapped",
+    onSave: handleSave,
+    onCancel: handleCancel,
+  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]);
 
   const handleRetry = () => {
     setError(null);
@@ -709,38 +738,6 @@ export default function WrappedPage() {
                     <p style={{ margin: "2px 0 0", fontSize: 12, color: "#8d94a8" }}>
                       Podsumowanie wysyłane raz w roku, 11 listopada o 12:00 — w urodziny serwera.
                     </p>
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="hover:bg-[#818cf8] disabled:cursor-not-allowed"
-                      style={{
-                        marginTop: 8,
-                        border: "none",
-                        borderRadius: 8,
-                        background: "#6366f1",
-                        color: "#fff",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        fontFamily: "inherit",
-                        height: 44,
-                        cursor: "pointer",
-                        opacity: saving ? 0.7 : 1,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 6,
-                      }}
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Zapisywanie...
-                        </>
-                      ) : (
-                        "Zapisz konfigurację"
-                      )}
-                    </button>
                   </div>
                 )}
               </div>
