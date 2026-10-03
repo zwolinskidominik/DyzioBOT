@@ -11,6 +11,31 @@ export function PrivacyPl() {
         długo je przechowujemy i jakie prawa Ci przysługują.
       </p>
 
+      <LegalSection id="pojecia" title="Pojęcia">
+        <LegalList>
+          <li>
+            <Strong>Administrator</Strong> — usługodawca wskazany w punkcie 1.
+          </li>
+          <li>
+            <Strong>Bot</Strong> — aplikacja Discord „Deezy" o identyfikatorze {LEGAL.botApplicationId}.
+          </li>
+          <li>
+            <Strong>Panel</Strong> — serwis internetowy pod adresem {LEGAL.siteUrl}, w którym konfiguruje się Bota.
+          </li>
+          <li>
+            <Strong>Discord</Strong> — platforma komunikacyjna prowadzona przez Discord Inc., dostępna pod adresem
+            discord.com i w aplikacjach Discord.
+          </li>
+          <li>
+            <Strong>Użytkownik</Strong> — osoba korzystająca z Bota lub Panelu, w tym członek serwera, na którym działa Bot.
+          </li>
+          <li>
+            <Strong>RODO</Strong> — rozporządzenie Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r.
+            (ogólne rozporządzenie o ochronie danych).
+          </li>
+        </LegalList>
+      </LegalSection>
+
       <LegalSection id="administrator" title="1. Administrator danych">
         <p>
           Administratorem danych jest <Strong>{LEGAL.operatorName}</Strong> (miejsce zamieszkania: {LEGAL.city}), adres do
@@ -85,7 +110,16 @@ export function PrivacyPl() {
           usunięciu.
         </p>
 
-        <h3 className="pt-2 font-semibold text-foreground">2.3. Kontakt z nami</h3>
+        <h3 className="pt-2 font-semibold text-foreground">2.3. Dane techniczne serwerów</h3>
+        <p>
+          Do działania Bota i Panelu przetwarzamy też dane samych serwerów: nazwę i ikonę serwera, listy kanałów, ról i
+          emoji oraz ustawienia modułów wprowadzone przez administrację. Nie są to dane osobowe w rozumieniu art. 4 pkt 1 i
+          motywu 26 RODO, dlatego nie opisujemy ich szczegółowo. Jeśli jednak ustawienia zawierają identyfikator konkretnej
+          osoby (na przykład użytkownika wyłączonego z modułu), traktujemy go jak dane osobowe. Dane techniczne serwera są
+          usuwane razem z pozostałymi danymi serwera (punkt 4).
+        </p>
+
+        <h3 className="pt-2 font-semibold text-foreground">2.4. Kontakt z nami</h3>
         <p>
           Gdy piszesz do nas e-mailem lub na serwerze wsparcia, przetwarzamy treść wiadomości oraz dane, z których się
           kontaktujesz (adres e-mail albo konto Discord).
@@ -143,7 +177,8 @@ export function PrivacyPl() {
           </li>
           <li>
             Adres IP w mechanizmie limitu zapytań przechowujemy przez kilka minut, a w logach serwera WWW do 14 dni. Logi
-            aplikacji mają ograniczoną objętość i najstarsze wpisy są automatycznie nadpisywane.
+            aplikacji (zdarzenia i błędy, zawierające m.in. identyfikatory serwerów i użytkowników) mają ograniczoną
+            objętość, a najstarsze wpisy są automatycznie nadpisywane.
           </li>
           <li>
             Korespondencję przechowujemy do {LEGAL.correspondenceRetentionYears} lat od zakończenia sprawy, chyba że
@@ -196,28 +231,31 @@ export function PrivacyPl() {
           </li>
         </LegalList>
         <p>
-          Nie używamy narzędzi analitycznych, reklamowych ani śledzących. Dlatego panel nie wyświetla prośby o zgodę na
-          cookies. Możesz usunąć ciasteczka w ustawieniach przeglądarki, ale wtedy zostaniesz wylogowany.
+          Przechowywanie informacji niezbędnych do świadczenia usługi, o którą prosisz, nie wymaga zgody (art. 5 ust. 3
+          dyrektywy 2002/58/WE i przepisy Prawa komunikacji elektronicznej, które ją wdrażają). Nie używamy narzędzi
+          analitycznych, reklamowych ani śledzących, dlatego panel nie wyświetla prośby o zgodę na cookies. Możesz usunąć
+          ciasteczka w ustawieniach przeglądarki, ale wtedy zostaniesz wylogowany.
         </p>
       </LegalSection>
 
       <LegalSection id="prawa" title="7. Twoje prawa">
         <p>Masz prawo do:</p>
         <LegalList>
-          <li>dostępu do swoich danych i otrzymania ich kopii;</li>
-          <li>sprostowania danych;</li>
-          <li>usunięcia danych;</li>
-          <li>ograniczenia przetwarzania;</li>
-          <li>przeniesienia danych;</li>
-          <li>sprzeciwu wobec przetwarzania opartego na prawnie uzasadnionym interesie;</li>
+          <li>dostępu do swoich danych i otrzymania ich kopii (art. 15 RODO);</li>
+          <li>sprostowania danych (art. 16 RODO);</li>
+          <li>usunięcia danych (art. 17 RODO);</li>
+          <li>ograniczenia przetwarzania (art. 18 RODO);</li>
+          <li>przeniesienia danych (art. 20 RODO);</li>
+          <li>sprzeciwu wobec przetwarzania opartego na prawnie uzasadnionym interesie (art. 21 RODO);</li>
           <li>
             wniesienia skargi do Prezesa Urzędu Ochrony Danych Osobowych (ul. Stawki 2, 00-193 Warszawa).
           </li>
         </LegalList>
         <p>
-          Aby skorzystać z tych praw, napisz na {LEGAL.email} albo na serwerze wsparcia. Musimy potwierdzić, że żądanie
-          pochodzi od właściciela danych, dlatego możemy poprosić o potwierdzenie z Twojego konta Discord. Odpowiadamy bez
-          zbędnej zwłoki, najpóźniej w ciągu miesiąca.
+          Nie przetwarzamy danych na podstawie zgody, więc nie ma zgody do cofnięcia. Aby skorzystać z tych praw, napisz na{" "}
+          {LEGAL.email} albo na serwerze wsparcia. Musimy potwierdzić, że żądanie pochodzi od właściciela danych, dlatego
+          możemy poprosić o potwierdzenie z Twojego konta Discord albo o identyfikator serwera, którego dotyczy żądanie
+          (art. 11 i art. 12 ust. 6 RODO). Odpowiadamy bez zbędnej zwłoki, najpóźniej w ciągu miesiąca.
         </p>
         <p>
           Administracja serwera może też doprowadzić do usunięcia wszystkich danych swojego serwera, usuwając z niego bota

@@ -11,6 +11,31 @@ export function PrivacyEn() {
         have. The Polish version is the binding one; this English version is a translation provided for convenience.
       </p>
 
+      <LegalSection id="terms-used" title="Terms used">
+        <LegalList>
+          <li>
+            <Strong>Controller</Strong> — the service provider named in section 1.
+          </li>
+          <li>
+            <Strong>Bot</Strong> — the Discord application &ldquo;Deezy&rdquo; with ID {LEGAL.botApplicationId}.
+          </li>
+          <li>
+            <Strong>Panel</Strong> — the website at {LEGAL.siteUrl} used to configure the Bot.
+          </li>
+          <li>
+            <Strong>Discord</Strong> — the communication platform operated by Discord Inc., available at discord.com and in
+            the Discord apps.
+          </li>
+          <li>
+            <Strong>User</Strong> — anyone using the Bot or the Panel, including a member of a server where the Bot runs.
+          </li>
+          <li>
+            <Strong>GDPR</Strong> — Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016
+            (General Data Protection Regulation).
+          </li>
+        </LegalList>
+      </LegalSection>
+
       <LegalSection id="controller" title="1. Data controller">
         <p>
           The data controller is <Strong>{LEGAL.operatorName}</Strong> (place of residence: {LEGAL.city}), correspondence
@@ -80,7 +105,16 @@ export function PrivacyEn() {
           These are regular Discord messages in a channel managed by the server's staff, who decide when to delete them.
         </p>
 
-        <h3 className="pt-2 font-semibold text-foreground">2.3. Contacting us</h3>
+        <h3 className="pt-2 font-semibold text-foreground">2.3. Technical server data</h3>
+        <p>
+          To run the Bot and the Panel we also process data about the servers themselves: the server name and icon, lists of
+          channels, roles and emoji, and module settings entered by the server&apos;s staff. This is not personal data
+          within the meaning of Art. 4(1) and Recital 26 GDPR, so we do not describe it in detail. If the settings contain
+          the ID of a specific person (for example a user excluded from a module), we treat it as personal data. Technical
+          server data is deleted together with the rest of the server&apos;s data (section 4).
+        </p>
+
+        <h3 className="pt-2 font-semibold text-foreground">2.4. Contacting us</h3>
         <p>
           When you write to us by e-mail or on the support server, we process the content of your message and the details
           you contact us from (e-mail address or Discord account).
@@ -136,7 +170,8 @@ export function PrivacyEn() {
           </li>
           <li>
             Your IP address is kept for a few minutes in the rate limiter and for up to 14 days in the web server logs.
-            Application logs have a limited size and the oldest entries are overwritten automatically.
+            Application logs (events and errors, including server and user IDs) have a limited size and the oldest entries
+            are overwritten automatically.
           </li>
           <li>
             Correspondence is kept for up to {LEGAL.correspondenceRetentionYears} years after the matter is closed, unless you
@@ -187,29 +222,32 @@ export function PrivacyEn() {
           </li>
         </LegalList>
         <p>
-          We do not use analytics, advertising or tracking tools, which is why the panel does not ask for cookie consent. You
-          can delete cookies in your browser settings, but you will be signed out.
+          Storing information that is strictly necessary to provide the service you request does not require consent
+          (Art. 5(3) of Directive 2002/58/EC and the Polish Electronic Communications Law implementing it). We do not use
+          analytics, advertising or tracking tools, which is why the panel does not ask for cookie consent. You can delete
+          cookies in your browser settings, but you will be signed out.
         </p>
       </LegalSection>
 
       <LegalSection id="rights" title="7. Your rights">
         <p>You have the right to:</p>
         <LegalList>
-          <li>access your data and receive a copy of it;</li>
-          <li>rectification;</li>
-          <li>erasure;</li>
-          <li>restriction of processing;</li>
-          <li>data portability;</li>
-          <li>object to processing based on legitimate interest;</li>
+          <li>access your data and receive a copy of it (Art. 15 GDPR);</li>
+          <li>rectification (Art. 16 GDPR);</li>
+          <li>erasure (Art. 17 GDPR);</li>
+          <li>restriction of processing (Art. 18 GDPR);</li>
+          <li>data portability (Art. 20 GDPR);</li>
+          <li>object to processing based on legitimate interest (Art. 21 GDPR);</li>
           <li>
             lodge a complaint with the Polish supervisory authority, the President of the Personal Data Protection Office
             (UODO, ul. Stawki 2, 00-193 Warsaw), or the authority in your country of residence.
           </li>
         </LegalList>
         <p>
-          To exercise these rights, write to {LEGAL.email} or on the support server. We need to confirm that the request
-          comes from the data subject, so we may ask you to confirm it from your Discord account. We reply without undue
-          delay and within one month at the latest.
+          We do not process data on the basis of consent, so there is no consent to withdraw. To exercise these rights,
+          write to {LEGAL.email} or on the support server. We need to confirm that the request comes from the data subject,
+          so we may ask you to confirm it from your Discord account or to give the ID of the server the request concerns
+          (Art. 11 and Art. 12(6) GDPR). We reply without undue delay and within one month at the latest.
         </p>
         <p>
           A server&apos;s staff can also have all of their server&apos;s data deleted by removing the bot from it (section
