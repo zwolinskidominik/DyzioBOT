@@ -86,13 +86,13 @@ export function TermsEn() {
 
       <LegalSection id="requirements" title="§4. Technical requirements">
         <LegalList>
-          <li>a Discord account and the Discord app or its browser version;</li>
+          <li>A Discord account and the Discord app or its browser version;</li>
           <li>
-            to use the Panel: an up-to-date version of a common browser (Google Chrome, Mozilla Firefox, Apple Safari or
+            To use the Panel: An up-to-date version of a common browser (Google Chrome, Mozilla Firefox, Apple Safari or
             Microsoft Edge) with JavaScript and cookies enabled;
           </li>
           <li>
-            to configure a server in the Panel: permission to manage that server in Discord (Manage Server or Administrator).
+            To configure a server in the Panel: Permission to manage that server in Discord (Manage Server or Administrator).
           </li>
         </LegalList>
       </LegalSection>

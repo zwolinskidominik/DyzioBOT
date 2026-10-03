@@ -85,13 +85,13 @@ export function TermsPl() {
 
       <LegalSection id="wymagania" title="§4. Wymagania techniczne">
         <LegalList>
-          <li>konto Discord oraz aplikacja Discord lub jej wersja w przeglądarce;</li>
+          <li>Konto Discord oraz aplikacja Discord lub jej wersja w przeglądarce;</li>
           <li>
-            do korzystania z Panelu: aktualna wersja popularnej przeglądarki (Google Chrome, Mozilla Firefox, Apple Safari
+            Do korzystania z Panelu: Aktualna wersja popularnej przeglądarki (Google Chrome, Mozilla Firefox, Apple Safari
             lub Microsoft Edge) z włączoną obsługą JavaScript i plików cookies;
           </li>
           <li>
-            do konfiguracji serwera w Panelu: uprawnienie do zarządzania tym serwerem w Discordzie (Zarządzanie serwerem lub
+            Do konfiguracji serwera w Panelu: Uprawnienie do zarządzania tym serwerem w Discordzie (Zarządzanie serwerem lub
             Administrator).
           </li>
         </LegalList>
