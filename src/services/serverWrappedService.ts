@@ -1,7 +1,7 @@
 import { Guild, GuildMember } from 'discord.js';
 import mongoose from 'mongoose';
 import { createCanvas, loadImage } from 'canvas';
-import { registerProjectFonts, roundRect, formatNumberDotSep, formatNumberCompact, type Ctx2D } from '../utils/canvasHelpers';
+import { registerProjectFonts, roundRect, formatNumberDotSep, type Ctx2D } from '../utils/canvasHelpers';
 import { fillTextWithEmoji } from '../utils/canvasEmojiText';
 import { MonthlyStatsModel } from '../models/MonthlyStats';
 import { LevelModel } from '../models/Level';
@@ -255,7 +255,7 @@ function plural(n: number, forms: [string, string, string]): string {
   return forms[2];
 }
 
-function fillAvatarFallback(ctx: any, cx: number, cy: number, size: number, index: number): void {
+function fillAvatarFallback(ctx: Ctx2D, cx: number, cy: number, size: number, index: number): void {
   const [c1, c2] = AVATAR_FALLBACK_GRADIENTS[index % AVATAR_FALLBACK_GRADIENTS.length];
   const r = size / 2;
   const gradient = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
@@ -661,168 +661,170 @@ export async function collectPersonalWrappedData(
 
 const PW = 800;
 
+const MONTH_NAMES = [
+  'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+  'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień',
+];
+
+/**
+ * Osobisty Wrapped (przycisk pod Server Wrapped). Ten sam język wizualny co renderWrappedCanvas:
+ * miękkie plamy światła, kafelki z obramowaniem w kolorze motywu, emoji jako Twemoji.
+ */
 export async function renderPersonalWrappedCanvas(
   data: PersonalWrappedData,
   theme: WrappedTheme = DEFAULT_WRAPPED_THEME,
 ): Promise<Buffer> {
   registerProjectFonts();
 
-  const { bg, tile: STAT_BG, accent: ACCENT } = THEME_PALETTES[theme];
+  const { bg, tile: STAT_BG, tileBorder: TILE_BORDER, accent: ACCENT, border: CARD_BORDER, glowA, glowB } = THEME_PALETTES[theme];
 
-  // Calculate dynamic height
-  const hasTopMonth = !!(data.topMonth && data.topMonth.messages > 0);
-  const pCellH = 100;
-  const pGridGap = 16;
-  // header(35+130+28+48+35) + grid(2*(100+16)+20) + topMonth?(90) + footer(50)
-  const PH = 35 + 130 + 28 + 48 + 35 + 2 * (pCellH + pGridGap) + 20 + (hasTopMonth ? 90 : 0) + 50;
+  const PAD_X = 40;
+  const CONTENT_W = PW - PAD_X * 2;
+  const GRID_COLS = 3;
+  const GRID_GAP = 12;
+  const TILE_W = (CONTENT_W - (GRID_COLS - 1) * GRID_GAP) / GRID_COLS;
+  const TILE_H = 108;
+  const GRID_Y = 304;
+  const GRID_END = GRID_Y + 2 * TILE_H + GRID_GAP;
+  const MONTH_H = 76;
+
+  const topMonth = data.topMonth && data.topMonth.messages > 0 ? data.topMonth : null;
+  const contentEnd = topMonth ? GRID_END + 24 + MONTH_H : GRID_END;
+  const footerBaseline = contentEnd + 30;
+  const PH = footerBaseline + 28;
 
   const canvas = createCanvas(PW, PH);
-  const ctx = canvas.getContext('2d') as any;
+  const ctx = canvas.getContext('2d') as Ctx2D;
+  ctx.textBaseline = 'alphabetic';
 
-  // Background
+  // ── Tło + plamy światła (jak w Server Wrapped) ──
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, PW, PH);
+  drawGlow(ctx, 710, 90, 620, glowA.rgb, glowA.alpha);
+  drawGlow(ctx, 110, PH - 90, 700, glowB.rgb, glowB.alpha);
 
-  // Decorative circles
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = ACCENT;
-  ctx.beginPath(); ctx.arc(680, 80, 180, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(80, PH - 150, 200, 0, Math.PI * 2); ctx.fill();
-  ctx.globalAlpha = 1;
-
-  let y = 35;
-
-  // ── Avatar ──
+  // ── Awatar z ramką w kolorze akcentu ──
+  const AVATAR_D = 112;
+  const AVATAR_BORDER = 3;
+  const avatarCy = 40 + AVATAR_D / 2;
   try {
     const av = await loadImage(data.avatarUrl);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(PW / 2, y + 60, 55, 0, Math.PI * 2);
+    ctx.arc(PW / 2, avatarCy, AVATAR_D / 2 - AVATAR_BORDER, 0, Math.PI * 2);
     ctx.clip();
-    ctx.drawImage(av, PW / 2 - 55, y + 5, 110, 110);
+    ctx.drawImage(av, PW / 2 - AVATAR_D / 2, avatarCy - AVATAR_D / 2, AVATAR_D, AVATAR_D);
     ctx.restore();
+  } catch {
+    fillAvatarFallback(ctx, PW / 2, avatarCy, AVATAR_D - AVATAR_BORDER * 2, 0);
+  }
+  ctx.strokeStyle = ACCENT;
+  ctx.lineWidth = AVATAR_BORDER;
+  ctx.beginPath();
+  ctx.arc(PW / 2, avatarCy, AVATAR_D / 2 - AVATAR_BORDER / 2, 0, Math.PI * 2);
+  ctx.stroke();
 
-    ctx.save();
-    ctx.shadowColor = ACCENT;
-    ctx.shadowBlur = 20;
-    ctx.strokeStyle = ACCENT;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(PW / 2, y + 60, 57, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  } catch { /* skip */ }
-  y += 130;
-
-  // Display name
+  // ── Nick, tytuł, podtytuł ──
   ctx.fillStyle = WHITE;
-  ctx.font = 'bold 28px Inter';
-  ctx.textAlign = 'center';
-  ctx.fillText(data.displayName, PW / 2, y);
-  y += 28;
+  ctx.font = '800 30px Inter';
+  await fillTextWithEmoji(ctx, data.displayName, PW / 2, 192, { fontSize: 30, align: 'center', maxWidth: CONTENT_W });
 
-  // "TWÓJ WRAPPED"
   ctx.fillStyle = ACCENT;
-  ctx.font = 'bold 36px Inter';
-  ctx.fillText('TWÓJ WRAPPED', PW / 2, y + 32);
-  y += 48;
+  ctx.font = '900 40px Inter';
+  await fillTextWithEmoji(ctx, 'TWÓJ WRAPPED', PW / 2, 244, { fontSize: 40, letterSpacing: 0.8, align: 'center' });
 
-  // Server + join date
-  const daysSince = Math.floor((Date.now() - data.joinedAt.getTime()) / 86_400_000);
+  const daysSince = Math.max(0, Math.floor((Date.now() - data.joinedAt.getTime()) / 86_400_000));
   ctx.fillStyle = MUTED;
-  ctx.font = '500 15px Inter';
-  ctx.fillText(
-    `${data.serverName} · na serwerze od ${daysSince} dni`,
+  ctx.font = '400 16px Inter';
+  await fillTextWithEmoji(
+    ctx,
+    `${data.serverName} · na serwerze od ${formatNumberDotSep(daysSince)} ${daysSince === 1 ? 'dnia' : 'dni'}`,
     PW / 2,
-    y + 8,
+    274,
+    { fontSize: 16, align: 'center', maxWidth: CONTENT_W },
   );
-  y += 35;
 
-  // ── Stats grid (3×2) ──
+  // ── Kafelki 3×2: emoji + wartość, etykieta w akcencie, szczegół wyciszony ──
   const voiceH = Math.floor(data.totalVoiceMinutes / 60);
   const voiceM = Math.round(data.totalVoiceMinutes % 60);
   const levelSub = data.levelsGained > 0
     ? `+${data.levelsGained} w tym roku · ${formatNumberDotSep(data.xp)} XP`
     : `#${data.levelRank} · ${formatNumberDotSep(data.xp)} XP`;
   const stats = [
-    { label: 'Wiadomości', value: formatNumberCompact(data.totalMessages), sub: `#${data.messageRank} na serwerze` },
-    { label: 'Czas głosowy', value: `${voiceH}h ${voiceM}m`, sub: `#${data.voiceRank} na serwerze` },
-    { label: 'Poziom', value: `${data.level}`, sub: levelSub },
-    { label: 'Wordle', value: `${data.wordleWins}W / ${data.wordleLosses}L`, sub: `Najlepszy streak: ${data.wordleBestStreak}` },
-    { label: 'Udział w giveawayach', value: `${data.giveawaysEntered}`, sub: `Wygrane: ${data.giveawaysWon}` },
-    { label: 'Zaproszeni użytkownicy', value: `${data.invites}`, sub: 'w tym roku' },
+    { icon: '💬', value: formatNumberDotSep(data.totalMessages), label: 'Wiadomości', sub: `#${data.messageRank} na serwerze` },
+    { icon: '🎙', value: `${voiceH}h ${voiceM}m`, label: 'Czas głosowy', sub: `#${data.voiceRank} na serwerze` },
+    { icon: '⭐', value: `${data.level}`, label: 'Poziom', sub: levelSub },
+    { icon: '🔤', value: `${data.wordleWins}W / ${data.wordleLosses}L`, label: 'Wordle', sub: `Najlepszy streak: ${data.wordleBestStreak}` },
+    { icon: '🎉', value: `${data.giveawaysEntered}`, label: 'Udział w giveawayach', sub: `Wygrane: ${data.giveawaysWon}` },
+    { icon: '📨', value: `${data.invites}`, label: 'Zaproszeni użytkownicy', sub: 'w tym roku' },
   ];
 
-  const gridCols = 3;
-  const cellW = 230;
-  const cellH = 100;
-  const gridGap = 16;
-  const gridX = (PW - (gridCols * cellW + (gridCols - 1) * gridGap)) / 2;
-
   for (let i = 0; i < stats.length; i++) {
-    const col = i % gridCols;
-    const row = Math.floor(i / gridCols);
-    const cx = gridX + col * (cellW + gridGap);
-    const cy = y + row * (cellH + gridGap);
+    const stat = stats[i];
+    const tx = PAD_X + (i % GRID_COLS) * (TILE_W + GRID_GAP);
+    const ty = GRID_Y + Math.floor(i / GRID_COLS) * (TILE_H + GRID_GAP);
+    const centerX = tx + TILE_W / 2;
 
     ctx.fillStyle = STAT_BG;
-    roundRect(ctx, cx, cy, cellW, cellH, 12);
+    roundRect(ctx, tx + 0.5, ty + 0.5, TILE_W - 1, TILE_H - 1, 12);
     ctx.fill();
+    ctx.strokeStyle = TILE_BORDER;
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-    // Value
     ctx.fillStyle = WHITE;
-    ctx.font = 'bold 22px Inter';
-    ctx.textAlign = 'center';
-    ctx.fillText(stats[i].value, cx + cellW / 2, cy + 36);
+    ctx.font = '800 28px Inter';
+    await fillTextWithEmoji(ctx, `${stat.icon} ${stat.value}`, centerX, ty + 44, {
+      fontSize: 28,
+      align: 'center',
+      maxWidth: TILE_W - 20,
+    });
 
-    // Label
     ctx.fillStyle = ACCENT;
-    ctx.font = '600 13px Inter';
-    ctx.fillText(stats[i].label, cx + cellW / 2, cy + 56);
+    ctx.font = '700 15px Inter';
+    await fillTextWithEmoji(ctx, stat.label, centerX, ty + 70, { fontSize: 15, align: 'center', maxWidth: TILE_W - 20 });
 
-    // Sub
     ctx.fillStyle = MUTED;
-    ctx.font = '500 11px Inter';
-    ctx.fillText(stats[i].sub, cx + cellW / 2, cy + 78);
+    ctx.font = '400 13px Inter';
+    await fillTextWithEmoji(ctx, stat.sub, centerX, ty + 92, { fontSize: 13, align: 'center', maxWidth: TILE_W - 20 });
   }
 
-  y += 2 * (cellH + gridGap) + 20;
-
-  // ── Best month section ──
-  if (data.topMonth && data.topMonth.messages > 0) {
-    const sectionW = 720;
-    const sectionX = (PW - sectionW) / 2;
+  // ── Najaktywniejszy miesiąc ──
+  if (topMonth) {
+    const boxY = GRID_END + 24;
 
     ctx.fillStyle = STAT_BG;
-    roundRect(ctx, sectionX, y, sectionW, 70, 12);
+    roundRect(ctx, PAD_X + 0.5, boxY + 0.5, CONTENT_W - 1, MONTH_H - 1, 12);
     ctx.fill();
+    ctx.strokeStyle = TILE_BORDER;
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
     ctx.fillStyle = ACCENT;
-    ctx.font = 'bold 16px Inter';
-    ctx.textAlign = 'left';
-    ctx.fillText('🔥 Najaktywniejszy miesiąc', sectionX + 20, y + 28);
+    ctx.font = '700 18px Inter';
+    await fillTextWithEmoji(ctx, '🔥 Najaktywniejszy miesiąc', PAD_X + 20, boxY + 31, { fontSize: 18 });
 
-    const [yr, mo] = data.topMonth.month.split('-');
-    const months = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
-                    'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
-    const monthName = `${months[parseInt(mo) - 1]} ${yr}`;
-
+    const [yr, mo] = topMonth.month.split('-');
+    const monthName = `${MONTH_NAMES[parseInt(mo, 10) - 1] ?? mo} ${yr}`;
     ctx.fillStyle = WHITE;
-    ctx.font = '500 15px Inter';
+    ctx.font = '500 16px Inter';
+    ctx.textAlign = 'left';
     ctx.fillText(
-      `${monthName} — ${formatNumberDotSep(data.topMonth.messages)} wiadomości`,
-      sectionX + 20,
-      y + 52,
+      `${monthName} — ${formatNumberDotSep(topMonth.messages)} ${plural(topMonth.messages, ['wiadomość', 'wiadomości', 'wiadomości'])}`,
+      PAD_X + 20,
+      boxY + 57,
     );
-
-    y += 90;
   }
 
-  // ── Footer ──
+  // ── Stopka + ramka karty ──
   ctx.fillStyle = MUTED;
-  ctx.font = '300 13px Inter';
+  ctx.font = '400 14px Inter';
   ctx.textAlign = 'center';
-  ctx.fillText(`Wygenerowano ${new Date().toLocaleDateString('pl-PL')}`, PW / 2, y + 20);
+  ctx.fillText(`Wygenerowano ${new Date().toLocaleDateString('pl-PL')}`, PW / 2, footerBaseline);
+
+  ctx.strokeStyle = CARD_BORDER;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, PW - 2, PH - 2);
 
   return canvas.toBuffer('image/png');
 }
