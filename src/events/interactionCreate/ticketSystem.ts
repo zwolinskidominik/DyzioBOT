@@ -12,6 +12,7 @@ import {
   TextChannel,
   CategoryChannel,
   MessageFlags,
+  OverwriteType,
 } from 'discord.js';
 import { ITicketType } from '../../interfaces/Models';
 import { createBaseEmbed } from '../../utils/embedHelpers';
@@ -162,6 +163,51 @@ function hasStaffRole(member: GuildMember, roleIds: string[]): boolean {
   return member.roles.cache.some((role) => roleIds.includes(role.id));
 }
 
+interface TicketAccess {
+  isStaff: boolean;
+  isCreator: boolean;
+}
+
+/**
+ * Kto może zajmować / zamykać zgłoszenie.
+ *
+ * - Osoby z uprawnieniem „Zarządzanie kanałami" (administracja serwera) — zawsze, nawet bez roli
+ *   obsługi z konfiguracji ticketów.
+ * - Role obsługi i twórca z zapisu TicketState. Zgłoszenia otwarte, zanim bot zaczął ten zapis
+ *   prowadzić (albo których typ usunięto z konfiguracji), nie mają go — wtedy odczytujemy to samo
+ *   z uprawnień kanału, które bot ustawia przy tworzeniu zgłoszenia: role z dostępem = obsługa,
+ *   członek z dostępem = twórca. Bez tego nikt nie mógł zamknąć takiego zgłoszenia przyciskiem.
+ */
+async function resolveTicketAccess(interaction: ButtonInteraction, channelId: string): Promise<TicketAccess> {
+  const member = interaction.member as GuildMember;
+  const guildId = interaction.guild!.id;
+
+  const [staffRoleIds, stateResult] = await Promise.all([
+    getStaffRoleIdsForChannel(guildId, channelId),
+    getTicketState(channelId),
+  ]);
+  const creatorId = stateResult.ok ? stateResult.data.creatorId : null;
+
+  const overwrites =
+    interaction.channel && 'permissionOverwrites' in interaction.channel
+      ? [...interaction.channel.permissionOverwrites.cache.values()].filter((o) =>
+          o.allow.has(PermissionFlagsBits.ViewChannel),
+        )
+      : [];
+
+  const roleIds =
+    staffRoleIds.length > 0
+      ? staffRoleIds
+      : overwrites.filter((o) => o.type === OverwriteType.Role && o.id !== guildId).map((o) => o.id);
+
+  const isManager = member.permissions?.has?.(PermissionFlagsBits.ManageChannels) === true;
+  const isCreator = creatorId
+    ? creatorId === interaction.user.id
+    : overwrites.some((o) => o.type === OverwriteType.Member && o.id === interaction.user.id);
+
+  return { isStaff: isManager || hasStaffRole(member, roleIds), isCreator };
+}
+
 function createAttachmentFromBuffer(buffer: Buffer, filename: string): AttachmentBuilder {
   return new AttachmentBuilder(buffer, { name: filename });
 }
@@ -244,13 +290,12 @@ async function sendTicketMessages(
 }
 
 async function handleTakeTicket(interaction: ButtonInteraction): Promise<void> {
-  const member = interaction.member as GuildMember;
   const channelId = interaction.channel?.id;
   if (!channelId) return;
 
-  const staffRoleIds = await getStaffRoleIdsForChannel(interaction.guild!.id, channelId);
+  const { isStaff } = await resolveTicketAccess(interaction, channelId);
 
-  if (!hasStaffRole(member, staffRoleIds)) {
+  if (!isStaff) {
     await interaction.followUp({
       content: 'Nie masz uprawnień do zajmowania zgłoszeń!',
       flags: MessageFlags.Ephemeral,
@@ -312,17 +357,10 @@ async function updateTakeTicketButton(interaction: ButtonInteraction): Promise<v
 }
 
 async function handleCloseTicket(interaction: ButtonInteraction): Promise<void> {
-  const member = interaction.member as GuildMember;
   const channelId = interaction.channel?.id;
   if (!channelId) return;
 
-  const [staffRoleIds, stateResult] = await Promise.all([
-    getStaffRoleIdsForChannel(interaction.guild!.id, channelId),
-    getTicketState(channelId),
-  ]);
-
-  const isStaff = hasStaffRole(member, staffRoleIds);
-  const isCreator = stateResult.ok && stateResult.data.creatorId === interaction.user.id;
+  const { isStaff, isCreator } = await resolveTicketAccess(interaction, channelId);
 
   if (!isStaff && !isCreator) {
     await interaction.followUp({

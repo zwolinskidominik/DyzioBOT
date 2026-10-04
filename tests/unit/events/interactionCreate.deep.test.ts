@@ -175,7 +175,7 @@ jest.mock('discord.js', () => {
     })),
     AttachmentBuilder: jest.fn().mockImplementation(() => ({})),
     ChannelType: { GuildVoice: 2, GuildText: 0, GuildCategory: 4 },
-    PermissionFlagsBits: { ViewChannel: 1n, SendMessages: 2n, Connect: 4n },
+    PermissionFlagsBits: { ViewChannel: 1n, SendMessages: 2n, Connect: 4n, ManageChannels: 16n },
     ButtonStyle: { Primary: 1, Secondary: 2, Danger: 4, Success: 3 },
     TextInputStyle: { Short: 1, Paragraph: 2 },
     MessageFlags: { Ephemeral: 64, SuppressEmbeds: 4 },
@@ -185,6 +185,7 @@ jest.mock('discord.js', () => {
 
 import voiceControlRun from '../../../src/events/interactionCreate/voiceControl';
 import { createControlPanelButtons } from '../../../src/events/interactionCreate/voiceControl';
+import { OverwriteType, PermissionFlagsBits } from 'discord.js';
 import ticketSystemRun from '../../../src/events/interactionCreate/ticketSystem';
 import giveawayHandlerRun from '../../../src/events/interactionCreate/giveawayHandler';
 
@@ -533,6 +534,59 @@ describe('ticketSystem', () => {
     expect(interaction.followUp).toHaveBeenCalledWith(
       expect.objectContaining({ content: expect.stringContaining('uprawnień') })
     );
+  });
+
+  it('lets server managers close a ticket without a staff role', async () => {
+    const interaction = makeButtonInteraction('zamknij-zgloszenie', false);
+    (interaction.member as any).permissions = { has: (flag: bigint) => flag === PermissionFlagsBits.ManageChannels };
+    await ticketSystemRun(interaction as any);
+    expect(interaction.followUp).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining('zamknąć') })
+    );
+  });
+
+  describe('tickets opened before TicketState existed (no saved record)', () => {
+    const withOverwrites = (interaction: any, overwrites: { id: string; type: number }[]) => {
+      mockGetStaffRoleIdsForChannel.mockResolvedValue([]);
+      mockGetTicketState.mockResolvedValue({
+        ok: true,
+        data: { channelId: 'ch1', assignedTo: null, typeId: null, creatorId: null },
+      });
+      const viewAllowed = { has: (flag: bigint) => flag === PermissionFlagsBits.ViewChannel };
+      interaction.channel.permissionOverwrites = {
+        cache: new Map(overwrites.map((o) => [o.id, { ...o, allow: viewAllowed }])),
+      };
+    };
+
+    it('recognises the creator from the channel permissions', async () => {
+      const interaction = makeButtonInteraction('zamknij-zgloszenie', false);
+      withOverwrites(interaction, [{ id: 'u1', type: OverwriteType.Member }]);
+      await ticketSystemRun(interaction as any);
+      expect(interaction.followUp).toHaveBeenCalledWith(
+        expect.objectContaining({ content: expect.stringContaining('zamknąć') })
+      );
+    });
+
+    it('recognises staff from role permissions on the channel', async () => {
+      const interaction = makeButtonInteraction('zajmij-zgloszenie', true);
+      withOverwrites(interaction, [{ id: 'r1', type: OverwriteType.Role }]);
+      await ticketSystemRun(interaction as any);
+      expect(interaction.followUp).not.toHaveBeenCalledWith(
+        expect.objectContaining({ content: expect.stringContaining('uprawnień') })
+      );
+    });
+
+    it('still blocks other members', async () => {
+      const interaction = makeButtonInteraction('zamknij-zgloszenie', false);
+      withOverwrites(interaction, [
+        { id: 'someone-else', type: OverwriteType.Member },
+        { id: 'r1', type: OverwriteType.Role },
+      ]);
+      await ticketSystemRun(interaction as any);
+      expect(interaction.followUp).toHaveBeenCalledWith(
+        expect.objectContaining({ content: expect.stringContaining('uprawnień') })
+      );
+    });
   });
 
   it('handles confirm close button', async () => {
