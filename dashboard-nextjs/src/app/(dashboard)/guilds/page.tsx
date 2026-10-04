@@ -113,7 +113,7 @@ export default function GuildsPage() {
       <main className="px-4 py-10 md:px-8 md:py-14">
         <div className="mx-auto max-w-5xl">
           <div className="mb-8 text-center">
-            <h1 className="mb-2 text-3xl font-bold text-white/90">Wybierz serwer</h1>
+            <h1 className="mb-2 text-3xl font-bold text-white/90">Twoje serwery</h1>
             <p className="text-muted-foreground">
               Zalogowano jako <span className="font-semibold text-bot-light">{session?.user?.name}</span>
             </p>
