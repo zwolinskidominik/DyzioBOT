@@ -1,7 +1,8 @@
 import { Guild, GuildMember } from 'discord.js';
 import mongoose from 'mongoose';
 import { createCanvas, loadImage } from 'canvas';
-import { registerProjectFonts, roundRect, formatNumberDotSep, formatNumberCompact } from '../utils/canvasHelpers';
+import { registerProjectFonts, roundRect, formatNumberDotSep, formatNumberCompact, type Ctx2D } from '../utils/canvasHelpers';
+import { fillTextWithEmoji } from '../utils/canvasEmojiText';
 import { MonthlyStatsModel } from '../models/MonthlyStats';
 import { LevelModel } from '../models/Level';
 import { LevelSnapshotModel } from '../models/LevelSnapshot';
@@ -230,14 +231,28 @@ const AVATAR_FALLBACK_GRADIENTS: [string, string][] = [
   ['#ec4899', '#a855f7'],
 ];
 
-/** Rysuje wielką, miękką plamę światła (odpowiednik CSS radial-gradient(...,68%)). */
-function drawGlow(ctx: any, cx: number, cy: number, radius: number, rgb: string, alpha: number): void {
+/**
+ * Miękka plama światła — odpowiednik CSS `radial-gradient(circle, rgba(c,a) 0%, rgba(c,0) 68%)`
+ * na kwadratowym divie o boku `side`. CSS liczy promień do najdalszego narożnika (side/2·√2),
+ * a kolor zanika już na 68% tego promienia.
+ */
+function drawGlow(ctx: Ctx2D, cx: number, cy: number, side: number, rgb: string, alpha: number): void {
+  const radius = (side / 2) * Math.SQRT2;
   const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
   gradient.addColorStop(0, `rgba(${rgb},${alpha})`);
-  gradient.addColorStop(0.68, `rgba(${rgb},${alpha})`);
-  gradient.addColorStop(1, `rgba(${rgb},0)`);
+  gradient.addColorStop(0.68, `rgba(${rgb},0)`);
   ctx.fillStyle = gradient;
-  ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+  ctx.fillRect(cx - side / 2, cy - side / 2, side, side);
+}
+
+/** Polska odmiana: 1 członek, 2 członków… (1:1 z dashboard-nextjs/src/lib/plural.ts). */
+function plural(n: number, forms: [string, string, string]): string {
+  const abs = Math.abs(n);
+  const last = abs % 10;
+  const last2 = abs % 100;
+  if (abs === 1) return forms[0];
+  if (last >= 2 && last <= 4 && (last2 < 12 || last2 > 14)) return forms[1];
+  return forms[2];
 }
 
 function fillAvatarFallback(ctx: any, cx: number, cy: number, size: number, index: number): void {
@@ -254,223 +269,220 @@ function fillAvatarFallback(ctx: any, cx: number, cy: number, size: number, inde
   ctx.restore();
 }
 
+/**
+ * Server Wrapped 800×1200 — dokładnie 2× podgląd z dashboardu (400×600,
+ * dashboard-nextjs/src/app/(dashboard)/[guildId]/wrapped/page.tsx). Współrzędne poniżej to
+ * wartości z CSS podglądu pomnożone przez 2, z liniami tekstu jak w przeglądarce
+ * (line-height: normal ≈ 1.21em, linia bazowa ≈ 0.97em od góry wiersza dla Inter).
+ * Zmieniasz układ tutaj → zmień też podgląd w dashboardzie (i odwrotnie).
+ */
 export async function renderWrappedCanvas(data: WrappedData, theme: WrappedTheme = DEFAULT_WRAPPED_THEME): Promise<Buffer> {
   registerProjectFonts();
 
   const { bg, tile: STAT_BG, tileBorder: TILE_BORDER, accent: ACCENT, border: CARD_BORDER, glowA, glowB } = THEME_PALETTES[theme];
 
   const canvas = createCanvas(W, H);
-  const ctx = canvas.getContext('2d') as any;
+  const ctx = canvas.getContext('2d') as Ctx2D;
+  ctx.textBaseline = 'alphabetic';
 
-  // ── Background + dekoracyjne "glow" plamy (1:1 z prototypem: dwie duże,
-  // miękkie plamy w rogach karty, zamiast dawnych trzech płaskich kółek) ──
+  // ── Tło + dwie plamy światła (div 310×310 w prawym górnym rogu, 350×350 w lewym dolnym) ──
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
-  drawGlow(ctx, 710, 90, 320, glowA.rgb, glowA.alpha);
-  drawGlow(ctx, 110, 1110, 360, glowB.rgb, glowB.alpha);
+  drawGlow(ctx, 710, 90, 620, glowA.rgb, glowA.alpha);
+  drawGlow(ctx, 110, 1110, 700, glowB.rgb, glowB.alpha);
 
-  const PAD_SIDES = 40;
-  const CONTENT_W = W - PAD_SIDES * 2;
+  const PAD_X = 40;
+  const CONTENT_W = W - PAD_X * 2;
 
-  let y = 38;
-
-  // ── Header: ikona serwera + nazwa ──
+  // ── Nagłówek: ikona serwera (40px + ramka 1.5px w środku) ──
   const AVATAR_D = 80;
+  const AVATAR_BORDER = 3;
+  const avatarCy = 38 + AVATAR_D / 2;
   if (data.serverIconUrl) {
     try {
       const icon = await loadImage(data.serverIconUrl);
       ctx.save();
       ctx.beginPath();
-      ctx.arc(W / 2, y + AVATAR_D / 2, AVATAR_D / 2, 0, Math.PI * 2);
+      ctx.arc(W / 2, avatarCy, AVATAR_D / 2 - AVATAR_BORDER, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(icon, W / 2 - AVATAR_D / 2, y, AVATAR_D, AVATAR_D);
+      ctx.drawImage(icon, W / 2 - AVATAR_D / 2, avatarCy - AVATAR_D / 2, AVATAR_D, AVATAR_D);
       ctx.restore();
     } catch {
-      // skip icon
+      // brak ikony — zostaje sama ramka
     }
   }
-  ctx.save();
   ctx.strokeStyle = ACCENT;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = AVATAR_BORDER;
   ctx.beginPath();
-  ctx.arc(W / 2, y + AVATAR_D / 2, AVATAR_D / 2, 0, Math.PI * 2);
+  ctx.arc(W / 2, avatarCy, AVATAR_D / 2 - AVATAR_BORDER / 2, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.restore();
-  y += AVATAR_D;
 
-  y += 10;
+  // Nazwa serwera (12px/800) — może zawierać emoji, więc przez Twemoji.
   ctx.fillStyle = WHITE;
   ctx.font = '800 24px Inter';
-  ctx.textAlign = 'center';
-  ctx.fillText(data.serverName, W / 2, y + 20);
-  y += 28;
+  await fillTextWithEmoji(ctx, data.serverName, W / 2, 151, { fontSize: 24, align: 'center', maxWidth: CONTENT_W });
 
-  y += 20;
+  // „SERVER WRAPPED" (20px/900, line-height 1, letter-spacing 0.02em)
   ctx.fillStyle = ACCENT;
   ctx.font = '900 40px Inter';
-  ctx.fillText('SERVER WRAPPED', W / 2, y + 34);
-  y += 44;
+  await fillTextWithEmoji(ctx, 'SERVER WRAPPED', W / 2, 212, { fontSize: 40, letterSpacing: 0.8, align: 'center' });
 
-  y += 8;
+  // Podtytuł (8px)
   ctx.fillStyle = MUTED;
-  ctx.font = '500 16px Inter';
-  ctx.fillText(
-    `${data.ageYears} ${data.ageYears === 1 ? 'rok' : data.ageYears < 5 ? 'lata' : 'lat'} razem!`,
-    W / 2,
-    y + 14,
-  );
-  y += 20;
+  ctx.font = '400 16px Inter';
+  ctx.textAlign = 'center';
+  const years = data.ageYears;
+  ctx.fillText(`${years} ${plural(years, ['rok', 'lata', 'lat'])} razem!`, W / 2, 240);
 
-  // ── Stats grid (3×2) ──
-  const stats = [
-    { label: 'Członków', value: formatNumberDotSep(data.memberCount), icon: '👥' },
-    { label: 'Wiadomości', value: formatNumberCompact(data.totalMessages), icon: '✉️' },
-    { label: 'Godzin VC', value: formatNumberCompact(data.totalVoiceHours), icon: '🎙️' },
-    { label: 'Giveawayów', value: formatNumberDotSep(data.totalGiveaways), icon: '🎉' },
-    { label: 'Gier Wordle', value: formatNumberDotSep(data.totalWordleGames), icon: '🔤' },
-    { label: 'Dołączeń', value: formatNumberDotSep(data.totalInvites), icon: '📨' },
+  // ── Kafelki statystyk 3×2 (gap 6, padding 8px 5px, wartość 12px/800, opis 7px) ──
+  const stats: { icon: string; value: number; forms: [string, string, string] }[] = [
+    { icon: '👥', value: data.memberCount, forms: ['członek', 'członków', 'członków'] },
+    { icon: '✉', value: data.totalMessages, forms: ['wiadomość', 'wiadomości', 'wiadomości'] },
+    { icon: '🎙', value: data.totalVoiceHours, forms: ['godzina na VC', 'godziny na VC', 'godzin na VC'] },
+    { icon: '🎉', value: data.totalGiveaways, forms: ['giveaway', 'giveawaye', 'giveawayów'] },
+    { icon: '🔤', value: data.totalWordleGames, forms: ['gra w Wordle', 'gry w Wordle', 'gier w Wordle'] },
+    { icon: '📨', value: data.totalInvites, forms: ['dołączenie', 'dołączenia', 'dołączeń'] },
   ];
 
-  const gridCols = 3;
-  const gridGap = 12;
-  const cellW = (CONTENT_W - (gridCols - 1) * gridGap) / gridCols;
-  const cellH = 82;
-  const gridStartX = PAD_SIDES;
-
-  y += 24;
-  const gridY = y;
+  const GRID_COLS = 3;
+  const GRID_GAP = 12;
+  const TILE_W = (CONTENT_W - (GRID_COLS - 1) * GRID_GAP) / GRID_COLS;
+  const TILE_H = 86;
+  const gridY = 264;
 
   for (let i = 0; i < stats.length; i++) {
-    const col = i % gridCols;
-    const row = Math.floor(i / gridCols);
-    const cx = gridStartX + col * (cellW + gridGap);
-    const cy = gridY + row * (cellH + gridGap);
+    const stat = stats[i];
+    const tx = PAD_X + (i % GRID_COLS) * (TILE_W + GRID_GAP);
+    const ty = gridY + Math.floor(i / GRID_COLS) * (TILE_H + GRID_GAP);
 
     ctx.fillStyle = STAT_BG;
-    roundRect(ctx, cx, cy, cellW, cellH, 12);
+    roundRect(ctx, tx + 0.5, ty + 0.5, TILE_W - 1, TILE_H - 1, 12);
     ctx.fill();
     ctx.strokeStyle = TILE_BORDER;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     ctx.fillStyle = WHITE;
     ctx.font = '800 24px Inter';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${stats[i].icon} ${stats[i].value}`, cx + cellW / 2, cy + 37);
+    await fillTextWithEmoji(ctx, `${stat.icon} ${formatNumberDotSep(stat.value)}`, tx + TILE_W / 2, ty + 41, {
+      fontSize: 24,
+      align: 'center',
+      maxWidth: TILE_W - 20,
+    });
 
     ctx.fillStyle = MUTED;
-    ctx.font = '500 13px Inter';
-    ctx.fillText(stats[i].label, cx + cellW / 2, cy + 61);
+    ctx.font = '400 14px Inter';
+    ctx.textAlign = 'center';
+    ctx.fillText(plural(stat.value, stat.forms), tx + TILE_W / 2, ty + 65);
   }
 
-  const gridRows = Math.ceil(stats.length / gridCols);
-  y = gridY + gridRows * cellH + (gridRows - 1) * gridGap;
+  const gridRows = Math.ceil(stats.length / GRID_COLS);
+  let y = gridY + gridRows * TILE_H + (gridRows - 1) * GRID_GAP;
 
-  // ── Sekcje top-3 (wiadomości / głos / poziom) ──
-  const sections = [
-    { title: '💬 Top wiadomości', users: data.topMessages, suffix: 'wiad.' },
-    { title: '🎙️ Top głosowe', users: data.topVoice, suffix: 'min' },
-    { title: '⭐ Top poziom', users: data.topLevel, suffix: 'lvl' },
+  // ── Sekcje top-3 (tytuł 9px/700, wiersze 26px z gap 4, odstęp między sekcjami 8) ──
+  const sections: { title: string; users: TopUser[]; format: (value: number) => string }[] = [
+    { title: '💬 Top wiadomości', users: data.topMessages, format: (v) => `${formatNumberDotSep(v)} wiad.` },
+    { title: '🎙 Top głosowe', users: data.topVoice, format: (v) => `${Math.floor(v / 60)}h ${Math.round(v % 60)}m` },
+    { title: '⭐ Top poziom', users: data.topLevel, format: (v) => `${v} lvl` },
   ];
 
-  const sectionX = PAD_SIDES;
-  const sectionW = CONTENT_W;
-  const ROW_H = 50;
-  const ROW_GAP = 7;
-  const TITLE_BLOCK_H = 28; // 20 (tytuł) + 8 (margines do wierszy)
-  const BASE_SECTION_GAP = 16;
-  const FOOTER_RESERVE = 26;
-
-  const sectionContentH = TITLE_BLOCK_H + 3 * ROW_H + 2 * ROW_GAP;
-  const naturalSectionsH = sections.length * sectionContentH + (sections.length - 1) * BASE_SECTION_GAP;
-  const availableH = H - 30 - FOOTER_RESERVE - (y + 22);
-  const extraGap = Math.max(0, (availableH - naturalSectionsH) / Math.max(1, sections.length - 1));
-  const sectionGap = BASE_SECTION_GAP + extraGap;
+  const TITLE_H = 22;
+  const TITLE_GAP = 8;
+  const ROW_H = 52;
+  const ROW_GAP = 8;
+  const ROW_PAD_X = 18; // 1px ramki + 8px paddingu, ×2
+  const AV_SIZE = 32;
 
   y += 22;
+  for (let si = 0; si < sections.length; si++) {
+    const section = sections[si];
+    if (si > 0) y += 16;
 
-  for (const section of sections) {
     ctx.fillStyle = ACCENT;
-    ctx.font = '700 17px Inter';
-    ctx.textAlign = 'left';
-    ctx.fillText(section.title, sectionX, y + 13);
-    y += TITLE_BLOCK_H;
+    ctx.font = '700 18px Inter';
+    await fillTextWithEmoji(ctx, section.title, PAD_X, y + 17, { fontSize: 18 });
+    y += TITLE_H + TITLE_GAP;
+
+    if (section.users.length === 0) {
+      ctx.fillStyle = MUTED;
+      ctx.font = '400 18px Inter';
+      ctx.textAlign = 'left';
+      ctx.fillText('Brak danych', PAD_X + 16, y + 25);
+      y += 38;
+      continue;
+    }
 
     for (let i = 0; i < section.users.length; i++) {
       const user = section.users[i];
       const rowY = y + i * (ROW_H + ROW_GAP);
+      const centerY = rowY + ROW_H / 2;
+      const baseline = centerY + 6;
 
       ctx.fillStyle = STAT_BG;
-      roundRect(ctx, sectionX, rowY, sectionW, ROW_H, 10);
+      roundRect(ctx, PAD_X + 0.5, rowY + 0.5, CONTENT_W - 1, ROW_H - 1, 10);
       ctx.fill();
       ctx.strokeStyle = TILE_BORDER;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      const textBaselineY = rowY + ROW_H / 2 + 5;
-
-      // Ranga
+      // Ranga (szerokość 13px)
+      const rankX = PAD_X + ROW_PAD_X;
       ctx.fillStyle = RANK_FG[i] ?? WHITE;
-      ctx.font = '800 15px Inter';
+      ctx.font = '800 16px Inter';
       ctx.textAlign = 'left';
-      ctx.fillText(`#${i + 1}`, sectionX + 16, textBaselineY);
+      ctx.fillText(`#${i + 1}`, rankX, baseline);
 
-      // Awatar
-      const avSize = 32;
-      const avCx = sectionX + 16 + 26 + 12 + avSize / 2;
-      const avCy = rowY + ROW_H / 2;
+      // Awatar 16px, gap 6
+      const avX = rankX + 26 + 12;
+      const avCx = avX + AV_SIZE / 2;
       if (user.avatarUrl) {
         try {
           const av = await loadImage(user.avatarUrl);
           ctx.save();
           ctx.beginPath();
-          ctx.arc(avCx, avCy, avSize / 2, 0, Math.PI * 2);
+          ctx.arc(avCx, centerY, AV_SIZE / 2, 0, Math.PI * 2);
           ctx.clip();
-          ctx.drawImage(av, avCx - avSize / 2, avCy - avSize / 2, avSize, avSize);
+          ctx.drawImage(av, avX, centerY - AV_SIZE / 2, AV_SIZE, AV_SIZE);
           ctx.restore();
         } catch {
-          fillAvatarFallback(ctx, avCx, avCy, avSize, i);
+          fillAvatarFallback(ctx, avCx, centerY, AV_SIZE, i);
         }
       } else {
-        fillAvatarFallback(ctx, avCx, avCy, avSize, i);
+        fillAvatarFallback(ctx, avCx, centerY, AV_SIZE, i);
       }
 
-      // Nick
+      // Wartość (od prawej) — najpierw, żeby wiedzieć, ile miejsca zostaje na nick.
+      const valueRight = PAD_X + CONTENT_W - ROW_PAD_X;
+      ctx.fillStyle = ACCENT;
+      ctx.font = '700 16px Inter';
+      ctx.textAlign = 'right';
+      const valueStr = section.format(user.value);
+      const valueW = ctx.measureText(valueStr).width;
+      ctx.fillText(valueStr, valueRight, baseline);
+
+      // Nick (8px/600, ellipsis) — nicki często mają emoji.
+      const nameX = avX + AV_SIZE + 12;
       ctx.fillStyle = WHITE;
       ctx.font = '600 16px Inter';
-      ctx.textAlign = 'left';
-      const maxNameW = 340;
-      let name = user.displayName;
-      while (ctx.measureText(name).width > maxNameW && name.length > 3) {
-        name = name.slice(0, -1);
-      }
-      if (name !== user.displayName) name += '…';
-      ctx.fillText(name, avCx + avSize / 2 + 12, textBaselineY);
-
-      // Wartość
-      ctx.fillStyle = ACCENT;
-      ctx.font = '700 15px Inter';
-      ctx.textAlign = 'right';
-      const valStr =
-        section.suffix === 'min'
-          ? `${Math.floor(user.value / 60)}h ${Math.round(user.value % 60)}m`
-          : `${formatNumberDotSep(user.value)} ${section.suffix}`;
-      ctx.fillText(valStr, sectionX + sectionW - 16, textBaselineY);
+      await fillTextWithEmoji(ctx, user.displayName, nameX, baseline, {
+        fontSize: 16,
+        maxWidth: valueRight - valueW - 12 - nameX,
+      });
     }
 
-    y += 3 * ROW_H + 2 * ROW_GAP + sectionGap;
+    y += section.users.length * ROW_H + (section.users.length - 1) * ROW_GAP;
   }
+
+  // ── Stopka (margin-top 8, 7px) ──
+  ctx.fillStyle = MUTED;
+  ctx.font = '400 14px Inter';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Wygenerowano ${new Date().toLocaleDateString('pl-PL')}`, W / 2, y + 16 + 14);
 
   // ── Ramka karty ──
   ctx.strokeStyle = CARD_BORDER;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
-
-  // ── Stopka ──
-  ctx.fillStyle = MUTED;
-  ctx.font = '300 13px Inter';
-  ctx.textAlign = 'center';
-  ctx.fillText(`Wygenerowano ${new Date().toLocaleDateString('pl-PL')}`, W / 2, H - 16);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, W - 2, H - 2);
 
   return canvas.toBuffer('image/png');
 }

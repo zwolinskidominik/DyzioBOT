@@ -11,6 +11,7 @@ const mockLoadImage = jest.fn();
 jest.mock('canvas', () => ({ loadImage: (...args: unknown[]) => mockLoadImage(...args) }));
 
 import {
+  fillTextWithEmoji,
   fillTextWithEmojiTracked,
   isEmojiGrapheme,
   splitGraphemes,
@@ -20,7 +21,7 @@ import {
 function fakeCtx() {
   return {
     textAlign: 'left',
-    measureText: jest.fn(() => ({ width: 10 })),
+    measureText: jest.fn((_text: string) => ({ width: 10 })),
     fillText: jest.fn(),
     drawImage: jest.fn(),
   };
@@ -73,5 +74,41 @@ describe('fillTextWithEmojiTracked', () => {
     expect(ctx.drawImage).not.toHaveBeenCalled();
     expect(ctx.fillText.mock.calls.map(([ch]) => ch)).toEqual(['X']);
     expect(width).toBe(10);
+  });
+});
+
+describe('fillTextWithEmoji', () => {
+  function measuringCtx() {
+    const ctx = fakeCtx();
+    ctx.measureText = jest.fn((text: string) => ({ width: [...text].length * 10 }));
+    return ctx;
+  }
+
+  it('draws text between emoji as whole runs when there is no letter spacing (keeps kerning)', async () => {
+    mockLoadImage.mockResolvedValue({ width: 72, height: 72 });
+    const ctx = measuringCtx();
+
+    const width = await fillTextWithEmoji(ctx as never, 'Blondi 🦋', 0, 20, { fontSize: 10 });
+
+    expect(ctx.fillText.mock.calls.map(([text]) => text)).toEqual(['Blondi ']);
+    expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+    expect(width).toBe(70 + 12); // 7 znaków + emoji 1.2 × fontSize
+  });
+
+  it('truncates with an ellipsis to fit maxWidth', async () => {
+    const ctx = measuringCtx();
+
+    const width = await fillTextWithEmoji(ctx as never, 'Abcdefghij', 0, 20, { fontSize: 10, maxWidth: 50 });
+
+    expect(ctx.fillText.mock.calls.map(([text]) => text)).toEqual(['Abcd…']);
+    expect(width).toBe(50);
+  });
+
+  it('centers text around x', async () => {
+    const ctx = measuringCtx();
+
+    await fillTextWithEmoji(ctx as never, 'Abcd', 100, 20, { fontSize: 10, align: 'center' });
+
+    expect(ctx.fillText).toHaveBeenCalledWith('Abcd', 80, 20);
   });
 });
