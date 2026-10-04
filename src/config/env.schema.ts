@@ -25,6 +25,9 @@ export const EnvSchema = z.object({
   TWITCH_CLIENT_ID: z.string().optional(),
   TWITCH_CLIENT_SECRET: z.string().optional(),
   FACEIT_API_KEY: z.string().optional(),
+
+  /** Usuwanie danych serwerów 30 dni po usunięciu bota. Ustaw "on" TYLKO na produkcji. */
+  GUILD_DATA_RETENTION: z.enum(['on', 'off']).optional(),
 });
 
 export type Env = Readonly<z.infer<typeof EnvSchema>>;

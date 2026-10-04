@@ -3,6 +3,7 @@ import { Client } from 'discord.js';
 import { CRON } from '../../config/constants/cron';
 import { purgeExpiredGuildData, reconcileGuildDepartures } from '../../services/guildDataRetentionService';
 import logger from '../../utils/logger';
+import { env } from '../../config';
 
 /**
  * Przy starcie i raz dziennie: uzgadnia listę serwerów, z których bota usunięto (także w czasie,
@@ -30,6 +31,14 @@ async function runRetention(client: Client): Promise<void> {
 }
 
 export default async function run(client: Client): Promise<void> {
+  // Włączane jawnie (GUILD_DATA_RETENTION=on w .env produkcji). Domyślnie wyłączone, bo instancja
+  // developerska podpięta pod tę samą bazę widzi inne serwery niż produkcja — uruchomiona
+  // u niej retencja uznałaby serwery produkcyjne za opuszczone.
+  if (env().GUILD_DATA_RETENTION !== 'on') {
+    logger.info('[Retention] Wyłączone (GUILD_DATA_RETENTION != on) — dane usuniętych serwerów nie są czyszczone.');
+    return;
+  }
+
   await runRetention(client).catch((err) => logger.error(`[Retention] Błąd przy starcie: ${err}`));
 
   schedule(

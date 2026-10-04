@@ -32,6 +32,7 @@ import {
 
 const GUILD_A = '881293681783623680';
 const GUILD_B = '123456789012345678';
+const GUILD_C = '987654321098765432';
 
 const collectionNames = ['levels', 'warns', 'system.views', 'guilddepartures'];
 const mockDistinct = jest.fn();
@@ -92,6 +93,17 @@ describe('reconcileGuildDepartures', () => {
     expect(mockDeparture.updateOne).not.toHaveBeenCalled();
   });
 
+  it('refuses when the bot cannot see most guilds from the database (wrong instance or database)', async () => {
+    // Np. bot developerski z innym tokenem, podpięty pod produkcyjną bazę: widzi 1 serwer z 3.
+    mockDistinct.mockResolvedValue([GUILD_A, GUILD_B, GUILD_C]);
+
+    const result = await reconcileGuildDepartures([GUILD_A]);
+
+    expect(result.ok).toBe(false);
+    expect(mockDeparture.updateOne).not.toHaveBeenCalled();
+    expect(mockDeparture.deleteMany).not.toHaveBeenCalled();
+  });
+
   it('marks guilds known to the database but absent from the bot, and clears present ones', async () => {
     mockDistinct.mockResolvedValue([GUILD_A, GUILD_B, null, 'junk']);
 
@@ -105,7 +117,12 @@ describe('reconcileGuildDepartures', () => {
     // Kolekcje systemowe i sam rejestr odejść nie są skanowane.
     const scanned = mockCollection.mock.calls.map(([name]) => name);
     expect(scanned).toEqual(['levels', 'warns']);
-    expect(mockDeparture.deleteMany).toHaveBeenCalledWith({ guildId: { $in: [GUILD_A] } });
+    // Bot ma włączone sanitizeFilter — operator $in musi przetrwać sanityzację (mongoose.trusted),
+    // inaczej Mongoose rzuca CastError i uzgadnianie w ogóle nie działa.
+    const [filter] = mockDeparture.deleteMany.mock.calls[0];
+    const sanitized = mongoose.sanitizeFilter(filter);
+    expect(sanitized.guildId).toEqual(expect.objectContaining({ $in: [GUILD_A] }));
+    expect(sanitized.guildId.$eq).toBeUndefined();
   });
 });
 
@@ -119,7 +136,11 @@ describe('purgeExpiredGuildData', () => {
     const now = new Date('2026-10-31T00:00:00Z');
     await purgeExpiredGuildData([GUILD_A], now);
     const cutoff = new Date(now.getTime() - GUILD_DATA_RETENTION_DAYS * 24 * 60 * 60 * 1000);
-    expect(mockDeparture.find).toHaveBeenCalledWith({ leftAt: { $lte: cutoff } });
+    const [filter] = mockDeparture.find.mock.calls[0];
+    // Musi przetrwać sanitizeFilter (patrz test reconcile) — sprawdzamy już po sanityzacji.
+    const sanitized = mongoose.sanitizeFilter(filter);
+    expect(sanitized.leftAt).toEqual(expect.objectContaining({ $lte: cutoff }));
+    expect(sanitized.leftAt.$eq).toBeUndefined();
   });
 
   it('deletes all guild-scoped documents and uploaded files of an expired guild', async () => {

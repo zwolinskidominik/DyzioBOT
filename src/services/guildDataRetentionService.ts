@@ -104,15 +104,31 @@ export async function reconcileGuildDepartures(
       }
     }
 
+    const absent = [...known].filter((guildId) => !present.has(guildId));
+
+    // Bezpiecznik: jeśli bot „nie widzi" ponad połowy serwerów, o których wie baza, to prawie na
+    // pewno nie jest prawdziwe odejście, tylko zła instancja (np. bot developerski z innym
+    // tokenem podpięty pod produkcyjną bazę) albo niepełna lista serwerów. Oznaczenie ich jako
+    // opuszczonych skończyłoby się za 30 dni skasowaniem danych działających serwerów.
+    if (absent.length > 0 && absent.length > known.size / 2) {
+      return fail(
+        'SUSPICIOUS_GUILD_LIST',
+        `Bot nie widzi ${absent.length} z ${known.size} serwerów z bazy — pomijam uzgadnianie (czy to właściwa instancja/baza?).`
+      );
+    }
+
     let marked = 0;
     const now = new Date();
-    for (const guildId of known) {
-      if (present.has(guildId)) continue;
+    for (const guildId of absent) {
       const result = await markGuildDeparted(guildId, now);
       if (result.ok) marked += 1;
     }
 
-    const cancelResult = await GuildDepartureModel.deleteMany({ guildId: { $in: [...present] } });
+    // mongoose.trusted(): bot ma włączone sanitizeFilter (src/index.ts), które owija każdy operator
+    // ($in, $lte, ...) w $eq i psuje zapytanie. Lista pochodzi z client.guilds.cache, nie z inputu.
+    const cancelResult = await GuildDepartureModel.deleteMany({
+      guildId: mongoose.trusted({ $in: [...present] }),
+    });
 
     return ok({ marked, cancelled: cancelResult.deletedCount ?? 0 });
   } catch (err) {
@@ -151,7 +167,8 @@ export async function purgeExpiredGuildData(
   try {
     const cutoff = new Date(now.getTime() - GUILD_DATA_RETENTION_DAYS * DAY_MS);
     const present = new Set(presentGuildIds);
-    const due = await GuildDepartureModel.find({ leftAt: { $lte: cutoff } }).lean();
+    // trusted — patrz komentarz w reconcileGuildDepartures (sanitizeFilter). cutoff liczymy sami.
+    const due = await GuildDepartureModel.find({ leftAt: mongoose.trusted({ $lte: cutoff }) }).lean();
 
     const purgedGuilds: string[] = [];
     let deletedDocuments = 0;
