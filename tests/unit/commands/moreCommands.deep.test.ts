@@ -247,6 +247,31 @@ describe('help command (deep)', () => {
     );
   });
 
+  describe('owner-only commands (/meme, /dowcip)', () => {
+    const OWNER_GUILD = '881293681783623680';
+    const footerFor = async (guildId: string): Promise<string> => {
+      const interaction = makeInteraction();
+      interaction.guildId = guildId;
+      mockCreateBaseEmbed.mockClear();
+      await helpCmd.run({ interaction, client: {} });
+      return mockCreateBaseEmbed.mock.calls[0][0].footerText;
+    };
+
+    it('are registered only on the owner servers', () => {
+      const meme = require('../../../src/commands/fun/meme');
+      const dowcip = require('../../../src/commands/fun/dowcip');
+      expect(meme.options.restrictedGuildIds).toContain(OWNER_GUILD);
+      expect(dowcip.options.restrictedGuildIds).toContain(OWNER_GUILD);
+    });
+
+    it('hides /meme from /help on other servers', async () => {
+      const helpSrc = require('fs').readFileSync(require.resolve('../../../src/commands/misc/help'), 'utf8');
+      const total = (helpSrc.match(/^    name: '/gm) ?? []).length;
+      expect(await footerFor(OWNER_GUILD)).toContain(`/${Math.ceil(total / 5)}`);
+      expect(await footerFor('123456789012345678')).toContain(`/${Math.ceil((total - 1) / 5)}`);
+    });
+  });
+
   it('handles error gracefully', async () => {
     const interaction = makeInteraction();
     interaction.reply.mockRejectedValueOnce(new Error('Error'));

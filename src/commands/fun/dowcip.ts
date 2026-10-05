@@ -3,6 +3,7 @@ import * as cheerio from 'cheerio';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
+import { OWNER_GUILD_IDS } from '../../config/constants/owner';
 
 // ─── perelki.net (scraping losowego dowcipu) ──────────────────────────────────
 
@@ -30,7 +31,12 @@ export const data = new SlashCommandBuilder()
   .setName('dowcip')
   .setDescription('Deezy ma dla Ciebie losowy dowcip. Oby był dobry. 🤡');
 
-export const options = { cooldown: 3 };
+/**
+ * Tylko na serwerach właściciela: treści pochodzą ze stron trzecich bez filtra 18+ i bez
+ * licencji, więc nie mogą trafiać na obce serwery (Discord Developer Policy pkt 10, Developer
+ * Terms §4). restrictedGuildIds rejestruje komendę wyłącznie tam i blokuje ją gdzie indziej.
+ */
+export const options = { cooldown: 3, restrictedGuildIds: [...OWNER_GUILD_IDS] };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   let text: string;

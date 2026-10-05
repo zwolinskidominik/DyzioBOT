@@ -9,6 +9,7 @@ import {
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { COLORS } from '../../config/constants/colors';
+import { OWNER_GUILD_IDS } from '../../config/constants/owner';
 import { CONTACT_EMAIL, PRIVACY_URL, SITE_URL, TERMS_URL } from '../../config/constants/links';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { getBotConfig } from '../../config/bot';
@@ -26,6 +27,8 @@ interface CommandInfo {
   name: string;
   description: string;
   usage?: string;
+  /** Komenda dostępna tylko na serwerach właściciela — nie pokazuj jej nigdzie indziej. */
+  ownerGuildsOnly?: boolean;
 }
 
 const ALL_COMMANDS: CommandInfo[] = [
@@ -78,6 +81,7 @@ const ALL_COMMANDS: CommandInfo[] = [
     name: '/meme',
     description: 'Wysyła losowego mema z polskich stron (kwejk, demotywatory, mistrzowie, ivall).',
     usage: '/meme',
+    ownerGuildsOnly: true,
   },
   {
     name: '/ping',
@@ -108,7 +112,9 @@ const ALL_COMMANDS: CommandInfo[] = [
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
-    const totalPages = Math.ceil(ALL_COMMANDS.length / 5);
+    const isOwnerGuild = (OWNER_GUILD_IDS as readonly string[]).includes(interaction.guildId ?? '');
+    const commands = ALL_COMMANDS.filter((cmd) => !cmd.ownerGuildsOnly || isOwnerGuild);
+    const totalPages = Math.ceil(commands.length / 5);
     let currentPage = 0;
 
     const botConfig = getBotConfig(interaction.client.application!.id);
@@ -117,7 +123,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const createEmbed = (page: number): EmbedBuilder => {
       const start = page * 5;
       const end = start + 5;
-      const pageCommands = ALL_COMMANDS.slice(start, end);
+      const pageCommands = commands.slice(start, end);
 
       const embed = createBaseEmbed({
         title: '📚 Lista komend - Deezy',

@@ -5,6 +5,7 @@ import { fetchMeme, SITES } from '../../utils/memeHelpers';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
+import { OWNER_GUILD_IDS } from '../../config/constants/owner';
 
 type MemeResponse =
   | { files: { attachment: string; name: string }[]; embeds: EmbedBuilder[] }
@@ -14,8 +15,14 @@ export const data = new SlashCommandBuilder()
   .setName('meme')
   .setDescription('Wylosuj mema z różnych zakątków internetu 🗿');
 
+/**
+ * Tylko na serwerach właściciela: treści pochodzą ze stron trzecich bez filtra 18+ i bez
+ * licencji, więc nie mogą trafiać na obce serwery (Discord Developer Policy pkt 10, Developer
+ * Terms §4). restrictedGuildIds rejestruje komendę wyłącznie tam i blokuje ją gdzie indziej.
+ */
 export const options = {
   cooldown: 5,
+  restrictedGuildIds: [...OWNER_GUILD_IDS],
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
