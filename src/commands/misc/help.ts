@@ -79,56 +79,6 @@ const ALL_COMMANDS: CommandInfo[] = [
     usage: '/meme',
   },
   {
-    name: '!play / !p',
-    description: 'Odtwarza muzykę z YouTube, Spotify lub innych źródeł.',
-    usage: '!play <nazwa/link>',
-  },
-  {
-    name: '!pause',
-    description: 'Wstrzymuje odtwarzanie muzyki.',
-    usage: '!pause',
-  },
-  {
-    name: '!resume',
-    description: 'Wznawia odtwarzanie muzyki.',
-    usage: '!resume',
-  },
-  {
-    name: '!skip',
-    description: 'Pomija aktualnie odtwarzany utwór.',
-    usage: '!skip',
-  },
-  {
-    name: '!stop',
-    description: 'Zatrzymuje odtwarzanie i czyści kolejkę.',
-    usage: '!stop',
-  },
-  {
-    name: '!queue / !q',
-    description: 'Wyświetla aktualną kolejkę utworów.',
-    usage: '!queue',
-  },
-  {
-    name: '!nowplaying / !np',
-    description: 'Pokazuje aktualnie odtwarzany utwór.',
-    usage: '!nowplaying',
-  },
-  {
-    name: '!volume / !vol',
-    description: 'Ustawia głośność odtwarzania (0-100).',
-    usage: '!volume <0-100>',
-  },
-  {
-    name: '!shuffle',
-    description: 'Miesza kolejkę utworów w losowej kolejności.',
-    usage: '!shuffle',
-  },
-  {
-    name: '!loop',
-    description: 'Ustawia tryb powtarzania (off/track/queue).',
-    usage: '!loop <off/track/queue>',
-  },
-  {
     name: '/ping',
     description: 'Sprawdza opóźnienie bota (ping).',
     usage: '/ping',

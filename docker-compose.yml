@@ -16,8 +16,6 @@ services:
       - deezybot-network
     volumes:
       - ./logs:/app/logs
-      - ./cookies.txt:/app/cookies.txt:ro
-      - yt-dlp-cache:/root/.cache/yt-dlp
       # Współdzielony z dashboardem (./assets:/assets) — bot czyta wgrane
       # obrazki/GIF-y Powitań z process.cwd()/assets/... w czasie działania,
       # więc musi widzieć ten sam katalog na hoście, nie tylko kopię z buildu.
@@ -67,5 +65,4 @@ networks:
   deezybot-network:
 
 volumes:
-  yt-dlp-cache:
   redis-data:
