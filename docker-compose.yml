@@ -14,6 +14,9 @@ services:
       - .env
     networks:
       - deezybot-network
+    depends_on:
+      mongo:
+        condition: service_healthy
     volumes:
       - ./logs:/app/logs
       # Współdzielony z dashboardem (./assets:/assets) — bot czyta wgrane
@@ -47,7 +50,10 @@ services:
       # przy każdym zapisie configu Powitań, nie tylko przy dodaniu pliku.
       - ./assets:/assets
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      mongo:
+        condition: service_healthy
 
   # Redis — session cache, rate limiting (upgrade from in-memory when scaling)
   redis:
@@ -60,6 +66,47 @@ services:
     volumes:
       - redis-data:/data
     # Not exposed externally — only accessible within deezybot-network
+
+  # MongoDB — jednowęzłowy replica set (rs0), żeby działały transakcje (ekonomia: saldo +
+  # wpis w ledgerze atomowo). Dane i keyFile leżą na zaszyfrowanym wolumenie LUKS
+  # (DEEZY_SECURE_DIR, domyślnie /srv/deezy-secure) — Discord Developer Terms §5c wymagają
+  # szyfrowania danych w spoczynku, a Mongo Community samo tego nie robi.
+  # Konfiguracja wolumenu i pierwsze uruchomienie: skrypty w ops/mongo/.
+  mongo:
+    image: mongo:8.0
+    container_name: deezybot-mongo
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command:
+      - --replSet
+      - rs0
+      - --keyFile
+      - /etc/mongo/keyfile
+      - --bind_ip_all
+      # Limit cache WiredTiger — domyślnie bierze ~50% RAM, a dzielimy VPS z botem i dashboardem.
+      - --wiredTigerCacheSizeGB
+      - "0.75"
+    env_file:
+      - mongo.env
+    networks:
+      - deezybot-network
+    # Tylko localhost VPS (np. do Compass przez tunel SSH) — nigdy publicznie.
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - ${DEEZY_SECURE_DIR:-/srv/deezy-secure}/mongo/data:/data/db
+      - ${DEEZY_SECURE_DIR:-/srv/deezy-secure}/mongo/keyfile:/etc/mongo/keyfile:ro
+    healthcheck:
+      # ping nie wymaga logowania
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
 
 networks:
   deezybot-network:
