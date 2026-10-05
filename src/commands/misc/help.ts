@@ -9,6 +9,7 @@ import {
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { COLORS } from '../../config/constants/colors';
+import { CONTACT_EMAIL, PRIVACY_URL, SITE_URL, TERMS_URL } from '../../config/constants/links';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
@@ -139,8 +140,23 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
         embed.addFields({ name: `**${cmd.name}**`, value: fieldValue, inline: false });
       });
 
+      embed.addFields({
+        name: '📬 Pomoc i kontakt',
+        value: `Problem z botem, zgłoszenie nadużycia albo prośba o usunięcie danych: **${CONTACT_EMAIL}**`,
+        inline: false,
+      });
+
       return embed;
     };
+
+    // Linki do panelu, regulaminu i polityki prywatności (wymóg Discord Developer Terms §5a:
+    // polityka prywatności musi być łatwo dostępna z poziomu aplikacji). Przyciski-linki nie
+    // wysyłają interakcji, więc nie trzeba ich wyłączać po upływie czasu kolektora.
+    const linkRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setLabel('Panel').setStyle(ButtonStyle.Link).setURL(SITE_URL),
+      new ButtonBuilder().setLabel('Regulamin').setStyle(ButtonStyle.Link).setURL(TERMS_URL),
+      new ButtonBuilder().setLabel('Polityka prywatności').setStyle(ButtonStyle.Link).setURL(PRIVACY_URL)
+    );
 
     const createButtons = (disabled = false) => {
       return new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -159,7 +175,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     await interaction.reply({
       embeds: [createEmbed(0)],
-      components: [createButtons()],
+      components: [createButtons(), linkRow],
     });
 
     const message = await interaction.fetchReply();
@@ -179,13 +195,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
       await i.update({
         embeds: [createEmbed(currentPage)],
-        components: [createButtons()],
+        components: [createButtons(), linkRow],
       });
     });
 
     collector.on('end', async () => {
       try {
-        await interaction.editReply({ components: [createButtons(true)] });
+        await interaction.editReply({ components: [createButtons(true), linkRow] });
       } catch {
         
       }
