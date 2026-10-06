@@ -8,12 +8,12 @@
   starsze niz -KeepDays (domyslnie 30 dni, czyli dluzsza historia niz na VPS).
 
   Wymaga logowania do VPS kluczem SSH bez pytania o haslo (zadanie dziala w tle) i wpisu
-  "deezy" w %USERPROFILE%\.ssh\config (adres, port 2222, uzytkownik):
-    Host deezy
+  "deezy.cc" w %USERPROFILE%\.ssh\config (adres, port 2222, uzytkownik):
+    Host deezy.cc
       HostName 57.128.214.153
       Port 2222
       User ubuntu
-  Sprawdzenie:  ssh -o BatchMode=yes deezy echo ok
+  Sprawdzenie:  ssh -o BatchMode=yes deezy.cc echo ok
 
 .EXAMPLE
   # Jednorazowo: zarejestruj codzienne zadanie w Harmonogramie zadan
@@ -24,7 +24,7 @@
   powershell -ExecutionPolicy Bypass -File ops\mongo\pull-backup.ps1
 #>
 param(
-  [string]$RemoteHost = "deezy",
+  [string]$RemoteHost = "deezy.cc",
   [string]$RemoteDir = "/srv/deezy-secure/backups",
   [string]$LocalDir = "C:\Backupy\Deezy",
   [int]$KeepDays = 30,
