@@ -71,6 +71,10 @@ mkdir -p "$MNT/mongo/data" "$MNT/backups"
 ( umask 077 && openssl rand -base64 756 > "$MNT/mongo/keyfile" )
 chmod 400 "$MNT/mongo/keyfile"
 chown -R "$MONGO_UID:$MONGO_UID" "$MNT/mongo"
+# Kopie robi i czyta zwykły użytkownik (ten, który uruchomił sudo, np. ubuntu) — cron,
+# migracja i pobieranie kopii przez scp nie działają z uprawnieniami roota.
+BACKUP_OWNER="${SUDO_USER:-root}"
+chown "$BACKUP_OWNER:" "$MNT/backups"
 chmod 700 "$MNT/backups"
 
 echo
