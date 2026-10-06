@@ -1,11 +1,11 @@
 ﻿"use client";
 
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Settings, Crown, Search } from "lucide-react";
+import { Loader2, Settings, Crown, Search, LogIn, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { openBotInvitePopup } from "@/lib/botInvite";
 import { DashboardTopbar } from "@/components/DashboardTopbar";
@@ -26,6 +26,8 @@ export default function GuildsPage() {
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  // "expired" — Discord odrzucił token (trzeba zalogować się ponownie), "failed" — inny błąd.
+  const [loadError, setLoadError] = useState<"expired" | "failed" | null>(null);
 
   const filteredGuilds = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("pl");
@@ -66,9 +68,13 @@ export default function GuildsPage() {
       if (response.ok) {
         const data = await response.json();
         setGuilds(data);
+        setLoadError(null);
+      } else {
+        setLoadError(response.status === 401 ? "expired" : "failed");
       }
     } catch (error) {
       console.error("Failed to fetch guilds:", error);
+      setLoadError("failed");
     } finally {
       setLoading(false);
     }
@@ -119,7 +125,37 @@ export default function GuildsPage() {
             </p>
           </div>
 
-          {guilds.length === 0 ? (
+          {loadError || session?.error ? (
+            <Card className="mx-auto max-w-lg border-0 bg-dark-700">
+              <CardContent className="p-12 text-center">
+                {loadError === "failed" && !session?.error ? (
+                  <>
+                    <h2 className="mb-2 text-xl font-semibold">Nie udało się pobrać serwerów</h2>
+                    <p className="mb-6 text-muted-foreground">Discord chwilowo nie odpowiada. Spróbuj ponownie za moment.</p>
+                    <Button
+                      className="btn-gradient"
+                      onClick={() => {
+                        setLoading(true);
+                        fetchGuilds();
+                      }}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Spróbuj ponownie
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="mb-2 text-xl font-semibold">Sesja Discorda wygasła</h2>
+                    <p className="mb-6 text-muted-foreground">Zaloguj się ponownie, żeby zobaczyć swoje serwery.</p>
+                    <Button className="btn-gradient" onClick={() => signIn("discord", { callbackUrl: "/guilds" })}>
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Zaloguj ponownie
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ) : guilds.length === 0 ? (
             <Card className="mx-auto max-w-lg border-0 bg-dark-700">
               <CardContent className="p-12 text-center">
                 <Settings className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />

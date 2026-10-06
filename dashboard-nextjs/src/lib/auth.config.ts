@@ -1,5 +1,13 @@
 import { NextAuthOptions } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import { ensureFreshDiscordToken } from "@/lib/discordTokenRefresh";
+
+function profileId(profile: unknown): string | undefined {
+  if (profile && typeof profile === "object" && "id" in profile && typeof profile.id === "string") {
+    return profile.id;
+  }
+  return undefined;
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,16 +24,25 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account) {
-        token.accessToken = account.access_token;
-        token.id = (profile as any)?.id;
+        // Pierwsze logowanie: zapamiętujemy też refresh token i moment wygaśnięcia, żeby móc
+        // odświeżyć token Discorda (wygasa po 7 dniach, sesja trwa 30).
+        return {
+          ...token,
+          id: profileId(profile),
+          accessToken: account.access_token,
+          refreshToken: account.refresh_token,
+          accessTokenExpires: typeof account.expires_at === "number" ? account.expires_at * 1000 : undefined,
+          error: undefined,
+        };
       }
-      return token;
+      return ensureFreshDiscordToken(token);
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.accessToken = token.accessToken as string;
+        session.user.id = token.id ?? "";
+        session.accessToken = token.accessToken ?? "";
       }
+      session.error = token.error;
       return session;
     },
     async redirect({ url, baseUrl }) {

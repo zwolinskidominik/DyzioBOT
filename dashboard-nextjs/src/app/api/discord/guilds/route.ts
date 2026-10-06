@@ -15,6 +15,9 @@ export async function GET() {
     if (!session || !session.accessToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    if (session.error) {
+      return NextResponse.json({ error: "DISCORD_TOKEN_EXPIRED" }, { status: 401 });
+    }
 
     const cacheKey = `guilds:${session.user?.id}`;
     const userId = session.user?.id ?? "unknown";
@@ -43,6 +46,12 @@ export async function GET() {
     if (!userGuildsResult.ok) {
       if (userGuildsResult.status === 429 && staleData) {
         return NextResponse.json(staleData);
+      }
+
+      // Discord odrzucił token użytkownika (wygasł albo został cofnięty) — interfejs prosi
+      // wtedy o ponowne logowanie zamiast pokazywać mylące „Brak dostępnych serwerów”.
+      if (userGuildsResult.status === 401) {
+        return NextResponse.json({ error: "DISCORD_TOKEN_EXPIRED" }, { status: 401 });
       }
 
       console.error("Discord API error:", userGuildsResult.status, userGuildsResult.errorText);
