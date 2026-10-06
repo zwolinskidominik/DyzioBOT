@@ -37,8 +37,10 @@ $TaskName = "Deezy - kopia MongoDB z VPS"
 
 if ($Register) {
   $scriptPath = $MyInvocation.MyCommand.Path
-  $argsLine = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`" -RemoteHost `"$RemoteHost`" -LocalDir `"$LocalDir`" -KeepDays $KeepDays"
-  $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $argsLine
+  $psArgs = "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`" -RemoteHost `"$RemoteHost`" -LocalDir `"$LocalDir`" -KeepDays $KeepDays"
+  # Samo -WindowStyle Hidden i tak na moment otwiera okno konsoli, co wyrzuca z gier na pelnym
+  # ekranie. conhost --headless (Windows 10 21H2+/11) uruchamia PowerShell bez zadnego okna.
+  $action = New-ScheduledTaskAction -Execute "conhost.exe" -Argument "--headless powershell.exe $psArgs"
   $trigger = New-ScheduledTaskTrigger -Daily -At $At
   # StartWhenAvailable: jesli komputer byl wylaczony o tej godzinie, zadanie ruszy po wlaczeniu.
   $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable `
