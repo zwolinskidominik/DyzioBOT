@@ -21,7 +21,7 @@ if ! mountpoint -q "$SECURE_DIR"; then
 fi
 
 docker compose exec -T mongo sh -c \
-  'mongodump -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip' \
+  'mongodump --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip' \
   > "$FILE.partial"
 mv "$FILE.partial" "$FILE"
 chmod 600 "$FILE"
