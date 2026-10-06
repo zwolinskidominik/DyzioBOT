@@ -14,11 +14,24 @@ SECURE_DIR="${DEEZY_SECURE_DIR:-/srv/deezy-secure}"
 BACKUP_DIR="$SECURE_DIR/backups"
 KEEP_DAYS="${KEEP_DAYS:-7}"
 FILE="$BACKUP_DIR/deezy-$(date +%F-%H%M).archive.gz"
+STATUS_DIR="$BACKUP_DIR/.status"
 
 if ! mountpoint -q "$SECURE_DIR"; then
   echo "$(date -Is) BŁĄD: $SECURE_DIR nie jest zamontowany — nie zapisuję kopii na niezaszyfrowany dysk." >&2
   exit 1
 fi
+
+# Status dla bota (alerty w DM, src/events/clientReady/backupMonitor.ts): data udanej kopii
+# albo data + treść błędu. Bot widzi tylko ten katalog, nie same kopie.
+mkdir -p "$STATUS_DIR"
+on_error() {
+  local line="$1" command="$2"
+  rm -f "$FILE.partial"
+  printf '%s\nKopia przerwana w linii %s: %s\n' "$(date -Is)" "$line" "$command" > "$STATUS_DIR/backup-error"
+  echo "$(date -Is) BŁĄD w linii $line: $command" >&2
+}
+# $BASH_COMMAND liczony w momencie błędu (wewnątrz funkcji wskazywałby już na jej własne polecenia).
+trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
 
 docker compose exec -T mongo sh -c \
   'mongodump --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip' \
@@ -28,4 +41,5 @@ chmod 600 "$FILE"
 
 find "$BACKUP_DIR" -maxdepth 1 -name 'deezy-*.archive.gz' -mtime +"$KEEP_DAYS" -delete
 
+date -Is > "$STATUS_DIR/backup-ok"
 echo "$(date -Is) OK: $(basename "$FILE") ($(du -h "$FILE" | cut -f1))"

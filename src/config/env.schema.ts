@@ -28,6 +28,11 @@ export const EnvSchema = z.object({
 
   /** Usuwanie danych serwerów 30 dni po usunięciu bota. Ustaw "on" TYLKO na produkcji. */
   GUILD_DATA_RETENTION: z.enum(['on', 'off']).optional(),
+
+  /** ID konta Discord, które dostaje w DM alerty o kopiach zapasowych bazy. Brak = monitor wyłączony. */
+  BACKUP_ALERT_USER_ID: z.string().regex(/^\d{17,20}$/, 'BACKUP_ALERT_USER_ID musi być ID użytkownika Discord').optional(),
+  /** Katalog ze statusem kopii (montowany tylko do odczytu w docker-compose). */
+  BACKUP_STATUS_DIR: z.string().optional(),
 });
 
 export type Env = Readonly<z.infer<typeof EnvSchema>>;

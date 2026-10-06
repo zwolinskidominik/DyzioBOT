@@ -55,4 +55,7 @@ export const CRON = {
 
   /** Daily at 04:00 — detect guilds the bot left and purge data past the retention period */
   GUILD_DATA_RETENTION: '0 4 * * *',
+
+  /** Every hour at :15 — check MongoDB backups and DM the owner when something breaks */
+  BACKUP_MONITOR: '15 * * * *',
 } as const;

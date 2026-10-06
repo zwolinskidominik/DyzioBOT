@@ -19,6 +19,9 @@ services:
         condition: service_healthy
     volumes:
       - ./logs:/app/logs
+      # Tylko status kopii zapasowych (pliki z datami), do odczytu — dla alertów w DM
+      # (src/events/clientReady/backupMonitor.ts). Same kopie nie są widoczne dla bota.
+      - ${DEEZY_SECURE_DIR:-/srv/deezy-secure}/backups/.status:/app/backup-status:ro
       # Współdzielony z dashboardem (./assets:/assets) — bot czyta wgrane
       # obrazki/GIF-y Powitań z process.cwd()/assets/... w czasie działania,
       # więc musi widzieć ten sam katalog na hoście, nie tylko kopię z buildu.

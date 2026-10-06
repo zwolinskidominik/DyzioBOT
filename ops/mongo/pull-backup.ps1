@@ -100,6 +100,9 @@ try {
     exit 1
   }
   Write-Log "OK: nowych kopii: $downloaded, najnowsza: $($newest.Name)"
+  # Zglos VPS-owi udane pobranie - bot pilnuje tej daty i napisze w DM, gdy pobieranie stanie.
+  & ssh @sshOpts $RemoteHost "mkdir -p $RemoteDir/.status && date -Is > $RemoteDir/.status/last-pull"
+  if ($LASTEXITCODE -ne 0) { Write-Log "UWAGA: nie udalo sie zapisac daty pobrania na VPS (kod $LASTEXITCODE)." }
 }
 catch {
   Write-Log "BLAD: $($_.Exception.Message)"
