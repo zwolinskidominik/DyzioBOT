@@ -29,10 +29,20 @@ export class CommandHandler {
     (interaction: CommandInteraction, command: ICommand) => Promise<string | null>
   > = [];
   private readonly config: ICommandHandlerConfig;
+  /**
+   * Spełnia się, gdy po `clientReady` skończy się czyszczenie (bulkRegister) i rejestracja komend —
+   * także na serwerach (guild-scoped). Skrypt sync-commands czeka na to przed zamknięciem procesu,
+   * zamiast zgadywać stałym opóźnieniem (wcześniejsze 5 s ucinało rejestrację komend serwerowych).
+   */
+  public readonly ready: Promise<void>;
+  private markReady: () => void = () => undefined;
 
   public constructor(client: Client, config: ICommandHandlerConfig = {}) {
     this.client = client;
     this.config = config;
+    this.ready = new Promise<void>((resolve) => {
+      this.markReady = resolve;
+    });
 
     this.loadCommands(join(__dirname, '..', 'commands'));
     this.loadValidations(join(__dirname, '..', 'validations'));
@@ -48,6 +58,7 @@ export class CommandHandler {
       await this.registerCommands()
         .then(() => logger.info('✅ Zarejestrowano komendy aplikacji.'))
         .catch((err) => logger.error(`❌ Błąd rejestracji komend: ${err}`));
+      this.markReady();
     });
   }
 

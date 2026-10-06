@@ -77,6 +77,38 @@ describe('CommandHandler', () => {
     expect(client.once).toHaveBeenCalledWith('clientReady', expect.any(Function));
   });
 
+  it('ready resolves only after commands are cleared and registered on clientReady', async () => {
+    mockReaddirSync.mockReturnValue([]);
+    const client = mockClient();
+    const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
+    const handler = new CH(client, { bulkRegister: true });
+
+    let finishRegistration: () => void = () => undefined;
+    const internals = handler as unknown as {
+      clearCommands: () => Promise<void>;
+      registerCommands: () => Promise<void>;
+    };
+    const clear = jest.spyOn(internals, 'clearCommands').mockResolvedValue(undefined);
+    const register = jest
+      .spyOn(internals, 'registerCommands')
+      .mockImplementation(() => new Promise<void>((resolve) => { finishRegistration = resolve; }));
+
+    let ready = false;
+    handler.ready.then(() => { ready = true; });
+
+    const onReady = (client.once as jest.Mock).mock.calls.find(([event]: [string]) => event === 'clientReady')[1];
+    const running = onReady();
+    await new Promise((r) => setImmediate(r));
+    expect(clear).toHaveBeenCalled();
+    expect(register).toHaveBeenCalled();
+    expect(ready).toBe(false); // rejestracja (np. komend serwerowych) jeszcze trwa
+
+    finishRegistration();
+    await running;
+    await handler.ready;
+    expect(ready).toBe(true);
+  });
+
   it('respond method uses reply if not deferred', async () => {
     mockReaddirSync.mockReturnValue([]);
     const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');

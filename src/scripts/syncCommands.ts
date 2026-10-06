@@ -14,7 +14,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
-new CommandHandler(client, {
+const handler = new CommandHandler(client, {
   devGuildIds: DEV_GUILD_IDS?.split(',') || [],
   devUserIds: DEV_USER_IDS?.split(',') || [],
   devRoleIds: DEV_ROLE_IDS?.split(',') || [],
@@ -24,8 +24,8 @@ new CommandHandler(client, {
 client.once('clientReady', async () => {
   console.log('✅ Bot zalogowany, synchronizuję komendy...');
   
-  await new Promise(resolve => setTimeout(resolve, 5000));
-  
+  await handler.ready;
+
   console.log('✅ Komendy zsynchronizowane! Zamykam bota...');
   client.destroy();
   process.exit(0);
