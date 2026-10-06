@@ -1,2 +1,4 @@
 # Skrypty uruchamiane na VPS (Linux) muszą mieć końce linii LF, nawet gdy repo jest edytowane na Windowsie.
 *.sh text eol=lf
+# Skrypty PowerShell uruchamiane na Windowsie.
+*.ps1 text eol=crlf
