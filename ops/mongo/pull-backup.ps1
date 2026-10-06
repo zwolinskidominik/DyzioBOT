@@ -21,7 +21,7 @@
 param(
   [string]$RemoteHost = "ubuntu@57.128.214.153",
   [string]$RemoteDir = "/srv/deezy-secure/backups",
-  [string]$LocalDir = "C:\Backupy\Deezy",
+  [string]$LocalDir = "$env:USERPROFILE\Desktop\Chicken\MongoDB\backups",
   [int]$KeepDays = 30,
   [string]$At = "10:00",
   [switch]$Register
