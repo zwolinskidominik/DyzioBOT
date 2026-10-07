@@ -52,6 +52,19 @@ if ($Register) {
   exit 0
 }
 
+# Gdy kopie trzymamy w zaszyfrowanym wolumenie (np. VeraCrypt jako dysk Z:), a wolumen nie jest
+# zamontowany, NIE zapisujemy kopii nigdzie indziej - w szczegolnosci nie na niezaszyfrowany dysk.
+# Bot i tak napisze w DM, jesli pobieranie stanie na dluzej niz 3 dni.
+$qualifier = Split-Path -Qualifier $LocalDir -ErrorAction SilentlyContinue
+if ($qualifier -and -not (Test-Path "$qualifier\")) {
+  $fallbackDir = Join-Path $env:LOCALAPPDATA "Deezy"
+  New-Item -ItemType Directory -Force -Path $fallbackDir | Out-Null
+  $line = "{0} POMINIETO: dysk {1} nie jest zamontowany (zamontuj wolumen VeraCrypt)." -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $qualifier
+  Add-Content -Path (Join-Path $fallbackDir "pull-backup.log") -Value $line -Encoding UTF8
+  Write-Host $line
+  exit 1
+}
+
 New-Item -ItemType Directory -Force -Path $LocalDir | Out-Null
 $log = Join-Path $LocalDir "pull-backup.log"
 function Write-Log([string]$message) {
