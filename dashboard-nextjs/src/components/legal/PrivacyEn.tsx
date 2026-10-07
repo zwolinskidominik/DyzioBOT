@@ -174,6 +174,12 @@ export function PrivacyEn() {
             are overwritten automatically.
           </li>
           <li>
+            <Strong>Backups</Strong> of the whole database are made daily. They are encrypted and kept for{" "}
+            {LEGAL.backupServerDays} days on the server and for up to {LEGAL.backupOffsiteDays} days on an encrypted drive
+            outside the server, then deleted automatically. Data removed from the database therefore disappears from the
+            last backup within {LEGAL.backupOffsiteDays} days. Backups are used only to restore data after a failure.
+          </li>
+          <li>
             Correspondence is kept for up to {LEGAL.correspondenceRetentionYears} years after the matter is closed, unless you
             ask us to delete it earlier.
           </li>
@@ -184,11 +190,8 @@ export function PrivacyEn() {
         <p>Infrastructure providers process data on our behalf:</p>
         <LegalList>
           <li>
-            <Strong>OVH sp. z o.o.</Strong> — the server running the bot and the panel (Poland), and e-mail hosting;
-          </li>
-          <li>
-            <Strong>MongoDB, Inc.</Strong> — the database (MongoDB Atlas) in an Amazon Web Services data centre in Frankfurt
-            (Germany).
+            <Strong>OVH sp. z o.o.</Strong> — a server in Poland running the bot, the panel and the database with its
+            backups, and e-mail hosting.
           </li>
         </LegalList>
         <p>In addition:</p>
@@ -260,7 +263,8 @@ export function PrivacyEn() {
       <LegalSection id="security" title="8. Security">
         <p>
           Connections to the panel are encrypted (HTTPS). Every change to a server&apos;s settings requires signing in and a
-          check that you have permission to manage that server. Only the people running the service have access to the
+          check that you have permission to manage that server. The database and its backups are stored encrypted, and
+          the database is not reachable from the internet. Only the people running the service have access to the
           database and the server.
         </p>
       </LegalSection>

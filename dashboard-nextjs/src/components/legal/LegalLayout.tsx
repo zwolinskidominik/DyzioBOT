@@ -9,6 +9,8 @@ interface LegalLayoutProps {
   path: "/privacy" | "/terms";
   title: string;
   version: string;
+  /** Data wejścia w życie dokumentu (YYYY-MM-DD). */
+  effectiveDate: string;
   children: ReactNode;
 }
 
@@ -31,7 +33,7 @@ const LABELS = {
   },
 } as const;
 
-export function LegalLayout({ lang, path, title, version, children }: LegalLayoutProps) {
+export function LegalLayout({ lang, path, title, version, effectiveDate, children }: LegalLayoutProps) {
   const t = LABELS[lang];
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -65,7 +67,7 @@ export function LegalLayout({ lang, path, title, version, children }: LegalLayou
           </nav>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          {t.version} {version}, {t.effective} {LEGAL.effectiveDate}
+          {t.version} {version}, {t.effective} {effectiveDate}
         </p>
         <div className="mt-8 space-y-8 break-words text-[15px] leading-7 text-foreground">{children}</div>
       </main>

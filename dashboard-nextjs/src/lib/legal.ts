@@ -10,6 +10,8 @@
  *   - GUILD_DATA_RETENTION_DAYS → src/services/guildDataRetentionService.ts (bot)
  *   - ACTIVITY_BUCKET_DAYS      → TTL w src/models/ActivityBucket.ts (bot)
  *   - STREAM_LOG_DAYS           → TTL w src/models/StreamNotificationLog.ts (bot)
+ *   - BACKUP_SERVER_DAYS        → KEEP_DAYS w ops/mongo/backup.sh (kopie na VPS)
+ *   - BACKUP_OFFSITE_DAYS       → KeepDays w ops/mongo/pull-backup.ps1 (kopie poza serwerem)
  * Zmiana któregokolwiek z nich wymaga aktualizacji dokumentów i podbicia wersji.
  */
 export const LEGAL = {
@@ -25,15 +27,21 @@ export const LEGAL = {
   /** ID aplikacji Discord (to samo co NEXT_PUBLIC_DISCORD_CLIENT_ID w docker-compose.yml). */
   botApplicationId: "1119327417237000285",
 
-  privacyVersion: "1.0",
+  privacyVersion: "1.1",
   termsVersion: "1.0",
-  /** Data wejścia w życie (YYYY-MM-DD). */
+  /** Data wejścia w życie regulaminu (YYYY-MM-DD). */
   effectiveDate: "2026-10-01",
+  /** Data wejścia w życie aktualnej wersji polityki prywatności (YYYY-MM-DD). */
+  privacyEffectiveDate: "2026-10-08",
 
   guildDataRetentionDays: 30,
   defaultWarnExpiryDays: 90,
   activityBucketDays: 32,
   streamLogDays: 60,
+  /** Codzienne, zaszyfrowane kopie bazy: tyle dni na serwerze… */
+  backupServerDays: 7,
+  /** …i tyle dni na zaszyfrowanym nośniku poza serwerem. */
+  backupOffsiteDays: 30,
   correspondenceRetentionYears: 2,
 } as const;
 

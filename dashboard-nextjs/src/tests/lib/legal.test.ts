@@ -28,5 +28,8 @@ describe("LEGAL", () => {
     expect(LEGAL.guildDataRetentionDays).toBe(30);
     expect(LEGAL.activityBucketDays).toBe(32);
     expect(LEGAL.streamLogDays).toBe(60);
+    // Kopie zapasowe: KEEP_DAYS w ops/mongo/backup.sh i KeepDays w ops/mongo/pull-backup.ps1.
+    expect(LEGAL.backupServerDays).toBe(7);
+    expect(LEGAL.backupOffsiteDays).toBe(30);
   });
 });

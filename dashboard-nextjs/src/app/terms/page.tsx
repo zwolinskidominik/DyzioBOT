@@ -21,6 +21,7 @@ export default async function TermsPage({ searchParams }: PageProps) {
       path="/terms"
       title={lang === "en" ? "Terms of Service" : "Regulamin"}
       version={LEGAL.termsVersion}
+      effectiveDate={LEGAL.effectiveDate}
     >
       {lang === "en" ? <TermsEn /> : <TermsPl />}
     </LegalLayout>

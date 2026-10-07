@@ -21,6 +21,7 @@ export default async function PrivacyPage({ searchParams }: PageProps) {
       path="/privacy"
       title={lang === "en" ? "Privacy Policy" : "Polityka prywatności"}
       version={LEGAL.privacyVersion}
+      effectiveDate={LEGAL.privacyEffectiveDate}
     >
       {lang === "en" ? <PrivacyEn /> : <PrivacyPl />}
     </LegalLayout>

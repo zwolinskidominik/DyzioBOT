@@ -181,6 +181,12 @@ export function PrivacyPl() {
             objętość, a najstarsze wpisy są automatycznie nadpisywane.
           </li>
           <li>
+            <Strong>Kopie zapasowe</Strong> całej bazy danych wykonujemy codziennie. Są zaszyfrowane i przechowywane przez{" "}
+            {LEGAL.backupServerDays} dni na serwerze oraz do {LEGAL.backupOffsiteDays} dni na zaszyfrowanym nośniku poza
+            serwerem, a potem automatycznie usuwane. Dane usunięte z bazy znikają więc z ostatniej kopii najpóźniej po{" "}
+            {LEGAL.backupOffsiteDays} dniach. Kopii używamy wyłącznie do odtworzenia danych po awarii.
+          </li>
+          <li>
             Korespondencję przechowujemy do {LEGAL.correspondenceRetentionYears} lat od zakończenia sprawy, chyba że
             wcześniej zażądasz jej usunięcia.
           </li>
@@ -191,11 +197,8 @@ export function PrivacyPl() {
         <p>Dane przetwarzają w naszym imieniu dostawcy infrastruktury:</p>
         <LegalList>
           <li>
-            <Strong>OVH sp. z o.o.</Strong> — serwer, na którym działają bot i panel (Polska), oraz obsługa poczty e-mail;
-          </li>
-          <li>
-            <Strong>MongoDB, Inc.</Strong> — baza danych (MongoDB Atlas) w centrum danych Amazon Web Services we Frankfurcie
-            (Niemcy).
+            <Strong>OVH sp. z o.o.</Strong> — serwer w Polsce, na którym działają bot, panel i baza danych wraz z kopiami
+            zapasowymi, oraz obsługa poczty e-mail.
           </li>
         </LegalList>
         <p>Ponadto:</p>
@@ -268,8 +271,9 @@ export function PrivacyPl() {
       <LegalSection id="bezpieczenstwo" title="8. Bezpieczeństwo">
         <p>
           Połączenie z panelem jest szyfrowane (HTTPS). Każda zmiana ustawień serwera wymaga zalogowania i sprawdzenia, czy
-          masz na tym serwerze uprawnienie do zarządzania. Dostęp do bazy danych i serwera mają wyłącznie osoby obsługujące
-          usługę.
+          masz na tym serwerze uprawnienie do zarządzania. Baza danych i jej kopie zapasowe są przechowywane w formie
+          zaszyfrowanej, a sama baza nie jest dostępna z internetu. Dostęp do bazy danych i serwera mają wyłącznie osoby
+          obsługujące usługę.
         </p>
       </LegalSection>
 
