@@ -14,6 +14,10 @@ export const authOptions: NextAuthOptions = {
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,
       clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+      // Discord dołącza do przekierowania po logowaniu parametr `iss` (RFC 9207). openid-client
+      // sprawdza go wtedy z wydawcą dostawcy — bez skonfigurowanego wydawcy każde logowanie
+      // kończyło się błędem „issuer must be configured on the issuer” (error=OAuthCallback).
+      issuer: process.env.DISCORD_OAUTH_ISSUER ?? "https://discord.com",
       authorization: {
         params: {
           scope: "identify guilds guilds.members.read",
