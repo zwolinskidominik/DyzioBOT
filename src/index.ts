@@ -13,13 +13,14 @@ import 'reflect-metadata';
 const { TOKEN, MONGODB_URI, DEV_GUILD_IDS, DEV_USER_IDS, DEV_ROLE_IDS } = env();
 
 const client = new Client({
+  // Bez GuildPresences: bot nie używa statusów ani aktywności członków (w co grają, Spotify).
+  // To uprzywilejowana intencja — mniej danych o użytkownikach i prostsza weryfikacja bota.
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildInvites,
