@@ -2,24 +2,16 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import mongoose from "mongoose";
+import BotStatus, { BOT_HEARTBEAT_STALE_MS } from "@/models/BotStatus";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
   await mongoose.connect(process.env.MONGODB_URI!);
 }
 
-// Mirrored 1:1 z src/models/BotStatus.ts po stronie bota — singleton (key='main')
-// heartbeat zapisywany co ~20s z src/events/clientReady/botStatusHeartbeat.ts.
-const BotStatusSchema = new mongoose.Schema({
-  key: String,
-  ping: Number,
-  updatedAt: Date,
-}, { collection: "botstatus", strict: false });
-const BotStatus = mongoose.models.BotStatus || mongoose.model("BotStatus", BotStatusSchema);
-
-// Heartbeat starszy niż to = traktujemy bota jako offline, nawet jeśli ostatni
-// zapisany ping wyglądał dobrze.
-const STALE_AFTER_MS = 90_000;
+// Heartbeat starszy niż BOT_HEARTBEAT_STALE_MS = bot offline, nawet jeśli ostatni zapisany ping
+// wyglądał dobrze. Model i próg są wspólne z publicznym /api/health.
+const STALE_AFTER_MS = BOT_HEARTBEAT_STALE_MS;
 
 export async function GET() {
   try {
