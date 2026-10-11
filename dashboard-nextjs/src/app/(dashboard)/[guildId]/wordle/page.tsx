@@ -33,7 +33,8 @@ interface WordleData {
 }
 
 const ALL_LENGTHS = [5, 6, 7];
-const POLISH_REGEX = /^[a-ząćęłńóśźż]+$/;
+// Polskie litery bez q, v, x — zgodnie z klawiaturą Wordle w bocie.
+const POLISH_REGEX = /^[a-pr-uwyząćęłńóśźż]+$/;
 
 const inputClass =
   "h-11 border border-[#3f4455] bg-dark-900 text-white/90 placeholder:text-[#9aa2b8] focus-visible:border-[#3b82f6] focus-visible:ring-[#3b82f6]/30 focus-visible:ring-offset-0";

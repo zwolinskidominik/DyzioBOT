@@ -6,7 +6,8 @@ import dbConnect from '@/lib/mongodb';
 import WordleWord from '@/models/WordleWord';
 import mongoose from 'mongoose';
 
-const POLISH_REGEX = /^[a-ząćęłńóśźż]+$/;
+// Polskie litery bez q, v, x — zgodnie z klawiaturą Wordle w bocie.
+const POLISH_REGEX = /^[a-pr-uwyząćęłńóśźż]+$/;
 const MIN_LEN = 5;
 const MAX_LEN = 7;
 

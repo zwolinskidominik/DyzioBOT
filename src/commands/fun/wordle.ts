@@ -49,7 +49,7 @@ const C_MUTED   = '#818384';
 const KB: string[][] = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-  ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
+  ['Z', 'X', 'C', 'B', 'N', 'M'],
   ['Ą', 'Ć', 'Ę', 'Ł', 'Ń', 'Ó', 'Ś', 'Ź', 'Ż'],
 ];
 
@@ -451,7 +451,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     const rawInput = modalInter.fields.getTextInputValue('wordle_input').trim().toLowerCase();
 
-    if (!/^[a-ząćęłńóśźż]+$/.test(rawInput)) {
+    if (!/^[a-pr-uwyząćęłńóśźż]+$/.test(rawInput)) {
       await modalInter.reply({ content: '❌ Używaj tylko polskich liter (bez q, v, x)!', flags: MessageFlags.Ephemeral });
       return;
     }
