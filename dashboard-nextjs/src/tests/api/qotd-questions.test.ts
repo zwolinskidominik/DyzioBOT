@@ -104,17 +104,21 @@ describe("GET /api/guild/[guildId]/qotd/questions", () => {
 
   it("without ?disabled returns enabled pool questions this guild has not used yet", async () => {
     mockUsedForGuild([{ questionId: "q1", usedAt: new Date() }]);
-    mocks.Question.find.mockReturnValueOnce({ sort: vi.fn().mockResolvedValue([]) });
+    const lean = vi.fn().mockResolvedValue([]);
+    mocks.Question.find.mockReturnValueOnce({ sort: vi.fn().mockReturnValue({ lean }) });
 
     const req = makeRequest("http://localhost/api/guild/g1/qotd/questions");
     const res = await GET(req, makeParams());
     expect(res.status).toBe(200);
 
     expect(mocks.UsedQuestion.find).toHaveBeenCalledWith({ guildId: GUILD_ID });
+    // null/'' wykluczają pytania bez zapisanego questionId (inaczej dostawałyby losowe ID przy odczycie).
     expect(mocks.Question.find).toHaveBeenCalledWith({
       disabled: { $ne: true },
-      questionId: { $nin: ["q1"] },
+      questionId: { $nin: ["q1", null, ""] },
     });
+    // lean() — bez hydratacji Mongoose nie dopisuje default questionId.
+    expect(lean).toHaveBeenCalled();
   });
 });
 

@@ -1,5 +1,7 @@
+import { randomUUID } from 'crypto';
 import mongoose from 'mongoose';
 import { ServiceResult, ok, fail } from '../types/serviceResult';
+import logger from '../utils/logger';
 import { QuestionModel } from '../models/Question';
 import { UsedQuestionModel } from '../models/UsedQuestion';
 
@@ -19,9 +21,10 @@ export interface QuestionData {
  * Losuje pytanie dostępne dla DANEGO serwera. Pula pytań (Question) jest
  * globalna — dodawana przez właściciela bota dla wszystkich serwerów — ale
  * każdy serwer śledzi swoje użycie osobno przez UsedQuestion (guildId +
- * questionId), więc pytania nie powtarzają się na tym samym serwerze, dopóki
- * nie przejdzie całej wspólnej puli. Gdy serwer wyczerpie pulę, cykl dla
- * niego zaczyna się od nowa (reszta serwerów tego nie widzi).
+ * questionId), więc pytania nigdy nie powtarzają się na tym samym serwerze.
+ *
+ * Wyczerpana pula NIE resetuje historii — wysłane pytanie zostaje wysłane na
+ * zawsze. Przywrócić je można tylko ręcznie (dashboard → „Przywróć”).
  */
 export async function getRandomQuestion(guildId: string): Promise<ServiceResult<QuestionData>> {
   // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
@@ -32,12 +35,12 @@ export async function getRandomQuestion(guildId: string): Promise<ServiceResult<
   }
 
   const usedIds = new Set(await UsedQuestionModel.find({ guildId }).distinct('questionId'));
-  let available = activePool.filter((q) => !usedIds.has(q.questionId));
+  // Pytanie bez zapisanego questionId nie da się oznaczyć jako wysłane — wysyłane byłoby
+  // w kółko. ensureQuestionIds() (start bota) uzupełnia takie ID; tu tylko zabezpieczenie.
+  const available = activePool.filter((q) => hasQuestionId(q.questionId) && !usedIds.has(q.questionId));
 
   if (available.length === 0) {
-    // Serwer wyczerpał całą pulę — zaczynamy cykl od nowa tylko dla niego.
-    await UsedQuestionModel.deleteMany({ guildId });
-    available = activePool;
+    return fail('POOL_EXHAUSTED', 'Wszystkie pytania zostały już wysłane na tym serwerze.');
   }
 
   const pick = available[Math.floor(Math.random() * available.length)];
@@ -49,6 +52,8 @@ export async function getRandomQuestion(guildId: string): Promise<ServiceResult<
  * serwery nadal mogą je wylosować).
  */
 export async function markUsed(guildId: string, questionId: string): Promise<ServiceResult<void>> {
+  // Pusty/undefined questionId zostałby wycięty z filtra i exists() trafiłby w DOWOLNE pytanie.
+  if (!hasQuestionId(questionId)) return fail('NOT_FOUND', 'Nie znaleziono pytania.');
   const exists = await QuestionModel.exists({ questionId });
   if (!exists) return fail('NOT_FOUND', 'Nie znaleziono pytania.');
 
@@ -83,7 +88,39 @@ export async function listQuestions(
   return ok(docs.map(toData));
 }
 
+/**
+ * Nadaje stałe questionId pytaniom, które go nie mają zapisanego w bazie (stare wpisy).
+ *
+ * Bez tego Mongoose przy każdym odczycie dokumentu dopisuje w pamięci NOWY losowy UUID
+ * (default w modelu), więc takie pytanie nigdy nie pasuje do historii wysłanych
+ * i wygląda na dostępne. Działa na surowej kolekcji, żeby default modelu nie maskował braku.
+ */
+export async function ensureQuestionIds(): Promise<ServiceResult<number>> {
+  try {
+    const missing = await QuestionModel.collection
+      .find({ questionId: { $in: [null, ''] } }, { projection: { _id: 1 } })
+      .toArray();
+
+    let fixed = 0;
+    for (const { _id } of missing) {
+      const res = await QuestionModel.collection.updateOne(
+        { _id, questionId: { $in: [null, ''] } },
+        { $set: { questionId: randomUUID() } },
+      );
+      fixed += res.modifiedCount;
+    }
+    return ok(fixed);
+  } catch (err) {
+    logger.error(`ensureQuestionIds failed: ${err}`);
+    return fail('INTERNAL_ERROR', 'Nie udało się uzupełnić ID pytań.');
+  }
+}
+
 /* ── Internal helpers ─────────────────────────────────────── */
+
+function hasQuestionId(id: unknown): id is string {
+  return typeof id === 'string' && id.length > 0;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toData(doc: any): QuestionData {

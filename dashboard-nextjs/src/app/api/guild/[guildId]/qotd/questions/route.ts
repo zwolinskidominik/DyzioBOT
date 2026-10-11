@@ -20,7 +20,7 @@ async function validateReactions(reactions: unknown): Promise<string | null> {
 }
 
 const questionSchema = new mongoose.Schema({
-  questionId: { type: String, default: () => randomUUID() },
+  questionId: { type: String, required: true, default: () => randomUUID() },
   authorId: { type: String, required: true },
   content: { type: String, required: true, unique: true },
   reactions: { type: [String], default: [] },
@@ -104,10 +104,13 @@ export async function GET(
     // "Aktywne" — globalnie włączone pytania, których TEN serwer jeszcze nie wysłał.
     // mongoose.trusted(): sanitizeFilter sanityzuje KAŻDY operator w ręcznie
     // pisanym filtrze, nie tylko $in/$nin — trzeba oznaczyć też $ne.
+    // .lean() — bez niego Mongoose dopisuje pytaniom bez zapisanego questionId NOWY losowy
+    // UUID przy każdym odczycie (default w schemacie), więc nie pasują do historii wysłanych.
+    // null/'' w $nin pomija takie wpisy (i brak pola); bot uzupełnia im ID przy starcie.
     const questions = await Question.find({
       disabled: mongoose.trusted({ $ne: true }),
-      questionId: mongoose.trusted({ $nin: usedIds }),
-    }).sort({ _id: 1 });
+      questionId: mongoose.trusted({ $nin: [...usedIds, null, ''] }),
+    }).sort({ _id: 1 }).lean();
 
     return NextResponse.json(questions);
   } catch (error) {

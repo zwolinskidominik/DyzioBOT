@@ -5,6 +5,7 @@ import {
   markUsed,
   addQuestion,
   listQuestions,
+  ensureQuestionIds,
 } from '../../../src/services/questionService';
 
 const GUILD_A = 'guild-a';
@@ -75,17 +76,64 @@ describe('getRandomQuestion', () => {
     expect(res.data.content).toBe('Q1');
   });
 
-  it('cycles (resets) for a guild once it has used the entire shared pool', async () => {
+  it('fails with POOL_EXHAUSTED and keeps the history once the guild has used the whole pool', async () => {
     const q1 = await addQuestion('a1', 'Q1');
     if (q1.ok) await markUsed(GUILD_A, q1.data.questionId);
 
     const res = await getRandomQuestion(GUILD_A);
-    expect(res.ok).toBe(true);
-    if (!res.ok) return;
-    expect(res.data.content).toBe('Q1');
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.code).toBe('POOL_EXHAUSTED');
 
     const usedCount = await UsedQuestionModel.countDocuments({ guildId: GUILD_A });
-    expect(usedCount).toBe(0);
+    expect(usedCount).toBe(1);
+  });
+});
+
+/* ── ensureQuestionIds ────────────────────────────────────── */
+
+describe('ensureQuestionIds', () => {
+  it('assigns a permanent questionId to legacy questions stored without one', async () => {
+    await QuestionModel.collection.insertMany([
+      { authorId: 'a1', content: 'Legacy bez pola', reactions: [], disabled: false },
+      { authorId: 'a1', content: 'Legacy null', questionId: null, reactions: [], disabled: false },
+    ]);
+    const keep = await addQuestion('a1', 'Nowe');
+
+    const res = await ensureQuestionIds();
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data).toBe(2);
+
+    const raw = await QuestionModel.collection.find({}).toArray();
+    expect(raw.every((d) => typeof d.questionId === 'string' && d.questionId.length > 0)).toBe(true);
+    if (keep.ok) expect(raw.find((d) => d.content === 'Nowe')?.questionId).toBe(keep.data.questionId);
+
+    // Drugie uruchomienie niczego nie zmienia — ID są stałe.
+    const again = await ensureQuestionIds();
+    expect(again.ok && again.data).toBe(0);
+  });
+
+  it('makes a legacy question markable as used so it stops coming back', async () => {
+    await QuestionModel.collection.insertOne({ authorId: 'a1', content: 'Legacy', reactions: [], disabled: false });
+    await ensureQuestionIds();
+
+    const first = await getRandomQuestion(GUILD_A);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect((await markUsed(GUILD_A, first.data.questionId)).ok).toBe(true);
+
+    const second = await getRandomQuestion(GUILD_A);
+    expect(second.ok).toBe(false);
+    if (second.ok) return;
+    expect(second.code).toBe('POOL_EXHAUSTED');
+  });
+
+  it('markUsed refuses an empty questionId instead of matching an arbitrary question', async () => {
+    await addQuestion('a1', 'Q1');
+    const res = await markUsed(GUILD_A, '');
+    expect(res.ok).toBe(false);
+    expect(await UsedQuestionModel.countDocuments({ guildId: GUILD_A })).toBe(0);
   });
 });
 
