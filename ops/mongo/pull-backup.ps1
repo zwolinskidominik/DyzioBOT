@@ -7,6 +7,10 @@
   sciaga przez scp wszystkie kopie, ktorych jeszcze nie ma lokalnie, i usuwa lokalne kopie
   starsze niz -KeepDays (domyslnie 30 dni, czyli dluzsza historia niz na VPS).
 
+  Komputer nie musi dzialac caly czas: zadanie rusza po zalogowaniu i potem co godzine.
+  Gdy dysk VeraCrypt nie jest zamontowany - po cichu czeka do kolejnej proby. Gdy dzisiejsza
+  kopia jest juz pobrana - konczy od razu, bez laczenia z VPS.
+
   Wymaga logowania do VPS kluczem SSH bez pytania o haslo (zadanie dziala w tle) i wpisu
   "deezy.cc" w %USERPROFILE%\.ssh\config (adres, port 2222, uzytkownik):
     Host deezy.cc
@@ -26,9 +30,8 @@
 param(
   [string]$RemoteHost = "deezy.cc",
   [string]$RemoteDir = "/srv/deezy-secure/backups",
-  [string]$LocalDir = "C:\Backupy\Deezy",
+  [string]$LocalDir = "Z:\Deezy",
   [int]$KeepDays = 30,
-  [string]$At = "10:00",
   [switch]$Register
 )
 
@@ -41,13 +44,17 @@ if ($Register) {
   # Samo -WindowStyle Hidden i tak na moment otwiera okno konsoli, co wyrzuca z gier na pelnym
   # ekranie. conhost --headless (Windows 10 21H2+/11) uruchamia PowerShell bez zadnego okna.
   $action = New-ScheduledTaskAction -Execute "conhost.exe" -Argument "--headless powershell.exe $psArgs"
-  $trigger = New-ScheduledTaskTrigger -Daily -At $At
-  # StartWhenAvailable: jesli komputer byl wylaczony o tej godzinie, zadanie ruszy po wlaczeniu.
+  # Po zalogowaniu (z opoznieniem - czas na zamontowanie VeraCrypt) i potem co godzine.
+  # Jedno codzienne uruchomienie nie wystarczalo: jesli dysk nie byl jeszcze zamontowany,
+  # kolejna proba byla dopiero nastepnego dnia.
+  $logon = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+  $logon.Delay = "PT5M"
+  $hourly = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Hours 1)
   $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable `
-    -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 15)
-  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings `
-    -Description "Codziennie pobiera kopie zapasowe bazy Deezy z VPS do $LocalDir" -Force | Out-Null
-  Write-Host "Zarejestrowano zadanie '$TaskName' (codziennie o $At, nadrobi po wlaczeniu komputera)."
+    -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -MultipleInstances IgnoreNew
+  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger @($logon, $hourly) -Settings $settings `
+    -Description "Pobiera kopie zapasowe bazy Deezy z VPS do $LocalDir (po zalogowaniu i co godzine)" -Force | Out-Null
+  Write-Host "Zarejestrowano zadanie '$TaskName' (5 min po zalogowaniu i co godzine)."
   Write-Host "Uruchom teraz, zeby sprawdzic:  Start-ScheduledTask -TaskName '$TaskName'"
   exit 0
 }
@@ -57,16 +64,29 @@ if ($Register) {
 # Bot i tak napisze w DM, jesli pobieranie stanie na dluzej niz 3 dni.
 $qualifier = Split-Path -Qualifier $LocalDir -ErrorAction SilentlyContinue
 if ($qualifier -and -not (Test-Path "$qualifier\")) {
+  # Zadanie probuje co godzine - do logu wpisujemy tylko pierwsze pominiecie danego dnia.
   $fallbackDir = Join-Path $env:LOCALAPPDATA "Deezy"
   New-Item -ItemType Directory -Force -Path $fallbackDir | Out-Null
+  $fallbackLog = Join-Path $fallbackDir "pull-backup.log"
+  $today = Get-Date -Format "yyyy-MM-dd"
   $line = "{0} POMINIETO: dysk {1} nie jest zamontowany (zamontuj wolumen VeraCrypt)." -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $qualifier
-  Add-Content -Path (Join-Path $fallbackDir "pull-backup.log") -Value $line -Encoding UTF8
+  if (-not ((Test-Path $fallbackLog) -and (Select-String -Path $fallbackLog -SimpleMatch "$today " -Quiet))) {
+    Add-Content -Path $fallbackLog -Value $line -Encoding UTF8
+  }
   Write-Host $line
-  exit 1
+  exit 0
 }
 
 New-Item -ItemType Directory -Force -Path $LocalDir | Out-Null
 $log = Join-Path $LocalDir "pull-backup.log"
+
+# Dzisiejsza kopia juz pobrana i zgloszona na VPS - nie ma czego robic az do jutra.
+$doneMarker = Join-Path $LocalDir ".last-pull"
+$todayTag = Get-Date -Format "yyyy-MM-dd"
+if ((Test-Path $doneMarker) -and ((Get-Content $doneMarker -Raw).Trim() -eq $todayTag) -and
+    (Get-ChildItem -Path $LocalDir -Filter "deezy-$todayTag-*.archive.gz")) {
+  exit 0
+}
 function Write-Log([string]$message) {
   $line = "{0} {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $message
   Add-Content -Path $log -Value $line -Encoding UTF8
@@ -115,7 +135,11 @@ try {
   Write-Log "OK: nowych kopii: $downloaded, najnowsza: $($newest.Name)"
   # Zglos VPS-owi udane pobranie - bot pilnuje tej daty i napisze w DM, gdy pobieranie stanie.
   & ssh @sshOpts $RemoteHost "mkdir -p $RemoteDir/.status && date -Is > $RemoteDir/.status/last-pull"
-  if ($LASTEXITCODE -ne 0) { Write-Log "UWAGA: nie udalo sie zapisac daty pobrania na VPS (kod $LASTEXITCODE)." }
+  if ($LASTEXITCODE -ne 0) {
+    Write-Log "UWAGA: nie udalo sie zapisac daty pobrania na VPS (kod $LASTEXITCODE)."
+  } else {
+    Set-Content -Path $doneMarker -Value $todayTag -Encoding ASCII
+  }
 }
 catch {
   Write-Log "BLAD: $($_.Exception.Message)"

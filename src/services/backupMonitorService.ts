@@ -104,7 +104,8 @@ export function describeBackupProblems(problems: BackupProblem[], status: Backup
       case 'PULL_STALE':
         return (
           `**PC nie pobrał kopii** — ostatnie pobranie: ${formatDate(status.lastPullAt)}.\n` +
-          'Jeśli komputer był włączony, sprawdź `C:\\Backupy\\Deezy\\pull-backup.log`.'
+          'Kopia pobierze się sama w ciągu godziny od włączenia PC i zamontowania dysku VeraCrypt. ' +
+          'Jeśli tak było, sprawdź `pull-backup.log` w folderze kopii (albo `%LOCALAPPDATA%\\Deezy\\pull-backup.log`, gdy dysk nie był zamontowany).'
         );
     }
   });
