@@ -2,10 +2,24 @@ import { Client, Collection, Guild, Invite } from 'discord.js';
 import logger from '../utils/logger';
 
 /**
- * In-memory cache of guild invites.
- * Maps guildId → Map<inviteCode, uses>.
+ * Pamięć podręczna zaproszeń — służy WYŁĄCZNIE do ustalenia, którego zaproszenia użyto przy
+ * dołączeniu (porównanie liczników przed/po). Trwała historia liczników (także zaproszeń, które
+ * już wygasły) jest w bazie: services/inviteUsageService.ts.
+ *
+ * Oprócz licznika trzymamy autora, limit użyć i datę wygaśnięcia — dzięki temu zaproszenie,
+ * które Discord skasował po ostatnim dozwolonym użyciu, nadal ma znanego autora, a takie, które
+ * po prostu wygasło, nie jest mylone z użytym.
  */
-const inviteCache = new Map<string, Map<string, number>>();
+interface CachedInvite {
+  uses: number;
+  inviterId: string | null;
+  /** 0 = bez limitu. */
+  maxUses: number;
+  /** ms od epoki; null = nie wygasa. */
+  expiresAt: number | null;
+}
+
+const inviteCache = new Map<string, Map<string, CachedInvite>>();
 
 /**
  * Licznik użyć niestandardowego linku (vanity) per gildia — TRZYMANY OSOBNO, bo
@@ -19,6 +33,26 @@ const vanityUsesCache = new Map<string, number>();
 export interface VanityData {
   code: string;
   uses: number;
+}
+
+/** Wynik wykrycia użytego zaproszenia. */
+export interface DetectedInvite {
+  code: string;
+  inviterId: string | null;
+  /**
+   * Ustawione, gdy zaproszenie zniknęło z listy, bo zużyło limit — Discord nie poda już jego
+   * licznika, więc to jest liczba użyć PO tym dołączeniu (do zapisania w historii).
+   */
+  consumedUses?: number;
+}
+
+function toCached(invite: Invite): CachedInvite {
+  return {
+    uses: invite.uses ?? 0,
+    inviterId: invite.inviter?.id ?? null,
+    maxUses: invite.maxUses ?? 0,
+    expiresAt: invite.expiresTimestamp ?? null,
+  };
 }
 
 /**
@@ -38,33 +72,48 @@ export async function fetchGuildVanity(guild: Guild): Promise<VanityData | null>
 }
 
 /**
- * Fetches all invites for a guild and stores them in the cache.
+ * Zapisuje pełny stan zaproszeń gildii (zastępuje poprzedni).
  *
- * `vanityUses` jest opcjonalne — gdy nie podano, licznik vanity zostaje nietknięty (tak działają
- * handlery inviteCreate/inviteDelete, które odświeżają tylko zwykłe zaproszenia).
+ * `vanityUses` jest opcjonalne — gdy nie podano, licznik vanity zostaje nietknięty.
  */
 export async function cacheGuildInvites(
   guildId: string,
   invites: Collection<string, Invite>,
   vanityUses?: number | null,
 ): Promise<void> {
-  const map = new Map<string, number>();
+  const map = new Map<string, CachedInvite>();
   for (const [code, invite] of invites) {
-    map.set(code, invite.uses ?? 0);
+    map.set(code, toCached(invite));
   }
   inviteCache.set(guildId, map);
   if (typeof vanityUses === 'number') vanityUsesCache.set(guildId, vanityUses);
 }
 
 /**
- * Caches invites for all guilds the bot is in.
+ * Dopisuje JEDNO nowe zaproszenie (inviteCreate). Nie pobieramy całej listy od nowa, bo
+ * wyrzuciłoby to z pamięci zaproszenie, które właśnie zniknęło po zużyciu limitu, a którego
+ * dołączenie jeszcze nie zostało przetworzone.
  */
-export async function cacheAllGuildInvites(client: Client): Promise<void> {
+export function addInviteToCache(guildId: string, invite: Invite): void {
+  const map = inviteCache.get(guildId);
+  if (!map) return; // brak stanu wyjściowego — pierwsze dołączenie i tak go zbuduje
+  map.set(invite.code, toCached(invite));
+}
+
+/**
+ * Pobiera zaproszenia wszystkich gildii bota. `onGuildInvites` dostaje każdą pobraną listę
+ * (np. do zapisania liczników w bazie).
+ */
+export async function cacheAllGuildInvites(
+  client: Client,
+  onGuildInvites?: (guildId: string, invites: Collection<string, Invite>) => Promise<void>,
+): Promise<void> {
   for (const [guildId, guild] of client.guilds.cache) {
     try {
       const invites = await guild.invites.fetch();
       const vanity = await fetchGuildVanity(guild);
       await cacheGuildInvites(guildId, invites, vanity?.uses ?? null);
+      if (onGuildInvites) await onGuildInvites(guildId, invites);
     } catch (error) {
       logger.warn(`[InviteCache] Nie można pobrać zaproszeń dla ${guild.name}: ${error}`);
     }
@@ -76,65 +125,66 @@ export function getCachedVanityUses(guildId: string): number | undefined {
   return vanityUsesCache.get(guildId);
 }
 
-/**
- * Gets the cached invite uses for a guild.
- */
+/** Liczniki użyć zaproszeń gildii z pamięci (kod → użycia). */
 export function getCachedInvites(guildId: string): Map<string, number> | undefined {
-  return inviteCache.get(guildId);
+  const map = inviteCache.get(guildId);
+  if (!map) return undefined;
+  return new Map([...map].map(([code, inv]) => [code, inv.uses]));
 }
 
 /**
- * Compares old cached invites with freshly fetched invites to find which invite was used.
- * Returns the invite code and inviter ID if detected, or null.
+ * Porównuje zapamiętany stan z aktualną listą zaproszeń i ustala, którego użyto.
+ * Po porównaniu pamięć dostaje aktualny stan.
+ *
+ * Kolejność:
+ *  1. zaproszenie, któremu wzrósł licznik — pewne;
+ *  2. niestandardowy link (vanity), któremu wzrósł licznik — pewne;
+ *  3. zaproszenie, które zniknęło, bo właśnie zużyło limit użyć (uses + 1 >= maxUses) i nie
+ *     wygasło — Discord kasuje je przy ostatnim użyciu; autora znamy z pamięci.
+ *     Zaproszenia, które zniknęły z innego powodu (wygasły, ktoś je usunął), są ignorowane.
  */
 export async function detectUsedInvite(
   guildId: string,
   newInvites: Collection<string, Invite>,
   vanity?: VanityData | null,
-): Promise<{ code: string; inviterId: string | null } | null> {
+  now: number = Date.now(),
+): Promise<DetectedInvite | null> {
   const oldInvites = inviteCache.get(guildId);
   const oldVanityUses = vanityUsesCache.get(guildId);
+  const refresh = (vanityUses: number | null) => cacheGuildInvites(guildId, newInvites, vanityUses);
 
   if (!oldInvites) {
-    // No cache — update cache and return null
-    await cacheGuildInvites(guildId, newInvites, vanity?.uses ?? null);
+    await refresh(vanity?.uses ?? null);
     return null;
   }
 
   for (const [code, invite] of newInvites) {
-    const oldUses = oldInvites.get(code) ?? 0;
-    const newUses = invite.uses ?? 0;
-
-    if (newUses > oldUses) {
-      // Update cache with new state
-      await cacheGuildInvites(guildId, newInvites, vanity?.uses ?? null);
-      return {
-        code,
-        inviterId: invite.inviter?.id ?? null,
-      };
+    const oldUses = oldInvites.get(code)?.uses ?? 0;
+    if ((invite.uses ?? 0) > oldUses) {
+      await refresh(vanity?.uses ?? null);
+      return { code, inviterId: invite.inviter?.id ?? null };
     }
   }
 
-  // Niestandardowy link (vanity) — sprawdzany PRZED heurystyką skasowanego zaproszenia,
-  // bo wzrost licznika vanity to twardy sygnał, a zniknięcie zaproszenia to tylko domysł.
-  // Vanity nie ma zapraszającego, więc inviterId zostaje null (sytuacja „vanity" w szablonach).
   if (vanity && typeof oldVanityUses === 'number' && vanity.uses > oldVanityUses) {
-    await cacheGuildInvites(guildId, newInvites, vanity.uses);
+    await refresh(vanity.uses);
     return { code: vanity.code, inviterId: null };
   }
 
-  // Check if an invite was used and then deleted (single-use invite)
-  for (const [code] of oldInvites) {
-    if (!newInvites.has(code)) {
-      // This invite disappeared — it was likely a single-use or max-use invite
-      await cacheGuildInvites(guildId, newInvites, vanity?.uses ?? null);
-      // We can't determine the inviter from a deleted invite
-      return { code, inviterId: null };
-    }
-  }
+  const consumed = [...oldInvites].filter(([code, inv]) =>
+    !newInvites.has(code) &&
+    inv.maxUses > 0 &&
+    inv.uses + 1 >= inv.maxUses &&
+    (inv.expiresAt === null || inv.expiresAt > now),
+  );
 
-  // Update the cache anyway
-  await cacheGuildInvites(guildId, newInvites, vanity?.uses ?? null);
+  await refresh(vanity?.uses ?? null);
+
+  // Dwa zużyte naraz — nie da się rozstrzygnąć, które było tym dołączeniem.
+  if (consumed.length === 1) {
+    const [code, inv] = consumed[0];
+    return { code, inviterId: inv.inviterId, consumedUses: inv.uses + 1 };
+  }
   return null;
 }
 

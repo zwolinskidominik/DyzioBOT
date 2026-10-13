@@ -1,4 +1,5 @@
-import { GuildMember, Client, TextChannel, EmbedBuilder, AuditLogEvent, ColorResolvable, Collection, Invite } from 'discord.js';
+import { GuildMember, Client, TextChannel, EmbedBuilder, AuditLogEvent, ColorResolvable, escapeMarkdown } from 'discord.js';
+import { syncGuildInvites, recordConsumedInvite, getInviterTotalUses } from '../../services/inviteUsageService';
 import { detectUsedInvite, fetchGuildVanity } from '../../cache/inviteCache';
 import {
   getConfig,
@@ -9,6 +10,7 @@ import {
   JoinSituation,
   MessageContext,
   ResolvedMessage,
+  resolveInviterUsername,
 } from '../../services/inviteTrackerService';
 import logger from '../../utils/logger';
 
@@ -33,11 +35,9 @@ export default async function run(member: GuildMember, _client: Client): Promise
     // Detect which invite was used
     let inviterId: string | null = null;
     let inviteCode: string | null = null;
-    let guildInvites: Collection<string, Invite> | null = null;
 
     try {
       const invites = await guild.invites.fetch();
-      guildInvites = invites;
       // Niestandardowy link (discord.gg/nazwa) nie jest zwracany przez invites.fetch() — jego
       // licznik użyć trzeba pobrać osobno, inaczej takie dołączenie nie zmienia żadnego licznika
       // i zawsze kończy się sytuacją „unknown".
@@ -46,6 +46,12 @@ export default async function run(member: GuildMember, _client: Client): Promise
       if (detected) {
         inviterId = detected.inviterId;
         inviteCode = detected.code;
+      }
+
+      // Trwała historia liczników — po tym „ma X zaproszeń" nie spada, gdy link wygaśnie.
+      await syncGuildInvites(guild.id, invites);
+      if (detected?.consumedUses !== undefined) {
+        await recordConsumedInvite(guild.id, detected.code, detected.inviterId, detected.consumedUses);
       }
     } catch (err) {
       logger.warn(`[InviteTracker] Nie można pobrać zaproszeń dla ${guild.name}: ${err}`);
@@ -76,18 +82,15 @@ export default async function run(member: GuildMember, _client: Client): Promise
     if (isVanity) {
       inviterName = 'niestandardowe zaproszenie';
     } else if (inviterId) {
-      const inviterMember = await guild.members.fetch(inviterId).catch(() => null);
-      inviterName = inviterMember?.displayName ?? 'nieznany';
+      inviterName = await resolveInviterUsername(member.client, inviterId);
 
-      // Licznik bierzemy prosto z Discorda (suma użyć zaproszeń tej osoby) — obejmuje CAŁĄ historię
-      // serwera, także sprzed wdrożenia bota. Baza Deezy zna tylko dołączenia zarejestrowane od jego
-      // uruchomienia, więc sama pokazywałaby licznik „od zera".
-      const usesFromDiscord = sumInviteUses(guildInvites, inviterId);
-      if (usesFromDiscord !== null) {
-        inviteCountText = `${usesFromDiscord}`;
+      // Suma użyć WSZYSTKICH zaproszeń tej osoby, jakie bot widział (także wygasłych/usuniętych/
+      // zużytych) — obejmuje historię sprzed wdrożenia bota, bo liczniki pochodzą z Discorda.
+      const usesResult = await getInviterTotalUses(guild.id, inviterId);
+      if (usesResult.ok && usesResult.data !== null) {
+        inviteCountText = `${usesResult.data}`;
       } else {
-        // Zapraszający nie ma już żadnego aktywnego zaproszenia (skasowane/wygasłe) — wracamy
-        // do liczby z bazy, bo Discord nie udostępnia użyć nieistniejących zaproszeń.
+        // Bot nie zna żadnego zaproszenia tej osoby (np. błąd bazy) — liczba dołączeń z bazy Deezy.
         const statsResult = await getInviterStats(guild.id, inviterId);
         if (statsResult.ok) inviteCountText = `${statsResult.data.active}`;
       }
@@ -109,27 +112,6 @@ export default async function run(member: GuildMember, _client: Client): Promise
   }
 }
 
-/**
- * Suma użyć wszystkich zaproszeń danej osoby widocznych na serwerze — to ta sama liczba, którą
- * pokazują inne boty od zaproszeń (Discord trzyma ją od zawsze, niezależnie od tego, kiedy Deezy
- * dołączył). Zwraca null, gdy ta osoba nie ma już żadnego zaproszenia na liście — wtedy nie mamy
- * z czego liczyć i wywołujący wraca do statystyk z bazy.
- */
-function sumInviteUses(invites: Collection<string, Invite> | null, inviterId: string): number | null {
-  if (!invites) return null;
-
-  let sum = 0;
-  let found = false;
-  for (const invite of invites.values()) {
-    if (invite.inviter?.id === inviterId) {
-      sum += invite.uses ?? 0;
-      found = true;
-    }
-  }
-
-  return found ? sum : null;
-}
-
 /** Bota dodano na serwer — próbujemy (best-effort) ustalić kto go dodał przez audit log. */
 async function handleBotAdd(
   member: GuildMember,
@@ -147,7 +129,7 @@ async function handleBotAdd(
   try {
     const logs = await member.guild.fetchAuditLogs({ type: AuditLogEvent.BotAdd, limit: 5 });
     const entry = logs.entries.find((e) => e.target?.id === member.id);
-    if (entry?.executor?.username) inviterName = entry.executor.username;
+    if (entry?.executor?.username) inviterName = escapeMarkdown(entry.executor.username);
   } catch {
     // brak uprawnień do audit logu — zostaw "nieznany"
   }

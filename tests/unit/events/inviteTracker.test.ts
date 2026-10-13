@@ -19,6 +19,15 @@ jest.mock('../../../src/services/inviteTrackerService', () => {
   };
 });
 
+jest.mock('../../../src/services/inviteUsageService', () => ({
+  syncGuildInvites: jest.fn().mockResolvedValue({ ok: true, data: undefined }),
+  recordConsumedInvite: jest.fn().mockResolvedValue({ ok: true, data: undefined }),
+  recordInvite: jest.fn().mockResolvedValue({ ok: true, data: undefined }),
+  markInviteDeleted: jest.fn().mockResolvedValue({ ok: true, data: undefined }),
+  // Domyślnie bot nie zna zaproszeń tej osoby → liczba z bazy dołączeń (getInviterStats).
+  getInviterTotalUses: jest.fn().mockResolvedValue({ ok: true, data: null }),
+}));
+
 jest.mock('../../../src/utils/logger', () => ({
   info: jest.fn(),
   error: jest.fn(),
@@ -35,6 +44,7 @@ import {
   InviteTrackerConfigData,
 } from '../../../src/services/inviteTrackerService';
 
+import { syncGuildInvites, recordConsumedInvite, getInviterTotalUses } from '../../../src/services/inviteUsageService';
 import inviteTrackerJoin from '../../../src/events/guildMemberAdd/inviteTracker';
 import inviteTrackerLeave from '../../../src/events/guildMemberRemove/inviteTracker';
 import inviteCacheStartup from '../../../src/events/clientReady/inviteCache';
@@ -45,6 +55,9 @@ const mockRecordLeave = recordLeave as jest.MockedFunction<typeof recordLeave>;
 const mockGetInviterStats = getInviterStats as jest.MockedFunction<typeof getInviterStats>;
 const mockDetectUsedInvite = detectUsedInvite as jest.MockedFunction<typeof detectUsedInvite>;
 const mockCacheAllGuildInvites = cacheAllGuildInvites as jest.MockedFunction<typeof cacheAllGuildInvites>;
+const mockSyncGuildInvites = syncGuildInvites as jest.MockedFunction<typeof syncGuildInvites>;
+const mockRecordConsumedInvite = recordConsumedInvite as jest.MockedFunction<typeof recordConsumedInvite>;
+const mockGetInviterTotalUses = getInviterTotalUses as jest.MockedFunction<typeof getInviterTotalUses>;
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 
@@ -88,6 +101,11 @@ function makeMember(overrides: Partial<any> = {}) {
       createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days old
       displayAvatarURL: jest.fn().mockReturnValue('https://cdn.discord.com/avatar.png'),
     },
+    client: {
+      users: {
+        fetch: jest.fn().mockResolvedValue({ id: 'inv-1', username: 'Inviter', globalName: 'Wyświetlana Nazwa' }),
+      },
+    },
     guild: {
       id: 'guild-1',
       name: 'Test Server',
@@ -97,7 +115,8 @@ function makeMember(overrides: Partial<any> = {}) {
         fetch: jest.fn().mockResolvedValue(new Map()),
       },
       members: {
-        fetch: jest.fn().mockResolvedValue({ displayName: 'Inviter', id: 'inv-1' }),
+        // Nick na serwerze — NIE może trafić do {inviterName} (tam ma być unikalna nazwa).
+        fetch: jest.fn().mockResolvedValue({ displayName: 'Nick Na Serwerze', id: 'inv-1' }),
       },
       fetchAuditLogs: jest.fn().mockResolvedValue({ entries: { find: () => undefined } }),
       channels: {
@@ -138,7 +157,8 @@ describe('clientReady/inviteCache', () => {
     mockCacheAllGuildInvites.mockResolvedValue(undefined);
     const client = makeClient();
     await inviteCacheStartup(client as any);
-    expect(mockCacheAllGuildInvites).toHaveBeenCalledWith(client);
+    // Drugi argument zapisuje pobrane liczniki w trwałej historii.
+    expect(mockCacheAllGuildInvites).toHaveBeenCalledWith(client, expect.any(Function));
   });
 
   it('handles errors gracefully', async () => {
@@ -213,43 +233,61 @@ describe('guildMemberAdd/inviteTracker', () => {
     expect(logChannel!.send).toHaveBeenCalledWith('<@member-1> zaproszony przez Inviter, ma 334 zaproszeń!');
   });
 
-  it('counts invites from Discord (whole server history), not only joins recorded by the bot', async () => {
+  it('uses the unique username for {inviterName} (escaped), even when the inviter already left the server', async () => {
+    mockGetConfig.mockResolvedValue({ ok: true, data: makeConfig({ join: { messages: { normal: 'przez **{inviterName}**', selfInvite: '', unknown: '', vanity: '', botAdd: '' } } }) });
+    mockDetectUsedInvite.mockResolvedValue({ code: 'abc', inviterId: 'inv-1' });
+    mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', fake: false } });
+    mockGetInviterStats.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', total: 1, active: 1, left: 0, fake: 0 } });
+
+    const member = makeMember();
+    member.guild.members.fetch.mockRejectedValue(new Error('Unknown Member'));
+    member.client.users.fetch.mockResolvedValue({ id: 'inv-1', username: '__natix_08__', globalName: 'Natix' });
+    await inviteTrackerJoin(member as any, {} as any);
+
+    const logChannel = member.guild.channels.cache.get('log-ch');
+    expect(member.client.users.fetch).toHaveBeenCalledWith('inv-1');
+    expect(logChannel!.send).toHaveBeenCalledWith('przez **\\_\\_natix\\_08\\_\\_**');
+  });
+
+  it('counts invites from the persistent history (incl. expired invites), not only joins recorded by the bot', async () => {
     mockGetConfig.mockResolvedValue({ ok: true, data: makeConfig() });
     mockDetectUsedInvite.mockResolvedValue({ code: 'abc', inviterId: 'inv-1' });
     mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', fake: false } });
-    // Baza Deezy zna tylko 8 dołączeń (od wdrożenia bota)...
-    mockGetInviterStats.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', total: 8, active: 8, left: 0, fake: 0 } });
+    mockGetInviterTotalUses.mockResolvedValueOnce({ ok: true, data: 386 });
 
     const member = makeMember();
-    // ...ale Discord pamięta 386 użyć zaproszeń tej osoby (200 + 186); cudze zaproszenie się nie liczy.
-    member.guild.invites.fetch = jest.fn().mockResolvedValue(new Map<string, any>([
-      ['abc', { code: 'abc', uses: 200, inviter: { id: 'inv-1' } }],
-      ['def', { code: 'def', uses: 186, inviter: { id: 'inv-1' } }],
-      ['ghi', { code: 'ghi', uses: 99, inviter: { id: 'someone-else' } }],
-    ]));
-
     await inviteTrackerJoin(member as any, {} as any);
 
+    expect(mockSyncGuildInvites).toHaveBeenCalledWith('guild-1', expect.anything());
+    expect(mockGetInviterTotalUses).toHaveBeenCalledWith('guild-1', 'inv-1');
     const logChannel = member.guild.channels.cache.get('log-ch');
     expect(logChannel!.send).toHaveBeenCalledWith('**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **386 zaproszeń**!');
     expect(mockGetInviterStats).not.toHaveBeenCalled();
   });
 
-  it('falls back to the database counter when the inviter has no invites left on the server', async () => {
+  it('falls back to the database join counter when no invite of the inviter is known', async () => {
     mockGetConfig.mockResolvedValue({ ok: true, data: makeConfig() });
     mockDetectUsedInvite.mockResolvedValue({ code: 'gone', inviterId: 'inv-1' });
     mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', fake: false } });
     mockGetInviterStats.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', total: 5, active: 3, left: 1, fake: 1 } });
 
     const member = makeMember();
-    member.guild.invites.fetch = jest.fn().mockResolvedValue(new Map<string, any>([
-      ['ghi', { code: 'ghi', uses: 99, inviter: { id: 'someone-else' } }],
-    ]));
-
     await inviteTrackerJoin(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
     expect(logChannel!.send).toHaveBeenCalledWith('**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **3 zaproszeń**!');
+  });
+
+  it('records the last count of an invite that was consumed (deleted by Discord) by this join', async () => {
+    mockGetConfig.mockResolvedValue({ ok: true, data: makeConfig() });
+    mockDetectUsedInvite.mockResolvedValue({ code: 'single', inviterId: 'inv-1', consumedUses: 1 });
+    mockRecordJoin.mockResolvedValue({ ok: true, data: { inviterId: 'inv-1', fake: false } });
+
+    const member = makeMember();
+    await inviteTrackerJoin(member as any, {} as any);
+
+    expect(mockRecordConsumedInvite).toHaveBeenCalledWith('guild-1', 'single', 'inv-1', 1);
+    expect(mockRecordJoin).toHaveBeenCalledWith(expect.objectContaining({ inviterId: 'inv-1', inviteCode: 'single' }));
   });
 
   it('does nothing when guild is missing', async () => {

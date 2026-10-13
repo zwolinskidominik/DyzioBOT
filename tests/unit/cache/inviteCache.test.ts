@@ -4,22 +4,27 @@ import {
   getCachedInvites,
   getCachedVanityUses,
   detectUsedInvite,
+  addInviteToCache,
   clearGuildCache,
   _resetCache,
 } from '../../../src/cache/inviteCache';
 
 // Helper to create a mock invite collection
-function createMockInvites(entries: Array<{ code: string; uses: number; inviterId?: string }>): Collection<string, Invite> {
+function createMockInvites(entries: Array<{ code: string; uses: number; inviterId?: string; maxUses?: number; expiresTimestamp?: number | null }>): Collection<string, Invite> {
   const collection = new Collection<string, Invite>();
   for (const entry of entries) {
     collection.set(entry.code, {
       code: entry.code,
       uses: entry.uses,
       inviter: entry.inviterId ? { id: entry.inviterId } : null,
+      maxUses: entry.maxUses ?? 0,
+      expiresTimestamp: entry.expiresTimestamp ?? null,
     } as unknown as Invite);
   }
   return collection;
 }
+
+const NOW = Date.parse('2026-10-13T12:00:00Z');
 
 beforeEach(() => {
   _resetCache();
@@ -69,22 +74,59 @@ describe('inviteCache', () => {
       expect(result?.inviterId).toBe('user-1');
     });
 
-    it('detects a deleted invite (single-use)', async () => {
-      const oldInvites = createMockInvites([
+    it('attributes a single-use invite that Discord deleted after its last use to its author', async () => {
+      await cacheGuildInvites('g1', createMockInvites([
         { code: 'abc', uses: 0 },
-        { code: 'single', uses: 0 },
-      ]);
-      await cacheGuildInvites('g1', oldInvites);
+        { code: 'single', uses: 0, inviterId: 'user-9', maxUses: 1 },
+      ]));
 
-      // "single" invite was used and auto-deleted
-      const newInvites = createMockInvites([
-        { code: 'abc', uses: 0 },
-      ]);
+      const result = await detectUsedInvite('g1', createMockInvites([{ code: 'abc', uses: 0 }]), null, NOW);
+      expect(result).toEqual({ code: 'single', inviterId: 'user-9', consumedUses: 1 });
+    });
 
-      const result = await detectUsedInvite('g1', newInvites);
-      expect(result).not.toBeNull();
+    it('attributes a limited invite that reached its max uses', async () => {
+      await cacheGuildInvites('g1', createMockInvites([{ code: 'lim', uses: 4, inviterId: 'user-9', maxUses: 5 }]));
+
+      const result = await detectUsedInvite('g1', createMockInvites([]), null, NOW);
+      expect(result).toEqual({ code: 'lim', inviterId: 'user-9', consumedUses: 5 });
+    });
+
+    it('does NOT treat an invite that simply expired as used', async () => {
+      await cacheGuildInvites('g1', createMockInvites([
+        { code: 'old', uses: 0, inviterId: 'user-9', maxUses: 1, expiresTimestamp: NOW - 1000 },
+      ]));
+
+      const result = await detectUsedInvite('g1', createMockInvites([]), null, NOW);
+      expect(result).toBeNull();
+      expect(getCachedInvites('g1')?.has('old')).toBe(false);
+    });
+
+    it('does NOT treat a manually deleted unlimited invite as used', async () => {
+      await cacheGuildInvites('g1', createMockInvites([{ code: 'manual', uses: 12, inviterId: 'user-9' }]));
+
+      const result = await detectUsedInvite('g1', createMockInvites([]), null, NOW);
+      expect(result).toBeNull();
+    });
+
+    it('returns null when two invites were consumed at once (ambiguous)', async () => {
+      await cacheGuildInvites('g1', createMockInvites([
+        { code: 's1', uses: 0, inviterId: 'a', maxUses: 1 },
+        { code: 's2', uses: 0, inviterId: 'b', maxUses: 1 },
+      ]));
+
+      const result = await detectUsedInvite('g1', createMockInvites([]), null, NOW);
+      expect(result).toBeNull();
+    });
+
+    it('keeps a just-consumed invite in memory when a new invite is created in between', async () => {
+      await cacheGuildInvites('g1', createMockInvites([{ code: 'single', uses: 0, inviterId: 'user-9', maxUses: 1 }]));
+      // inviteCreate dopisuje jedno zaproszenie zamiast pobierać całą listę od nowa
+      const fresh = createMockInvites([{ code: 'new', uses: 0, inviterId: 'user-2' }]);
+      addInviteToCache('g1', fresh.get('new')!);
+
+      const result = await detectUsedInvite('g1', fresh, null, NOW);
       expect(result?.code).toBe('single');
-      expect(result?.inviterId).toBeNull();
+      expect(result?.inviterId).toBe('user-9');
     });
 
     it('returns null when no invite was used', async () => {

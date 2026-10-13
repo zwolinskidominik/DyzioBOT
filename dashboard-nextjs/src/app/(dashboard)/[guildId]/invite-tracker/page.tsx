@@ -135,7 +135,7 @@ const LEAVE_SITUATIONS: SituationDef[] = [
 const VARIABLES = [
   { name: "Użytkownik", display: "Użytkownik", value: "{memberMention}", description: "Wzmianka użytkownika" },
   { name: "Nazwa użytkownika", display: "Nazwa użytkownika", value: "{memberName}", description: "Nazwa użytkownika (bez wzmianki)" },
-  { name: "Zapraszający", display: "Zapraszający", value: "{inviterName}", description: "Nazwa zapraszającego" },
+  { name: "Zapraszający", display: "Zapraszający", value: "{inviterName}", description: "Unikalna nazwa użytkownika zapraszającego (np. natix08328), nie nick na serwerze" },
   { name: "Liczba zaproszeń", display: "Liczba zaproszeń", value: "{inviteCount}", description: "Liczba zaproszeń zapraszającego" },
   { name: "Kod zaproszenia", display: "Kod zaproszenia", value: "{inviteCode}", description: "Kod użytego zaproszenia" },
 ];

@@ -1,18 +1,17 @@
-import { Invite, Guild } from 'discord.js';
-import { cacheGuildInvites } from '../../cache/inviteCache';
+import { Invite } from 'discord.js';
+import { addInviteToCache } from '../../cache/inviteCache';
+import { recordInvite } from '../../services/inviteUsageService';
 import logger from '../../utils/logger';
 
 /**
- * When a new invite is created, re-cache the guild's invites
- * so the invite tracker can detect usage accurately.
+ * Nowe zaproszenie — dopisujemy je do pamięci (bez pobierania całej listy, patrz addInviteToCache)
+ * i do trwałej historii liczników.
  */
 export default async function run(invite: Invite): Promise<void> {
   try {
     if (!invite.guild || !('invites' in invite.guild)) return;
-    const guild = invite.guild as Guild;
-
-    const invites = await guild.invites.fetch();
-    await cacheGuildInvites(guild.id, invites);
+    addInviteToCache(invite.guild.id, invite);
+    await recordInvite(invite.guild.id, invite);
   } catch (error) {
     logger.warn(`[InviteCache] Nie udało się zaktualizować cache po utworzeniu zaproszenia: ${error}`);
   }

@@ -1,19 +1,18 @@
-import { Invite, Guild } from 'discord.js';
-import { cacheGuildInvites } from '../../cache/inviteCache';
+import { Invite } from 'discord.js';
+import { markInviteDeleted } from '../../services/inviteUsageService';
 import logger from '../../utils/logger';
 
 /**
- * When an invite is deleted, re-cache the guild's invites
- * so the invite tracker stays accurate.
+ * Zaproszenie usunięte (ręcznie albo przez Discord po zużyciu limitu). Pamięci NIE odświeżamy:
+ * Discord potrafi wysłać to zdarzenie, zanim przyjdzie dołączenie, które to zaproszenie zużyło —
+ * gdybyśmy je wyrzucili, nie dałoby się ustalić autora. Przy następnym dołączeniu
+ * detectUsedInvite i tak porówna stan i wyczyści pamięć. W historii licznik zostaje.
  */
 export default async function run(invite: Invite): Promise<void> {
   try {
-    if (!invite.guild || !('invites' in invite.guild)) return;
-    const guild = invite.guild as Guild;
-
-    const invites = await guild.invites.fetch();
-    await cacheGuildInvites(guild.id, invites);
+    if (!invite.guild) return;
+    await markInviteDeleted(invite.guild.id, invite.code);
   } catch (error) {
-    logger.warn(`[InviteCache] Nie udało się zaktualizować cache po usunięciu zaproszenia: ${error}`);
+    logger.warn(`[InviteCache] Nie udało się oznaczyć usuniętego zaproszenia: ${error}`);
   }
 }

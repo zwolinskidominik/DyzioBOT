@@ -1,3 +1,4 @@
+import { Client, escapeMarkdown } from 'discord.js';
 import { InviteEntryModel } from '../models/InviteEntry';
 import { InviteTrackerConfigModel } from '../models/InviteTrackerConfig';
 import { ServiceResult, ok, fail } from '../types/serviceResult';
@@ -148,6 +149,17 @@ export const LEAVE_SITUATIONS: Record<LeaveSituation, SituationMeta> = {
 };
 
 /* ── Zmienne szablonu ────────────────────────────────────────────── */
+
+/**
+ * {inviterName} = unikalna nazwa użytkownika Discorda (np. natix08328), nie nick na serwerze
+ * ani nazwa wyświetlana. Pobierana przez users.fetch, więc działa też, gdy zapraszający
+ * już opuścił serwer. Znaki markdown (np. „_” w nazwie) są escapowane, bo szablony owijają
+ * nazwę w **pogrubienie** — „__x__” zmieniłoby się w podkreślenie.
+ */
+export async function resolveInviterUsername(client: Client, inviterId: string): Promise<string> {
+  const user = await client.users.fetch(inviterId).catch(() => null);
+  return user ? escapeMarkdown(user.username) : 'nieznany';
+}
 
 export interface MessageContext {
   memberMention: string;

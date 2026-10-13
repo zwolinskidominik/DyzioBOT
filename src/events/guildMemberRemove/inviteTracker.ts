@@ -7,6 +7,7 @@ import {
   LeaveSituation,
   MessageContext,
   ResolvedMessage,
+  resolveInviterUsername,
 } from '../../services/inviteTrackerService';
 import logger from '../../utils/logger';
 
@@ -45,8 +46,7 @@ export default async function run(member: GuildMember, _client: Client): Promise
     if (isVanity) {
       inviterName = 'niestandardowe zaproszenie';
     } else if (inviterId) {
-      const inviterMember = await guild.members.fetch(inviterId).catch(() => null);
-      inviterName = inviterMember?.displayName ?? 'nieznany';
+      inviterName = await resolveInviterUsername(member.client, inviterId);
     }
 
     const ctx: MessageContext = {
