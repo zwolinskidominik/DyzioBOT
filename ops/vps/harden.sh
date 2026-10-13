@@ -72,7 +72,10 @@ fail2ban-client status sshd | grep -E 'Currently|Total'
 
 # ── 3. Zapora ───────────────────────────────────────────────────────────────────
 step "Zapora (ufw): tylko SSH $SSH_PORT, HTTP 80, HTTPS 443"
-if ! sshd -T | grep -qx "port $SSH_PORT"; then
+# Wynik sshd -T najpierw do zmiennej: przy `sshd -T | grep -q` grep kończy po pierwszym trafieniu,
+# sshd dostaje SIGPIPE, a z pipefail cały warunek wychodzi na „nie znaleziono" (fałszywy alarm).
+SSHD_CONFIG_DUMP="$(sshd -T)"
+if ! grep -qx "port $SSH_PORT" <<<"$SSHD_CONFIG_DUMP"; then
   echo "!! SSH nie nasłuchuje na porcie $SSH_PORT — przerywam, żeby zapora nie odcięła dostępu." >&2
   exit 1
 fi
