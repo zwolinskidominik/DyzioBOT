@@ -118,9 +118,16 @@ chmod 755 /etc/cron.weekly/deezy-docker-prune
 
 # ── 6. Nginx ────────────────────────────────────────────────────────────────────
 step "Nginx: ukrycie wersji, HSTS, limit zapytań"
-cat > /etc/nginx/conf.d/deezy-security.conf <<'CONF'
+# server_tokens bywa już ustawione w nginx.conf (Ubuntu ma tam „# server_tokens off;" do
+# odkomentowania) — drugi raz w tym samym bloku http to błąd „directive is duplicate".
+if grep -Eqs '^[[:space:]]*server_tokens[[:space:]]' /etc/nginx/nginx.conf; then
+  SERVER_TOKENS_LINE="# server_tokens ustawione w /etc/nginx/nginx.conf"
+else
+  SERVER_TOKENS_LINE="server_tokens off;"
+fi
+cat > /etc/nginx/conf.d/deezy-security.conf <<CONF
 # Zarządzane przez ops/vps/harden.sh (poziom http — dotyczy wszystkich stron)
-server_tokens off;
+$SERVER_TOKENS_LINE
 
 # Przeglądarka ma zawsze łączyć się przez HTTPS (nagłówek działa tylko na odpowiedziach HTTPS).
 # Pozostałe nagłówki bezpieczeństwa (CSP, X-Frame-Options itd.) ustawia dashboard (next.config.ts).
@@ -129,7 +136,7 @@ add_header Strict-Transport-Security "max-age=31536000" always;
 # Limit zapytań z jednego IP — hojny dla zwykłego użytkownika (pierwsze wejście ładuje
 # kilkadziesiąt plików), a zatrzymuje proste zalewanie strony. Dashboard ma dodatkowo
 # własny limit w Redisie.
-limit_req_zone $binary_remote_addr zone=deezy_per_ip:10m rate=30r/s;
+limit_req_zone \$binary_remote_addr zone=deezy_per_ip:10m rate=30r/s;
 limit_req zone=deezy_per_ip burst=120 nodelay;
 limit_req_status 429;
 CONF
