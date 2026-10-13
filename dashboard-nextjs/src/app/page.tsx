@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { LEGAL } from "@/lib/legal";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Shield, Zap, Users, Gift, MessageSquare } from "lucide-react";
 
@@ -192,6 +193,7 @@ export default function HomePage() {
             <nav aria-label="Dokumenty" className="mt-2 flex justify-center gap-4 text-sm">
               <Link href="/terms" className="hover:text-foreground">Regulamin</Link>
               <Link href="/privacy" className="hover:text-foreground">Polityka prywatności</Link>
+              <a href={`${LEGAL.statusUrl}/pl`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">Status</a>
             </nav>
           </div>
         </footer>

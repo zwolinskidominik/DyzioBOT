@@ -24,6 +24,8 @@ export const LEGAL = {
   /** TODO: stałe zaproszenie na serwer wsparcia DeezyBOT. */
   supportServerUrl: "[LINK DO SERWERA WSPARCIA — DO UZUPEŁNIENIA]",
   siteUrl: "https://deezy.cc",
+  /** Publiczna strona statusu (Better Stack, monitoruje /api/health). Bot: STATUS_URL w src/config/constants/links.ts. */
+  statusUrl: "https://status.deezy.cc",
   /** ID aplikacji Discord (to samo co NEXT_PUBLIC_DISCORD_CLIENT_ID w docker-compose.yml). */
   botApplicationId: "1119327417237000285",
 

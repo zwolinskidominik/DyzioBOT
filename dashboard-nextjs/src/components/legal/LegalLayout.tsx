@@ -80,6 +80,9 @@ export function LegalLayout({ lang, path, title, version, effectiveDate, childre
           <Link href={lang === "en" ? "/terms?lang=en" : "/terms"} className="hover:text-foreground">
             {t.terms}
           </Link>
+          <a href={lang === "en" ? `${LEGAL.statusUrl}/en` : `${LEGAL.statusUrl}/pl`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+            Status
+          </a>
           <a href={`mailto:${LEGAL.email}`} className="hover:text-foreground">
             {LEGAL.email}
           </a>

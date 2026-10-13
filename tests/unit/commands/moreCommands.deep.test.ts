@@ -233,13 +233,18 @@ describe('help command (deep)', () => {
     expect(interaction.fetchReply).toHaveBeenCalled();
   });
 
-  it('links to the dashboard, terms and privacy policy and shows the contact e-mail', async () => {
+  it('links to the dashboard, terms, privacy policy and status page and shows the contact e-mail', async () => {
     const interaction = makeInteraction();
     await helpCmd.run({ interaction, client: {} });
 
     const { components } = interaction.reply.mock.calls[0][0];
     const urls = components[1].toJSON().components.map((c: { url?: string }) => c.url);
-    expect(urls).toEqual(['https://deezy.cc', 'https://deezy.cc/terms', 'https://deezy.cc/privacy']);
+    expect(urls).toEqual([
+      'https://deezy.cc',
+      'https://deezy.cc/terms',
+      'https://deezy.cc/privacy',
+      'https://status.deezy.cc/pl',
+    ]);
 
     const embed = mockCreateBaseEmbed.mock.results[mockCreateBaseEmbed.mock.results.length - 1].value;
     expect(embed.addFields).toHaveBeenCalledWith(

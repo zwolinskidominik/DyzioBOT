@@ -10,7 +10,7 @@ import {
 import type { ICommandOptions } from '../../interfaces/Command';
 import { COLORS } from '../../config/constants/colors';
 import { OWNER_GUILD_IDS } from '../../config/constants/owner';
-import { CONTACT_EMAIL, PRIVACY_URL, SITE_URL, TERMS_URL } from '../../config/constants/links';
+import { CONTACT_EMAIL, PRIVACY_URL, SITE_URL, STATUS_URL, TERMS_URL } from '../../config/constants/links';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
@@ -161,7 +161,8 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const linkRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setLabel('Panel').setStyle(ButtonStyle.Link).setURL(SITE_URL),
       new ButtonBuilder().setLabel('Regulamin').setStyle(ButtonStyle.Link).setURL(TERMS_URL),
-      new ButtonBuilder().setLabel('Polityka prywatności').setStyle(ButtonStyle.Link).setURL(PRIVACY_URL)
+      new ButtonBuilder().setLabel('Polityka prywatności').setStyle(ButtonStyle.Link).setURL(PRIVACY_URL),
+      new ButtonBuilder().setLabel('Status').setStyle(ButtonStyle.Link).setURL(STATUS_URL)
     );
 
     const createButtons = (disabled = false) => {
