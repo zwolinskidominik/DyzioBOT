@@ -121,7 +121,9 @@ step "Nginx: ukrycie wersji, HSTS, limit zapytań"
 # server_tokens bywa już ustawione w nginx.conf (Ubuntu ma tam „# server_tokens off;" do
 # odkomentowania) — drugi raz w tym samym bloku http to błąd „directive is duplicate".
 if grep -Eqs '^[[:space:]]*server_tokens[[:space:]]' /etc/nginx/nginx.conf; then
-  SERVER_TOKENS_LINE="# server_tokens ustawione w /etc/nginx/nginx.conf"
+  # Ubuntu 26.04 ma tam domyślnie „server_tokens build;" (pokazuje wersję) — wymuszamy „off".
+  sed -Ei 's/^([[:space:]]*)server_tokens[[:space:]]+[^;]*;/\1server_tokens off;/' /etc/nginx/nginx.conf
+  SERVER_TOKENS_LINE="# server_tokens off ustawione w /etc/nginx/nginx.conf"
 else
   SERVER_TOKENS_LINE="server_tokens off;"
 fi
