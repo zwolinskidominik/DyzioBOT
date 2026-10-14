@@ -43,9 +43,9 @@ export default function HomePage() {
             </h1>
 
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Deezy to kompleksowe rozwiązanie zaufane przez tysiące serwerów. 
-              Łatwy w konfiguracji, potężny w możliwościach - wszystko czego potrzebujesz 
-              do zarządzania i rozwijania swojej społeczności.
+              Deezy to kompleksowy bot do zarządzania serwerem i budowania społeczności.
+              Łatwy w konfiguracji, potężny w możliwościach — wszystko ustawisz
+              w przejrzystym panelu, bez wpisywania komend.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -73,7 +73,7 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8 pt-8 text-sm text-muted-foreground">
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/30 backdrop-blur-sm border border-bot-blue/20 hover:scale-110 hover:border-bot-primary/40 transition-all duration-300 cursor-default" style={{ transition: 'all 0.3s ease' }} onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(99, 102, 241, 0.35)'} onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}>
                 <Shield className="w-5 h-5 text-bot-light" />
-                <span>100% Bezpieczny</span>
+                <span>Szyfrowane dane</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/30 backdrop-blur-sm border border-bot-blue/20 hover:scale-110 hover:border-bot-primary/40 transition-all duration-300 cursor-default" style={{ transition: 'all 0.3s ease' }} onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(99, 102, 241, 0.35)'} onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}>
                 <Zap className="w-5 h-5 text-bot-light" />
@@ -171,7 +171,7 @@ export default function HomePage() {
               Gotowy, aby ulepszyć swój serwer?
             </h2>
             <p className="text-muted-foreground text-lg">
-              Dołącz do tysięcy serwerów, które już korzystają z Deezy
+              Dodaj Deezy w minutę i skonfiguruj wszystko w panelu
             </p>
             <Button
               asChild
@@ -189,7 +189,7 @@ export default function HomePage() {
         {/* Footer */}
         <footer className="border-t border-bot-blue/20 py-8 backdrop-blur-sm">
           <div className="container mx-auto px-4 text-center text-muted-foreground">
-            <p>&copy; 2025 Deezy. Wszystkie prawa zastrzeżone.</p>
+            <p>&copy; {new Date().getFullYear()} Deezy. Wszystkie prawa zastrzeżone.</p>
             <nav aria-label="Dokumenty" className="mt-2 flex justify-center gap-4 text-sm">
               <Link href="/terms" className="hover:text-foreground">Regulamin</Link>
               <Link href="/privacy" className="hover:text-foreground">Polityka prywatności</Link>
