@@ -32,7 +32,9 @@ param(
   [string]$RemoteDir = "/srv/deezy-secure/backups",
   [string]$LocalDir = "Z:\Deezy",
   [int]$KeepDays = 30,
-  [switch]$Register
+  [switch]$Register,
+  # Pobierz od razu, nawet jesli dzisiejsza kopia jest juz pobrana (np. po recznym backup.sh).
+  [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -81,9 +83,10 @@ New-Item -ItemType Directory -Force -Path $LocalDir | Out-Null
 $log = Join-Path $LocalDir "pull-backup.log"
 
 # Dzisiejsza kopia juz pobrana i zgloszona na VPS - nie ma czego robic az do jutra.
+# Reczna kopia zrobiona w ciagu dnia (bash ops/mongo/backup.sh) wymaga uruchomienia z -Force.
 $doneMarker = Join-Path $LocalDir ".last-pull"
 $todayTag = Get-Date -Format "yyyy-MM-dd"
-if ((Test-Path $doneMarker) -and ((Get-Content $doneMarker -Raw).Trim() -eq $todayTag) -and
+if (-not $Force -and (Test-Path $doneMarker) -and ((Get-Content $doneMarker -Raw).Trim() -eq $todayTag) -and
     (Get-ChildItem -Path $LocalDir -Filter "deezy-$todayTag-*.archive.gz")) {
   exit 0
 }
@@ -123,12 +126,16 @@ try {
     Where-Object { $_.LastWriteTime -lt $cutoff } |
     ForEach-Object { Remove-Item $_.FullName; Write-Log "Usunieto stara kopie $($_.Name)" }
 
-  $newest = Get-ChildItem -Path $LocalDir -Filter "deezy-*.archive.gz" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+  # Najnowsza po NAZWIE (deezy-RRRR-MM-DD-GGMM, czas UTC z VPS) - data modyfikacji pliku po scp
+  # bywa niewiarygodna i wskazywala przedostatnia kopie.
+  $newest = Get-ChildItem -Path $LocalDir -Filter "deezy-*.archive.gz" | Sort-Object Name -Descending | Select-Object -First 1
   if (-not $newest) {
     Write-Log "UWAGA: brak jakiejkolwiek kopii w $LocalDir."
     exit 1
   }
-  if ($newest.LastWriteTime -lt (Get-Date).AddDays(-2)) {
+  $newestAt = [datetime]::ParseExact(($newest.Name -replace '^deezy-(\d{4}-\d{2}-\d{2}-\d{4}).*$', '$1'), "yyyy-MM-dd-HHmm",
+    [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AssumeUniversal)
+  if ($newestAt -lt (Get-Date).AddDays(-2)) {
     Write-Log "UWAGA: najnowsza kopia ($($newest.Name)) ma ponad 2 dni - sprawdz cron na VPS (backup.log)."
     exit 1
   }
