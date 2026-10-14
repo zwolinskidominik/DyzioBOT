@@ -15,6 +15,8 @@ jest.mock('../../../src/utils/logger', () => ({
 }));
 
 import { readdirSync, statSync } from 'fs';
+import { DiscordAPIError, RESTJSONErrorCodes } from 'discord.js';
+import mockedLogger from '../../../src/utils/logger';
 import { CommandHandler } from '../../../src/handlers/CommandHandler';
 
 const mockReaddirSync = readdirSync as jest.Mock;
@@ -199,6 +201,36 @@ describe('CommandHandler', () => {
     await client.emit('clientReady');
     await new Promise(r => setTimeout(r, 50));
     expect(client.application.commands.set).toHaveBeenCalled();
+  });
+
+  it('only logs info (not a warning) when the bot is not on a guild from restrictedGuildIds', async () => {
+    const logger = mockedLogger as unknown as Record<string, jest.Mock>;
+    mockFS({
+      'meme.ts': {
+        data: { name: 'meme', toJSON: () => ({ name: 'meme', description: 'Meme', type: 1 }) },
+        options: { restrictedGuildIds: ['g-missing', 'g-broken'] },
+        run: jest.fn(),
+      },
+    });
+    const client = createMockClient();
+    const unknownGuild = new DiscordAPIError(
+      { code: RESTJSONErrorCodes.UnknownGuild, message: 'Unknown Guild' },
+      RESTJSONErrorCodes.UnknownGuild, 404, 'GET', '/guilds/g-missing', {},
+    );
+    client.guilds.fetch.mockImplementation((id: string) =>
+      Promise.reject(id === 'g-missing' ? unknownGuild : new Error('socket hang up')),
+    );
+    logger.info.mockClear();
+    logger.warn.mockClear();
+
+    const handler = new CommandHandler(client as any, { bulkRegister: true });
+    client.emit('clientReady');
+    await handler.ready;
+
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('g-missing'));
+    expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining('g-missing'));
+    // Inny błąd (sieć) nadal jest ostrzeżeniem.
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('g-broken'));
   });
 
   it('registerCommands skips deleted commands', async () => {

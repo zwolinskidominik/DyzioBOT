@@ -8,7 +8,10 @@ import {
   ChatInputCommandInteraction,
   MessageContextMenuCommandInteraction,
   UserContextMenuCommandInteraction,
+  DiscordAPIError,
+  RESTJSONErrorCodes,
   type ApplicationCommand,
+  type Guild,
   type InteractionReplyOptions,
 } from 'discord.js';
 import type { ICommand, ICommandHandlerConfig } from '../interfaces/Command';
@@ -158,11 +161,8 @@ export class CommandHandler {
       }
 
       for (const [guildId, cmds] of guildCommands) {
-        const guild = await this.client.guilds.fetch(guildId).catch(() => null);
-        if (!guild) {
-          logger.warn(`⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend guild-scoped.`);
-          continue;
-        }
+        const guild = await this.fetchGuildForCommands(guildId);
+        if (!guild) continue;
         await guild.commands.set(cmds);
         logger.info(`✅ Załadowano ${cmds.length} komend guild-scoped na serwerze "${guild.name}".`);
       }
@@ -186,11 +186,8 @@ export class CommandHandler {
     }
 
     for (const [guildId, cmds] of guildCommands) {
-      const guild = await this.client.guilds.fetch(guildId).catch(() => null);
-      if (!guild) {
-        logger.warn(`⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend guild-scoped.`);
-        continue;
-      }
+      const guild = await this.fetchGuildForCommands(guildId);
+      if (!guild) continue;
 
       const existing = await guild.commands.fetch();
 
@@ -224,7 +221,7 @@ export class CommandHandler {
 
     for (const guildId of guildIds) {
       try {
-        const guild = await this.client.guilds.fetch(guildId);
+        const guild = await this.fetchGuildForCommands(guildId);
         if (guild) {
           await guild.commands.set([]);
           logger.info(`🧹 Wyczyszczono komendy na serwerze "${guild.name}"`);
@@ -353,6 +350,25 @@ export class CommandHandler {
     if (member && devRoleIds.some((roleId) => member.roles.cache.has(roleId))) return true;
 
     return false;
+  }
+
+  /**
+   * Serwer z listy komend guild-scoped (np. OWNER_GUILD_IDS), na którym bota nie ma — to nie błąd
+   * (np. serwer testowy obsługiwany przez bota deweloperskiego), więc tylko informacja w logu.
+   * Ostrzeżenie zostaje dla innych błędów (sieć, limity API).
+   */
+  private async fetchGuildForCommands(guildId: string): Promise<Guild | null> {
+    try {
+      return await this.client.guilds.fetch(guildId);
+    } catch (err) {
+      const code = err instanceof DiscordAPIError ? err.code : undefined;
+      if (code === RESTJSONErrorCodes.UnknownGuild || code === RESTJSONErrorCodes.MissingAccess) {
+        logger.info(`ℹ️ Pomijam komendy guild-scoped dla serwera ${guildId} — bota nie ma na tym serwerze.`);
+      } else {
+        logger.warn(`⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend guild-scoped: ${err}`);
+      }
+      return null;
+    }
   }
 
   private commandChanged(existing: ApplicationCommand, next: ApplicationCommandData): boolean {
