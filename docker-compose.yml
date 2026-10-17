@@ -75,8 +75,12 @@ services:
   # (DEEZY_SECURE_DIR, domyślnie /srv/deezy-secure) — Discord Developer Terms §5c wymagają
   # szyfrowania danych w spoczynku, a Mongo Community samo tego nie robi.
   # Konfiguracja wolumenu i pierwsze uruchomienie: skrypty w ops/mongo/.
+  #
+  # Wersja przypięta do 8.2.12: mongo 8.0 (i 8.3/9.0) odmawia startu na jądrze Ubuntu 26.04
+  # (7.0.x) — SERVER-121912 / SERVER-136848. featureCompatibilityVersion zostaje 8.0, więc
+  # powrót na mongo:8.0 jest możliwy bez migracji danych. Nie zmieniaj FCV bez potrzeby.
   mongo:
-    image: mongo:8.0
+    image: mongo:8.2.12
     container_name: deezybot-mongo
     restart: unless-stopped
     logging:
