@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import redis from "@/lib/redis";
 import { getCachedGuildList, setCachedGuildList, type CachedDiscordGuild } from "@/lib/discordGuildCache";
 import { fetchDiscordUserGuildsDeduped } from "@/lib/discordUserGuilds";
@@ -8,7 +8,44 @@ import { fetchDiscordUserGuildsDeduped } from "@/lib/discordUserGuilds";
 const CACHE_TTL_SECONDS = 60;
 const STALE_CACHE_TTL_SECONDS = CACHE_TTL_SECONDS * 30;
 
-export async function GET() {
+/**
+ * Lista serwerów, na których jest bot. null = Discord nie odpowiedział poprawnie — wtedy NIE
+ * wolno uznać, że bota nigdzie nie ma (wszystkie kafelki pokazałyby „Dodaj bota”).
+ */
+async function fetchBotGuildIds(): Promise<string[] | null> {
+  try {
+    const botResponse = await fetch("https://discord.com/api/v10/users/@me/guilds", {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      cache: "no-store",
+    });
+    if (!botResponse.ok) return null;
+    const botGuilds: unknown = await botResponse.json();
+    return Array.isArray(botGuilds)
+      ? botGuilds
+          .filter((g): g is { id: string } => !!g && typeof g === "object" && typeof (g as { id?: unknown }).id === "string")
+          .map((g) => g.id)
+      : null;
+  } catch (err) {
+    console.error("Failed to fetch bot guilds:", err);
+    return null;
+  }
+}
+
+async function storeGuildList(userId: string, cacheKey: string, guilds: CachedDiscordGuild[]) {
+  setCachedGuildList(userId, guilds);
+  try {
+    const serialized = JSON.stringify(guilds);
+    await redis
+      .pipeline()
+      .setex(cacheKey, CACHE_TTL_SECONDS, serialized)
+      .setex(`${cacheKey}:stale`, STALE_CACHE_TTL_SECONDS, serialized)
+      .exec();
+  } catch {
+    // Redis unavailable — skip caching
+  }
+}
+
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -21,6 +58,24 @@ export async function GET() {
 
     const cacheKey = `guilds:${session.user?.id}`;
     const userId = session.user?.id ?? "unknown";
+
+    // ?fresh=1 — po dodaniu bota (okno zaproszenia) lista z cache (60 s) nadal mówiłaby
+    // „Dodaj bota”. Serwery użytkownika bierzemy z cache, ale obecność bota liczymy od nowa.
+    if (request.nextUrl.searchParams.get("fresh") === "1") {
+      const cached = getCachedGuildList(userId, STALE_CACHE_TTL_SECONDS * 1000);
+      if (cached) {
+        const botGuildIds = await fetchBotGuildIds();
+        if (botGuildIds) {
+          const refreshed = cached.map((guild) => ({
+            ...guild,
+            hasBot: botGuildIds.includes(guild.id),
+          }));
+          await storeGuildList(userId, cacheKey, refreshed);
+          return NextResponse.json(refreshed);
+        }
+        return NextResponse.json(cached);
+      }
+    }
 
     const memoryFresh = getCachedGuildList(userId, CACHE_TTL_SECONDS * 1000);
     if (memoryFresh) return NextResponse.json(memoryFresh);
@@ -68,44 +123,16 @@ export async function GET() {
       return (permissions & ADMINISTRATOR) === ADMINISTRATOR;
     });
 
-    let botGuildIds: string[] = [];
-    try {
-      const botResponse = await fetch("https://discord.com/api/v10/users/@me/guilds", {
-        headers: {
-          Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-        },
-      });
-
-      if (botResponse.ok) {
-        const botGuilds: unknown = await botResponse.json();
-        botGuildIds = Array.isArray(botGuilds)
-          ? botGuilds
-              .filter((g): g is { id: string } => !!g && typeof g === "object" && typeof (g as { id?: unknown }).id === "string")
-              .map((g) => g.id)
-          : [];
-      }
-    } catch (err) {
-      console.error("Failed to fetch bot guilds:", err);
-    }
+    const botGuildIds = await fetchBotGuildIds();
 
     const guildsWithBotStatus: CachedDiscordGuild[] = adminGuilds.map((guild) => ({
       ...guild,
-      hasBot: botGuildIds.includes(guild.id),
+      hasBot: botGuildIds ? botGuildIds.includes(guild.id) : undefined,
     }));
 
-    // Store in Redis (fresh + stale)
-    try {
-      const serialized = JSON.stringify(guildsWithBotStatus);
-      setCachedGuildList(userId, guildsWithBotStatus);
-      await redis
-        .pipeline()
-        .setex(cacheKey, CACHE_TTL_SECONDS, serialized)
-        .setex(`${cacheKey}:stale`, STALE_CACHE_TTL_SECONDS, serialized)
-        .exec();
-    } catch {
-      setCachedGuildList(userId, guildsWithBotStatus);
-      // Redis unavailable — skip caching
-    }
+    // Bez listy serwerów bota nie zapisujemy wyniku do cache — inaczej przez minutę (i dłużej
+    // jako „stale”) wszystkie serwery wyglądałyby na takie bez bota.
+    if (botGuildIds) await storeGuildList(userId, cacheKey, guildsWithBotStatus);
 
     return NextResponse.json(guildsWithBotStatus);
   } catch (error) {

@@ -52,7 +52,7 @@ export default function GuildsPage() {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type !== "deezy:bot-invite-complete") return;
 
-      fetchGuilds();
+      fetchGuilds({ fresh: true });
     };
 
     window.addEventListener("message", handleBotInviteComplete);
@@ -62,9 +62,10 @@ export default function GuildsPage() {
     };
   }, []);
 
-  const fetchGuilds = async () => {
+  // fresh: po zamknięciu okna zaproszenia — serwer przelicza, gdzie jest bot, z pominięciem cache.
+  const fetchGuilds = async (opts: { fresh?: boolean } = {}) => {
     try {
-      const response = await fetch("/api/discord/guilds");
+      const response = await fetch(opts.fresh ? "/api/discord/guilds?fresh=1" : "/api/discord/guilds");
       if (response.ok) {
         const data = await response.json();
         setGuilds(data);
@@ -94,8 +95,8 @@ export default function GuildsPage() {
 
   const handleBotInvite = (guildId: string) => {
     openBotInvitePopup(guildId, {
-      onComplete: fetchGuilds,
-      onClosed: fetchGuilds,
+      onComplete: () => fetchGuilds({ fresh: true }),
+      onClosed: () => fetchGuilds({ fresh: true }),
     });
   };
 
