@@ -372,6 +372,83 @@ describe('antiSpam handler — rate rule detection', () => {
   });
 });
 
+/* ── Aplikacje zewnętrzne (instalowane na koncie użytkownika) ── */
+
+describe('antiSpam handler — external user-installed apps (raid bots)', () => {
+  /** Wiadomość wysłana przez aplikację „APL." na komendę członka serwera (jak raid „Jalapeno"). */
+  function makeAppRaidMessage(owners: Record<string, string> = { '1': 'raider-id' }) {
+    const guild = mockGuild();
+    const raider = mockGuildMember({ id: 'raider-id' });
+    raider.permissions = new PermissionsBitField();
+    raider.moderatable = true;
+    raider.guild = guild;
+    guild.members.fetch = jest.fn().mockResolvedValue(raider);
+
+    const channel = mockTextChannel();
+    const fetched = new Collection<string, any>();
+    const meta = { user: { id: 'raider-id' } };
+    fetched.set('a1', { author: { id: 'app-id' }, interactionMetadata: meta, delete: jest.fn() });
+    fetched.set('a2', { author: { id: 'app-id' }, interactionMetadata: meta, delete: jest.fn() });
+    fetched.set('x', { author: { id: 'someone-else' }, delete: jest.fn() });
+    channel.messages = { fetch: jest.fn().mockResolvedValue(fetched) };
+    channel.bulkDelete = jest.fn().mockResolvedValue(undefined);
+
+    const msg = mockMessage({ guild, member: null, channel });
+    msg.author = { id: 'app-id', tag: 'Jalapeno Inc#2121', username: 'Jalapeno_Inc', bot: true };
+    msg.interactionMetadata = {
+      user: { id: 'raider-id', tag: 'raider#0001' },
+      authorizingIntegrationOwners: owners,
+    };
+    return { msg, raider, channel, guild };
+  }
+
+  beforeEach(() => {
+    (getConfig as jest.Mock).mockResolvedValue(buildConfig({ rate: { on: true, action: 'mute', muteDuration: '5' } }));
+    (trackMessage as jest.Mock).mockReturnValue({ isSpam: true, messageCount: 10 });
+  });
+
+  it('treats the member who ran the command as the spammer and times them out', async () => {
+    const { msg, raider } = makeAppRaidMessage();
+    const result = await run(msg, mockClient());
+    expect(result).toBe(true);
+    expect(trackMessage).toHaveBeenCalledWith(msg.guild.id, 'raider-id', expect.anything());
+    expect(raider.timeout).toHaveBeenCalled();
+  });
+
+  it("deletes the app's recent messages sent on that member's command", async () => {
+    const { msg, channel } = makeAppRaidMessage();
+    await run(msg, mockClient());
+    const deleted = (channel.bulkDelete as jest.Mock).mock.calls[0][0] as Collection<string, unknown>;
+    expect([...deleted.keys()].sort()).toEqual(['a1', 'a2']);
+  });
+
+  it('names the app in the moderation log', async () => {
+    const { msg } = makeAppRaidMessage();
+    const client = mockClient();
+    await run(msg, client);
+    expect(sendLog).toHaveBeenCalledWith(
+      client,
+      msg.guild.id,
+      'antiSpam',
+      expect.objectContaining({ description: expect.stringContaining('**Przez aplikację:** Jalapeno\\_Inc') })
+    );
+  });
+
+  it('ignores apps installed on the server itself (added by admins)', async () => {
+    const { msg } = makeAppRaidMessage({ '0': 'guild-id', '1': 'raider-id' });
+    const result = await run(msg, mockClient());
+    expect(result).toBeUndefined();
+    expect(getConfig).not.toHaveBeenCalled();
+  });
+
+  it('ignores the app message when the member who ran it already left', async () => {
+    const { msg, guild } = makeAppRaidMessage();
+    guild.members.fetch = jest.fn().mockRejectedValue(new Error('Unknown Member'));
+    const result = await run(msg, mockClient());
+    expect(result).toBeUndefined();
+  });
+});
+
 /* ── Invite link blocking (reguła 'invites') ──────────────── */
 
 describe('antiSpam handler — invite link blocking', () => {

@@ -1,4 +1,13 @@
-import { Message, Client, GuildMember, Collection, PermissionFlagsBits } from 'discord.js';
+import {
+  Message,
+  Client,
+  GuildMember,
+  Collection,
+  PermissionFlagsBits,
+  ApplicationIntegrationType,
+  User,
+  escapeMarkdown,
+} from 'discord.js';
 import {
   getConfig,
   trackMessage,
@@ -24,14 +33,60 @@ import logger from '../../utils/logger';
 let cleanupStarted = false;
 
 /**
+ * Kto odpowiada za wiadomość. Zwykle autor, ale przy aplikacjach instalowanych na koncie
+ * użytkownika („APL.", np. boty do raidów) autorem jest aplikacja, a sprawcą osoba, która
+ * użyła jej komendy na tym serwerze — to ją karzemy, nie aplikację.
+ */
+interface SpamSource {
+  member: GuildMember;
+  user: User;
+  /** Aplikacja zewnętrzna, przez którą wysłano wiadomość; null dla zwykłych wiadomości. */
+  viaApp: User | null;
+}
+
+/**
+ * Ustala sprawcę wiadomości. Zwraca null dla wiadomości, których Anti-Spam nie ocenia:
+ * DM-y, wiadomości systemowe, zwykłe boty i aplikacje zainstalowane NA SERWERZE (te dodali
+ * administratorzy, więc im ufamy).
+ */
+export async function resolveSpamSource(message: Message): Promise<SpamSource | null> {
+  if (!message.guild) return null;
+
+  if (!message.author.bot) {
+    return message.member ? { member: message.member, user: message.author, viaApp: null } : null;
+  }
+
+  const meta = message.interactionMetadata;
+  if (!meta) return null;
+  const owners = meta.authorizingIntegrationOwners;
+  const userInstalled = owners[ApplicationIntegrationType.UserInstall] !== undefined;
+  const guildInstalled = owners[ApplicationIntegrationType.GuildInstall] !== undefined;
+  if (!userInstalled || guildInstalled) return null;
+
+  const member = await message.guild.members.fetch(meta.user.id).catch(() => null);
+  if (!member) return null;
+  return { member, user: meta.user, viaApp: message.author };
+}
+
+/** Linia „Użytkownik" do logu + informacja o aplikacji zewnętrznej, jeśli jej użyto. */
+function sourceLines(source: SpamSource): string {
+  const userLine = `**Użytkownik:** <@${source.user.id}> (${source.user.tag})\n`;
+  if (!source.viaApp) return userLine;
+  return userLine + `**Przez aplikację:** ${escapeMarkdown(source.viaApp.username)} (\`${source.viaApp.id}\`)\n`;
+}
+
+/**
  * Anti-spam handler for messageCreate.
  *
  * Returns `true` to short-circuit the handler chain when a message is
  * identified as spam (the message is already dealt with).
  */
 export default async function run(message: Message, client: Client): Promise<boolean | void> {
-  // Ignore bots, DMs, system messages
-  if (message.author.bot || !message.guild || !message.member) return;
+  // Ignore DMs, system messages, bots and server-installed apps (see resolveSpamSource)
+  if (!message.guild) return;
+  const source = await resolveSpamSource(message);
+  if (!source) return;
+  const guild = message.guild;
 
   // Lazily start the periodic cleanup
   if (!cleanupStarted) {
@@ -39,58 +94,58 @@ export default async function run(message: Message, client: Client): Promise<boo
     cleanupStarted = true;
   }
 
-  const settings = await getConfig(message.guild.id);
+  const settings = await getConfig(guild.id);
   if (!settings.enabled) return;
 
   // Skip ignored channels
   if (settings.ignoredChannels.includes(message.channelId)) return;
 
   // Skip members with ignored roles
-  if (hasIgnoredRole(message.member, settings)) return;
+  if (hasIgnoredRole(source.member, settings)) return;
 
   // Skip members with administrator permission (always exempt)
-  if (message.member.permissions.has(PermissionFlagsBits.Administrator)) return;
+  if (source.member.permissions.has(PermissionFlagsBits.Administrator)) return;
 
   // ── Masowe wzmianki ─────────────────────────────────────────────
   if (settings.mentions.on) {
-    const blocked = await checkMassMentions(message, client, settings.mentions);
+    const blocked = await checkMassMentions(message, client, source, settings.mentions);
     if (blocked) return true;
   }
 
   // ── Linki z zaproszeniami ────────────────────────────────────────
   if (settings.invites.on) {
-    const blocked = await checkInviteLinks(message, client, settings.invites);
+    const blocked = await checkInviteLinks(message, client, source, settings.invites);
     if (blocked) return true;
   }
 
   // ── Powtarzające się wiadomości ──────────────────────────────────
   if (settings.repeat.on && message.content.length > 0) {
     const floodResult = trackFlood(
-      message.guild.id,
-      message.author.id,
+      guild.id,
+      source.user.id,
       message.content,
       message.channelId,
       settings.repeat
     );
     if (floodResult.isFlood) {
       logger.warn(
-        `🛡️ Anti-Spam: wykryto powtarzające się wiadomości od ${message.author.tag} (${message.author.id}) — ` +
+        `🛡️ Anti-Spam: wykryto powtarzające się wiadomości od ${source.user.tag} (${source.user.id}) — ` +
           `${floodResult.duplicateCount}x ta sama wiadomość na ${floodResult.channels.length} kanałach`
       );
 
-      clearFloodHistory(message.guild.id, message.author.id);
+      clearFloodHistory(guild.id, source.user.id);
 
       if (settings.repeat.deleteMessage) {
         await message.delete().catch(() => {});
       }
 
-      const actionLabel = await applyRulePunishment(message, client, 'repeat', settings.repeat);
+      const actionLabel = await applyRulePunishment(guild.id, client, source, 'repeat', settings.repeat);
 
       const channelMentions = floodResult.channels.map((ch) => `<#${ch}>`).join(', ');
-      await sendLog(client, message.guild.id, 'antiSpam', {
+      await sendLog(client, guild.id, 'antiSpam', {
         title: '🛡️ Wykryto powtarzające się wiadomości',
         description:
-          `**Użytkownik:** <@${message.author.id}> (${message.author.tag})\n` +
+          sourceLines(source) +
           `**Powtórzona treść:** \`${truncate(message.content, 100)}\`\n` +
           `**Powtórzeń:** ${floodResult.duplicateCount} w ${settings.repeat.windowSeconds}s\n` +
           `**Kanały:** ${channelMentions}\n` +
@@ -103,27 +158,27 @@ export default async function run(message: Message, client: Client): Promise<boo
 
   // ── Za szybkie pisanie (rate-limit) ──────────────────────────────
   if (settings.rate.on) {
-    const result = trackMessage(message.guild.id, message.author.id, settings.rate);
+    const result = trackMessage(guild.id, source.user.id, settings.rate);
     if (result.isSpam) {
       logger.warn(
-        `🛡️ Anti-Spam: wykryto spam od ${message.author.tag} (${message.author.id}) ` +
-          `na serwerze ${message.guild.name} (${message.guild.id}) — ` +
+        `🛡️ Anti-Spam: wykryto spam od ${source.user.tag} (${source.user.id}) ` +
+          `na serwerze ${guild.name} (${guild.id}) — ` +
           `${result.messageCount} wiadomości w ${settings.rate.windowSeconds}s`
       );
 
       // Clear rate history so they don't keep re-triggering immediately
-      clearUserHistory(message.guild.id, message.author.id);
+      clearUserHistory(guild.id, source.user.id);
 
       if (settings.rate.deleteMessage) {
-        await deleteRecentMessages(message);
+        await deleteRecentMessages(message, source.user.id);
       }
 
-      const actionLabel = await applyRulePunishment(message, client, 'rate', settings.rate);
+      const actionLabel = await applyRulePunishment(guild.id, client, source, 'rate', settings.rate);
 
-      await sendLog(client, message.guild.id, 'antiSpam', {
+      await sendLog(client, guild.id, 'antiSpam', {
         title: '🛡️ Wykryto zbyt szybkie wiadomości',
         description:
-          `**Użytkownik:** <@${message.author.id}> (${message.author.tag})\n` +
+          sourceLines(source) +
           `**Kanał:** <#${message.channelId}>\n` +
           `**Wykryto:** ${result.messageCount} wiadomości w ${settings.rate.windowSeconds}s\n` +
           `**Akcja:** ${actionLabel}`,
@@ -141,16 +196,21 @@ function hasIgnoredRole(member: GuildMember, settings: AntiSpamSettings): boolea
   return settings.ignoredRoles.some((roleId) => member.roles.cache.has(roleId));
 }
 
+/** Wiadomość napisana przez tę osobę albo wysłana przez aplikację zewnętrzną na jej komendę. */
+function isFromUser(m: Message, userId: string): boolean {
+  return m.author.id === userId || m.interactionMetadata?.user.id === userId;
+}
+
 /**
  * Tries to bulk-delete recent messages from the spammer in the same channel.
  */
-async function deleteRecentMessages(message: Message): Promise<void> {
+async function deleteRecentMessages(message: Message, userId: string): Promise<void> {
   try {
     const channel = message.channel;
     if (!('messages' in channel)) return;
 
     const fetched = (await channel.messages.fetch({ limit: 20 })) as Collection<string, Message>;
-    const spam = fetched.filter((m) => m.author.id === message.author.id);
+    const spam = fetched.filter((m) => isFromUser(m, userId));
 
     if (spam.size > 1 && 'bulkDelete' in channel) {
       await (channel as any).bulkDelete(spam, true);
@@ -167,14 +227,15 @@ async function deleteRecentMessages(message: Message): Promise<void> {
  * Zwraca czytelną etykietę do logów.
  */
 async function applyRulePunishment(
-  message: Message,
+  guildId: string,
   client: Client,
+  source: SpamSource,
   ruleId: AntiSpamRuleId,
   rule: AntiSpamRuleSettings
 ): Promise<string> {
-  const punishment = await getNextPunishment(message.guild!.id, message.author.id, ruleId, rule);
-  const label = await executeAction(message, client, punishment, rule.muteDuration);
-  await recordIncident(message.guild!.id, message.author.id, ruleId, punishment);
+  const punishment = await getNextPunishment(guildId, source.user.id, ruleId, rule);
+  const label = await executeAction(source.member, client, punishment, rule.muteDuration);
+  await recordIncident(guildId, source.user.id, ruleId, punishment);
   return label;
 }
 
@@ -182,12 +243,11 @@ async function applyRulePunishment(
  * Executes the given punishment and returns a human-readable label.
  */
 async function executeAction(
-  message: Message,
+  member: GuildMember,
   client: Client,
   punishment: AntiSpamPunishment,
   muteDurationMinutes: string
 ): Promise<string> {
-  const member = message.member!;
 
   try {
     switch (punishment) {
@@ -356,6 +416,7 @@ const INVITE_REGEX =
 async function checkInviteLinks(
   message: Message,
   client: Client,
+  source: SpamSource,
   rule: AntiSpamRuleSettings
 ): Promise<boolean> {
   const matches = message.content.matchAll(INVITE_REGEX);
@@ -371,20 +432,20 @@ async function checkInviteLinks(
       if (isOwnServer && rule.allowOwnServerInvites) continue;
 
       logger.warn(
-        `🛡️ Anti-Spam: zablokowano zaproszenie od ${message.author.tag} ` +
-          `(${message.author.id}) → ${invite.guild.name} (${invite.guild.id})`
+        `🛡️ Anti-Spam: zablokowano zaproszenie od ${source.user.tag} ` +
+          `(${source.user.id}) → ${invite.guild.name} (${invite.guild.id})`
       );
 
       if (rule.deleteMessage) {
         await message.delete().catch(() => {});
       }
 
-      const actionLabel = await applyRulePunishment(message, client, 'invites', rule);
+      const actionLabel = await applyRulePunishment(message.guild!.id, client, source, 'invites', rule);
 
       await sendLog(client, message.guild!.id, 'antiSpam', {
         title: '🛡️ Zablokowane zaproszenie',
         description:
-          `**Użytkownik:** <@${message.author.id}> (${message.author.tag})\n` +
+          sourceLines(source) +
           `**Kanał:** <#${message.channelId}>\n` +
           `**Zaproszenie do:** ${invite.guild.name} (\`${invite.guild.id}\`)\n` +
           `**Kod:** \`${code}\`\n` +
@@ -411,6 +472,7 @@ async function checkInviteLinks(
 async function checkMassMentions(
   message: Message,
   client: Client,
+  source: SpamSource,
   rule: AntiSpamRuleSettings
 ): Promise<boolean> {
   const mentionedUsers = message.mentions.users.size;
@@ -419,13 +481,14 @@ async function checkMassMentions(
   const mentionsEveryone = message.mentions.everyone; // true for @everyone or @here
 
   if (mentionsEveryone) {
-    return await blockMention(message, client, rule, 'Użycie @everyone / @here', '@everyone/@here');
+    return await blockMention(message, client, source, rule, 'Użycie @everyone / @here', '@everyone/@here');
   }
 
   if (totalMentions > rule.threshold) {
     return await blockMention(
       message,
       client,
+      source,
       rule,
       `Zbyt wiele wzmianek (${totalMentions})`,
       `${mentionedUsers} użytkowników, ${mentionedRoles} ról`
@@ -441,25 +504,26 @@ async function checkMassMentions(
 async function blockMention(
   message: Message,
   client: Client,
+  source: SpamSource,
   rule: AntiSpamRuleSettings,
   reason: string,
   details: string
 ): Promise<boolean> {
   logger.warn(
-    `🛡️ Anti-Spam: zablokowano masowe wzmianki od ${message.author.tag} ` +
-      `(${message.author.id}) — ${reason}`
+    `🛡️ Anti-Spam: zablokowano masowe wzmianki od ${source.user.tag} ` +
+      `(${source.user.id}) — ${reason}`
   );
 
   if (rule.deleteMessage) {
     await message.delete().catch(() => {});
   }
 
-  const actionLabel = await applyRulePunishment(message, client, 'mentions', rule);
+  const actionLabel = await applyRulePunishment(message.guild!.id, client, source, 'mentions', rule);
 
   await sendLog(client, message.guild!.id, 'antiSpam', {
     title: '🛡️ Zablokowane wzmianki',
     description:
-      `**Użytkownik:** <@${message.author.id}> (${message.author.tag})\n` +
+      sourceLines(source) +
       `**Kanał:** <#${message.channelId}>\n` +
       `**Powód:** ${reason}\n` +
       `**Szczegóły:** ${details}\n` +
