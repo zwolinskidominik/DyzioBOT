@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, User, Guild } from 'discord.js';
+import { SlashCommandBuilder, User, Guild, GuildMember } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
@@ -22,9 +22,14 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   try {
     const targetUser: User = interaction.options.getUser('uzytkownik') || interaction.user;
-    const avatarURL: string = getUserAvatarURL(targetUser);
     const guild: Guild = interaction.guild!;
-    const embed = createAvatarEmbed(targetUser, avatarURL, guild);
+    const globalAvatarURL: string = getUserAvatarURL(targetUser);
+    // Avatar ustawiony na TYM serwerze (np. bot z profilem per-serwer z dashboardu, albo
+    // użytkownik z avatarem serwerowym Nitro) ma pierwszeństwo — tak jak pokazuje go Discord.
+    // force: true, bo cache członka (zwłaszcza samego bota) może trzymać stary avatar.
+    const member = await fetchMember(guild, targetUser.id);
+    const serverAvatarURL = member?.avatar ? getMemberAvatarURL(member) : null;
+    const embed = createAvatarEmbed(targetUser, serverAvatarURL ?? globalAvatarURL, guild, serverAvatarURL ? globalAvatarURL : null);
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
     logger.error(`Błąd podczas wyświetlania avataru: ${error}`);
@@ -34,6 +39,15 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   }
 }
 
+async function fetchMember(guild: Guild | null, userId: string): Promise<GuildMember | null> {
+  if (!guild?.members?.fetch) return null;
+  return guild.members.fetch({ user: userId, force: true }).catch(() => null);
+}
+
+function getMemberAvatarURL(member: GuildMember): string {
+  return member.displayAvatarURL({ extension: 'png' as const, size: 1024 as AvatarSize });
+}
+
 function getUserAvatarURL(user: User): string {
   return user.displayAvatarURL({
     extension: 'png' as const,
@@ -41,11 +55,14 @@ function getUserAvatarURL(user: User): string {
   });
 }
 
-function createAvatarEmbed(user: User, avatarURL: string, guild: Guild) {
+function createAvatarEmbed(user: User, avatarURL: string, guild: Guild, globalAvatarURL: string | null) {
   return createBaseEmbed({
     footerText: guild.name,
     footerIcon: `${guild.iconURL()}`,
     title: `Avatar użytkownika ${user.tag}`,
+    ...(globalAvatarURL
+      ? { description: `Avatar ustawiony na tym serwerze · [avatar globalny](${globalAvatarURL})` }
+      : {}),
     image: avatarURL,
   });
 }

@@ -222,6 +222,26 @@ describe('avatar command', () => {
     expect(interaction.editReply).toHaveBeenCalled();
   });
 
+  it('prefers the avatar set on this server (e.g. per-server bot profile) and links the global one', async () => {
+    const { run } = load();
+    const targetUser = mockUser({ id: 'bot-id', username: 'Deezy' });
+    targetUser.displayAvatarURL = jest.fn().mockReturnValue('https://cdn/global.png');
+    const member = { avatar: 'halloween-hash', displayAvatarURL: jest.fn().mockReturnValue('https://cdn/server.png') };
+    const interaction = mockInteraction();
+    interaction.options.getUser = jest.fn().mockReturnValue(targetUser);
+    interaction.guild.members.fetch = jest.fn().mockResolvedValue(member);
+
+    await run({ interaction, client: interaction.client });
+
+    expect(interaction.guild.members.fetch).toHaveBeenCalledWith({ user: 'bot-id', force: true });
+    expect(mockCreateBaseEmbed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        image: 'https://cdn/server.png',
+        description: expect.stringContaining('https://cdn/global.png'),
+      })
+    );
+  });
+
   it('shows own avatar when no user specified', async () => {
     const { run } = load();
     const interaction = mockInteraction();
