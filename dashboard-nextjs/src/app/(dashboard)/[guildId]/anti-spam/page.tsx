@@ -693,6 +693,9 @@ export default function AntiSpamPage() {
               <p className="mt-2 max-w-[640px] text-sm leading-6 text-[#969db0]">
                 Każde zagrożenie ma osobną regułę — własny próg i własną karę. Wyjątki obowiązują we wszystkich regułach.
               </p>
+              <p className="mt-1 max-w-[640px] text-sm leading-6 text-[#969db0]">
+                Reguły obejmują też wiadomości wysyłane przez aplikacje dodane do kont użytkowników — karana jest osoba, która użyła komendy.
+              </p>
             </div>
             <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-white/80">
               <span>{config.enabled ? "Aktywne" : "Nieaktywne"}</span>
