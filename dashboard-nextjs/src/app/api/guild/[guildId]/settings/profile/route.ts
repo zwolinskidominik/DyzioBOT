@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { createAuditLog } from "@/lib/auditLog";
 import { z } from "zod";
+import { PROFILE_EDIT_GUILD_IDS } from "@/lib/owner";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,15 @@ const MAX_NICK_LENGTH = 32;
 const MAX_BIO_LENGTH = 190;
 // Spójne z limitem uploadów w greetings/images.
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Zmiana profilu bota (nick, opis, avatar, banner) jest na razie dostępna tylko na głównym
+ * serwerze właściciela — na pozostałych będzie funkcją premium. Blokada musi być po stronie API,
+ * nie tylko w UI (zablokowane pola da się obejść zwykłym requestem).
+ */
+function isProfileEditable(guildId: string): boolean {
+  return PROFILE_EDIT_GUILD_IDS.includes(guildId);
+}
 
 interface DiscordMemberProfile {
   nick?: string | null;
@@ -120,6 +130,7 @@ export async function GET(
 
   return NextResponse.json({
     botUserId: creds.appId,
+    editable: isProfileEditable(guildId),
     nick: member.nick ?? null,
     bio: member.bio ?? null,
     ...buildUrls(guildId, creds.appId, member),
@@ -152,6 +163,13 @@ export async function PATCH(
   const { guildId } = await params;
   const accessError = await requireGuildAccess(session, guildId);
   if (accessError) return accessError;
+
+  if (!isProfileEditable(guildId)) {
+    return NextResponse.json(
+      { error: "Zmiana profilu bota będzie dostępna wkrótce." },
+      { status: 403 }
+    );
+  }
 
   const creds = getCredentials();
   if (!creds) {

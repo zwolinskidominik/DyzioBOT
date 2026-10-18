@@ -145,6 +145,8 @@ export default function SettingsPage() {
   const [liveBannerUrl, setLiveBannerUrl] = useState<string | null>(null);
   const [avatarFileName, setAvatarFileName] = useState<string | null>(null);
   const [bannerFileName, setBannerFileName] = useState<string | null>(null);
+  // Zmiana profilu bota jest na razie dostępna tylko na serwerach właściciela (patrz API).
+  const [profileEditable, setProfileEditable] = useState(false);
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const savedRef = useRef<FormState>(DEFAULT_FORM);
@@ -202,6 +204,7 @@ export default function SettingsPage() {
           // Jeśli ten serwer nie ma jeszcze własnego nadpisania (nick/bio/avatar/banner),
           // pokaż standardowy profil bota zamiast pustych pól — patrz defaultUsername/defaultBio
           // i defaultAvatarUrl/defaultBannerUrl w GET /settings/profile.
+          setProfileEditable(p.editable === true);
           setLiveAvatarUrl(p.avatarUrl ?? p.defaultAvatarUrl ?? null);
           setLiveBannerUrl(p.bannerUrl ?? p.defaultBannerUrl ?? null);
           nextForm = { ...nextForm, nick: p.nick ?? p.defaultUsername ?? "", bio: p.bio ?? p.defaultBio ?? "" };
@@ -235,7 +238,7 @@ export default function SettingsPage() {
   const nameTrim = form.nick.trim();
 
   const handleSave = useCallback(async () => {
-    if (!nameTrim) {
+    if (profileEditable && !nameTrim) {
       toast.error("Nazwa bota nie może być pusta");
       return;
     }
@@ -250,25 +253,27 @@ export default function SettingsPage() {
       });
       if (!generalRes.ok) throw new Error("Failed to save general settings");
 
-      const profilePatch: Record<string, unknown> = { nick: form.nick.trim(), bio: form.bio.trim() || null };
-      if (form.pendingAvatar !== undefined) profilePatch.avatar = form.pendingAvatar;
-      if (form.pendingBanner !== undefined) profilePatch.banner = form.pendingBanner;
+      if (profileEditable) {
+        const profilePatch: Record<string, unknown> = { nick: form.nick.trim(), bio: form.bio.trim() || null };
+        if (form.pendingAvatar !== undefined) profilePatch.avatar = form.pendingAvatar;
+        if (form.pendingBanner !== undefined) profilePatch.banner = form.pendingBanner;
 
-      const profileRes = await fetch(`/api/guild/${guildId}/settings/profile`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profilePatch),
-      });
-      if (!profileRes.ok) {
-        const err = await profileRes.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to save profile");
+        const profileRes = await fetch(`/api/guild/${guildId}/settings/profile`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(profilePatch),
+        });
+        if (!profileRes.ok) {
+          const err = await profileRes.json().catch(() => ({}));
+          throw new Error(err.error || "Failed to save profile");
+        }
+        const updatedProfile = await profileRes.json();
+
+        setLiveAvatarUrl(updatedProfile.avatarUrl ?? null);
+        setLiveBannerUrl(updatedProfile.bannerUrl ?? null);
+        setAvatarFileName(null);
+        setBannerFileName(null);
       }
-      const updatedProfile = await profileRes.json();
-
-      setLiveAvatarUrl(updatedProfile.avatarUrl ?? null);
-      setLiveBannerUrl(updatedProfile.bannerUrl ?? null);
-      setAvatarFileName(null);
-      setBannerFileName(null);
 
       const nextForm: FormState = { ...form, pendingAvatar: undefined, pendingBanner: undefined };
       setForm(nextForm);
@@ -281,7 +286,7 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
-  }, [form, guildId, nameTrim]);
+  }, [form, guildId, nameTrim, profileEditable]);
 
   const handleCancel = useCallback(() => {
     setForm(savedRef.current);
@@ -303,6 +308,7 @@ export default function SettingsPage() {
   );
 
   const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!profileEditable) return;
     const picked = await pickImage(e);
     e.target.value = "";
     if (!picked) return;
@@ -312,6 +318,7 @@ export default function SettingsPage() {
   };
 
   const handleBannerPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!profileEditable) return;
     const picked = await pickImage(e);
     e.target.value = "";
     if (!picked) return;
@@ -404,8 +411,18 @@ export default function SettingsPage() {
             <p style={{ margin: "0 0 16px", fontSize: 12, lineHeight: 1.6, color: COLORS.textMuted }}>
               Nazwa, opis, avatar i banner widoczne tylko tutaj — na innych serwerach bot wygląda inaczej.
             </p>
-
-            <div className="grid grid-cols-1 items-start gap-[18px] md:grid-cols-[minmax(0,1fr)_320px]">
+            {/* Na razie zablokowane poza serwerami z PROFILE_EDIT_GUILD_IDS — rozmyte, z napisem „Wkrótce”.
+                pointer-events/aria-hidden: rozmyte pola nie dają się kliknąć ani wybrać klawiaturą. */}
+            <div style={{ position: "relative" }}>
+            <div
+              className="grid grid-cols-1 items-start gap-[18px] md:grid-cols-[minmax(0,1fr)_320px]"
+              aria-hidden={!profileEditable || undefined}
+              style={
+                profileEditable
+                  ? undefined
+                  : { filter: "blur(1.5px)", opacity: 0.75, pointerEvents: "none", userSelect: "none" }
+              }
+            >
               <div className="flex min-w-0 flex-col gap-3.5">
                 <div>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
@@ -418,14 +435,20 @@ export default function SettingsPage() {
                     type="text"
                     placeholder="Deezy"
                     value={form.nick}
-                    onChange={(e) => setForm((f) => ({ ...f, nick: e.target.value.slice(0, 32) }))}
+                    onChange={(e) => {
+                      // Zablokowany profil: zmiany wpisane po obejściu blokady (F12) są ignorowane.
+                      if (!profileEditable) return;
+                      setForm((f) => ({ ...f, nick: e.target.value.slice(0, 32) }));
+                    }}
                     maxLength={32}
+                    disabled={!profileEditable}
                     className="focus:!border-[#6366f1]"
                     style={{
                       width: "100%",
                       boxSizing: "border-box",
                       height: 40,
-                      border: `1px solid ${!nameTrim ? "rgba(239,68,68,0.6)" : COLORS.border}`,
+                      border: `1px solid ${profileEditable && !nameTrim ? "rgba(239,68,68,0.6)" : COLORS.border}`,
+                      cursor: profileEditable ? "text" : "not-allowed",
                       borderRadius: 6,
                       background: COLORS.input,
                       color: "#d8dbe6",
@@ -434,7 +457,7 @@ export default function SettingsPage() {
                       padding: "0 12px",
                     }}
                   />
-                  {!nameTrim && (
+                  {profileEditable && !nameTrim && (
                     <p style={{ margin: "6px 0 0", fontSize: 11, color: COLORS.dangerText }}>Nazwa nie może być pusta.</p>
                   )}
                 </div>
@@ -450,13 +473,18 @@ export default function SettingsPage() {
                     rows={3}
                     placeholder="Krótki opis widoczny w profilu bota…"
                     value={form.bio}
-                    onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value.slice(0, 190) }))}
+                    onChange={(e) => {
+                      if (!profileEditable) return;
+                      setForm((f) => ({ ...f, bio: e.target.value.slice(0, 190) }));
+                    }}
                     maxLength={190}
+                    disabled={!profileEditable}
                     className="focus:!border-[#6366f1]"
                     style={{
                       width: "100%",
                       boxSizing: "border-box",
                       resize: "vertical",
+                      cursor: profileEditable ? "text" : "not-allowed",
                       border: `1px solid ${COLORS.border}`,
                       borderRadius: 6,
                       background: COLORS.input,
@@ -499,8 +527,9 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       onClick={() => avatarInputRef.current?.click()}
+                      disabled={!profileEditable}
                       className="flex-none rounded-[5px] border-none bg-[#23252f] px-[11px] py-1.5 font-sans text-[11px] font-semibold text-[#c4cad8] hover:bg-[#2f3341] hover:text-white"
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: profileEditable ? "pointer" : "not-allowed" }}
                     >
                       Zmień
                     </button>
@@ -539,8 +568,9 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       onClick={() => bannerInputRef.current?.click()}
+                      disabled={!profileEditable}
                       className="flex-none rounded-[5px] border-none bg-[#23252f] px-[11px] py-1.5 font-sans text-[11px] font-semibold text-[#c4cad8] hover:bg-[#2f3341] hover:text-white"
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: profileEditable ? "pointer" : "not-allowed" }}
                     >
                       Zmień
                     </button>
@@ -604,6 +634,39 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+            {!profileEditable && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Napis po przekątnej, jak pieczątka. */}
+                <span
+                  role="status"
+                  style={{
+                    transform: "rotate(-6deg)",
+                    borderRadius: 8,
+                    border: "2px solid rgba(99,102,241,0.7)",
+                    background: "rgba(23,24,30,0.72)",
+                    padding: "8px 28px",
+                    fontSize: 22,
+                    fontWeight: 800,
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: COLORS.textPrimary,
+                    boxShadow: "0 8px 24px rgba(8,10,16,0.35)",
+                  }}
+                >
+                  Wkrótce
+                </span>
+              </div>
+            )}
             </div>
           </div>
         </SlideIn>
