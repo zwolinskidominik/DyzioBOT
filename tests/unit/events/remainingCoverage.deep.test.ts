@@ -44,6 +44,7 @@ jest.mock('../../../src/utils/embedHelpers', () => ({
 const mockSendLog = jest.fn().mockResolvedValue(undefined);
 const mockTruncate = jest.fn((s: string) => s);
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: mockSendLog,
   truncate: mockTruncate,
   // Handlery logów budują pole moderatora tym helperem — bez niego rzucają TypeError.

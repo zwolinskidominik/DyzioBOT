@@ -52,6 +52,7 @@ jest.mock('../../../src/utils/embedHelpers', () => ({
 
 const mockSendLog = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: mockSendLog,
   // Handlery logów budują pole moderatora tym helperem — bez niego fabryka zwraca undefined,
   // wywołanie rzuca TypeError i sendLog nigdy nie dochodzi do skutku.

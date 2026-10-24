@@ -157,6 +157,14 @@ export function truncate(text: string, maxLength: number = 1024): string {
   return text.substring(0, maxLength - 3) + '...';
 }
 
+/**
+ * Wzmianka roli do logu. Rola @everyone ma ID serwera — `<@&guildId>` Discord renderuje
+ * jako „@@everyone”, więc dla niej zwracamy zwykły tekst.
+ */
+export function roleMention(roleId: string, guildId: string): string {
+  return roleId === guildId ? '@everyone' : `<@&${roleId}>`;
+}
+
 /** Buduje pole embeda "Moderator" (spójne dla wszystkich logów). */
 export function moderatorField(userId: string): { name: string; value: string; inline: boolean } {
   return { name: 'Moderator:', value: `<@${userId}>`, inline: true };

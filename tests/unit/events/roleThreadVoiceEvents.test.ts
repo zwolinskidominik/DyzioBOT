@@ -9,6 +9,7 @@
 /* ── mocks ───────────────────────────────────────────────── */
 
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../../../src/utils/auditLogHelpers', () => ({
@@ -150,6 +151,16 @@ describe('roleUpdate / logRoleUpdate', () => {
     const newRole = mockRole({ guild, name: 'Same', color: 0, hexColor: '#000', permissions: { bitfield: 1n }, hoist: false, mentionable: false });
     await run(oldRole, newRole, client);
     expect(sendLog).toHaveBeenCalled();
+  });
+
+  it('shows @everyone as plain text (not <@&guildId>, which Discord renders as "@@everyone")', async () => {
+    const client = mockClient();
+    const guild = mockGuild();
+    const oldRole = mockRole({ id: guild.id, guild, name: '@everyone', color: 0, hexColor: '#000', permissions: { bitfield: 0n }, hoist: false, mentionable: false });
+    const newRole = mockRole({ id: guild.id, guild, name: '@everyone', color: 0, hexColor: '#000', permissions: { bitfield: 1n }, hoist: false, mentionable: false });
+    await run(oldRole, newRole, client);
+    const data = (sendLog as jest.Mock).mock.calls[0][3];
+    expect(data.description).toBe('**✏️ Zaktualizowano uprawnienia roli @everyone.**');
   });
 
   it('does nothing when unchanged', async () => {

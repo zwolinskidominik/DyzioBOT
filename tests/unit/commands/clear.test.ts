@@ -15,6 +15,7 @@ jest.mock('../../../src/utils/logger', () => ({
 
 const mockSendLog = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: mockSendLog,
 }));
 

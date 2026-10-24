@@ -89,6 +89,7 @@ jest.mock('../../../src/utils/embedHelpers', () => ({
 
 const mockSendLog = jest.fn();
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: mockSendLog,
   createLogEmbed: jest.fn().mockReturnValue({
     setFooter: jest.fn().mockReturnThis(),

@@ -21,6 +21,7 @@ jest.mock('../../../src/utils/moderationHelpers', () => ({
   applyTimeoutSafely: jest.fn().mockResolvedValue({ muteEndTs: null, muteFailed: false }),
 }));
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: jest.fn().mockResolvedValue(undefined),
   guildFooter: jest.fn().mockReturnValue({}),
   moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),

@@ -1,4 +1,16 @@
-import { createLogEmbed, truncate, moderatorField } from '../../../src/utils/logHelpers';
+import { createLogEmbed, truncate, moderatorField, roleMention } from '../../../src/utils/logHelpers';
+
+/* ── roleMention ──────────────────────────────────────────── */
+
+describe('roleMention', () => {
+  it('mentions a normal role', () => {
+    expect(roleMention('123', 'guild-1')).toBe('<@&123>');
+  });
+
+  it('renders @everyone (role id = guild id) as plain text', () => {
+    expect(roleMention('guild-1', 'guild-1')).toBe('@everyone');
+  });
+});
 
 /* ── truncate ─────────────────────────────────────────────── */
 

@@ -54,6 +54,7 @@ jest.mock('../../../src/utils/channelHelpers', () => ({
 /* â”€â”€â”€ Log helpers mock â”€â”€â”€ */
 const mockSendLog = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: mockSendLog,
   truncate: jest.fn((s: string) => s),
   // Logi głosowe dodają pole moderatora (rozłączenie/przeniesienie przez moderatora) — bez tej

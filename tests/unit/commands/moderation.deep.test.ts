@@ -100,6 +100,7 @@ jest.mock('../../../src/services/moderationLogService', () => ({
 // LogConfiguration w Mongo i test wisi do timeoutu.
 const mockSendLog = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: mockSendLog,
   moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
   truncate: jest.fn((text: string) => text),

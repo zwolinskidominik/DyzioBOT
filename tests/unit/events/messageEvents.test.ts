@@ -10,6 +10,7 @@
 /* ── mocks ───────────────────────────────────────────────── */
 
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: jest.fn().mockResolvedValue(undefined),
   truncate: jest.fn((s: string, len: number) => s?.slice(0, len) ?? ''),
 }));

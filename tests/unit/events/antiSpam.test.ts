@@ -49,6 +49,7 @@ jest.mock('pretty-ms', () => ({
 }));
 
 jest.mock('../../../src/utils/logHelpers', () => ({
+  roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: jest.fn().mockResolvedValue(undefined),
   guildFooter: jest.fn().mockReturnValue({}),
   truncate: jest.fn((text: string, max = 1024) => (text.length <= max ? text : text.slice(0, max - 3) + '...')),
