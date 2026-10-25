@@ -52,13 +52,59 @@ npm run sync-commands # rejestracja slash commands w Discord
 ## Changelog na serwer wsparcia
 
 Po **każdej** zmianie wdrożonej na produkcję (bot lub dashboard), którą zobaczą użytkownicy, dopisz w odpowiedzi gotowy changelog do wklejenia na kanał `#changelog` serwera wsparcia (Deezy • Support):
-- najpierw 🇬🇧 English, pod nim 🇵🇱 Polski (polski jest drugorzędny),
+- najpierw 🇵🇱 Polski, pod nim 🇬🇧 English (ustalone z Dominikiem),
 - w bloku kodu (żeby dało się skopiować 1:1), max ~2000 znaków,
 - konkretnie, językiem użytkownika — co się zmieniło dla niego, bez nazw plików i szczegółów technicznych,
 - podział: ✨ New / 🔧 Changed / 🐛 Fixed (pomiń puste sekcje), data wdrożenia w nagłówku,
 - punkty jako lista markdown Discorda (`- ` na początku linii), nie ręcznie wpisane `•`,
+- odstępy: pusta linia między nagłówkiem a językiem, językiem a sekcją i między sekcjami; zaraz pod nagłówkiem `##` Discord zjada pustą linię, więc tam wstaw linię `** **` (pusty pogrubiony tekst = widoczny odstęp),
 - nigdy gołe `@everyone`/`@here`/wzmianki ról w treści — zawsze w backtickach (`` `@everyone` ``), żeby nikogo nie spingować przy wklejaniu.
 Zmiany czysto wewnętrzne (refaktor, testy, CI) pomijaj.
+- Przykład formatu (wzorzec do kopiowania):
+  ```
+  ## 📝 Changelog | DD.MM.RRRR
+  ** **
+  🇵🇱 **Polski**
+
+  ✨ **Nowe**
+  - …
+
+  🐛 **Poprawione**
+  - …
+
+  🇬🇧 **English**
+
+  ✨ **New**
+  - …
+
+  🐛 **Fixed**
+  - …
+  ```
+- Wysyłka: Dominik wkleja go przez `/say` na `#changelog` (tryb embed: puste/`off`; embed tylko gdy >2000 znaków). Changelog podawaj dopiero dla zmian, które są już (albo właśnie będą) na produkcji — jeśli coś czeka na commit/deploy, powiedz to wprost.
+
+## Serwer wsparcia (Deezy • Support) — prowadzę go za Dominika
+
+Claude prowadzi serwer wsparcia w imieniu Dominika (przez Claude in Chrome na koncie Chickenen + API dashboardu deezy.cc z tej samej karty). Zakres:
+- **Każda zmiana bota/dashboardu na produkcji** → przygotuj treść: drobne zmiany = `#changelog`; większe funkcje, przerwy techniczne, zmiany regulaminu/polityki = dodatkowo `#announcements`. Publikuj przez bota (`/say`), po wdrożeniu — nie przed.
+- **Aktualność treści**: regulamin (`#rules`), FAQ (`#faq`), panel ticketów — gdy zmiana w bocie je dezaktualizuje (nowa funkcja, zmieniony link, nowy kanał), popraw je w tym samym kroku.
+- **Konfiguracja Deezy na tym serwerze** (logi, Anti-Spam, tickety, poziomy, autorole itd.) i ustawienia Discorda (kanały, role, uprawnienia) — utrzymuj spójne, po zmianach sprawdzaj realnie (API/zrzut ekranu).
+- **Granice**: nie usuwam wiadomości (prosimy Dominika); zanim coś spinguje (`@everyone`, role) — pytam; akceptacja regulaminów/warunków tylko za wyraźną zgodą. Jeśli Chrome nie działa — podaję gotowe treści do wklejenia.
+
+Kluczowe ID (guild `1563365696153329766`):
+- kanały: rules `1563365697357221993` · announcements `1563365697357221994` · changelog `1563365697357221995` · faq `1563365697357221996` · help-en `1563365697357221998` · pomoc-pl `1563365697587904666` · suggestions `1563365697587904667` · bug-reports `1563365697587904668` · ticket (panel) `1563561771053097021` · general `1563365697587904665` · staff-chat `1563365697784913933` · logs `1563365697784913937`
+- kategorie: TICKETS `1563561705978597376` · STATS `1563365697969459271`
+- role: Administrator `1563365696459509852` · Support `1563365696459509850` · Member `1563365696153329769` · Bot `1563365696153329768`
+
+## Serwer wsparcia (Deezy • Support) — treści
+
+- Każda treść publikowana na serwerze wsparcia (regulamin, FAQ, ogłoszenia, changelog): **polski na górze, angielski pod nim**, oba z flagą (🇵🇱 / 🇬🇧).
+- Stałe treści na osobnych wiadomościach (`#rules`, `#faq`): wysyłaj najpierw wiadomość 🇵🇱, potem 🇬🇧, żeby angielski był na dole (tam Discord otwiera kanał). Podgląd linku (deezy.cc) tylko w angielskiej wiadomości; w polskiej wszystkie linki w `<...>`. W jednej wiadomości (changelog, ogłoszenie) też 🇵🇱 nad 🇬🇧.
+- Oficjalne treści publikuje **bot** (`/say`, panel ticketów z dashboardu), nie konto właściciela.
+- Grafiki/bannery (np. ticketów) po angielsku.
+- **Markdown Discorda zamiast własnych znaków**: listy przez `- ` (punktory), numeracja `1. `, nagłówki `#`/`##`/`###`, pogrubienie `**`. **Nigdy długich myślników/pauz (`—`, `–`)** ani innych „typograficznych” znaków, które zdradzają tekst pisany przez AI; zamiast nich zwykły `-`, dwukropek albo nowa linia. Treści mają brzmieć jak pisane przez Dominika, nigdy nie sugerować AI.
+- **Podglądy linków (miniaturki)** działają tylko w zwykłych wiadomościach, nie w embedach. Jeśli zależy nam na podglądzie (np. deezy.cc, status), wysyłaj zwykłą wiadomość (`/say` z embed `off`); duplikaty podglądów w kolejnych wiadomościach wyłączaj, owijając link w `<...>`.
+- `-#` (subtext) nie działa w embedach — tam rozdzielaj języki flagami i pustą linią.
+- Wzorując się na cudzym serwerze (np. regulamin StartIT) — przejmuj układ i formę, treść pisz własną pod Deezy (bez kopiowania 1:1).
 
 ## Commity
 
