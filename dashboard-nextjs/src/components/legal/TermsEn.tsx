@@ -17,8 +17,8 @@ export function TermsEn() {
           Electronic Means.
         </p>
         <p>
-          The service provider is <Strong>{LEGAL.operatorName}</Strong> (place of residence: {LEGAL.city}), correspondence
-          address: {LEGAL.postalAddress}.
+          The service provider is <Strong>{LEGAL.operatorName}</Strong> (place of residence: {LEGAL.city})
+          {LEGAL.postalAddress ? `, correspondence address: ${LEGAL.postalAddress}` : ""}.
         </p>
         <p>
           Contact for any matter, including complaints and technical support: e-mail{" "}

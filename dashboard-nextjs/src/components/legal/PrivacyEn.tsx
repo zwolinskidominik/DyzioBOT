@@ -38,8 +38,8 @@ export function PrivacyEn() {
 
       <LegalSection id="controller" title="1. Data controller">
         <p>
-          The data controller is <Strong>{LEGAL.operatorName}</Strong> (place of residence: {LEGAL.city}), correspondence
-          address: {LEGAL.postalAddress}.
+          The data controller is <Strong>{LEGAL.operatorName}</Strong> (place of residence: {LEGAL.city})
+          {LEGAL.postalAddress ? `, correspondence address: ${LEGAL.postalAddress}` : ""}.
         </p>
         <p>For anything related to personal data you can reach us:</p>
         <LegalList>

@@ -15,8 +15,8 @@ export function TermsPl() {
           usług drogą elektroniczną.
         </p>
         <p>
-          Usługodawcą jest <Strong>{LEGAL.operatorName}</Strong> (miejsce zamieszkania: {LEGAL.city}), adres do
-          korespondencji: {LEGAL.postalAddress}.
+          Usługodawcą jest <Strong>{LEGAL.operatorName}</Strong> (miejsce zamieszkania: {LEGAL.city})
+          {LEGAL.postalAddress ? `, adres do korespondencji: ${LEGAL.postalAddress}` : ""}.
         </p>
         <p>
           Kontakt w każdej sprawie, w tym reklamacje i pomoc techniczna: e-mail{" "}

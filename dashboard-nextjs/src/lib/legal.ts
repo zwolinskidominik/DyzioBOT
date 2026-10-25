@@ -18,8 +18,11 @@ export const LEGAL = {
   operatorName: "Dominik Zwoliński",
   /** Miejscowość zamieszkania (samo miasto, bez ulicy). */
   city: "Żydowo",
-  /** TODO: adres do korespondencji, np. „skrytka pocztowa nr 123, UP Warszawa 1, 00-001 Warszawa". */
-  postalAddress: "[ADRES DO KORESPONDENCJI — DO UZUPEŁNIENIA]",
+  /**
+   * TODO (przed wersją płatną): adres do korespondencji, np. „skrytka pocztowa nr 123, UP Warszawa 1,
+   * 00-001 Warszawa". Dopóki null, dokumenty pomijają ten fragment (bez banera „wersja robocza").
+   */
+  postalAddress: null as string | null,
   email: "contact@deezy.cc",
   /** Stałe (niewygasające) zaproszenie na serwer wsparcia. Bot: SUPPORT_SERVER_URL w src/config/constants/links.ts. */
   supportServerUrl: "https://discord.gg/D59aaJQ7zn",
@@ -55,7 +58,9 @@ export function resolveLegalLang(value: string | string[] | undefined): LegalLan
   return value === "en" ? "en" : "pl";
 }
 
-/** true, gdy któreś pole wymagane prawem nie zostało jeszcze uzupełnione. */
-export const LEGAL_HAS_PLACEHOLDERS = [LEGAL.city, LEGAL.postalAddress, LEGAL.supportServerUrl].some((v) =>
-  v.startsWith("[")
-);
+/**
+ * true, gdy któreś pole ma jeszcze tekst zastępczy „[...]" (wtedy dokumenty pokazują baner
+ * „wersja robocza"). Brak adresu do korespondencji (null) świadomie tu nie wchodzi - ten
+ * fragment jest po prostu pomijany do czasu założenia skrytki.
+ */
+export const LEGAL_HAS_PLACEHOLDERS = [LEGAL.city, LEGAL.supportServerUrl].some((v) => v.startsWith("["));

@@ -106,6 +106,10 @@ Kluczowe ID (guild `1563365696153329766`):
 - `-#` (subtext) nie działa w embedach — tam rozdzielaj języki flagami i pustą linią.
 - Wzorując się na cudzym serwerze (np. regulamin StartIT) — przejmuj układ i formę, treść pisz własną pod Deezy (bez kopiowania 1:1).
 
+## Do zrobienia później (pamiętaj)
+
+- **Adres do korespondencji** w `dashboard-nextjs/src/lib/legal.ts` (`postalAddress`, teraz `null` - dokumenty pomijają ten fragment, baner „wersja robocza" wyłączony). Uzupełnić, gdy Dominik założy skrytkę pocztową, **najpóźniej przed startem wersji płatnej** (art. 5 ustawy o świadczeniu usług drogą elektroniczną). Przypomnij o tym przy pracach nad premium.
+
 ## Commity
 
 - Wiadomości commitów **po angielsku**, prefiks `feat:`/`fix:`/`chore:` (commitlint zablokuje inne).

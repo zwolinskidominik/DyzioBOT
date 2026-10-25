@@ -17,8 +17,12 @@ describe("resolveLegalLang", () => {
 
 describe("LEGAL", () => {
   it("flags the documents as drafts while required operator details are placeholders", () => {
-    const required = [LEGAL.city, LEGAL.postalAddress, LEGAL.supportServerUrl];
+    const required = [LEGAL.city, LEGAL.supportServerUrl];
     expect(LEGAL_HAS_PLACEHOLDERS).toBe(required.some((value) => value.startsWith("[")));
+  });
+
+  it("leaves out the correspondence address until it is set (no placeholder text)", () => {
+    expect(LEGAL.postalAddress === null || !LEGAL.postalAddress.startsWith("[")).toBe(true);
   });
 
   it("states the retention periods implemented in the bot", () => {

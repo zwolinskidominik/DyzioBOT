@@ -38,8 +38,8 @@ export function PrivacyPl() {
 
       <LegalSection id="administrator" title="1. Administrator danych">
         <p>
-          Administratorem danych jest <Strong>{LEGAL.operatorName}</Strong> (miejsce zamieszkania: {LEGAL.city}), adres do
-          korespondencji: {LEGAL.postalAddress}.
+          Administratorem danych jest <Strong>{LEGAL.operatorName}</Strong> (miejsce zamieszkania: {LEGAL.city})
+          {LEGAL.postalAddress ? `, adres do korespondencji: ${LEGAL.postalAddress}` : ""}.
         </p>
         <p>W sprawach dotyczących danych osobowych możesz się kontaktować:</p>
         <LegalList>
