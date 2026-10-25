@@ -13,6 +13,12 @@ describe("resolveLegalLang", () => {
     // ?lang=en&lang=en daje tablicę — nie zgadujemy, wracamy do wersji wiążącej.
     expect(resolveLegalLang(["en", "en"])).toBe("pl");
   });
+
+  it("follows the dashboard language when ?lang is not given, but an explicit ?lang wins", () => {
+    expect(resolveLegalLang(undefined, "en")).toBe("en");
+    expect(resolveLegalLang("pl", "en")).toBe("pl");
+    expect(resolveLegalLang("de", "en")).toBe("pl");
+  });
 });
 
 describe("LEGAL", () => {

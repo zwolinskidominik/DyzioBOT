@@ -3,9 +3,12 @@
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 export function BotInviteCallbackClient() {
   const searchParams = useSearchParams();
+  const t = useMessages(commonMessages).botInvite;
   const error = searchParams.get("error");
   const state = searchParams.get("state");
   const guildId = state?.startsWith("bot_invite:") ? state.slice("bot_invite:".length) : null;
@@ -36,12 +39,12 @@ export function BotInviteCallbackClient() {
         <XCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
       )}
       <h1 className="mb-2 text-xl font-semibold">
-        {success ? "Bot został dodany" : "Nie dodano bota"}
+        {success ? t.addedTitle : t.notAddedTitle}
       </h1>
       <p className="text-sm text-muted-foreground">
         {success
-          ? "To okno zaraz zamknie się automatycznie."
-          : "Możesz zamknąć to okno i spróbować ponownie."}
+          ? t.addedText
+          : t.notAddedText}
       </p>
     </div>
   );

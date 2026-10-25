@@ -9,6 +9,8 @@ import {
   useRef,
   useState,
 } from "react";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 export interface DirtyStateController {
   id: string;
@@ -31,14 +33,14 @@ interface DirtyStateContextValue {
   attentionMessage: string;
 }
 
-const DEFAULT_ATTENTION_MESSAGE = "Najpierw zapisz albo anuluj zmiany.";
 
 const DirtyStateContext = createContext<DirtyStateContextValue | null>(null);
 
 export function DirtyStateProvider({ children }: { children: React.ReactNode }) {
   const [controller, setController] = useState<DirtyStateController | null>(null);
   const [attentionToken, setAttentionToken] = useState(0);
-  const [attentionMessage, setAttentionMessage] = useState(DEFAULT_ATTENTION_MESSAGE);
+  const defaultAttentionMessage = useMessages(commonMessages).saveBar.attention;
+  const [attentionMessage, setAttentionMessage] = useState(defaultAttentionMessage);
   const controllerRef = useRef<DirtyStateController | null>(null);
 
   useEffect(() => {
@@ -57,10 +59,10 @@ export function DirtyStateProvider({ children }: { children: React.ReactNode }) 
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
-  const triggerDirtyAttention = useCallback((message = DEFAULT_ATTENTION_MESSAGE) => {
-    setAttentionMessage(message);
+  const triggerDirtyAttention = useCallback((message?: string) => {
+    setAttentionMessage(message ?? defaultAttentionMessage);
     setAttentionToken((token) => token + 1);
-  }, []);
+  }, [defaultAttentionMessage]);
 
   const registerDirtyController = useCallback((nextController: DirtyStateController) => {
     setController(nextController);

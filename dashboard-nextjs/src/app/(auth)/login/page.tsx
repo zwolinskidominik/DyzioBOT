@@ -4,8 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { guildsMessages } from "@/i18n/messages/guilds";
 
 export default function LoginPage() {
+  const t = useMessages(guildsMessages);
   const handleLogin = () => {
     signIn("discord", { callbackUrl: "/guilds" });
   };
@@ -18,10 +21,10 @@ export default function LoginPage() {
             <LogIn className="w-10 h-10 text-white" />
           </div>
           <CardTitle className="text-3xl font-bold text-white/90">
-            Deezy Dashboard
+            {t.loginTitle}
           </CardTitle>
           <CardDescription>
-            Zaloguj się przez Discord, aby zarządzać swoim botem
+            {t.loginLead}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -31,10 +34,10 @@ export default function LoginPage() {
             size="lg"
           >
             <LogIn className="mr-2" />
-            Zaloguj przez Discord
+            {t.loginButton}
           </Button>
           <p className="text-xs text-muted-foreground text-center mt-6">
-            Logując się, akceptujesz dostęp do podstawowych informacji z Discord
+            {t.loginNote}
           </p>
         </CardContent>
       </Card>

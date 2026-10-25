@@ -1,12 +1,18 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { LEGAL } from "@/lib/legal";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Shield, Zap, Users, Gift, MessageSquare } from "lucide-react";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
+import { landingMessages } from "@/i18n/messages/landing";
 
 export default function HomePage() {
+  const t = useMessages(landingMessages);
+  const footer = useMessages(commonMessages).footer;
+  const { lang } = useLang();
   const scrollToFeatures = () => {
     document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -31,21 +37,19 @@ export default function HomePage() {
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 animated-border bg-card/80 backdrop-blur-sm shadow-lg shadow-bot-primary/10">
               <Sparkles className="w-4 h-4 text-bot-light" />
-              <span className="text-sm text-muted-foreground">Najlepszy bot Discord dla Twojego serwera</span>
+              <span className="text-sm text-muted-foreground">{t.badge}</span>
             </div>
 
             <h1 className="text-5xl md:text-7xl font-bold leading-tight">
               <span className="bg-gradient-to-r from-bot-light via-bot-primary to-bot-blue bg-clip-text text-transparent drop-shadow-2xl">
-                Kompletny bot
+                {t.titleAccent}
               </span>
               <br />
-              <span className="text-foreground">dla Twojego serwera Discord</span>
+              <span className="text-foreground">{t.titleRest}</span>
             </h1>
 
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Deezy to kompleksowy bot do zarządzania serwerem i budowania społeczności.
-              Łatwy w konfiguracji, potężny w możliwościach — wszystko ustawisz
-              w przejrzystym panelu, bez wpisywania komend.
+              {t.lead}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -55,7 +59,7 @@ export default function HomePage() {
                 className="btn-gradient shadow-2xl shadow-bot-primary/40 text-base px-8 hover:shadow-bot-primary/60 hover:scale-105"
               >
                 <a href={inviteUrl} target="_blank" rel="noopener noreferrer">
-                  Dodaj do serwera
+                  {t.addToServer}
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </a>
               </Button>
@@ -66,22 +70,22 @@ export default function HomePage() {
                 size="lg"
                 className="text-base px-8 border-bot-blue/30 hover:border-bot-primary/50 hover:bg-bot-primary/10 transition-all"
               >
-                Zobacz funkcje
+                {t.seeFeatures}
               </Button>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8 pt-8 text-sm text-muted-foreground">
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/30 backdrop-blur-sm border border-bot-blue/20 hover:scale-110 hover:border-bot-primary/40 transition-all duration-300 cursor-default" style={{ transition: 'all 0.3s ease' }} onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(99, 102, 241, 0.35)'} onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}>
                 <Shield className="w-5 h-5 text-bot-light" />
-                <span>Szyfrowane dane</span>
+                <span>{t.perks.encrypted}</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/30 backdrop-blur-sm border border-bot-blue/20 hover:scale-110 hover:border-bot-primary/40 transition-all duration-300 cursor-default" style={{ transition: 'all 0.3s ease' }} onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(99, 102, 241, 0.35)'} onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}>
                 <Zap className="w-5 h-5 text-bot-light" />
-                <span>Szybki i niezawodny</span>
+                <span>{t.perks.fast}</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/30 backdrop-blur-sm border border-bot-blue/20 hover:scale-110 hover:border-bot-primary/40 transition-all duration-300 cursor-default" style={{ transition: 'all 0.3s ease' }} onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(99, 102, 241, 0.35)'} onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}>
                 <Users className="w-5 h-5 text-bot-light" />
-                <span>Aktywne wsparcie</span>
+                <span>{t.perks.support}</span>
               </div>
             </div>
           </div>
@@ -92,11 +96,11 @@ export default function HomePage() {
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               <span className="text-white/90">
-                Funkcje bota
+                {t.featuresTitle}
               </span>
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Odkryj wszystkie możliwości, które Deezy oferuje dla Twojego serwera Discord
+              {t.featuresLead}
             </p>
           </div>
 
@@ -106,9 +110,9 @@ export default function HomePage() {
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-bot-light to-bot-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-bot-primary/30">
                 <Gift className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">System Urodzin</h3>
+              <h3 className="text-xl font-semibold mb-2">{t.features.birthdays.title}</h3>
               <p className="text-muted-foreground">
-                Automatyczne życzenia urodzinowe i specjalne role dla solenizantów
+                {t.features.birthdays.text}
               </p>
             </div>
 
@@ -116,9 +120,9 @@ export default function HomePage() {
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-bot-light to-bot-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-bot-primary/30">
                 <Users className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Powitania</h3>
+              <h3 className="text-xl font-semibold mb-2">{t.features.greetings.title}</h3>
               <p className="text-muted-foreground">
-                Personalizowane wiadomości powitalne i pożegnalne dla członków serwera
+                {t.features.greetings.text}
               </p>
             </div>
 
@@ -126,9 +130,9 @@ export default function HomePage() {
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-bot-light to-bot-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-bot-primary/30">
                 <Zap className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">System Poziomów</h3>
+              <h3 className="text-xl font-semibold mb-2">{t.features.levels.title}</h3>
               <p className="text-muted-foreground">
-                Nagradzaj aktywność użytkowników z systemem XP, poziomów i ról
+                {t.features.levels.text}
               </p>
             </div>
 
@@ -136,9 +140,9 @@ export default function HomePage() {
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-bot-light to-bot-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-bot-primary/30">
                 <Shield className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Auto-role</h3>
+              <h3 className="text-xl font-semibold mb-2">{t.features.autoroles.title}</h3>
               <p className="text-muted-foreground">
-                Automatyczne przydzielanie ról nowym członkom serwera
+                {t.features.autoroles.text}
               </p>
             </div>
 
@@ -146,9 +150,9 @@ export default function HomePage() {
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-bot-light to-bot-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-bot-primary/30">
                 <MessageSquare className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Sugestie</h3>
+              <h3 className="text-xl font-semibold mb-2">{t.features.suggestions.title}</h3>
               <p className="text-muted-foreground">
-                System zgłaszania propozycji z głosowaniem społeczności
+                {t.features.suggestions.text}
               </p>
             </div>
 
@@ -156,9 +160,9 @@ export default function HomePage() {
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-bot-light to-bot-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-bot-primary/30">
                 <MessageSquare className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">System Ticketów</h3>
+              <h3 className="text-xl font-semibold mb-2">{t.features.tickets.title}</h3>
               <p className="text-muted-foreground">
-                Profesjonalny system zgłoszeń wsparcia z prywatnymi kanałami
+                {t.features.tickets.text}
               </p>
             </div>
           </div>
@@ -168,10 +172,10 @@ export default function HomePage() {
         <section className="container mx-auto px-4 py-20">
           <div className="max-w-4xl mx-auto text-center space-y-6 p-6 sm:p-12 rounded-2xl border border-bot-blue/30 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-2xl shadow-bot-primary/10">
             <h2 className="text-3xl md:text-4xl font-bold">
-              Gotowy, aby ulepszyć swój serwer?
+              {t.ctaTitle}
             </h2>
             <p className="text-muted-foreground text-lg">
-              Dodaj Deezy w minutę i skonfiguruj wszystko w panelu
+              {t.ctaLead}
             </p>
             <Button
               asChild
@@ -179,7 +183,7 @@ export default function HomePage() {
               className="btn-gradient shadow-2xl shadow-bot-primary/40 text-base px-8 hover:shadow-bot-primary/60 hover:scale-105"
             >
               <a href={inviteUrl} target="_blank" rel="noopener noreferrer">
-                Dodaj Deezy już teraz
+                {t.ctaButton}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </a>
             </Button>
@@ -189,11 +193,11 @@ export default function HomePage() {
         {/* Footer */}
         <footer className="border-t border-bot-blue/20 py-8 backdrop-blur-sm">
           <div className="container mx-auto px-4 text-center text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Deezy. Wszystkie prawa zastrzeżone.</p>
-            <nav aria-label="Dokumenty" className="mt-2 flex justify-center gap-4 text-sm">
-              <Link href="/terms" className="hover:text-foreground">Regulamin</Link>
-              <Link href="/privacy" className="hover:text-foreground">Polityka prywatności</Link>
-              <a href={`${LEGAL.statusUrl}/pl`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">Status</a>
+            <p>&copy; {new Date().getFullYear()} Deezy. {footer.rights}</p>
+            <nav aria-label={footer.documents} className="mt-2 flex justify-center gap-4 text-sm">
+              <Link href="/terms" className="hover:text-foreground">{footer.terms}</Link>
+              <Link href="/privacy" className="hover:text-foreground">{footer.privacy}</Link>
+              <a href={lang === "pl" ? `${LEGAL.statusUrl}/pl` : LEGAL.statusUrl} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">{footer.status}</a>
             </nav>
           </div>
         </footer>

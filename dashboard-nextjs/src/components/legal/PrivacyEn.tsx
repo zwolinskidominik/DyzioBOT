@@ -228,6 +228,11 @@ export function PrivacyEn() {
         <LegalList>
           <li>cookies for the sign-in session, protection against CSRF attacks and the return address after signing in;</li>
           <li>
+            a cookie with the dashboard language you picked (<code>deezy-lang</code>, kept for a year). It is only set when
+            you change the language yourself with the switcher. Without it the dashboard follows your browser language and
+            stores nothing;
+          </li>
+          <li>
             browser storage (localStorage) for interface settings, such as collapsed menu sections, and cached data that
             speeds up loading.
           </li>

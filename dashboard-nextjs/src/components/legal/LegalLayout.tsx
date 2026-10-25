@@ -53,7 +53,7 @@ export function LegalLayout({ lang, path, title, version, effectiveDate, childre
             {(["pl", "en"] as const).map((code) => (
               <Link
                 key={code}
-                href={code === "pl" ? path : `${path}?lang=en`}
+                href={`${path}?lang=${code}`}
                 aria-current={code === lang ? "page" : undefined}
                 className={
                   code === lang
@@ -74,10 +74,10 @@ export function LegalLayout({ lang, path, title, version, effectiveDate, childre
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-3xl flex-wrap gap-x-6 gap-y-2 px-4 py-6 text-sm text-muted-foreground">
-          <Link href={lang === "en" ? "/privacy?lang=en" : "/privacy"} className="hover:text-foreground">
+          <Link href={`/privacy?lang=${lang}`} className="hover:text-foreground">
             {t.privacy}
           </Link>
-          <Link href={lang === "en" ? "/terms?lang=en" : "/terms"} className="hover:text-foreground">
+          <Link href={`/terms?lang=${lang}`} className="hover:text-foreground">
             {t.terms}
           </Link>
           <a href={lang === "en" ? `${LEGAL.statusUrl}/en` : `${LEGAL.statusUrl}/pl`} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">

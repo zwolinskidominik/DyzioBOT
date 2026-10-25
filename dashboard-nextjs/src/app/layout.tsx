@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import SessionProvider from "@/components/SessionProvider";
+import { LanguageProvider } from "@/i18n/LanguageProvider";
+import { getLang } from "@/i18n/server";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -39,17 +41,20 @@ export const metadata: Metadata = {
 // Kolor paska embeda linku na Discordzie.
 export const viewport: Viewport = { themeColor: "#5865F2" };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const lang = await getLang();
   return (
-    <html lang="pl" suppressHydrationWarning>
+    <html lang={lang} suppressHydrationWarning>
       <body className={inter.className}>
-        <SessionProvider>
-          {children}
-        </SessionProvider>
+        <LanguageProvider initialLang={lang}>
+          <SessionProvider>
+            {children}
+          </SessionProvider>
+        </LanguageProvider>
         <Toaster position="bottom-right" richColors />
       </body>
     </html>

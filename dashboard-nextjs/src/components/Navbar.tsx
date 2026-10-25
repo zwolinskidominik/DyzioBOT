@@ -3,47 +3,18 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { LogIn, LayoutDashboard, ChevronDown } from "lucide-react";
+import { LogIn, LayoutDashboard } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useRef } from "react";
-
-interface Language {
-  flag: string;
-  name: string;
-  code: string;
-  disabled?: boolean;
-}
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 export default function Navbar() {
   const { status } = useSession();
   const isLoggedIn = status === "authenticated";
 
-  const [langOpen, setLangOpen] = useState(false);
-  const [currentLang, setCurrentLang] = useState("pl");
-  const langDropdownRef = useRef<HTMLDivElement>(null);
-
-  const languages: Record<string, Language> = {
-    pl: { flag: "/flags/pl.svg", name: "Polski", code: "PL" },
-    en: { flag: "/flags/us.svg", name: "English", code: "US", disabled: true },
-    de: { flag: "/flags/de.svg", name: "Deutsch", code: "DE", disabled: true },
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target as Node)) {
-        setLangOpen(false);
-      }
-    };
-
-    if (langOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [langOpen]);
+  const t = useMessages(commonMessages).nav;
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-bot-blue/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -64,77 +35,24 @@ export default function Navbar() {
 
         {/* Right side - Language & Login */}
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Language Selector */}
-          <div className="relative" ref={langDropdownRef}>
-            <button
-              onClick={() => setLangOpen(!langOpen)}
-              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors"
-            >
-              <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
-                <Image
-                  src={languages[currentLang as keyof typeof languages].flag}
-                  alt={languages[currentLang as keyof typeof languages].code}
-                  width={20}
-                  height={20}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <span className="text-sm font-semibold">{languages[currentLang as keyof typeof languages].code}</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${langOpen ? "rotate-180" : ""}`} />
-            </button>
-            
-            {langOpen && (
-              <div className="absolute right-0 mt-2 w-48 rounded-md border border-bot-blue/30 bg-card/95 backdrop-blur shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="p-1">
-                  {Object.entries(languages).map(([code, lang]) => (
-                    <button
-                      key={code}
-                      onClick={() => {
-                        if (!lang.disabled) {
-                          setCurrentLang(code);
-                          setLangOpen(false);
-                        }
-                      }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors ${
-                        lang.disabled ? "opacity-50 cursor-not-allowed" : ""
-                      } ${currentLang === code ? "bg-accent" : ""}`}
-                    >
-                      <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
-                        <Image
-                          src={lang.flag}
-                          alt={lang.code}
-                          width={24}
-                          height={24}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 flex-1">
-                        <span>{lang.name}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{lang.code}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <LanguageSwitcher />
 
           {/* Login / Dashboard Button — na telefonie (<640px) sama ikona, żeby nie nachodziła na logo. */}
           {isLoggedIn ? (
             <Button asChild className="btn-gradient px-3 shadow-lg shadow-bot-primary/30 hover:scale-105 sm:px-4">
-              <Link href="/guilds" aria-label="Moje serwery">
+              <Link href="/guilds" aria-label={t.myServers}>
                 <LayoutDashboard className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Moje serwery</span>
+                <span className="hidden sm:inline">{t.myServers}</span>
               </Link>
             </Button>
           ) : (
             <Button
               onClick={() => signIn("discord", { callbackUrl: "/guilds" })}
-              aria-label="Zaloguj się"
+              aria-label={t.login}
               className="btn-gradient px-3 shadow-lg shadow-bot-primary/30 hover:scale-105 sm:px-4"
             >
               <LogIn className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Zaloguj się</span>
+              <span className="hidden sm:inline">{t.login}</span>
             </Button>
           )}
         </div>

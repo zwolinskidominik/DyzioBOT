@@ -14,6 +14,9 @@ import { prefetchGuildData } from "@/lib/cache";
 import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
 import { useDirtyState } from "@/components/DirtyStateProvider";
 import { onModulesStatusChanged } from "@/lib/modulesStatusBus";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
+import type { Widen } from "@/i18n/config";
 
 interface Guild {
   id: string;
@@ -26,9 +29,12 @@ interface ModulesStatus {
   [key: string]: boolean;
 }
 
+type SidebarText = Widen<(typeof commonMessages)["pl"]["sidebar"]>;
+
 interface ModuleItem {
   id: string;
-  name: string;
+  /** Klucz w commonMessages.sidebar.modules. */
+  name: keyof SidebarText["modules"];
   icon: React.ElementType;
   href: string;
   ownerOnly?: boolean;
@@ -37,7 +43,8 @@ interface ModuleItem {
 
 interface ModuleGroup {
   id: string;
-  label: string | null;
+  /** Klucz w commonMessages.sidebar.groups. */
+  label: keyof SidebarText["groups"] | null;
   modules: ModuleItem[];
 }
 
@@ -46,63 +53,63 @@ const moduleGroups: ModuleGroup[] = [
     id: "main",
     label: null,
     modules: [
-      { id: "", name: "Strona główna", icon: Home, href: "" },
-      { id: "settings", name: "Ustawienia", icon: Settings, href: "/settings" },
+      { id: "", name: "home", icon: Home, href: "" },
+      { id: "settings", name: "settings", icon: Settings, href: "/settings" },
     ],
   },
   {
     id: "management",
-    label: "ZARZĄDZANIE SERWEREM",
+    label: "management",
     modules: [
-      { id: "commands", name: "Komendy", icon: Wrench, href: "/commands" },
-      { id: "greetings", name: "Powitania", icon: Hand, href: "/greetings" },
-      { id: "autoroles", name: "Auto role", icon: UserPlus, href: "/autoroles" },
-      { id: "reaction-roles", name: "Role za reakcje", icon: Smile, href: "/reaction-roles" },
-      { id: "temp-channels", name: "Tymczasowe Kanały", icon: Radio, href: "/temp-channels" },
-      { id: "tickets", name: "Tickety", icon: Ticket, href: "/tickets" },
-      { id: "suggestions", name: "Sugestie", icon: Lightbulb, href: "/suggestions" },
+      { id: "commands", name: "commands", icon: Wrench, href: "/commands" },
+      { id: "greetings", name: "greetings", icon: Hand, href: "/greetings" },
+      { id: "autoroles", name: "autoroles", icon: UserPlus, href: "/autoroles" },
+      { id: "reaction-roles", name: "reactionRoles", icon: Smile, href: "/reaction-roles" },
+      { id: "temp-channels", name: "tempChannels", icon: Radio, href: "/temp-channels" },
+      { id: "tickets", name: "tickets", icon: Ticket, href: "/tickets" },
+      { id: "suggestions", name: "suggestions", icon: Lightbulb, href: "/suggestions" },
     ],
   },
   {
     id: "engagement",
-    label: "ZAANGAŻOWANIE I ZABAWA",
+    label: "engagement",
     modules: [
-      { id: "levels", name: "Poziomy", icon: Trophy, href: "/levels" },
-      { id: "birthdays", name: "Urodziny", icon: Cake, href: "/birthdays" },
-      { id: "qotd", name: "Pytanie Dnia", icon: HelpCircle, href: "/qotd" },
-      { id: "hangman", name: "Wisielec", icon: Dices, href: "/hangman", ownerOnly: true },
-      { id: "wordle", name: "Wordle", icon: Puzzle, href: "/wordle", ownerOnly: true },
-      { id: "tournament", name: "Turniej CS2", icon: Gamepad2, href: "/tournament", ownerOnly: true, ownerGuildOnly: true },
-      { id: "giveaway", name: "Giveaway", icon: Gift, href: "/giveaway" },
-      { id: "wrapped", name: "Server Wrapped", icon: PartyPopper, href: "/wrapped", ownerOnly: true, ownerGuildOnly: true },
-      { id: "stream-config", name: "Powiadomienia Twitch", icon: Tv, href: "/stream-config" },
+      { id: "levels", name: "levels", icon: Trophy, href: "/levels" },
+      { id: "birthdays", name: "birthdays", icon: Cake, href: "/birthdays" },
+      { id: "qotd", name: "qotd", icon: HelpCircle, href: "/qotd" },
+      { id: "hangman", name: "hangman", icon: Dices, href: "/hangman", ownerOnly: true },
+      { id: "wordle", name: "wordle", icon: Puzzle, href: "/wordle", ownerOnly: true },
+      { id: "tournament", name: "tournament", icon: Gamepad2, href: "/tournament", ownerOnly: true, ownerGuildOnly: true },
+      { id: "giveaway", name: "giveaway", icon: Gift, href: "/giveaway" },
+      { id: "wrapped", name: "wrapped", icon: PartyPopper, href: "/wrapped", ownerOnly: true, ownerGuildOnly: true },
+      { id: "stream-config", name: "streamConfig", icon: Tv, href: "/stream-config" },
     ],
   },
   {
     id: "stats",
-    label: "STATYSTYKI",
+    label: "stats",
     modules: [
-      { id: "channel-stats", name: "Kanały z licznikami", icon: Activity, href: "/channel-stats" },
-      { id: "monthly-stats", name: "Statystyki Miesięczne", icon: BarChart3, href: "/monthly-stats" },
-      { id: "invite-tracker", name: "Invite Tracker", icon: UserCheck, href: "/invite-tracker" },
+      { id: "channel-stats", name: "channelStats", icon: Activity, href: "/channel-stats" },
+      { id: "monthly-stats", name: "monthlyStats", icon: BarChart3, href: "/monthly-stats" },
+      { id: "invite-tracker", name: "inviteTracker", icon: UserCheck, href: "/invite-tracker" },
     ],
   },
   {
     id: "moderation",
-    label: "MODERACJA SERWERA",
+    label: "moderation",
     modules: [
-      { id: "logs", name: "Logi", icon: FileText, href: "/logs" },
-      { id: "anti-spam", name: "Anti-Spam", icon: ShieldAlert, href: "/anti-spam" },
-      { id: "moderation", name: "Moderacja", icon: Gavel, href: "/moderation" },
+      { id: "logs", name: "logs", icon: FileText, href: "/logs" },
+      { id: "anti-spam", name: "antiSpam", icon: ShieldAlert, href: "/anti-spam" },
+      { id: "moderation", name: "moderation", icon: Gavel, href: "/moderation" },
     ],
   },
   {
     id: "system",
-    label: "SYSTEM",
+    label: "system",
     modules: [
-      { id: "audit-logs", name: "Logi panelu kontrolnego", icon: ScrollText, href: "/audit-logs" },
-      { id: "disboard", name: "Disboard", icon: Star, href: "/disboard", ownerOnly: true, ownerGuildOnly: true },
-      { id: "bot-emojis", name: "Emoji Bota", icon: SmilePlus, href: "/bot-emojis", ownerOnly: true },
+      { id: "audit-logs", name: "auditLogs", icon: ScrollText, href: "/audit-logs" },
+      { id: "disboard", name: "disboard", icon: Star, href: "/disboard", ownerOnly: true, ownerGuildOnly: true },
+      { id: "bot-emojis", name: "botEmojis", icon: SmilePlus, href: "/bot-emojis", ownerOnly: true },
     ],
   },
 ];
@@ -120,6 +127,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
   const { data: session } = useSession();
   const currentUserId = (session?.user as { id?: string })?.id;
   const { guardedNavigate } = useDirtyState();
+  const t = useMessages(commonMessages).sidebar;
 
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [guildOpen, setGuildOpen] = useState(false);
@@ -207,7 +215,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
     guardedNavigate(() => {
       onClose?.();
       router.push(`/${guildId}`);
-    }, "Masz niezapisane zmiany w tym module.");
+    }, t.unsavedChangeServer);
   };
 
   const handleModuleNavigate = (event: ReactMouseEvent<HTMLAnchorElement>, href: string) => {
@@ -221,7 +229,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
     guardedNavigate(() => {
       onClose?.();
       router.push(href);
-    }, "Zapisz albo anuluj zmiany przed zmianą modułu.");
+    }, t.unsavedChangeModule);
   };
 
   const handleModulePrefetch = () => {
@@ -289,7 +297,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                 </span>
               </>
             ) : (
-              <span className="text-sm text-muted-foreground">Ładowanie...</span>
+              <span className="text-sm text-muted-foreground">{t.loading}</span>
             )}
             <ChevronDown className={`w-4 h-4 transition-transform flex-shrink-0 ${guildOpen ? "rotate-180" : ""}`} />
           </button>
@@ -366,7 +374,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                   <div className="w-8 h-8 rounded-full border border-dashed border-white/20 flex items-center justify-center flex-shrink-0">
                     <Plus className="w-4 h-4" />
                   </div>
-                  <span className="text-sm">Dodaj nowy serwer</span>
+                  <span className="text-sm">{t.addServer}</span>
                 </button>
               </div>
             </div>
@@ -391,7 +399,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                   <ChevronRight
                     className={`w-3 h-3 transition-transform duration-200 ${isCollapsed ? "" : "rotate-90"}`}
                   />
-                  {group.label}
+                  {t.groups[group.label]}
                 </button>
               )}
 
@@ -423,7 +431,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                           />
                         )}
                         <Icon className="w-6 h-6 flex-shrink-0" strokeWidth={1.5} />
-                        <span className="text-sm font-medium flex-1 truncate">{module.name}</span>
+                        <span className="text-sm font-medium flex-1 truncate">{t.modules[module.name]}</span>
                         {hasStatusDot && (
                           <span
                             className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-300 ${
@@ -431,7 +439,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                                 ? "bg-bot-primary shadow-[0_0_5px_1px_rgba(99,102,241,0.6)]"
                                 : "bg-gray-500/60"
                             }`}
-                            title={modulesStatus[module.id] ? "Włączony" : "Wyłączony"}
+                            title={modulesStatus[module.id] ? t.enabled : t.disabled}
                           />
                         )}
                       </Link>

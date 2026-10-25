@@ -3,6 +3,7 @@ import { LegalLayout } from "@/components/legal/LegalLayout";
 import { TermsEn } from "@/components/legal/TermsEn";
 import { TermsPl } from "@/components/legal/TermsPl";
 import { LEGAL, resolveLegalLang } from "@/lib/legal";
+import { getLang } from "@/i18n/server";
 
 export const metadata: Metadata = {
   title: "Regulamin · Terms of Service — Deezy",
@@ -14,7 +15,7 @@ interface PageProps {
 
 /** Publiczna strona (bez logowania) — wyjątek w matcherze src/proxy.ts. */
 export default async function TermsPage({ searchParams }: PageProps) {
-  const lang = resolveLegalLang((await searchParams).lang);
+  const lang = resolveLegalLang((await searchParams).lang, await getLang());
   return (
     <LegalLayout
       lang={lang}

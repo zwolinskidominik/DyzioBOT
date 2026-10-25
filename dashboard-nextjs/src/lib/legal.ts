@@ -32,12 +32,12 @@ export const LEGAL = {
   /** ID aplikacji Discord (to samo co NEXT_PUBLIC_DISCORD_CLIENT_ID w docker-compose.yml). */
   botApplicationId: "1119327417237000285",
 
-  privacyVersion: "1.2",
+  privacyVersion: "1.3",
   termsVersion: "1.0",
   /** Data wejścia w życie regulaminu (YYYY-MM-DD). */
   effectiveDate: "2026-10-01",
   /** Data wejścia w życie aktualnej wersji polityki prywatności (YYYY-MM-DD). */
-  privacyEffectiveDate: "2026-10-25",
+  privacyEffectiveDate: "2026-10-26",
 
   guildDataRetentionDays: 30,
   defaultWarnExpiryDays: 90,
@@ -54,8 +54,14 @@ export const LEGAL = {
 
 export type LegalLang = "pl" | "en";
 
-export function resolveLegalLang(value: string | string[] | undefined): LegalLang {
-  return value === "en" ? "en" : "pl";
+/**
+ * Język dokumentu: jawne ?lang=pl/en ma pierwszeństwo, bez niego - język panelu (`fallback`).
+ * Cokolwiek innego (np. ?lang=de) daje wersję wiążącą, polską.
+ */
+export function resolveLegalLang(value: string | string[] | undefined, fallback: LegalLang = "pl"): LegalLang {
+  if (value === "en" || value === "pl") return value;
+  if (value === undefined) return fallback;
+  return "pl";
 }
 
 /**

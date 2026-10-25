@@ -5,13 +5,9 @@ import Image from "next/image";
 import { ChevronDown, LayoutDashboard, LogOut, Menu, X } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
-
-interface Language {
-  flag: string;
-  name: string;
-  code: string;
-  disabled?: boolean;
-}
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface DashboardTopbarProps {
   sidebarOpen?: boolean;
@@ -21,12 +17,6 @@ interface DashboardTopbarProps {
   className?: string;
 }
 
-const languages: Record<string, Language> = {
-  pl: { flag: "/flags/pl.svg", name: "Polski", code: "PL" },
-  en: { flag: "/flags/us.svg", name: "English", code: "US", disabled: true },
-  de: { flag: "/flags/de.svg", name: "Deutsch", code: "DE", disabled: true },
-};
-
 export function DashboardTopbar({
   sidebarOpen = false,
   onSidebarToggle,
@@ -35,33 +25,27 @@ export function DashboardTopbar({
   className,
 }: DashboardTopbarProps) {
   const { data: session } = useSession();
-  const [langOpen, setLangOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
-  const [currentLang, setCurrentLang] = useState("pl");
+  const t = useMessages(commonMessages).nav;
   const userDropdownRef = useRef<HTMLDivElement>(null);
-  const langDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
         setUserOpen(false);
       }
-      if (langDropdownRef.current && !langDropdownRef.current.contains(event.target as Node)) {
-        setLangOpen(false);
-      }
     };
 
-    if (userOpen || langOpen) {
+    if (userOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [userOpen, langOpen]);
+  }, [userOpen]);
 
   const brandVisibility = showBrandOnDesktop ? "flex" : "flex lg:hidden";
-  const currentLanguage = languages[currentLang as keyof typeof languages];
 
   return (
     <nav className={`z-40 w-full shrink-0 ${className ?? "bg-dark-900"}`}>
@@ -71,7 +55,7 @@ export function DashboardTopbar({
             <button
               onClick={onSidebarToggle}
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md transition-colors hover:bg-white/5 lg:hidden"
-              aria-label={sidebarOpen ? "Zamknij menu" : "Otwórz menu"}
+              aria-label={sidebarOpen ? t.closeMenu : t.openMenu}
               aria-expanded={sidebarOpen}
             >
               {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -94,59 +78,7 @@ export function DashboardTopbar({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          <div className="relative" ref={langDropdownRef}>
-            <button
-              onClick={() => setLangOpen(!langOpen)}
-              className="flex items-center gap-2 rounded-md px-3 py-2 transition-colors hover:bg-accent"
-            >
-              <div className="h-5 w-5 flex-shrink-0 overflow-hidden rounded-full">
-                <Image
-                  src={currentLanguage.flag}
-                  alt={currentLanguage.code}
-                  width={20}
-                  height={20}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <span className="text-sm font-semibold">{currentLanguage.code}</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${langOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            {langOpen && (
-              <div className="absolute right-0 mt-2 w-48 animate-in rounded-md border border-bot-blue/30 bg-card/95 shadow-lg backdrop-blur fade-in slide-in-from-top-2 duration-200">
-                <div className="p-1">
-                  {Object.entries(languages).map(([code, lang]) => (
-                    <button
-                      key={code}
-                      onClick={() => {
-                        if (!lang.disabled) {
-                          setCurrentLang(code);
-                          setLangOpen(false);
-                        }
-                      }}
-                      className={`flex w-full items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-accent ${
-                        lang.disabled ? "cursor-not-allowed opacity-50" : ""
-                      } ${currentLang === code ? "bg-accent" : ""}`}
-                    >
-                      <div className="h-6 w-6 flex-shrink-0 overflow-hidden rounded-full">
-                        <Image
-                          src={lang.flag}
-                          alt={lang.code}
-                          width={24}
-                          height={24}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="flex flex-1 items-center gap-2">
-                        <span>{lang.name}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{lang.code}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <LanguageSwitcher />
 
           {session?.user && (
             <div className="relative" ref={userDropdownRef}>
@@ -181,14 +113,14 @@ export function DashboardTopbar({
                       className="group flex w-full items-center gap-3 rounded-md border border-transparent px-3 py-2.5 transition-all hover:border-bot-blue/20 hover:bg-bot-blue/10"
                     >
                       <LayoutDashboard className="h-4 w-4 text-bot-light transition-colors group-hover:text-bot-primary" />
-                      <span className="text-sm font-medium text-foreground transition-colors group-hover:text-white">Moje serwery</span>
+                      <span className="text-sm font-medium text-foreground transition-colors group-hover:text-white">{t.myServers}</span>
                     </Link>
                     <button
                       onClick={() => signOut({ callbackUrl: "/" })}
                       className="group flex w-full items-center gap-3 rounded-md border border-transparent px-3 py-2.5 transition-all hover:border-red-500/20 hover:bg-red-500/10"
                     >
                       <LogOut className="h-4 w-4 text-red-400 transition-colors group-hover:text-red-500" />
-                      <span className="text-sm font-medium text-red-400 transition-colors group-hover:text-red-500">Wyloguj się</span>
+                      <span className="text-sm font-medium text-red-400 transition-colors group-hover:text-red-500">{t.logout}</span>
                     </button>
                   </div>
                 </div>

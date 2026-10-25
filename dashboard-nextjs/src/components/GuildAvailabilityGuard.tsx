@@ -7,6 +7,8 @@ import { BotOff, LayoutDashboard, Loader2, Plus, RefreshCw, ShieldAlert } from "
 import { Button } from "@/components/ui/button";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { openBotInvitePopup } from "@/lib/botInvite";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 type AvailabilityStatus = "checking" | "available" | "missing-bot" | "missing-guild" | "transient-error" | "error";
 
@@ -28,8 +30,8 @@ interface VerifyGuildOptions {
   force?: boolean;
 }
 
-function getGuildName(data: GuildAvailabilityResponse): string {
-  return typeof data.name === "string" && data.name.trim().length > 0 ? data.name : "ten serwer";
+function getGuildName(data: GuildAvailabilityResponse): string | null {
+  return typeof data.name === "string" && data.name.trim().length > 0 ? data.name : null;
 }
 
 export function GuildAvailabilityGuard({ children }: GuildAvailabilityGuardProps) {
@@ -37,7 +39,8 @@ export function GuildAvailabilityGuard({ children }: GuildAvailabilityGuardProps
   const router = useRouter();
   const guildId = params.guildId;
   const [status, setStatus] = useState<AvailabilityStatus>("checking");
-  const [guildName, setGuildName] = useState("ten serwer");
+  const t = useMessages(commonMessages).availability;
+  const [guildName, setGuildName] = useState<string | null>(null);
   const statusRef = useRef(status);
   const lastCheckedAtRef = useRef(0);
   const inflightRef = useRef<Promise<void> | null>(null);
@@ -126,7 +129,7 @@ export function GuildAvailabilityGuard({ children }: GuildAvailabilityGuardProps
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-center">
           <Loader2 className="h-10 w-10 animate-spin text-bot-primary" />
-          <p className="text-sm text-muted-foreground">Sprawdzanie dostępu do serwera...</p>
+          <p className="text-sm text-muted-foreground">{t.checking}</p>
         </div>
       </div>
     );
@@ -149,14 +152,14 @@ export function GuildAvailabilityGuard({ children }: GuildAvailabilityGuardProps
         </div>
 
         <h1 className="mb-2 text-2xl font-semibold text-white/90">
-          {isMissingBot ? "Bot nie jest już na tym serwerze" : isTransient ? "Discord chwilowo ograniczył zapytania" : "Serwer jest niedostępny"}
+          {isMissingBot ? t.missingBotTitle : isTransient ? t.rateLimitedTitle : t.unavailableTitle}
         </h1>
         <p className="mx-auto mb-6 max-w-md text-sm leading-6 text-muted-foreground">
           {isMissingBot
-            ? `Deezy został usunięty z serwera ${guildName}. Za chwilę wrócisz do listy serwerów.`
+            ? t.missingBotText(guildName ?? t.thisServer)
             : isTransient
-              ? "Nie możemy teraz potwierdzić statusu bota, bo Discord zwrócił limit zapytań. Poczekaj chwilę i sprawdź ponownie."
-            : "Nie możemy potwierdzić dostępu do tego serwera. Wróć do listy serwerów albo spróbuj ponownie za chwilę."}
+              ? t.rateLimitedText
+            : t.unavailableText}
         </p>
 
         <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-5 sm:flex-row sm:justify-center sm:px-8">
@@ -166,18 +169,18 @@ export function GuildAvailabilityGuard({ children }: GuildAvailabilityGuardProps
               onClick={() => openBotInvitePopup(guildId, { onComplete: () => verifyGuild({ showChecking: true, force: true }), onClosed: () => verifyGuild({ force: true }) })}
             >
               <Plus className="h-4 w-4" />
-              Dodaj bota ponownie
+              {t.addBotAgain}
             </Button>
           )}
           <Button variant="outline" asChild>
             <Link href="/guilds">
               <LayoutDashboard className="h-4 w-4" />
-              Moje serwery
+              {t.myServers}
             </Link>
           </Button>
           <Button variant="ghost" onClick={() => verifyGuild({ showChecking: true, force: true })}>
             <RefreshCw className="h-4 w-4" />
-            Sprawdź ponownie
+            {t.checkAgain}
           </Button>
         </div>
       </div>

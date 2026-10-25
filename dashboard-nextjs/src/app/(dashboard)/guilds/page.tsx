@@ -10,6 +10,8 @@ import Image from "next/image";
 import { openBotInvitePopup } from "@/lib/botInvite";
 import { DashboardTopbar } from "@/components/DashboardTopbar";
 import { Input } from "@/components/ui/input";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { guildsMessages } from "@/i18n/messages/guilds";
 
 interface Guild {
   id: string;
@@ -23,6 +25,7 @@ interface Guild {
 export default function GuildsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const t = useMessages(guildsMessages);
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -107,7 +110,7 @@ export default function GuildsPage() {
         <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
           <div className="text-center">
             <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-discord-blurple" />
-            <p className="text-muted-foreground">Ładowanie serwerów...</p>
+            <p className="text-muted-foreground">{t.loading}</p>
           </div>
         </div>
       </div>
@@ -120,9 +123,9 @@ export default function GuildsPage() {
       <main className="px-4 py-10 md:px-8 md:py-14">
         <div className="mx-auto max-w-5xl">
           <div className="mb-8 text-center">
-            <h1 className="mb-2 text-3xl font-bold text-white/90">Twoje serwery</h1>
+            <h1 className="mb-2 text-3xl font-bold text-white/90">{t.title}</h1>
             <p className="text-muted-foreground">
-              Zalogowano jako <span className="font-semibold text-bot-light">{session?.user?.name}</span>
+              {t.loggedInAs} <span className="font-semibold text-bot-light">{session?.user?.name}</span>
             </p>
           </div>
 
@@ -131,8 +134,8 @@ export default function GuildsPage() {
               <CardContent className="p-12 text-center">
                 {loadError === "failed" && !session?.error ? (
                   <>
-                    <h2 className="mb-2 text-xl font-semibold">Nie udało się pobrać serwerów</h2>
-                    <p className="mb-6 text-muted-foreground">Discord chwilowo nie odpowiada. Spróbuj ponownie za moment.</p>
+                    <h2 className="mb-2 text-xl font-semibold">{t.fetchFailedTitle}</h2>
+                    <p className="mb-6 text-muted-foreground">{t.fetchFailedText}</p>
                     <Button
                       className="btn-gradient"
                       onClick={() => {
@@ -141,16 +144,16 @@ export default function GuildsPage() {
                       }}
                     >
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Spróbuj ponownie
+                      {t.retry}
                     </Button>
                   </>
                 ) : (
                   <>
-                    <h2 className="mb-2 text-xl font-semibold">Sesja Discorda wygasła</h2>
-                    <p className="mb-6 text-muted-foreground">Zaloguj się ponownie, żeby zobaczyć swoje serwery.</p>
+                    <h2 className="mb-2 text-xl font-semibold">{t.sessionExpiredTitle}</h2>
+                    <p className="mb-6 text-muted-foreground">{t.sessionExpiredText}</p>
                     <Button className="btn-gradient" onClick={() => signIn("discord", { callbackUrl: "/guilds" })}>
                       <LogIn className="mr-2 h-4 w-4" />
-                      Zaloguj ponownie
+                      {t.loginAgain}
                     </Button>
                   </>
                 )}
@@ -160,9 +163,9 @@ export default function GuildsPage() {
             <Card className="mx-auto max-w-lg border-0 bg-dark-700">
               <CardContent className="p-12 text-center">
                 <Settings className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-                <h2 className="mb-2 text-xl font-semibold">Brak dostępnych serwerów</h2>
+                <h2 className="mb-2 text-xl font-semibold">{t.noServersTitle}</h2>
                 <p className="text-muted-foreground">
-                  Nie znaleziono serwerów Discord gdzie masz uprawnienia administratora.
+                  {t.noServersText}
                 </p>
               </CardContent>
             </Card>
@@ -182,16 +185,16 @@ export default function GuildsPage() {
                     type="search"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Szukaj serwerów..."
-                    aria-label="Szukaj serwerów"
+                    placeholder={t.searchPlaceholder}
+                    aria-label={t.searchLabel}
                     className="h-11 border-dark-700 bg-dark-900 pl-9"
                   />
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">Naciśnij Enter, aby wybrać pierwszy wynik</p>
+                <p className="mt-2 text-xs text-muted-foreground">{t.searchHint}</p>
               </form>
 
               {filteredGuilds.length === 0 ? (
-                <p className="text-center text-muted-foreground">Brak serwerów pasujących do „{query.trim()}”.</p>
+                <p className="text-center text-muted-foreground">{t.noMatches(query.trim())}</p>
               ) : (
                 <div className="flex flex-wrap justify-center gap-6">
                   {filteredGuilds.map((guild) => {
@@ -226,7 +229,7 @@ export default function GuildsPage() {
                               {guild.owner && (
                                 <div className="flex items-center justify-center gap-1 text-xs text-discord-yellow">
                                   <Crown className="h-3 w-3" />
-                                  <span>Właściciel</span>
+                                  <span>{t.owner}</span>
                                 </div>
                               )}
                             </div>
@@ -236,7 +239,7 @@ export default function GuildsPage() {
                           {hasBot ? (
                             <Button className="w-full btn-gradient" size="sm">
                               <Settings className="mr-2 h-4 w-4" />
-                              Zarządzaj
+                              {t.manage}
                             </Button>
                           ) : (
                             <Button
@@ -247,7 +250,7 @@ export default function GuildsPage() {
                                 handleBotInvite(guild.id);
                               }}
                             >
-                              Dodaj bota
+                              {t.addBot}
                             </Button>
                           )}
                         </CardContent>

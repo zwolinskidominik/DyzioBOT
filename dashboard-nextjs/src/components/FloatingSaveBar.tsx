@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { useDirtyState } from "@/components/DirtyStateProvider";
 import { notifyModulesStatusChanged } from "@/lib/modulesStatusBus";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 export function FloatingSaveBar() {
   const { controller, attentionToken, attentionMessage } = useDirtyState();
+  const t = useMessages(commonMessages).saveBar;
   const [isShaking, setIsShaking] = useState(false);
   const isVisible = Boolean(controller?.isDirty);
   const isSaving = Boolean(controller?.isSaving);
@@ -37,9 +40,9 @@ export function FloatingSaveBar() {
         )}
       >
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-white">Masz niezapisane zmiany</p>
+          <p className="text-sm font-semibold text-white">{t.title}</p>
           <p className="truncate text-xs text-[#9aa2b8]">
-            {isShaking ? attentionMessage : controller?.label ?? "Zapisz albo anuluj przed przejściem dalej."}
+            {isShaking ? attentionMessage : controller?.label ?? t.hint}
           </p>
         </div>
 
@@ -52,7 +55,7 @@ export function FloatingSaveBar() {
             className="h-9 border-[#3a3f4e] bg-dark-900 px-3 text-xs text-white hover:bg-dark-700"
           >
             <RotateCcw className="h-4 w-4" />
-            Anuluj
+            {t.cancel}
           </Button>
           <Button
             type="button"
@@ -63,7 +66,7 @@ export function FloatingSaveBar() {
             className="h-9 bg-[#3b82f6] px-3 text-xs font-semibold text-white hover:bg-[#5b9bff]"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {isSaving ? "Zapisywanie" : controller?.saveLabel ?? "Zapisz"}
+            {isSaving ? t.saving : controller?.saveLabel ?? t.save}
           </Button>
         </div>
       </div>

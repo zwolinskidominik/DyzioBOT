@@ -238,6 +238,10 @@ export function PrivacyPl() {
         <LegalList>
           <li>ciasteczek sesji logowania, ochrony przed atakami CSRF i adresu powrotu po zalogowaniu;</li>
           <li>
+            ciasteczka z wybranym językiem panelu (<code>deezy-lang</code>, ważne rok). Zapisujemy je dopiero, gdy sam
+            zmienisz język przełącznikiem. Bez niego panel dobiera język do ustawień przeglądarki i niczego nie zapisuje;
+          </li>
+          <li>
             pamięci przeglądarki (localStorage) na ustawienia interfejsu, na przykład zwinięte sekcje menu, oraz podręczne
             dane przyspieszające wczytywanie.
           </li>
