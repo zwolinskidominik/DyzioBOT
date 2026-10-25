@@ -49,6 +49,15 @@ npm run sync-commands # rejestracja slash commands w Discord
 
 ---
 
+## Changelog na serwer wsparcia
+
+Po **każdej** zmianie wdrożonej na produkcję (bot lub dashboard), którą zobaczą użytkownicy, dopisz w odpowiedzi gotowy changelog do wklejenia na kanał `#changelog` serwera wsparcia (Deezy • Support):
+- najpierw 🇬🇧 English, pod nim 🇵🇱 Polski (polski jest drugorzędny),
+- w bloku kodu (żeby dało się skopiować 1:1), max ~2000 znaków,
+- konkretnie, językiem użytkownika — co się zmieniło dla niego, bez nazw plików i szczegółów technicznych,
+- podział: ✨ New / 🔧 Changed / 🐛 Fixed (pomiń puste sekcje), data wdrożenia w nagłówku.
+Zmiany czysto wewnętrzne (refaktor, testy, CI) pomijaj.
+
 ## Commity
 
 - Wiadomości commitów **po angielsku**, prefiks `feat:`/`fix:`/`chore:` (commitlint zablokuje inne).

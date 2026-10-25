@@ -1,5 +1,6 @@
 import { Message, PartialMessage, Client } from 'discord.js';
 import { sendLog, truncate } from '../../utils/logHelpers';
+import { getMessageSnapshot, storeMessageSnapshot, StoredMessage } from '../../services/messageSnapshotService';
 
 export default async function run(
   oldMessage: Message | PartialMessage,
@@ -7,20 +8,27 @@ export default async function run(
   client: Client
 ): Promise<void> {
   if (!newMessage.guild) return;
-  
+
   if (newMessage.author?.bot) return;
 
-  if (oldMessage.content === newMessage.content) return;
+  // Cache discord.js obejmuje tylko to, co bot widział od swojego startu — starsze wiadomości
+  // przychodzą jako partial (`content === null`). Wtedy sięgamy po kopię z bazy (patrz
+  // messageSnapshotService), a dopiero bez niej piszemy, że treści nie znamy.
+  let snapshot: StoredMessage | null = null;
+  if (oldMessage.partial) {
+    const res = await getMessageSnapshot(newMessage.guild.id, newMessage.id);
+    snapshot = res.ok ? res.data : null;
+  }
 
-  // Cache wiadomości obejmuje tylko to, co bot widział od swojego startu. Dla starszych
-  // wiadomości `oldMessage` przychodzi jako partial (patrz `partials` w src/index.ts) i ma
-  // `content === null` — nie wiemy, jak wyglądała treść przed zmianą. Wcześniej wpisywaliśmy
-  // w takim przypadku "*Brak treści*", co sugerowało, że wiadomość była pusta. To nieprawda:
-  // treści po prostu nie znamy. Discord wysyła messageUpdate także przy samym przegenerowaniu
-  // podglądu linku, więc takie wpisy potrafią dotyczyć wiadomości, których nikt nie edytował.
-  const oldContent = oldMessage.partial
-    ? '(treść nieznana — wiadomość spoza pamięci bota)'
-    : oldMessage.content || '*Brak treści*';
+  const previous = oldMessage.partial ? snapshot?.content ?? null : oldMessage.content;
+  // Discord wysyła messageUpdate także przy samym przegenerowaniu podglądu linku.
+  if (previous !== null && previous === newMessage.content) return;
+
+  // Kopia ma mieć najnowszą treść, żeby kolejna edycja/usunięcie pokazały aktualny stan.
+  await storeMessageSnapshot(newMessage);
+
+  const oldContent =
+    previous === null ? '(treść nieznana — wiadomość sprzed włączenia logów)' : previous || '*Brak treści*';
   const newContent = newMessage.content || '*Brak treści*';
 
   await sendLog(client, newMessage.guild.id, 'messageEdit', {

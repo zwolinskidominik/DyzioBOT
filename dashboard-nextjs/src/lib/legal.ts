@@ -29,17 +29,19 @@ export const LEGAL = {
   /** ID aplikacji Discord (to samo co NEXT_PUBLIC_DISCORD_CLIENT_ID w docker-compose.yml). */
   botApplicationId: "1119327417237000285",
 
-  privacyVersion: "1.1",
+  privacyVersion: "1.2",
   termsVersion: "1.0",
   /** Data wejścia w życie regulaminu (YYYY-MM-DD). */
   effectiveDate: "2026-10-01",
   /** Data wejścia w życie aktualnej wersji polityki prywatności (YYYY-MM-DD). */
-  privacyEffectiveDate: "2026-10-08",
+  privacyEffectiveDate: "2026-10-25",
 
   guildDataRetentionDays: 30,
   defaultWarnExpiryDays: 90,
   activityBucketDays: 32,
   streamLogDays: 60,
+  /** Kopie wiadomości dla logów usunięcia/edycji (TTL w src/models/MessageSnapshot.ts). */
+  messageSnapshotDays: 30,
   /** Codzienne, zaszyfrowane kopie bazy: tyle dni na serwerze… */
   backupServerDays: 7,
   /** …i tyle dni na zaszyfrowanym nośniku poza serwerem. */

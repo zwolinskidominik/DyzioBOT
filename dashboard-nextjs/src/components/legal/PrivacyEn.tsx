@@ -94,9 +94,11 @@ export function PrivacyEn() {
         </LegalList>
         <p>
           <Strong>Message content.</Strong> The bot can see the content of messages in channels it has access to. It
-          processes it on the fly: to count activity, to protect against spam and for moderation logs. We do not store
-          message content in our database. It is kept only temporarily in the running bot's memory and disappears when the
-          bot restarts.
+          processes it on the fly: to count activity, to protect against spam and for moderation logs. We store message
+          content only on servers whose staff have turned on the deleted- or edited-message log. There we keep a copy of
+          each message (content, author, attachment links) so the log can show it even after the bot restarts. The copy is
+          deleted as soon as the deletion is logged, and automatically after {LEGAL.messageSnapshotDays} days at the
+          latest. On other servers message content is not saved in our database.
         </p>
         <p>
           <Strong>Logs and transcripts on the server.</Strong> If a server's staff enable logs, the bot posts information
@@ -159,6 +161,10 @@ export function PrivacyEn() {
           <li>
             Detailed activity history used for statistics is deleted after {LEGAL.activityBucketDays} days, and the history of
             Twitch stream notifications after {LEGAL.streamLogDays} days.
+          </li>
+          <li>
+            Copies of messages kept for deleted/edited-message logs are deleted after {LEGAL.messageSnapshotDays} days (or
+            earlier, once the deletion is logged).
           </li>
           <li>
             Leaving a server does not automatically delete your data on that server. We will delete it on request (section

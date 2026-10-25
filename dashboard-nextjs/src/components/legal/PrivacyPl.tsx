@@ -99,8 +99,11 @@ export function PrivacyPl() {
         </LegalList>
         <p>
           <Strong>Treść wiadomości.</Strong> Bot widzi treść wiadomości na kanałach, do których ma dostęp. Przetwarza ją na
-          bieżąco: do naliczania aktywności, ochrony przed spamem i logów moderacyjnych. Treści wiadomości nie zapisujemy w
-          bazie danych. Przechowywana jest tylko tymczasowo w pamięci działającego bota i znika przy jego restarcie.
+          bieżąco: do naliczania aktywności, ochrony przed spamem i logów moderacyjnych. Treść wiadomości zapisujemy tylko na
+          serwerach, na których administracja włączyła log usuniętych lub edytowanych wiadomości. Tam przechowujemy kopię
+          każdej wiadomości (treść, autora, linki do załączników), żeby log mógł ją pokazać także po restarcie bota. Kopia
+          jest usuwana od razu po zalogowaniu usunięcia, a najpóźniej automatycznie po {LEGAL.messageSnapshotDays} dniach.
+          Na pozostałych serwerach treści wiadomości nie zapisujemy w bazie danych.
         </p>
         <p>
           <Strong>Logi i transkrypty na serwerze.</Strong> Jeśli administracja serwera włączy logi, bot publikuje na
@@ -167,6 +170,10 @@ export function PrivacyPl() {
           <li>
             Szczegółowa historia aktywności używana do statystyk jest usuwana po {LEGAL.activityBucketDays} dniach, a historia
             powiadomień o transmisjach na Twitchu po {LEGAL.streamLogDays} dniach.
+          </li>
+          <li>
+            Kopie wiadomości dla logów usuniętych i edytowanych wiadomości są usuwane po {LEGAL.messageSnapshotDays} dniach
+            (albo wcześniej, po zalogowaniu usunięcia).
           </li>
           <li>
             Wyjście z serwera nie usuwa automatycznie Twoich danych na tym serwerze. Usuniemy je na Twoje żądanie (punkt 7).
