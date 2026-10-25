@@ -70,6 +70,14 @@ jest.mock('../../../src/services/suggestionService', () => ({
   deleteSuggestionByMessageId: mockDeleteSuggestion,
 }));
 
+// Kopie wiadomości (Typegoose) są testowane osobno w messageSnapshotService.test.ts; tu lodash
+// jest zamockowany, więc prawdziwy model by się nie załadował.
+jest.mock('../../../src/services/messageSnapshotService', () => ({
+  getMessageSnapshot: jest.fn().mockResolvedValue({ ok: true, data: null }),
+  deleteMessageSnapshot: jest.fn().mockResolvedValue({ ok: true, data: false }),
+  storeMessageSnapshot: jest.fn().mockResolvedValue({ ok: true, data: false }),
+}));
+
 /* ─── Model mocks ─── */
 const mockTempChannelFind = jest.fn();
 const mockTempChannelFindOneAndUpdate = jest.fn();
