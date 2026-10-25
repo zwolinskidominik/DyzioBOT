@@ -1,5 +1,5 @@
 /**
- * Tests for antiSpamService — in-memory rate/repeat tracking, config cache,
+ * Tests for antiSpamService - in-memory rate/repeat tracking, config cache,
  * per-rule escalation (ladder) i incydenty.
  */
 import { AntiSpamConfigModel } from '../../../src/models/AntiSpamConfig';
@@ -87,7 +87,7 @@ describe('getConfig', () => {
     const cfg1 = await getConfig(GID);
     expect(cfg1.enabled).toBe(true);
 
-    // Change DB behind the scenes — cache should still serve the old value
+    // Change DB behind the scenes - cache should still serve the old value
     await AntiSpamConfigModel.updateOne({ guildId: GID }, { $set: { enabled: false } });
 
     const cfg2 = await getConfig(GID);
@@ -329,7 +329,7 @@ describe('getNextPunishment', () => {
 
     const doc = await AntiSpamIncidentModel.create({ guildId: GID, userId: 'u1', rule: 'rate', actionTaken: 'warn' });
     // Uwaga: przy `timestamps: true` Mongoose traktuje createdAt jako immutable i po cichu ignoruje
-    // $set przez model — trzeba pisać przez sterownik, inaczej incydent zostaje "świeży"
+    // $set przez model - trzeba pisać przez sterownik, inaczej incydent zostaje "świeży"
     // i test sprawdza coś innego, niż deklaruje.
     await AntiSpamIncidentModel.collection.updateOne(
       { _id: doc._id },

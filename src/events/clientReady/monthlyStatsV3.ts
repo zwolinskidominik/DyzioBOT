@@ -11,7 +11,7 @@ import {
 import { MonthlyTopkaCardV3, TopkaV3Entry } from '../../utils/canvasMonthlyTopkaCardV3';
 
 /**
- * Produkcyjny cron v3 (grafika, jeden łączony ranking) — NASTĘPCA `monthlyStats.ts`
+ * Produkcyjny cron v3 (grafika, jeden łączony ranking) - NASTĘPCA `monthlyStats.ts`
  * (tekstowa wersja, wyłączona przez ENABLED=false w tamtym pliku, ale zostawiona
  * na wypadek powrotu do starego formatu).
  */

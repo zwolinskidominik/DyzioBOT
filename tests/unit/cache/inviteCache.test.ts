@@ -135,7 +135,7 @@ describe('inviteCache', () => {
       ]);
       await cacheGuildInvites('g1', invites);
 
-      // Same state — no change
+      // Same state - no change
       const result = await detectUsedInvite('g1', invites);
       expect(result).toBeNull();
     });

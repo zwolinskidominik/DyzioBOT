@@ -146,12 +146,12 @@ export async function setLiveStatus(
   return ok(undefined);
 }
 
-/** Zapisuje wpis w logu wysłanych powiadomień — zasila licznik "powiadomień w tym miesiącu" na dashboardzie. */
+/** Zapisuje wpis w logu wysłanych powiadomień - zasila licznik "powiadomień w tym miesiącu" na dashboardzie. */
 export async function logNotificationSent(guildId: string, twitchChannel: string): Promise<void> {
   await StreamNotificationLogModel.create({ guildId, twitchChannel, sentAt: new Date() });
 }
 
-/** Odświeża zapisany avatarUrl streamera — wywoływane z cyklu sprawdzania (już i tak pobiera dane
+/** Odświeża zapisany avatarUrl streamera - wywoływane z cyklu sprawdzania (już i tak pobiera dane
  * użytkownika z Twitcha), więc nie generuje żadnych dodatkowych zapytań do API. */
 export async function updateAvatarUrl(
   guildId: string,

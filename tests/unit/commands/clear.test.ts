@@ -1,5 +1,5 @@
 /**
- * Tests for /clear command – bulk message deletion.
+ * Tests for /clear command - bulk message deletion.
  */
 
 /* ── Mocks ───────────────────────────────────────────────── */
@@ -24,7 +24,7 @@ jest.mock('../../../src/config/constants/colors', () => ({
 }));
 
 // Komendy moderacyjne sprawdzają dostęp ręcznie przez checkCommandAccess() (ModerationConfig
-// z bazy + extraRoleIds). W teście jednostkowym nie ma bazy, więc przepuszczamy dostęp —
+// z bazy + extraRoleIds). W teście jednostkowym nie ma bazy, więc przepuszczamy dostęp -
 // testy scenariuszy odmowy nadpisują ten mock lokalnie.
 const mockCheckCommandAccess = jest.fn().mockResolvedValue({ allowed: true, config: {} });
 jest.mock('../../../src/services/moderationConfigService', () => ({
@@ -74,7 +74,7 @@ beforeEach(() => {
 
 /* ── Tests ───────────────────────────────────────────────── */
 
-describe('/clear – data & options', () => {
+describe('/clear - data & options', () => {
   it('has correct name and permissions', () => {
     const { data, options } = require('../../../src/commands/moderation/clear');
     expect(data.name).toBe('clear');
@@ -100,7 +100,7 @@ describe('/clear – data & options', () => {
   });
 });
 
-describe('/clear – run()', () => {
+describe('/clear - run()', () => {
   const { run } = require('../../../src/commands/moderation/clear');
 
   it('defers reply as ephemeral', async () => {

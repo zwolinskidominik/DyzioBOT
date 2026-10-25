@@ -1,7 +1,7 @@
 import { getModelForClass, modelOptions, prop, DocumentType } from '@typegoose/typegoose';
 
 /**
- * Pojedynczy dokument (singleton, key='main') z ostatnim heartbeatem bota —
+ * Pojedynczy dokument (singleton, key='main') z ostatnim heartbeatem bota -
  * czytany przez dashboard, żeby pokazać status online + ping w nagłówku strony
  * głównej. Zapisywany cyklicznie z src/events/clientReady/botStatusHeartbeat.ts.
  */

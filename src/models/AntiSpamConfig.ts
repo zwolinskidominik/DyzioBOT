@@ -6,7 +6,7 @@ export type AntiSpamMode = 'single' | 'ladder';
 
 /**
  * Konfiguracja pojedynczej reguły Anti-Spam (rate / invites / mentions / repeat).
- * Wszystkie pola są zawsze obecne — część z nich (threshold, windowSeconds,
+ * Wszystkie pola są zawsze obecne - część z nich (threshold, windowSeconds,
  * allowOwnServerInvites) ma znaczenie tylko dla niektórych reguł, reszta je ignoruje.
  */
 export class AntiSpamRuleConfig {
@@ -25,7 +25,7 @@ export class AntiSpamRuleConfig {
   @prop({ type: String, default: 'mute' })
   public action!: AntiSpamPunishment;
 
-  /** Kolejne kary w trybie 'ladder' (1. wykrycie → steps[0], 2. → steps[1], itd. — ostatni krok powtarza się). */
+  /** Kolejne kary w trybie 'ladder' (1. wykrycie → steps[0], 2. → steps[1], itd. - ostatni krok powtarza się). */
   @prop({ type: () => [String], default: ['warn'] })
   public steps!: AntiSpamPunishment[];
 

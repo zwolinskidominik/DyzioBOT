@@ -1,5 +1,5 @@
 /**
- * Unit tests for tempRoleService — CRUD operations and expiry collection.
+ * Unit tests for tempRoleService - CRUD operations and expiry collection.
  */
 import { TempRoleModel } from '../../../src/models/TempRole';
 import {

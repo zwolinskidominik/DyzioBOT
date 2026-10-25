@@ -1,5 +1,5 @@
 /**
- * Unit tests for backupMonitorService — ocena stanu kopii zapasowych MongoDB na podstawie
+ * Unit tests for backupMonitorService - ocena stanu kopii zapasowych MongoDB na podstawie
  * plików statusu zapisywanych przez ops/mongo/backup.sh i pull-backup.ps1.
  */
 import os from 'os';

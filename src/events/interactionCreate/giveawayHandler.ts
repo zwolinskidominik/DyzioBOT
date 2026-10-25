@@ -291,7 +291,7 @@ async function handleShowParticipants(
   );
 
   const pages = chunk(users, 30).map((page, i, arr) => ({
-    name: `Uczestnicy (${uniqueIds.length})${arr.length > 1 ? `  – str. ${i + 1}/${arr.length}` : ''}`,
+    name: `Uczestnicy (${uniqueIds.length})${arr.length > 1 ? `  - str. ${i + 1}/${arr.length}` : ''}`,
     value: page.map((u, idx) => `${idx + 1 + i * 30}. ${u}`).join('\n'),
   }));
 

@@ -35,7 +35,7 @@ let cleanupStarted = false;
 /**
  * Kto odpowiada za wiadomość. Zwykle autor, ale przy aplikacjach instalowanych na koncie
  * użytkownika („APL.", np. boty do raidów) autorem jest aplikacja, a sprawcą osoba, która
- * użyła jej komendy na tym serwerze — to ją karzemy, nie aplikację.
+ * użyła jej komendy na tym serwerze - to ją karzemy, nie aplikację.
  */
 interface SpamSource {
   member: GuildMember;
@@ -129,7 +129,7 @@ export default async function run(message: Message, client: Client): Promise<boo
     );
     if (floodResult.isFlood) {
       logger.warn(
-        `🛡️ Anti-Spam: wykryto powtarzające się wiadomości od ${source.user.tag} (${source.user.id}) — ` +
+        `🛡️ Anti-Spam: wykryto powtarzające się wiadomości od ${source.user.tag} (${source.user.id}) - ` +
           `${floodResult.duplicateCount}x ta sama wiadomość na ${floodResult.channels.length} kanałach`
       );
 
@@ -162,7 +162,7 @@ export default async function run(message: Message, client: Client): Promise<boo
     if (result.isSpam) {
       logger.warn(
         `🛡️ Anti-Spam: wykryto spam od ${source.user.tag} (${source.user.id}) ` +
-          `na serwerze ${guild.name} (${guild.id}) — ` +
+          `na serwerze ${guild.name} (${guild.id}) - ` +
           `${result.messageCount} wiadomości w ${settings.rate.windowSeconds}s`
       );
 
@@ -184,7 +184,7 @@ export default async function run(message: Message, client: Client): Promise<boo
           `**Akcja:** ${actionLabel}`,
       });
 
-      // Short-circuit — don't process this message further (no XP, no suggestions, etc.)
+      // Short-circuit - don't process this message further (no XP, no suggestions, etc.)
       return true;
     }
   }
@@ -267,7 +267,7 @@ async function executeAction(
         const botUser = client.user;
         const reason = 'Anti-Spam: automatyczne ostrzeżenie za spam';
 
-        // Anti-Spam wpina się w TĘ SAMĄ konfigurowalną drabinkę co /warn (Rule Engine bez LLM) —
+        // Anti-Spam wpina się w TĘ SAMĄ konfigurowalną drabinkę co /warn (Rule Engine bez LLM) -
         // steps pochodzą z ModerationConfig serwera, nie z hardcoded stałych.
         const modConfig = await getOrCreateModerationConfig(member.guild.id);
         const steps: WarnStep[] =
@@ -280,7 +280,7 @@ async function executeAction(
           userId: member.id,
           reason,
           moderatorId: botUser?.id ?? 'system',
-          // Stała etykieta zamiast botUser.tag — nick bota na serwerze może się zmieniać
+          // Stała etykieta zamiast botUser.tag - nick bota na serwerze może się zmieniać
           // (np. przez Ustawienia → Profil), a to ostrzeżenie jest automatyczne, nie ludzkie.
           moderatorTag: 'Anti-Spam (automatycznie)',
           steps,
@@ -291,14 +291,14 @@ async function executeAction(
           return 'Ostrzeżenie (błąd zapisu)';
         }
 
-        // To ostrzeżenie może realnie oznaczać auto-ban, auto-kick albo timeout wg poziomu kary —
+        // To ostrzeżenie może realnie oznaczać auto-ban, auto-kick albo timeout wg poziomu kary -
         // user dostaje DM i realną karę, nie tylko wpis w bazie.
         const { count, step, nextStep, isFinal } = result.data;
         const limit = steps.length;
 
         if (step.action === 'ban') {
           try {
-            await member.ban({ reason: `Auto-ban: osiągnięto limit ostrzeżeń (${count}) — Anti-Spam` });
+            await member.ban({ reason: `Auto-ban: osiągnięto limit ostrzeżeń (${count}) - Anti-Spam` });
           } catch (err) {
             logger.error(`Anti-Spam: błąd przy auto-banie ${member.id}: ${err}`);
             return `Ostrzeżenie ${count}/${limit} (nie udało się zbanować)`;
@@ -329,7 +329,7 @@ async function executeAction(
                 description:
                   `**Serwer:** ${member.guild.name}\n` +
                   `**Powód:** Zbyt szybkie wysyłanie wiadomości (Anti-Spam)\n\n` +
-                  `⚠️ **Osiągnięto ${count}/${limit} ostrzeżeń** — zostałeś wyrzucony z serwera.`,
+                  `⚠️ **Osiągnięto ${count}/${limit} ostrzeżeń** - zostałeś wyrzucony z serwera.`,
                 color: COLORS.ERROR,
               })],
             });
@@ -408,7 +408,7 @@ const INVITE_REGEX =
   /(?:https?:\/\/)?(?:www\.)?(?:discord\.gg|discord(?:app)?\.com\/invite)\/([a-zA-Z0-9-]+)/gi;
 
 /**
- * Extracts invite codes from a message, resolves them, and blocks invites —
+ * Extracts invite codes from a message, resolves them, and blocks invites -
  * z wyjątkiem zaproszeń do TEGO serwera, jeśli `rule.allowOwnServerInvites` jest włączone.
  *
  * @returns `true` if the message was blocked.
@@ -426,7 +426,7 @@ async function checkInviteLinks(
   for (const code of codes) {
     try {
       const invite = await client.fetchInvite(code);
-      if (!invite.guild) continue; // np. zaproszenie do group DM — nie da się porównać serwera
+      if (!invite.guild) continue; // np. zaproszenie do group DM - nie da się porównać serwera
 
       const isOwnServer = invite.guild.id === message.guild!.id;
       if (isOwnServer && rule.allowOwnServerInvites) continue;
@@ -454,7 +454,7 @@ async function checkInviteLinks(
 
       return true;
     } catch {
-      // Invalid/expired invite — ignore
+      // Invalid/expired invite - ignore
     }
   }
 
@@ -499,7 +499,7 @@ async function checkMassMentions(
 }
 
 /**
- * Handles a blocked mention — deletes, punishes, logs.
+ * Handles a blocked mention - deletes, punishes, logs.
  */
 async function blockMention(
   message: Message,
@@ -511,7 +511,7 @@ async function blockMention(
 ): Promise<boolean> {
   logger.warn(
     `🛡️ Anti-Spam: zablokowano masowe wzmianki od ${source.user.tag} ` +
-      `(${source.user.id}) — ${reason}`
+      `(${source.user.id}) - ${reason}`
   );
 
   if (rule.deleteMessage) {

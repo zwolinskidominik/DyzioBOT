@@ -6,10 +6,10 @@ import { ServiceResult, ok, fail } from '../types/serviceResult';
  * Pilnuje kopii zapasowych MongoDB i mówi, czy coś jest nie tak.
  *
  * Skrypty kopii zapisują krótkie pliki statusu w katalogu, który bot widzi tylko do odczytu:
- *   backup-ok     — data ostatniej udanej nocnej kopii na VPS (ops/mongo/backup.sh)
- *   backup-error  — data i treść ostatniego błędu nocnej kopii
- *   last-pull     — data ostatniego udanego pobrania kopii na PC właściciela (pull-backup.ps1)
- * Bot nie ma dostępu do samych kopii (zawierają m.in. hashe haseł bazy) — tylko do statusu.
+ *   backup-ok     - data ostatniej udanej nocnej kopii na VPS (ops/mongo/backup.sh)
+ *   backup-error  - data i treść ostatniego błędu nocnej kopii
+ *   last-pull     - data ostatniego udanego pobrania kopii na PC właściciela (pull-backup.ps1)
+ * Bot nie ma dostępu do samych kopii (zawierają m.in. hashe haseł bazy) - tylko do statusu.
  */
 
 export type BackupProblem = 'NO_BACKUP' | 'BACKUP_FAILED' | 'BACKUP_STALE' | 'PULL_STALE';
@@ -21,9 +21,9 @@ export interface BackupStatus {
   lastPullAt: Date | null;
 }
 
-/** Nocna kopia jest o 3:30 — 26 h daje zapas na przesunięcia i restart serwera. */
+/** Nocna kopia jest o 3:30 - 26 h daje zapas na przesunięcia i restart serwera. */
 export const BACKUP_MAX_AGE_MS = 26 * 60 * 60 * 1000;
-/** PC może być wyłączony kilka dni (wyjazd) — alarmujemy dopiero po 3 dniach bez pobrania. */
+/** PC może być wyłączony kilka dni (wyjazd) - alarmujemy dopiero po 3 dniach bez pobrania. */
 export const PULL_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
 function parseDate(value: string | undefined): Date | null {
@@ -84,7 +84,7 @@ function formatDate(date: Date | null): string {
   return date ? `<t:${Math.floor(date.getTime() / 1000)}:R>` : 'nigdy';
 }
 
-/** Treść wiadomości do właściciela — konkretnie, co się stało i gdzie zajrzeć. */
+/** Treść wiadomości do właściciela - konkretnie, co się stało i gdzie zajrzeć. */
 export function describeBackupProblems(problems: BackupProblem[], status: BackupStatus): string {
   const lines = problems.map((problem) => {
     switch (problem) {
@@ -98,12 +98,12 @@ export function describeBackupProblems(problems: BackupProblem[], status: Backup
         return '**Na VPS nie ma jeszcze żadnej kopii.** Uruchom `bash ops/mongo/backup.sh` i sprawdź crontab.';
       case 'BACKUP_STALE':
         return (
-          `**Brak nowej kopii na VPS** — ostatnia udana: ${formatDate(status.lastSuccessAt)}.\n` +
+          `**Brak nowej kopii na VPS** - ostatnia udana: ${formatDate(status.lastSuccessAt)}.\n` +
           'Sprawdź `crontab -l` i `/srv/deezy-secure/backups/backup.log`.'
         );
       case 'PULL_STALE':
         return (
-          `**PC nie pobrał kopii** — ostatnie pobranie: ${formatDate(status.lastPullAt)}.\n` +
+          `**PC nie pobrał kopii** - ostatnie pobranie: ${formatDate(status.lastPullAt)}.\n` +
           'Kopia pobierze się sama w ciągu godziny od włączenia PC i zamontowania dysku VeraCrypt. ' +
           'Jeśli tak było, sprawdź `pull-backup.log` w folderze kopii (albo `%LOCALAPPDATA%\\Deezy\\pull-backup.log`, gdy dysk nie był zamontowany).'
         );

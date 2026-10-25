@@ -10,7 +10,7 @@ import logger from '../../utils/logger';
 const MIN_INTERVAL_DAYS = 12;
 const MAX_INTERVAL_DAYS = 18;
 
-/** Time window for random hour — sends between 10:00 and 20:00. */
+/** Time window for random hour - sends between 10:00 and 20:00. */
 const MIN_HOUR = 10;
 const MAX_HOUR = 20;
 
@@ -35,7 +35,7 @@ export default async function run(client: Client): Promise<void> {
     async () => {
       try {
         // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie
-        // pisane operatory — bez tego rzuca CastError na $in.
+        // pisane operatory - bez tego rzuca CastError na $in.
         const configs = await DisboardConfigModel.find({ enabled: true, guildId: mongoose.trusted({ $in: OWNER_GUILD_IDS }) }).lean();
         if (!configs.length) return;
 

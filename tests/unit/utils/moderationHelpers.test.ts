@@ -1,4 +1,4 @@
-/* pretty-ms is ESM-only — mock it so Jest can import moderationHelpers */
+/* pretty-ms is ESM-only - mock it so Jest can import moderationHelpers */
 jest.mock('pretty-ms', () => ({
   __esModule: true,
   default: (ms: number) => `${ms}ms`,

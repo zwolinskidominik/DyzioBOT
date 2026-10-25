@@ -25,7 +25,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const guild: Guild = interaction.guild!;
     const globalAvatarURL: string = getUserAvatarURL(targetUser);
     // Avatar ustawiony na TYM serwerze (np. bot z profilem per-serwer z dashboardu, albo
-    // użytkownik z avatarem serwerowym Nitro) ma pierwszeństwo — tak jak pokazuje go Discord.
+    // użytkownik z avatarem serwerowym Nitro) ma pierwszeństwo - tak jak pokazuje go Discord.
     // force: true, bo cache członka (zwłaszcza samego bota) może trzymać stary avatar.
     const member = await fetchMember(guild, targetUser.id);
     const serverAvatarURL = member?.avatar ? getMemberAvatarURL(member) : null;

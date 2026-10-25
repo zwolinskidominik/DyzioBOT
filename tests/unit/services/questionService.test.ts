@@ -109,7 +109,7 @@ describe('ensureQuestionIds', () => {
     expect(raw.every((d) => typeof d.questionId === 'string' && d.questionId.length > 0)).toBe(true);
     if (keep.ok) expect(raw.find((d) => d.content === 'Nowe')?.questionId).toBe(keep.data.questionId);
 
-    // Drugie uruchomienie niczego nie zmienia — ID są stałe.
+    // Drugie uruchomienie niczego nie zmienia - ID są stałe.
     const again = await ensureQuestionIds();
     expect(again.ok && again.data).toBe(0);
   });
@@ -184,7 +184,7 @@ describe('listQuestions', () => {
     const res = await listQuestions(true);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    // markUsed nie wyłącza już pytania globalnie — obie pozostają aktywne w puli
+    // markUsed nie wyłącza już pytania globalnie - obie pozostają aktywne w puli
     expect(res.data).toHaveLength(2);
   });
 });

@@ -54,14 +54,14 @@ const mockSendLog = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../src/utils/logHelpers', () => ({
   roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: mockSendLog,
-  // Handlery logów budują pole moderatora tym helperem — bez niego fabryka zwraca undefined,
+  // Handlery logów budują pole moderatora tym helperem - bez niego fabryka zwraca undefined,
   // wywołanie rzuca TypeError i sendLog nigdy nie dochodzi do skutku.
   moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
   truncate: jest.fn((text: string) => text),
 }));
 
 const mockGetModerator = jest.fn().mockResolvedValue(null);
-// getAuditLogEntry/getReason doszły do helpera już po napisaniu tego mocka — logMemberUpdate
+// getAuditLogEntry/getReason doszły do helpera już po napisaniu tego mocka - logMemberUpdate
 // czyta przez nie zmianę pseudonimu z audit logu, a brak funkcji ubijał cały handler.
 const mockGetAuditLogEntry = jest.fn().mockResolvedValue(null);
 const mockGetReason = jest.fn().mockResolvedValue(null);
@@ -135,7 +135,7 @@ jest.mock('../../../src/services/suggestionService', () => ({
   createSuggestion: mockCreateSuggestion,
   vote: mockVote,
   getSuggestion: mockGetSuggestion,
-  // Dwa eksporty dopisane do serwisu już po powstaniu tego mocka — bez nich handler
+  // Dwa eksporty dopisane do serwisu już po powstaniu tego mocka - bez nich handler
   // sugestii wywala się na "is not a function".
   getSuggestionConfig: mockGetSuggestionConfig,
   deleteSuggestionByMessageId: mockDeleteSuggestionByMessageId,
@@ -193,7 +193,7 @@ describe('welcomeCard', () => {
   }
 
   it('sends welcome message when config exists', async () => {
-    // enabled: przełącznik całego modułu Powitania — bez niego handler kończy na pierwszym warunku.
+    // enabled: przełącznik całego modułu Powitania - bez niego handler kończy na pierwszym warunku.
     mockGreetingsFind.mockResolvedValue({
       enabled: true,
       greetingsChannelId: 'ch1', welcomeEnabled: true, welcomeMessage: 'Welcome {user}!',

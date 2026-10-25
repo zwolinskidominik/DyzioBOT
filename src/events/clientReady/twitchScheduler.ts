@@ -205,7 +205,7 @@ async function sendStreamNotification(
 
 async function checkStreams(client: Client): Promise<void> {
   if (!twitchClient) {
-    logger.warn('Twitch API niedostępne – pomijam sprawdzanie streamów.');
+    logger.warn('Twitch API niedostępne - pomijam sprawdzanie streamów.');
     return;
   }
 
@@ -221,7 +221,7 @@ async function checkStreams(client: Client): Promise<void> {
     try {
       const user = await twitchClient.users.getUserByName(s.twitchChannel);
 
-      // Dane użytkownika i tak już pobrane w tym cyklu — odświeżamy zapisany avatar
+      // Dane użytkownika i tak już pobrane w tym cyklu - odświeżamy zapisany avatar
       // bez dodatkowych zapytań do Twitch API (tylko gdy faktycznie się zmienił).
       if (user && user.profilePictureUrl && user.profilePictureUrl !== s.avatarUrl) {
         await updateAvatarUrl(s.guildId, s.twitchChannel, user.profilePictureUrl);
@@ -230,7 +230,7 @@ async function checkStreams(client: Client): Promise<void> {
       const stream = user ? await twitchClient.streams.getStreamByUserId(user.id) : null;
 
       if (stream) {
-        // Dane już pobrane w tym cyklu — zapisujemy je jako cache, żeby dashboard
+        // Dane już pobrane w tym cyklu - zapisujemy je jako cache, żeby dashboard
         // czytał świeże liczby bez własnych zapytań do Twitch API.
         const snapshot: LiveSnapshot = {
           title: stream.title,
@@ -257,11 +257,11 @@ async function checkStreams(client: Client): Promise<void> {
               await logNotificationSent(s.guildId, s.twitchChannel);
             }
           } else {
-            // Brak skonfigurowanego kanału — status i tak aktualizujemy, żeby dashboard był zgodny z rzeczywistością.
+            // Brak skonfigurowanego kanału - status i tak aktualizujemy, żeby dashboard był zgodny z rzeczywistością.
             await setLiveStatus(s.guildId, s.twitchChannel, true, snapshot);
           }
         } else {
-          // Już na żywo — tylko odśwież cache (widzowie/tytuł mogły się zmienić).
+          // Już na żywo - tylko odśwież cache (widzowie/tytuł mogły się zmienić).
           await setLiveStatus(s.guildId, s.twitchChannel, true, snapshot);
         }
       }

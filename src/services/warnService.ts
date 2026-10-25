@@ -4,7 +4,7 @@ import { ServiceResult, ok, fail } from '../types/serviceResult';
 import { formatDurationPl } from '../utils/moderationHelpers';
 import logger from '../utils/logger';
 
-/* ── Types (drabinka ostrzeżeń — konfigurowalna per-serwer przez ModerationConfig) ── */
+/* ── Types (drabinka ostrzeżeń - konfigurowalna per-serwer przez ModerationConfig) ── */
 
 export type WarnActionKind = 'none' | 'mute' | 'kick' | 'ban';
 
@@ -15,13 +15,13 @@ export interface WarnStep {
 }
 
 export interface ResolvedWarnStep extends WarnStep {
-  /** ms — 0 dla akcji innych niż 'mute'. */
+  /** ms - 0 dla akcji innych niż 'mute'. */
   durationMs: number;
   /** Czytelna etykieta po polsku, np. "15 minut", "Wyrzucenie z serwera". */
   label: string;
 }
 
-/** Legacy domyślna drabinka — używana tylko jako fallback, gdy wołający nie ma jeszcze ModerationConfig. */
+/** Legacy domyślna drabinka - używana tylko jako fallback, gdy wołający nie ma jeszcze ModerationConfig. */
 export const DEFAULT_WARN_STEPS: WarnStep[] = [
   { action: 'mute', durationMinutes: 15 },
   { action: 'mute', durationMinutes: 180 },
@@ -51,17 +51,17 @@ export interface AddWarnData {
   count: number;
   /** Kara zastosowana dla TEGO ostrzeżenia. */
   step: ResolvedWarnStep;
-  /** Kara przy KOLEJNYM ostrzeżeniu (w trybie 'single' — ta sama; drabinka po ostatnim stopniu się nie wydłuża). */
+  /** Kara przy KOLEJNYM ostrzeżeniu (w trybie 'single' - ta sama; drabinka po ostatnim stopniu się nie wydłuża). */
   nextStep: ResolvedWarnStep;
-  /** true gdy to ostrzeżenie osiągnęło lub przekroczyło ostatni stopień drabinki — kolejne ostrzeżenia powtórzą tę samą karę. */
+  /** true gdy to ostrzeżenie osiągnęło lub przekroczyło ostatni stopień drabinki - kolejne ostrzeżenia powtórzą tę samą karę. */
   isFinal: boolean;
-  /** Stabilne ID nowo dodanego wpisu (Warn.warnings[i]._id) — do ModerationLog i undo z dashboardu. */
+  /** Stabilne ID nowo dodanego wpisu (Warn.warnings[i]._id) - do ModerationLog i undo z dashboardu. */
   warnEntryId: string;
 }
 
 export interface RemoveWarnData {
   remainingCount: number;
-  /** _id usuniętego wpisu — do oznaczenia powiązanego ModerationLog jako cofnięty. Puste przy removeWarnById (wołający już zna to ID). */
+  /** _id usuniętego wpisu - do oznaczenia powiązanego ModerationLog jako cofnięty. Puste przy removeWarnById (wołający już zna to ID). */
   removedId?: string;
 }
 
@@ -85,9 +85,9 @@ export interface CleanExpiredData {
 /* ── Service functions ───────────────────────────────────────────── */
 
 /**
- * Dodaje ostrzeżenie i wylicza karę wg drabinki `steps` (przekazywanej przez wołającego —
+ * Dodaje ostrzeżenie i wylicza karę wg drabinki `steps` (przekazywanej przez wołającego -
  * zwykle rozwiązanej z ModerationConfig: tryb 'single' → [warnSingle], tryb 'ladder' → warnSteps).
- * Gdy `count` przekracza długość drabinki, kara się NIE wydłuża — powtarza się ostatni stopień
+ * Gdy `count` przekracza długość drabinki, kara się NIE wydłuża - powtarza się ostatni stopień
  * (to samo mechanicznie realizuje tryb 'single', gdy `steps` ma jeden element).
  */
 export async function addWarn(params: {
@@ -159,7 +159,7 @@ export async function removeWarn(params: {
 }
 
 /**
- * Jak `removeWarn`, ale po stabilnym `_id` wpisu zamiast pozycji w tablicy — używane przez
+ * Jak `removeWarn`, ale po stabilnym `_id` wpisu zamiast pozycji w tablicy - używane przez
  * dashboard (zakładka "Aktywne ostrzeżenia" / undo w "Otrzymane kary"), gdzie pozycja mogłaby
  * się przesunąć między pobraniem listy a kliknięciem usuń.
  */
@@ -193,7 +193,7 @@ export async function removeWarnById(params: {
   // trafiło w kilka, lepiej nie zapisać nic i zgłosić błąd niż po cichu skasować historię.
   if (removed > 1) {
     logger.error(
-      `removeWarnById: ID ${warnEntryId} dopasowało ${removed} wpisów (guild=${guildId}, user=${userId}) — przerwano bez zapisu.`
+      `removeWarnById: ID ${warnEntryId} dopasowało ${removed} wpisów (guild=${guildId}, user=${userId}) - przerwano bez zapisu.`
     );
     return fail('INTERNAL_ERROR', 'Nie udało się usunąć ostrzeżenia.');
   }
@@ -223,7 +223,7 @@ export async function getWarnings(params: {
 }
 
 export async function cleanExpiredWarns(params: {
-  /** Gdy pominięte — czyści ostrzeżenia na WSZYSTKICH serwerach (bot jest multi-tenant). */
+  /** Gdy pominięte - czyści ostrzeżenia na WSZYSTKICH serwerach (bot jest multi-tenant). */
   guildId?: string;
   monthsAgo?: number;
 }): Promise<ServiceResult<CleanExpiredData>> {

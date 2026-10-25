@@ -5,7 +5,7 @@ import { getModelForClass, modelOptions, prop, DocumentType } from '@typegoose/t
  *
  * Po upływie okresu retencji (GUILD_DATA_RETENTION_DAYS w guildDataRetentionService) wszystkie
  * dane serwera są kasowane. Jeśli bot wróci na serwer wcześniej, wpis jest usuwany i nic nie ginie.
- * Ten okres jest opisany w polityce prywatności — zmiana tutaj wymaga też zmiany tam.
+ * Ten okres jest opisany w polityce prywatności - zmiana tutaj wymaga też zmiany tam.
  */
 @modelOptions({ schemaOptions: { timestamps: true, collection: 'guilddepartures' } })
 class GuildDeparture {

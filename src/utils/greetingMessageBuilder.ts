@@ -224,7 +224,7 @@ export async function buildGreetingMessage(options: BuildGreetingMessageOptions)
   const { member, config, moduleKey, defaultMessage, defaultTitle, defaultColor, mentionUser = false, directMessage = false } = options;
   const moduleConfig = getModuleConfig(config, moduleKey);
   const messageTemplate = moduleConfig.message?.trim() || defaultMessage;
-  // ?? (nie ||) — pusty string to świadomy wybór "bez tytułu" (pole wyczyszczone w dashboardzie),
+  // ?? (nie ||) - pusty string to świadomy wybór "bez tytułu" (pole wyczyszczone w dashboardzie),
   // fallback na defaultTitle następuje tylko gdy pole w ogóle nie istnieje (undefined).
   const titleTemplate = moduleConfig.titleText?.trim() ?? defaultTitle;
   const message = replaceGreetingVariables(messageTemplate, member, config, directMessage);

@@ -42,7 +42,7 @@ export default async function run(client: Client): Promise<void> {
  */
 async function syncSchedules(client: Client): Promise<void> {
   // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
-  // operatory — bez tego rzuca CastError na $in.
+  // operatory - bez tego rzuca CastError na $in.
   const configs = await TournamentConfigModel.find({ guildId: mongoose.trusted({ $in: OWNER_GUILD_IDS }) }).lean();
 
   const enabledGuildIds = new Set<string>();
@@ -54,7 +54,7 @@ async function syncSchedules(client: Client): Promise<void> {
     const cronExpr = cfg.cronSchedule || CRON.TOURNAMENT_RULES_DEFAULT;
     const existing = activeTasks.get(cfg.guildId);
 
-    // Already scheduled with the same cron — nothing to do
+    // Already scheduled with the same cron - nothing to do
     if (existing && existing.cron === cronExpr) continue;
 
     // Stop old task if the cron expression changed
@@ -80,7 +80,7 @@ async function syncSchedules(client: Client): Promise<void> {
     if (!enabledGuildIds.has(guildId)) {
       entry.task.stop();
       activeTasks.delete(guildId);
-      logger.info(`Turniej ${guildId}: wyłączono — harmonogram usunięty.`);
+      logger.info(`Turniej ${guildId}: wyłączono - harmonogram usunięty.`);
     }
   }
 }
@@ -93,7 +93,7 @@ async function sendTournamentMessage(client: Client, guildId: string): Promise<v
   try {
     const config = await TournamentConfigModel.findOne({ guildId });
     if (!config || !config.enabled) {
-      logger.info(`Turniej ${guildId}: wyłączony lub usunięty — pomijam.`);
+      logger.info(`Turniej ${guildId}: wyłączony lub usunięty - pomijam.`);
       return;
     }
 
@@ -160,7 +160,7 @@ async function sendTournamentMessage(client: Client, guildId: string): Promise<v
     await rulesMessage.react(config.reactionEmoji || '🎮');
     logger.info(`Turniej ${guildId}: wiadomość wysłana na kanale #${textChannel.name}.`);
   } catch (error) {
-    logger.error(`Turniej ${guildId}: błąd wysyłania — ${error}`);
+    logger.error(`Turniej ${guildId}: błąd wysyłania - ${error}`);
   }
 }
 

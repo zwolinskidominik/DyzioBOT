@@ -115,7 +115,7 @@ function makeMember(overrides: Partial<any> = {}) {
         fetch: jest.fn().mockResolvedValue(new Map()),
       },
       members: {
-        // Nick na serwerze — NIE może trafić do {inviterName} (tam ma być unikalna nazwa).
+        // Nick na serwerze - NIE może trafić do {inviterName} (tam ma być unikalna nazwa).
         fetch: jest.fn().mockResolvedValue({ displayName: 'Nick Na Serwerze', id: 'inv-1' }),
       },
       fetchAuditLogs: jest.fn().mockResolvedValue({ entries: { find: () => undefined } }),
@@ -424,7 +424,7 @@ describe('guildMemberRemove/inviteTracker', () => {
 
   it('sends custom leave message', async () => {
     mockGetConfig.mockResolvedValue({ ok: true, data: makeConfig({ leave: { messages: { normal: '{memberName} opuścił serwer!', unknown: '', vanity: '', botRemove: '' } } }) });
-    // Własny szablon ustawiony jest dla sytuacji "normal", więc zapraszający MUSI być znany —
+    // Własny szablon ustawiony jest dla sytuacji "normal", więc zapraszający MUSI być znany -
     // przy inviterId: null handler poprawnie wybiera "unknown" i test nie mógł przejść.
     mockRecordLeave.mockResolvedValue({ ok: true, data: { inviterId: 'inviter-1', inviteCode: 'abc' } });
 

@@ -25,7 +25,7 @@ export function canModerate(
   targetMember: GuildMember | null | undefined,
   requestMember: GuildMember | null | undefined,
   botMember: GuildMember | null | undefined,
-  /** Ustaw na true dla akcji korzystających z Discordowego timeoutu (mute) — Discord nigdy nie pozwoli wyciszyć membera z uprawnieniem Administrator, niezależnie od hierarchii ról. */
+  /** Ustaw na true dla akcji korzystających z Discordowego timeoutu (mute) - Discord nigdy nie pozwoli wyciszyć membera z uprawnieniem Administrator, niezależnie od hierarchii ról. */
   requiresTimeout = false
 ): RoleCheckResult {
   if (!targetMember || !requestMember || !botMember) {
@@ -70,7 +70,7 @@ const FAIL_MESSAGES: Record<RoleCheckFailReason, (verb: string) => string> = {
   SELF_ACTION: (v) => `Nie możesz ${v} samego siebie.`,
   TARGET_NOT_LOWER_THAN_REQUESTER: (v) => `Nie możesz ${v} użytkownika z wyższą lub równą rolą.`,
   TARGET_NOT_LOWER_THAN_BOT: (v) => `Moja rola jest za niska, aby ${v} tego użytkownika.`,
-  TARGET_HAS_ADMIN: () => 'Nie można wyciszyć użytkownika z uprawnieniem Administratora — to twarde ograniczenie Discorda, niezależne od hierarchii ról.',
+  TARGET_HAS_ADMIN: () => 'Nie można wyciszyć użytkownika z uprawnieniem Administratora - to twarde ograniczenie Discorda, niezależne od hierarchii ról.',
 };
 
 export function getModFailMessage(
@@ -80,9 +80,9 @@ export function getModFailMessage(
   action: ModAction
 ): string | null {
   if (!botMember) return FAIL_MESSAGES.MISSING_PARAM(ACTION_LABELS[action]);
-  // Tylko /mute korzysta wyłącznie z timeoutu — blokujemy z góry, bo bez niego komenda nic nie robi.
+  // Tylko /mute korzysta wyłącznie z timeoutu - blokujemy z góry, bo bez niego komenda nic nie robi.
   // /warn ma timeout jako efekt uboczny drabinki kar, więc samo ostrzeżenie i tak ma sens zapisać
-  // (patrz warn.ts — tam błąd nałożenia timeoutu jest łapany osobno i widoczny w odpowiedzi/logu).
+  // (patrz warn.ts - tam błąd nałożenia timeoutu jest łapany osobno i widoczny w odpowiedzi/logu).
   const requiresTimeout = action === 'mute';
   const result = canModerate(targetMember, requestMember, botMember, requiresTimeout);
   if (result.allowed) return null;
@@ -90,17 +90,17 @@ export function getModFailMessage(
 }
 
 export interface TimeoutAttemptResult {
-  /** Unix timestamp (sekundy) końca timeoutu — ustawiony tylko gdy timeout faktycznie się udał. */
+  /** Unix timestamp (sekundy) końca timeoutu - ustawiony tylko gdy timeout faktycznie się udał. */
   muteEndTs: number | null;
   /** true gdy próbowaliśmy nałożyć timeout i się nie udało (np. target ma uprawnienie Administratora). */
   muteFailed: boolean;
 }
 
 /**
- * Bezpiecznie nakłada timeout: najpierw sprawdza `member.moderatable` (discord.js — uwzględnia
+ * Bezpiecznie nakłada timeout: najpierw sprawdza `member.moderatable` (discord.js - uwzględnia
  * uprawnienie Administratora, którego Discord nigdy nie pozwoli wyciszyć niezależnie od hierarchii
  * ról), żeby uniknąć gwarantowanego DiscordAPIError[50013]. Współdzielone przez `/warn` i
- * automatyczne ostrzeżenie z Anti-Spam — oba korzystają z tej samej drabinki kar (`warnService`).
+ * automatyczne ostrzeżenie z Anti-Spam - oba korzystają z tej samej drabinki kar (`warnService`).
  */
 export async function applyTimeoutSafely(
   member: GuildMember,
@@ -111,7 +111,7 @@ export async function applyTimeoutSafely(
 
   if (!member.moderatable) {
     logger.warn(
-      `Nie można nałożyć timeoutu na ${member.id} — member.moderatable === false (prawdopodobnie uprawnienie Administratora).`
+      `Nie można nałożyć timeoutu na ${member.id} - member.moderatable === false (prawdopodobnie uprawnienie Administratora).`
     );
     return { muteEndTs: null, muteFailed: true };
   }

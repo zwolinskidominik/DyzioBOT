@@ -24,7 +24,7 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie przez checkCommandAccess()
+  // userPermissions celowo pominięte - dostęp sprawdzamy ręcznie przez checkCommandAccess()
   // (extraRoleIds z ModerationConfig ma prawo przepuścić moderatora bez natywnego uprawnienia).
   botPermissions: [PermissionFlagsBits.BanMembers],
   guildOnly: true,

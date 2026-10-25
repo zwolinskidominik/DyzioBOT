@@ -40,7 +40,7 @@ async function sendTranscript(
   const attachment = new AttachmentBuilder(buffer, { name: `transkrypt-${channel.name}.txt` });
 
   await logChannel.send({
-    content: `📄 Transkrypt zamkniętego ticketu **#${channel.name}** — ${reason}`,
+    content: `📄 Transkrypt zamkniętego ticketu **#${channel.name}** - ${reason}`,
     files: [attachment],
   });
 }

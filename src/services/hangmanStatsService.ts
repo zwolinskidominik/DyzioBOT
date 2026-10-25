@@ -9,7 +9,7 @@ export interface HangmanStatsEntry {
   losses: number;
   currentStreak: number;
   bestStreak: number;
-  winRate: number;    // 0–100
+  winRate: number;    // 0-100
   avgGuesses: number; // średnia liter na grę
 }
 

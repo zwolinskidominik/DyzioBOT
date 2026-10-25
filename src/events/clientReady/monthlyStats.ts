@@ -15,7 +15,7 @@ import {
 } from '../../services/monthlyStatsService';
 
 /**
- * Wyłączone — zastąpione przez `monthlyStatsV3.ts` (grafika, wspólny ranking wiadomości+głos).
+ * Wyłączone - zastąpione przez `monthlyStatsV3.ts` (grafika, wspólny ranking wiadomości+głos).
  * Plik zostaje w repo w pełni sprawny na wypadek powrotu do starego, tekstowego formatu:
  * wystarczy zmienić `ENABLED` na `true` (i wyłączyć/usunąć monthlyStatsV3.ts, żeby uniknąć
  * podwójnej wysyłki co miesiąc).
@@ -65,7 +65,7 @@ export default function run(client: Client) {
             const prevRank = await getUserRank(guild.id, stat.userId, prevMonthStr, 'messages');
             const isNew_ = await isNewUser(guild.id, stat.userId);
             const emoji = getTrendEmoji(i + 1, prevRank, isNew_, emojis);
-            message += `${emoji} <@${stat.userId}> – ${stat.messageCount.toLocaleString('pl-PL')} ✉️\n`;
+            message += `${emoji} <@${stat.userId}> - ${stat.messageCount.toLocaleString('pl-PL')} ✉️\n`;
           }
         }
         
@@ -78,7 +78,7 @@ export default function run(client: Client) {
             const isNew_ = await isNewUser(guild.id, stat.userId);
             const emoji = getTrendEmoji(i + 1, prevRank, isNew_, emojis);
             const timeStr = formatVoiceTime(stat.voiceMinutes);
-            message += `${emoji} <@${stat.userId}> – ${timeStr} ⌛\n`;
+            message += `${emoji} <@${stat.userId}> - ${timeStr} ⌛\n`;
           }
           message += '\u200b\n';
         }

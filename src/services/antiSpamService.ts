@@ -268,7 +268,7 @@ export async function getNextPunishment(
     const resetMs = Number(rule.reset) * 60 * 60 * 1000;
     const since = new Date(Date.now() - resetMs);
     // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje każdy ręcznie
-    // pisany operator — bez tego rzuca CastError na $gte.
+    // pisany operator - bez tego rzuca CastError na $gte.
     const count = await AntiSpamIncidentModel.countDocuments({
       guildId,
       userId,
@@ -283,7 +283,7 @@ export async function getNextPunishment(
   }
 }
 
-/** Zapisuje wystąpienie zadziałania reguły — do eskalacji i statystyk. */
+/** Zapisuje wystąpienie zadziałania reguły - do eskalacji i statystyk. */
 export async function recordIncident(
   guildId: string,
   userId: string,
@@ -297,7 +297,7 @@ export async function recordIncident(
   }
 }
 
-/** Liczba interwencji na serwerze w ostatnich `hours` godzinach — do statystyki dashboardu. */
+/** Liczba interwencji na serwerze w ostatnich `hours` godzinach - do statystyki dashboardu. */
 export async function countRecentIncidents(guildId: string, hours: number): Promise<number> {
   try {
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
@@ -339,7 +339,7 @@ export async function updateConfig(
 
 /* ── Testing helpers ─────────────────────────────────────────────── */
 
-/** @internal — For testing only: clear all in-memory state. */
+/** @internal - For testing only: clear all in-memory state. */
 export function _resetForTesting(): void {
   messageTracker.clear();
   floodTracker.clear();
@@ -347,7 +347,7 @@ export function _resetForTesting(): void {
   stopCleanup();
 }
 
-/** @internal — For testing only: read the message tracker. */
+/** @internal - For testing only: read the message tracker. */
 export function _getTracker(): Map<string, number[]> {
   return messageTracker;
 }

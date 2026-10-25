@@ -86,7 +86,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
 
     await channel.send({
-      content: `# 🧪 [TEST] Server Wrapped — **${guild.name}**\nTo jest testowa wysyłka wywołana przez ${interaction.user}. Prawdziwy Wrapped wyśle się automatycznie 11 listopada.`,
+      content: `# 🧪 [TEST] Server Wrapped - **${guild.name}**\nTo jest testowa wysyłka wywołana przez ${interaction.user}. Prawdziwy Wrapped wyśle się automatycznie 11 listopada.`,
       files: [attachment],
       components: [row],
     });

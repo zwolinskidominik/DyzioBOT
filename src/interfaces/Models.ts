@@ -94,7 +94,7 @@ export interface IGreetingsConfiguration {
 
 export interface ITempChannelConfiguration {
   guildId: string;
-  /** @deprecated legacy field kept for backward compatibility — derived from `creators` on every save. */
+  /** @deprecated legacy field kept for backward compatibility - derived from `creators` on every save. */
   channelIds: string[];
   creators: { channelId: string; type: 'panel' | 'standard' }[];
 }

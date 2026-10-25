@@ -114,7 +114,7 @@ export async function collectExpiredTempRoles(): Promise<ServiceResult<ExpiredTe
     // eslint-disable-next-line no-constant-condition
     while (true) {
       // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie
-      // pisane operatory — bez tego CAŁE czyszczenie wygasłych ról rzuca CastError.
+      // pisane operatory - bez tego CAŁE czyszczenie wygasłych ról rzuca CastError.
       const doc = await TempRoleModel.findOneAndDelete({
         expiresAt: mongoose.trusted({ $lte: new Date() }),
       }).lean();

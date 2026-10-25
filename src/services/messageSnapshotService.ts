@@ -6,7 +6,7 @@ import logger from '../utils/logger';
 
 /**
  * Kopie wiadomości dla logów usunięcia/edycji (kolekcja messagesnapshots, TTL 30 dni).
- * Zapisujemy tylko tam, gdzie te logi są włączone — reszta serwerów nie płaci za to ani
+ * Zapisujemy tylko tam, gdzie te logi są włączone - reszta serwerów nie płaci za to ani
  * miejscem w bazie, ani prywatnością użytkowników.
  */
 
@@ -30,7 +30,7 @@ interface CachedDecision {
   expiresAt: number;
 }
 
-/** Konfiguracja logów czytana przy KAŻDEJ wiadomości — krótki cache odciąża bazę. */
+/** Konfiguracja logów czytana przy KAŻDEJ wiadomości - krótki cache odciąża bazę. */
 const CONFIG_CACHE_TTL_MS = 60 * 1000;
 const configCache = new Map<string, CachedDecision>();
 

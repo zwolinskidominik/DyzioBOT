@@ -1,6 +1,6 @@
 export {};
 /**
- * branchCoverage3.deep.test.ts — final push to ≥80 % branches
+ * branchCoverage3.deep.test.ts - final push to ≥80 % branches
  *
  * Targets the specific uncovered branches in small files:
  *   userStatusAdd, logChannelCreate, logUnban, logBan, warnRemove,
@@ -218,7 +218,7 @@ function mockClient() {
 
 /* ────────────────────── tests ─────────────────────── */
 
-describe('branchCoverage3 — final branch push', () => {
+describe('branchCoverage3 - final branch push', () => {
   beforeEach(() => jest.clearAllMocks());
 
   /* ── userStatusAdd ─────────────────── */
@@ -623,7 +623,7 @@ describe('branchCoverage3 — final branch push', () => {
     });
   });
 
-  /* ── channelHelpers – buildChannelName, updateChannelName, safeSetChannelName ── */
+  /* ── channelHelpers - buildChannelName, updateChannelName, safeSetChannelName ── */
   describe('channelHelpers', () => {
     // Use requireActual to test the real functions
     let channelHelpers: any;

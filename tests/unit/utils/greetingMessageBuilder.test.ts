@@ -53,7 +53,7 @@ beforeEach(() => {
   mockedFs.readdirSync.mockReturnValue([] as never);
 });
 
-describe('buildGreetingMessage — text mode', () => {
+describe('buildGreetingMessage - text mode', () => {
   it('returns plain content without embed', async () => {
     const result = await buildGreetingMessage({
       member: makeMember(),
@@ -72,7 +72,7 @@ describe('buildGreetingMessage — text mode', () => {
   });
 });
 
-describe('buildGreetingMessage — variable replacement', () => {
+describe('buildGreetingMessage - variable replacement', () => {
   it('replaces {user} with mention outside DM', async () => {
     await buildGreetingMessage({
       member: makeMember(),
@@ -101,7 +101,7 @@ describe('buildGreetingMessage — variable replacement', () => {
   });
 });
 
-describe('buildGreetingMessage — embed color fallback', () => {
+describe('buildGreetingMessage - embed color fallback', () => {
   it('uses default color when embedColor is invalid', async () => {
     await buildGreetingMessage({
       member: makeMember(),
@@ -129,7 +129,7 @@ describe('buildGreetingMessage — embed color fallback', () => {
   });
 });
 
-describe('buildGreetingMessage — thumbnailMode', () => {
+describe('buildGreetingMessage - thumbnailMode', () => {
   it('defaults to avatar thumbnail when no mode and no file', async () => {
     await buildGreetingMessage({
       member: makeMember(),
@@ -235,7 +235,7 @@ describe('buildGreetingMessage — thumbnailMode', () => {
   });
 });
 
-describe('buildGreetingMessage — image modes', () => {
+describe('buildGreetingMessage - image modes', () => {
   it('sets custom image attachment when imageMode is custom', async () => {
     mockedFs.existsSync.mockReturnValue(true);
 
@@ -305,7 +305,7 @@ describe('buildGreetingMessage — image modes', () => {
   });
 });
 
-describe('buildGreetingMessage — mention content', () => {
+describe('buildGreetingMessage - mention content', () => {
   it('adds mention content for welcome embed', async () => {
     const result = await buildGreetingMessage({
       member: makeMember(),

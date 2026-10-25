@@ -5,57 +5,57 @@
  * 6-field cron:     second minute hour day month weekday
  */
 export const CRON = {
-  /** Daily at 09:00 — birthday announcements */
+  /** Daily at 09:00 - birthday announcements */
   BIRTHDAY_CHECK: '0 9 * * *',
 
-  /** 1st of each month at 12:00 — generate monthly stats */
+  /** 1st of each month at 12:00 - generate monthly stats */
   MONTHLY_STATS_GENERATE: '0 12 1 * *',
 
-  /** Daily at 10:00 (6-field: seconds=0) — post scheduled question */
+  /** Daily at 10:00 (6-field: seconds=0) - post scheduled question */
   QUESTION_POST: '0 0 10 * * *',
 
-  /** Default: Monday at 20:25 — send tournament rules (overridable in DB) */
+  /** Default: Monday at 20:25 - send tournament rules (overridable in DB) */
   TOURNAMENT_RULES_DEFAULT: '25 20 * * 1',
 
-  /** Daily at midnight — clean up old Twitch thumbnails */
+  /** Daily at midnight - clean up old Twitch thumbnails */
   TWITCH_THUMBNAIL_CLEANUP: '0 0 * * *',
 
-  /** Every minute — check Twitch streams */
+  /** Every minute - check Twitch streams */
   TWITCH_STREAM_CHECK: '* * * * *',
 
-  /** Every 5 minutes — flush monthly stats cache to DB */
+  /** Every 5 minutes - flush monthly stats cache to DB */
   MONTHLY_STATS_FLUSH: '*/5 * * * *',
 
-  /** Every 30 seconds (6-field) — voice-channel XP tick */
+  /** Every 30 seconds (6-field) - voice-channel XP tick */
   VC_MINUTE_TICK: '*/30 * * * * *',
 
-  /** Daily at midnight — warn expiry maintenance */
+  /** Daily at midnight - warn expiry maintenance */
   WARN_MAINTENANCE: '0 0 * * *',
 
-  /** Every minute — scan for ended giveaways */
+  /** Every minute - scan for ended giveaways */
   GIVEAWAY_CHECK: '* * * * *',
 
-  /** Every 5 minutes — flush XP cache to DB */
+  /** Every 5 minutes - flush XP cache to DB */
   XP_FLUSH: '*/5 * * * *',
 
-  /** Every 10 minutes — update channel statistics */
+  /** Every 10 minutes - update channel statistics */
   CHANNEL_STATS_UPDATE: '*/10 * * * *',
 
-  /** Every hour — check for expired temp roles */
+  /** Every hour - check for expired temp roles */
   TEMP_ROLE_CHECK: '0 * * * *',
 
-  /** Every hour — check if it's time to send Disboard review reminder */
+  /** Every hour - check if it's time to send Disboard review reminder */
   DISBOARD_REMINDER_CHECK: '0 * * * *',
 
-  /** Every 15 minutes — auto-close idle ticket channels past their guild threshold */
+  /** Every 15 minutes - auto-close idle ticket channels past their guild threshold */
   TICKET_AUTOCLOSE_CHECK: '*/15 * * * *',
 
-  /** Every 20 seconds (6-field) — write bot ping/online heartbeat for dashboard */
+  /** Every 20 seconds (6-field) - write bot ping/online heartbeat for dashboard */
   BOT_STATUS_HEARTBEAT: '*/20 * * * * *',
 
-  /** Daily at 04:00 — detect guilds the bot left and purge data past the retention period */
+  /** Daily at 04:00 - detect guilds the bot left and purge data past the retention period */
   GUILD_DATA_RETENTION: '0 4 * * *',
 
-  /** Every hour at :15 — check MongoDB backups and DM the owner when something breaks */
+  /** Every hour at :15 - check MongoDB backups and DM the owner when something breaks */
   BACKUP_MONITOR: '15 * * * *',
 } as const;

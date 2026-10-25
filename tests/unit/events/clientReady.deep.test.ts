@@ -589,7 +589,7 @@ describe('questionScheduler', () => {
     await cronCallbacks[cronCallbacks.length - 1]();
     expect(sendFn).toHaveBeenCalled();
     expect(createThreadFn).toHaveBeenCalled();
-    // markUsed(guildId, questionId) — pierwszy argument doszedł wraz ze scope'owaniem pytań per serwer.
+    // markUsed(guildId, questionId) - pierwszy argument doszedł wraz ze scope'owaniem pytań per serwer.
     expect(mockMarkUsed).toHaveBeenCalledWith('g1', 'q1');
   });
 
@@ -666,7 +666,7 @@ describe('sendTournamentRules', () => {
 
     await sendTournamentRules(client as any);
 
-    // The per-guild cron was scheduled — invoke it
+    // The per-guild cron was scheduled - invoke it
     const guildCb = cronCallbacks.find((_cb, i) => {
       // Find the callback for the guild cron (not the '* * * * *' sync cron)
       return i >= 0;
@@ -833,7 +833,7 @@ describe('vcMinuteTick', () => {
     const client = makeClient([guild]);
     vcMinuteTick(client as any);
     await cronCallbacks[cronCallbacks.length - 1]();
-    // Both humans get XP — muted/deaf does not block XP
+    // Both humans get XP - muted/deaf does not block XP
     expect(mockXpCacheAddVcMin).toHaveBeenCalledTimes(2);
     expect(mockXpCacheAddVcMin).toHaveBeenCalledWith('g1', 'u1', expect.any(Number));
     expect(mockXpCacheAddVcMin).toHaveBeenCalledWith('g1', 'u2', expect.any(Number));
@@ -925,7 +925,7 @@ describe('xpFlush', () => {
    monthlyStats
    ═══════════════════════════════════════════════════════════════════ */
 describe('monthlyStats (legacy, wyłączony)', () => {
-  // monthlyStats.ts ma ENABLED = false — zastąpił go monthlyStatsV3.ts (grafika, wspólny ranking).
+  // monthlyStats.ts ma ENABLED = false - zastąpił go monthlyStatsV3.ts (grafika, wspólny ranking).
   // Plik zostaje w repo sprawny na wypadek powrotu do starego formatu, ale NIE MOŻE rejestrować
   // crona, bo oznaczałoby to podwójną wysyłkę co miesiąc. Poprzednie testy wołały callback crona,
   // który od tej zmiany nigdy nie powstaje.

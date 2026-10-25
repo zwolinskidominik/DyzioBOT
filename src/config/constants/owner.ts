@@ -1,6 +1,6 @@
 /**
  * Owner-restricted constants for bot-side access control.
- * Mirrors dashboard-nextjs/src/lib/owner.ts — keep in sync.
+ * Mirrors dashboard-nextjs/src/lib/owner.ts - keep in sync.
  */
 export const OWNER_IDS = ['548177225661546496', '548182827532025897'] as const;
 

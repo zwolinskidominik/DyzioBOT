@@ -33,7 +33,7 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie przez checkCommandAccess()
+  // userPermissions celowo pominięte - dostęp sprawdzamy ręcznie przez checkCommandAccess()
   // (extraRoleIds z ModerationConfig ma prawo przepuścić moderatora bez natywnego uprawnienia).
   botPermissions: [PermissionFlagsBits.BanMembers],
   guildOnly: true,
@@ -90,7 +90,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
 
     if (config.ban.dm) {
-      // DM PRZED banem — po zbanowaniu użytkownik może nie dzielić z nami już żadnego
+      // DM PRZED banem - po zbanowaniu użytkownik może nie dzielić z nami już żadnego
       // wspólnego serwera, co blokuje wysyłkę DM.
       try {
         await targetUser.send({

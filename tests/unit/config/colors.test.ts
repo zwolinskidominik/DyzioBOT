@@ -8,7 +8,7 @@ describe('COLORS constants', () => {
 
   it('has all expected color entries', () => {
     // Lista odzwierciedla faktyczną paletę z src/config/constants/colors.ts. Poprzednia wersja
-    // wymagała kluczy po nieistniejących już modułach (CS2_MIX, FORTUNE_ADD, TICKET_*) —
+    // wymagała kluczy po nieistniejących już modułach (CS2_MIX, FORTUNE_ADD, TICKET_*) -
     // sprawdzone: żaden z nich nie jest nigdzie w kodzie używany.
     const expectedKeys = [
       'DEFAULT', 'BIRTHDAY', 'EMBED', 'ERROR', 'FACEIT',

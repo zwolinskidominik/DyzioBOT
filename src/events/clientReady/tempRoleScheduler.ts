@@ -21,7 +21,7 @@ export default async function run(client: Client): Promise<void> {
             if (!member) continue;
 
             if (member.roles.cache.has(entry.roleId)) {
-              await member.roles.remove(entry.roleId, 'Temp role – czas wygasł');
+              await member.roles.remove(entry.roleId, 'Temp role - czas wygasł');
               logger.info(
                 `[TempRole] Usunięto rolę ${entry.roleId} z użytkownika ${entry.userId} na serwerze ${entry.guildId}`
               );

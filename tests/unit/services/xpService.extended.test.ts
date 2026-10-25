@@ -138,7 +138,7 @@ describe('modifyXp', () => {
     // Put something in cache first
     await xpCache.addMsg(GID, 'u1', 5);
     await modifyXp(makeClient(), GID, 'u1', 10);
-    // After modifyXp, cache should be invalidated — drain should have no u1 entry
+    // After modifyXp, cache should be invalidated - drain should have no u1 entry
     const entries = xpCache.drain();
     const hasU1 = entries.some(([key]) => key.includes('u1'));
     expect(hasU1).toBe(false);
@@ -210,13 +210,13 @@ describe('trackMessage', () => {
     const member = makeMember();
     const result = await trackMessage(GID, 'u1', 'ch-bonus', member);
     expect(result).toBe(true);
-    // XP should be 10 * 2 = 20 in cache — verify by drain
+    // XP should be 10 * 2 = 20 in cache - verify by drain
     const entries = xpCache.drain();
     expect(entries.length).toBeGreaterThan(0);
   });
 
   // Moduł Poziomy jest domyślnie wyłączony (LevelConfig.enabled = false), a przy zupełnym braku
-  // konfiguracji trackMessage nie ma czego włączyć — XP nie jest naliczane, dopóki ktoś nie
+  // konfiguracji trackMessage nie ma czego włączyć - XP nie jest naliczane, dopóki ktoś nie
   // włączy modułu w panelu.
   it('returns false when no config exists (module stays off until enabled)', async () => {
     const result = await trackMessage(GID, 'u1', 'ch1', makeMember());

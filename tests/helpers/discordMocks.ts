@@ -96,9 +96,9 @@ export function mockGuildMember(
     premiumSince?: Date | null;
     communicationDisabledUntil?: Date | null;
     joinedTimestamp?: number;
-    /** Czy target ma uprawnienie Administrator — Discord nigdy nie pozwoli go wyciszyć (timeout), niezależnie od hierarchii ról. */
+    /** Czy target ma uprawnienie Administrator - Discord nigdy nie pozwoli go wyciszyć (timeout), niezależnie od hierarchii ról. */
     isAdmin?: boolean;
-    /** Odpowiednik realnego GuildMember#moderatable z discord.js — domyślnie true, chyba że isAdmin. */
+    /** Odpowiednik realnego GuildMember#moderatable z discord.js - domyślnie true, chyba że isAdmin. */
     moderatable?: boolean;
   } = {},
 ): any {

@@ -39,7 +39,7 @@ class TwitchStreamer {
   @prop({ type: () => String })
   public thumbnailUrl?: string;
 
-  /** URL avatara streamera z Twitcha (profile_image_url) — pobierany przy dodawaniu/walidacji, bez dodatkowych zapytań do API. */
+  /** URL avatara streamera z Twitcha (profile_image_url) - pobierany przy dodawaniu/walidacji, bez dodatkowych zapytań do API. */
   @prop({ type: () => String })
   public avatarUrl?: string;
 }

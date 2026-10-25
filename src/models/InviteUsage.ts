@@ -2,7 +2,7 @@ import { getModelForClass, index, modelOptions, prop, DocumentType } from '@type
 
 /**
  * Trwała historia liczników zaproszeń. Discord przestaje pokazywać zaproszenie (a z nim jego
- * licznik), gdy ono wygaśnie, zostanie usunięte albo zużyje limit — tutaj wpis zostaje
+ * licznik), gdy ono wygaśnie, zostanie usunięte albo zużyje limit - tutaj wpis zostaje
  * (deleted=true), więc „ma X zaproszeń" nie spada po wygaśnięciu linku.
  */
 @modelOptions({ schemaOptions: { timestamps: true, collection: 'inviteusages' } })

@@ -22,7 +22,7 @@ import logger from '../../utils/logger';
  *
  * Strategy: we use bulkDelete(messages, true) which automatically
  * filters out messages older than 14 days. For the user this means
- * some messages may be skipped if they're too old – we report
+ * some messages may be skipped if they're too old - we report
  * the actual number deleted.
  */
 
@@ -51,7 +51,7 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie przez checkCommandAccess()
+  // userPermissions celowo pominięte - dostęp sprawdzamy ręcznie przez checkCommandAccess()
   // (extraRoleIds z ModerationConfig ma prawo przepuścić moderatora bez natywnego uprawnienia).
   botPermissions: PermissionFlagsBits.ManageMessages,
   guildOnly: true,

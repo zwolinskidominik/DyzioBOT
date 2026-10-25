@@ -132,7 +132,7 @@ describe('/pogoda command', () => {
     expect(options.cooldown).toBe(5);
   });
 
-  /* ── run – single city result ────────────────────────────── */
+  /* ── run - single city result ────────────────────────────── */
   it('defers reply and sends weather embed on success', async () => {
     const { run } = require('../../../src/commands/fun/pogoda');
     const { interaction } = buildInteraction({ miasto: 'Warszawa' });
@@ -148,7 +148,7 @@ describe('/pogoda command', () => {
     );
   });
 
-  /* ── run – city too short ────────────────────────────────── */
+  /* ── run - city too short ────────────────────────────────── */
   it('sends error for city name shorter than 2 chars', async () => {
     const { run } = require('../../../src/commands/fun/pogoda');
     const { interaction } = buildInteraction({ miasto: 'X' });
@@ -162,7 +162,7 @@ describe('/pogoda command', () => {
     expect(mockGeocode).not.toHaveBeenCalled();
   });
 
-  /* ── run – geocode empty ─────────────────────────────────── */
+  /* ── run - geocode empty ─────────────────────────────────── */
   it('sends error when geocode returns empty array', async () => {
     mockGeocode.mockResolvedValue([]);
 
@@ -178,7 +178,7 @@ describe('/pogoda command', () => {
     );
   });
 
-  /* ── run – weather fetch fails ───────────────────────────── */
+  /* ── run - weather fetch fails ───────────────────────────── */
   it('sends error when fetchWeather returns null', async () => {
     mockFetchWeather.mockResolvedValue(null);
 
@@ -192,7 +192,7 @@ describe('/pogoda command', () => {
     expect(mockFormat).not.toHaveBeenCalled();
   });
 
-  /* ── run – unexpected exception ──────────────────────────── */
+  /* ── run - unexpected exception ──────────────────────────── */
   it('catches unexpected errors and replies with error embed', async () => {
     mockGeocode.mockRejectedValue(new Error('network fail'));
 
@@ -206,7 +206,7 @@ describe('/pogoda command', () => {
     );
   });
 
-  /* ── run – trims whitespace ──────────────────────────────── */
+  /* ── run - trims whitespace ──────────────────────────────── */
   it('trims city name whitespace', async () => {
     const { run } = require('../../../src/commands/fun/pogoda');
     const { interaction } = buildInteraction({ miasto: '  Kraków  ' });
@@ -216,7 +216,7 @@ describe('/pogoda command', () => {
     expect(mockGeocode).toHaveBeenCalledWith('Kraków');
   });
 
-  /* ── run – disambiguation (multiple results) ─────────────── */
+  /* ── run - disambiguation (multiple results) ─────────────── */
   it('shows select menu when geocode returns multiple results', async () => {
     mockGeocode.mockResolvedValue([fakeLocation, fakeLocation2]);
 

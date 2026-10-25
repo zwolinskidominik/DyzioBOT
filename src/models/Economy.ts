@@ -12,7 +12,7 @@ class Economy {
   @prop({ required: true, type: () => String })
   public userId!: string;
 
-  // Portfele — zawsze INTEGER (całe żetony)
+  // Portfele - zawsze INTEGER (całe żetony)
   @prop({ default: 0, type: () => Number, min: 0 })
   public wallet!: number;
 

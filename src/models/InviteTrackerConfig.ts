@@ -84,7 +84,7 @@ class InviteTrackerConfig {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
-  /** Globalny wyłącznik modułu — gdy false, bot nic nie wysyła niezależnie od sekcji. */
+  /** Globalny wyłącznik modułu - gdy false, bot nic nie wysyła niezależnie od sekcji. */
   @prop({ type: () => Boolean, default: false })
   public enabled!: boolean;
 

@@ -139,7 +139,7 @@ describe('syncSchedules()', () => {
   });
 
   it('removes task when config is disabled', async () => {
-    // First sync — enabled
+    // First sync - enabled
     mockFind.mockReturnValue({
       lean: jest.fn().mockResolvedValue([
         { guildId: 'g1', enabled: true, cronSchedule: '0 20 * * 5' },
@@ -148,7 +148,7 @@ describe('syncSchedules()', () => {
     await syncSchedules(client);
     expect(activeTasks.size).toBe(1);
 
-    // Second sync — disabled
+    // Second sync - disabled
     mockFind.mockReturnValue({
       lean: jest.fn().mockResolvedValue([
         { guildId: 'g1', enabled: false },

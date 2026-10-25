@@ -12,7 +12,7 @@ import {
 const GID = 'guild-1';
 const UID = 'user-1';
 const MOD = 'mod-1';
-const STEPS = DEFAULT_WARN_STEPS; // [15min mute, 3h mute, 1dzień mute, ban] — 4 stopnie
+const STEPS = DEFAULT_WARN_STEPS; // [15min mute, 3h mute, 1dzień mute, ban] - 4 stopnie
 
 /* ================================================================ */
 /*  addWarn                                                          */

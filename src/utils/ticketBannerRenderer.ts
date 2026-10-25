@@ -67,7 +67,7 @@ export async function renderTextBanner(text: string): Promise<Buffer> {
     fontSize -= 2;
   }
 
-  // Still too wide at minimum size — wrap onto two lines.
+  // Still too wide at minimum size - wrap onto two lines.
   if (!fits(fontSize, safeText)) {
     const words = safeText.split(/\s+/);
     let mid = Math.ceil(words.length / 2);

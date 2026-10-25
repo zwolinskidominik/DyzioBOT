@@ -91,7 +91,7 @@ async function handleTemp(interaction: ICommandOptions['interaction']): Promise<
   const durationMs = parseDuration(durationStr);
   if (!durationMs) {
     await interaction.editReply({
-      embeds: [createErrorEmbed('Podaj prawidłowy czas trwania (5 sekund – 28 dni).\nPrzykłady: `1d 2h`, `30m`, `5h 30m`')],
+      embeds: [createErrorEmbed('Podaj prawidłowy czas trwania (5 sekund - 28 dni).\nPrzykłady: `1d 2h`, `30m`, `5h 30m`')],
     });
     return;
   }
@@ -140,7 +140,7 @@ async function handleTemp(interaction: ICommandOptions['interaction']): Promise<
 
   // Add Discord role
   try {
-    await targetMember.roles.add(role, `Temp role – ${reason ?? 'Tymczasowa rola'}`);
+    await targetMember.roles.add(role, `Temp role - ${reason ?? 'Tymczasowa rola'}`);
   } catch (error) {
     logger.error(`[role temp] Nie udało się nadać roli: ${error}`);
     await interaction.editReply({
@@ -210,7 +210,7 @@ async function handleRemove(interaction: ICommandOptions['interaction']): Promis
   try {
     const member = await guild.members.fetch(targetUser.id);
     if (member.roles.cache.has(role.id)) {
-      await member.roles.remove(role, 'Temp role – wcześniejsze usunięcie');
+      await member.roles.remove(role, 'Temp role - wcześniejsze usunięcie');
     }
   } catch (error) {
     logger.warn(`[role remove] Nie udało się usunąć roli z Discord: ${error}`);
@@ -256,7 +256,7 @@ async function handleList(interaction: ICommandOptions['interaction']): Promise<
 
   const lines = entries.map((e, i) => {
     const expires = time(e.expiresAt, TimestampStyles.RelativeTime);
-    return `**${i + 1}.** <@${e.userId}> — <@&${e.roleId}> · wygasa ${expires}`;
+    return `**${i + 1}.** <@${e.userId}> - <@&${e.roleId}> · wygasa ${expires}`;
   });
 
   const title = filterUser

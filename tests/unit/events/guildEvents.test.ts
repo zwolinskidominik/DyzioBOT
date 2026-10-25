@@ -13,7 +13,7 @@
 jest.mock('../../../src/utils/logHelpers', () => ({
   roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: jest.fn().mockResolvedValue(undefined),
-  // Handlery logów budują pole moderatora tym helperem — bez niego rzucają TypeError.
+  // Handlery logów budują pole moderatora tym helperem - bez niego rzucają TypeError.
   moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
   truncate: jest.fn((text: string) => text),
 }));
@@ -154,7 +154,7 @@ describe('guildCreate / initializeGuildConfigs', () => {
     const client = mockClient();
     const guild = mockGuild();
     mockFindOneAndUpdate.mockClear();
-    // EventHandler woła handler(...argsEventu, client) — dla guildCreate: (guild, client).
+    // EventHandler woła handler(...argsEventu, client) - dla guildCreate: (guild, client).
     await run(guild, client);
     // 13 models are initialized (Birthday, Greetings, Level, MonthlyStats, Question, Suggestion, Ticket, Stream, ReactionRole, Log, Tournament, Giveaway, AutoRole)
     expect(mockFindOneAndUpdate).toHaveBeenCalled();

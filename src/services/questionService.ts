@@ -19,23 +19,23 @@ export interface QuestionData {
 
 /**
  * Losuje pytanie dostępne dla DANEGO serwera. Pula pytań (Question) jest
- * globalna — dodawana przez właściciela bota dla wszystkich serwerów — ale
+ * globalna - dodawana przez właściciela bota dla wszystkich serwerów - ale
  * każdy serwer śledzi swoje użycie osobno przez UsedQuestion (guildId +
  * questionId), więc pytania nigdy nie powtarzają się na tym samym serwerze.
  *
- * Wyczerpana pula NIE resetuje historii — wysłane pytanie zostaje wysłane na
+ * Wyczerpana pula NIE resetuje historii - wysłane pytanie zostaje wysłane na
  * zawsze. Przywrócić je można tylko ręcznie (dashboard → „Przywróć”).
  */
 export async function getRandomQuestion(guildId: string): Promise<ServiceResult<QuestionData>> {
   // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
-  // operatory — bez tego CAŁE losowanie pytania dnia rzuca CastError.
+  // operatory - bez tego CAŁE losowanie pytania dnia rzuca CastError.
   const activePool = await QuestionModel.find({ disabled: mongoose.trusted({ $ne: true }) }).lean();
   if (activePool.length === 0) {
     return fail('NO_QUESTIONS', 'Brak dostępnych pytań.');
   }
 
   const usedIds = new Set(await UsedQuestionModel.find({ guildId }).distinct('questionId'));
-  // Pytanie bez zapisanego questionId nie da się oznaczyć jako wysłane — wysyłane byłoby
+  // Pytanie bez zapisanego questionId nie da się oznaczyć jako wysłane - wysyłane byłoby
   // w kółko. ensureQuestionIds() (start bota) uzupełnia takie ID; tu tylko zabezpieczenie.
   const available = activePool.filter((q) => hasQuestionId(q.questionId) && !usedIds.has(q.questionId));
 
@@ -48,7 +48,7 @@ export async function getRandomQuestion(guildId: string): Promise<ServiceResult<
 }
 
 /**
- * Oznacza pytanie jako użyte NA DANYM SERWERZE (nie globalnie — inne
+ * Oznacza pytanie jako użyte NA DANYM SERWERZE (nie globalnie - inne
  * serwery nadal mogą je wylosować).
  */
 export async function markUsed(guildId: string, questionId: string): Promise<ServiceResult<void>> {

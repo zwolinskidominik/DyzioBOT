@@ -1,5 +1,5 @@
 /**
- * Unit tests for weatherHelpers — pure logic + mocked API calls.
+ * Unit tests for weatherHelpers - pure logic + mocked API calls.
  */
 
 jest.mock('undici', () => ({

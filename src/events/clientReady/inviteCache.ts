@@ -5,7 +5,7 @@ import logger from '../../utils/logger';
 
 /**
  * On bot startup, cache all guild invites so we can detect
- * which invite was used when a new member joins — i zapisuje ich liczniki w trwałej historii.
+ * which invite was used when a new member joins - i zapisuje ich liczniki w trwałej historii.
  */
 export default async function run(client: Client): Promise<void> {
   try {

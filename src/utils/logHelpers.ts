@@ -131,7 +131,7 @@ export async function sendLog(
       await notifySystemChannel(client, {
         guildId,
         kind: 'missing_channel',
-        message: `Nie mogę wysłać logu (**${eventType}**) — kanał <#${channelId}> nie istnieje lub bot nie ma do niego dostępu. Sprawdź konfigurację w module Logi.`,
+        message: `Nie mogę wysłać logu (**${eventType}**) - kanał <#${channelId}> nie istnieje lub bot nie ma do niego dostępu. Sprawdź konfigurację w module Logi.`,
       });
       return;
     }
@@ -158,7 +158,7 @@ export function truncate(text: string, maxLength: number = 1024): string {
 }
 
 /**
- * Wzmianka roli do logu. Rola @everyone ma ID serwera — `<@&guildId>` Discord renderuje
+ * Wzmianka roli do logu. Rola @everyone ma ID serwera - `<@&guildId>` Discord renderuje
  * jako „@@everyone”, więc dla niej zwracamy zwykły tekst.
  */
 export function roleMention(roleId: string, guildId: string): string {

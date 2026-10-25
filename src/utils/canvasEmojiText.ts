@@ -5,7 +5,7 @@ import logger from './logger';
 /**
  * Tekst z emoji na canvasie.
  *
- * node-canvas (Cairo) nie renderuje kolorowych emoji przez fillText — zamiast glifu rysuje
+ * node-canvas (Cairo) nie renderuje kolorowych emoji przez fillText - zamiast glifu rysuje
  * pusty prostokąt z kodem (np. „01F3AE" dla 🎮). Tak wyglądała nazwa serwera w grafice
  * statystyk miesięcznych. Dlatego emoji rysujemy jako obrazki Twemoji (ta sama wersja, co
  * medale w canvasMonthlyTopkaCardV3), a zwykły tekst przez fillText.
@@ -34,7 +34,7 @@ export function isEmojiGrapheme(grapheme: string): boolean {
 
 /**
  * Nazwa pliku Twemoji dla emoji: kody szesnastkowe połączone myślnikiem. Selektor wariantu
- * U+FE0F usuwamy, chyba że emoji jest sekwencją ZWJ — tak samo nazywa pliki biblioteka Twemoji.
+ * U+FE0F usuwamy, chyba że emoji jest sekwencją ZWJ - tak samo nazywa pliki biblioteka Twemoji.
  */
 export function twemojiCode(grapheme: string): string {
   const normalized = grapheme.includes(ZWJ) ? grapheme : grapheme.replace(VARIATION_SELECTOR_16, '');
@@ -61,8 +61,8 @@ interface TextPart {
 
 /**
  * Dzieli tekst na fragmenty do narysowania. Bez letter-spacingu zwykły tekst idzie w ciągłych
- * kawałkach (zachowuje kerning fontu); z letter-spacingiem — znak po znaku. Emoji, którego nie
- * udało się pobrać, jest pomijane — lepiej go nie pokazać niż pokazać prostokąt z kodem.
+ * kawałkach (zachowuje kerning fontu); z letter-spacingiem - znak po znaku. Emoji, którego nie
+ * udało się pobrać, jest pomijane - lepiej go nie pokazać niż pokazać prostokąt z kodem.
  */
 async function layoutParts(ctx: Ctx2D, graphemes: string[], emojiSize: number, perGrapheme: boolean): Promise<TextPart[]> {
   const parts: TextPart[] = [];

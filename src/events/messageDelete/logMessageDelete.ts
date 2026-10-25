@@ -19,7 +19,7 @@ export default async function run(
     logger.error(`[Suggestion] Błąd podczas usuwania sugestii z bazy danych: ${error}`);
   }
 
-  // Wiadomości sprzed restartu bota nie ma w cache (partial: brak autora i treści) — bierzemy
+  // Wiadomości sprzed restartu bota nie ma w cache (partial: brak autora i treści) - bierzemy
   // je z kopii w bazie. Kopię usuwamy zawsze, bo wiadomość już nie istnieje.
   const snapshotRes = await getMessageSnapshot(message.guild.id, message.id);
   const snapshot: StoredMessage | null = snapshotRes.ok ? snapshotRes.data : null;
@@ -34,7 +34,7 @@ export default async function run(
   const knownContent = message.partial ? snapshot?.content : message.content;
   const content =
     knownContent === undefined
-      ? '*Treść nieznana — wiadomość sprzed włączenia logów*'
+      ? '*Treść nieznana - wiadomość sprzed włączenia logów*'
       : knownContent || '*Brak treści (możliwe embedy/attachmenty)*';
 
   const attachmentUrls = message.attachments?.size

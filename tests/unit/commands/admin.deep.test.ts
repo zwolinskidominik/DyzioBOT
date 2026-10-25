@@ -38,7 +38,7 @@ jest.mock('../../../src/services/giveawayService', () => ({
   listActiveGiveaways: mockListActiveGiveaways,
   rerollGiveaway: mockRerollGiveaway,
   getAdditionalNote: mockGetAdditionalNote,
-  // Dopisek o mnożnikach ról doszedł do serwisu po napisaniu tego mocka — bez niego
+  // Dopisek o mnożnikach ról doszedł do serwisu po napisaniu tego mocka - bez niego
   // handler /giveaway create wywala się na TypeError przed wywołaniem createGiveaway.
   getMultipliersNote: jest.fn().mockResolvedValue(''),
 }));

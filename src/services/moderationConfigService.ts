@@ -38,7 +38,7 @@ export interface CommandAccessResult {
 /**
  * Sprawdza czy komenda może zostać wykonana: moduł włączony → komenda włączona →
  * moderator ma natywne uprawnienie Discorda LUB jedną z ról z `extraRoleIds`.
- * Musi być wołane RĘCZNIE na początku run() każdej komendy moderacyjnej — te
+ * Musi być wołane RĘCZNIE na początku run() każdej komendy moderacyjnej - te
  * komendy NIE mają `userPermissions` w ICommandConfig, bo CommandHandler
  * odrzuciłby interakcję przed dotarciem do tej logiki (extraRoleIds ma prawo
  * przepuścić kogoś BEZ natywnego uprawnienia).

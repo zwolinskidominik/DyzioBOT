@@ -7,7 +7,7 @@ import logger from '../../utils/logger';
  * Zwraca odwołanie do kanału głosowego nadające się do wstawienia w treść logu.
  *
  * Wzmianka `<#id>` jest wygodna, bo klikalna, ale Discord rozwiązuje ją dopiero w momencie
- * WYŚWIETLANIA embeda — nie w momencie wysłania. Kanały tymczasowe (tempChannel.ts) są kasowane
+ * WYŚWIETLANIA embeda - nie w momencie wysłania. Kanały tymczasowe (tempChannel.ts) są kasowane
  * zaraz po wyjściu ostatniej osoby, więc zanim log dotrze do odbiorcy, kanału już nie ma i
  * zamiast nazwy widać "nieznane".
  *

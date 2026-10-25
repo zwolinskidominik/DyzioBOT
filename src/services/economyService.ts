@@ -184,7 +184,7 @@ export async function getUserRank(guildId: string, userId: string): Promise<Serv
     const doc = await EconomyModel.findOne({ guildId, userId }).lean();
     if (!doc) return ok(0);
     // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
-    // operatory — bez tego /rank rzuca CastError.
+    // operatory - bez tego /rank rzuca CastError.
     const rank =
       (await EconomyModel.countDocuments({ guildId, netWorth: mongoose.trusted({ $gt: doc.netWorth }) })) + 1;
     return ok(rank);
@@ -196,7 +196,7 @@ export async function getUserRank(guildId: string, userId: string): Promise<Serv
 
 /**
  * Wpłać do banku (Portfel → Bank).
- * Nie zmienia netWorth — to transfer wewnętrzny.
+ * Nie zmienia netWorth - to transfer wewnętrzny.
  */
 export async function deposit(
   guildId: string,
@@ -239,7 +239,7 @@ export async function deposit(
 
 /**
  * Wypłać z banku (Bank → Portfel).
- * Nie zmienia netWorth — to transfer wewnętrzny.
+ * Nie zmienia netWorth - to transfer wewnętrzny.
  */
 export async function withdraw(
   guildId: string,
@@ -337,7 +337,7 @@ export async function send(
     );
     if (!updatedReceiver) return fail('INTERNAL_ERROR', 'Błąd aktualizacji odbiorcy.');
 
-    // Ledger — oba wpisy
+    // Ledger - oba wpisy
     await EconomyTransactionModel.insertMany([
       {
         guildId,

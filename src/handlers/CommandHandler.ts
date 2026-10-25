@@ -33,7 +33,7 @@ export class CommandHandler {
   > = [];
   private readonly config: ICommandHandlerConfig;
   /**
-   * Spełnia się, gdy po `clientReady` skończy się czyszczenie (bulkRegister) i rejestracja komend —
+   * Spełnia się, gdy po `clientReady` skończy się czyszczenie (bulkRegister) i rejestracja komend -
    * także na serwerach (guild-scoped). Skrypt sync-commands czeka na to przed zamknięciem procesu,
    * zamiast zgadywać stałym opóźnieniem (wcześniejsze 5 s ucinało rejestrację komend serwerowych).
    */
@@ -70,7 +70,7 @@ export class CommandHandler {
       const fullPath = join(dir, entry);
       if (statSync(fullPath).isDirectory()) {
         // Kategoria = nazwa najbliższego folderu nadrzędnego (np. "fun", "misc", "birthdays").
-        // Zagnieżdżone podfoldery dostają WŁASNĄ kategorię, a nie kategorię rodzica — dzięki temu
+        // Zagnieżdżone podfoldery dostają WŁASNĄ kategorię, a nie kategorię rodzica - dzięki temu
         // np. misc/birthdays/* nie trafia do kategorii "misc" (mają już osobny moduł Urodziny).
         this.loadCommands(fullPath, entry);
         continue;
@@ -123,7 +123,7 @@ export class CommandHandler {
     }
     const globalCommands: ApplicationCommandData[] = [];
     // guildId -> komendy, które mają być zarejestrowane WYŁĄCZNIE na tym serwerze
-    // (dev-only na devGuildIds ORAZ restrictedGuildIds z pojedynczych komend — scalone,
+    // (dev-only na devGuildIds ORAZ restrictedGuildIds z pojedynczych komend - scalone,
     // bo jeden serwer może dostać komendy z obu źródeł naraz).
     const guildCommands = new Map<string, ApplicationCommandData[]>();
 
@@ -353,7 +353,7 @@ export class CommandHandler {
   }
 
   /**
-   * Serwer z listy komend guild-scoped (np. OWNER_GUILD_IDS), na którym bota nie ma — to nie błąd
+   * Serwer z listy komend guild-scoped (np. OWNER_GUILD_IDS), na którym bota nie ma - to nie błąd
    * (np. serwer testowy obsługiwany przez bota deweloperskiego), więc tylko informacja w logu.
    * Ostrzeżenie zostaje dla innych błędów (sieć, limity API).
    */
@@ -363,7 +363,7 @@ export class CommandHandler {
     } catch (err) {
       const code = err instanceof DiscordAPIError ? err.code : undefined;
       if (code === RESTJSONErrorCodes.UnknownGuild || code === RESTJSONErrorCodes.MissingAccess) {
-        logger.info(`ℹ️ Pomijam komendy guild-scoped dla serwera ${guildId} — bota nie ma na tym serwerze.`);
+        logger.info(`ℹ️ Pomijam komendy guild-scoped dla serwera ${guildId} - bota nie ma na tym serwerze.`);
       } else {
         logger.warn(`⚠️ Nie udało się pobrać gildii o ID ${guildId} do rejestracji komend guild-scoped: ${err}`);
       }

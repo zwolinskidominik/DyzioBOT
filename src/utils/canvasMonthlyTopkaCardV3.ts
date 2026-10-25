@@ -4,8 +4,8 @@ import { fillTextWithEmojiTracked, isEmojiGrapheme, splitGraphemes } from './can
 import logger from './logger';
 
 /**
- * Generator grafiki dla miesięcznej "Topki" — wersja v3 (podium + wspólny wynik).
- * Osobny, samodzielny plik — NIE dotyka `canvasMonthlyTopkaCard.ts` (v2, dwie kolumny)
+ * Generator grafiki dla miesięcznej "Topki" - wersja v3 (podium + wspólny wynik).
+ * Osobny, samodzielny plik - NIE dotyka `canvasMonthlyTopkaCard.ts` (v2, dwie kolumny)
  * ani `canvasLeaderboardCard.ts` (TOPKA LEVELI, /toplvl). Wynik łączy wiadomości i głos
  * w jeden ranking: score = wiadomości + round(minuty_głosowe / 2).
  *
@@ -14,7 +14,7 @@ import logger from './logger';
  *  1. Wagi fontu 800/900 z makiety → renderowane jako `bold` (700), bo w `assets/`
  *     nie ma plików Inter ExtraBold/Black. To najcięższa zarejestrowana waga.
  *  2. `tabular-nums` nie ma odpowiednika w Canvas2D/Cairo (brak kontroli cech OpenType
- *     typu `tnum`) — kolumny liczb są za to zawsze prawo-wyrównane do stałej krawędzi,
+ *     typu `tnum`) - kolumny liczb są za to zawsze prawo-wyrównane do stałej krawędzi,
  *     więc wizualnie nie "skaczą" mimo proporcjonalnych cyfr.
  */
 
@@ -36,11 +36,11 @@ export interface MonthlyTopkaCardV3Options {
   totalMessages: number;
   totalVoiceMinutes: number;
   activeUsers: number;
-  /** Posortowane malejąco po score — index 0 = #1 miejsce. */
+  /** Posortowane malejąco po score - index 0 = #1 miejsce. */
   entries: TopkaV3Entry[];
-  /** Ile wiadomości = 1 pkt (domyślnie 1) — wpływa tylko na tekst stopki, wynik jest już policzony w entries. */
+  /** Ile wiadomości = 1 pkt (domyślnie 1) - wpływa tylko na tekst stopki, wynik jest już policzony w entries. */
   msgRate?: number;
-  /** Ile minut na voice = 1 pkt (domyślnie 2) — wpływa tylko na tekst stopki. */
+  /** Ile minut na voice = 1 pkt (domyślnie 2) - wpływa tylko na tekst stopki. */
   voiceRate?: number;
 }
 
@@ -53,7 +53,7 @@ function pl(num: number): string {
   return Math.round(num).toLocaleString('pl-PL');
 }
 
-/* ── Medale Twemoji (złoto/srebro/brąz) — pobrane raz przy starcie procesu i ──
+/* ── Medale Twemoji (złoto/srebro/brąz) - pobrane raz przy starcie procesu i ──
    cache'owane w pamięci; node-canvas nie renderuje emoji przez fillText, więc
    medale rysujemy jako obrazki drawImage(). ─────────────────────────────── */
 
@@ -97,11 +97,11 @@ interface PodiumTier {
   entry: TopkaV3Entry;
   rank: 1 | 2 | 3;
   medalColor: string;
-  /** Kolor bazowy (np. tło awatara fallback) — bez przezroczystości. */
+  /** Kolor bazowy (np. tło awatara fallback) - bez przezroczystości. */
   accent: string;
   /** Kolor obwódki karty. */
   accentSoft: string;
-  /** Stopy gradientowej nakładki (0 = góra), kończące się pełną przezroczystością — NIE kolorem tła. */
+  /** Stopy gradientowej nakładki (0 = góra), kończące się pełną przezroczystością - NIE kolorem tła. */
   gradientStops: [number, string][];
   scoreColor: string;
 }
@@ -158,7 +158,7 @@ export class MonthlyTopkaCardV3 {
     this.restCount = Math.max(0, options.entries.length - 3);
 
     // Karty podium mają wysokość dokładnie dopasowaną do treści (bez pustej
-    // przestrzeni pod tekstem) — liczoną z tej samej sekwencji odstępów, której
+    // przestrzeni pod tekstem) - liczoną z tej samej sekwencji odstępów, której
     // używa drawPodiumCard(). MVP jest wyższa organicznie (więcej linii + większe fonty),
     // nie przez sztywną stałą.
     this.podiumMidHeight = this.computePodiumHeight(true);
@@ -181,7 +181,7 @@ export class MonthlyTopkaCardV3 {
 
     this.height = this.padTop + contentHeight + this.padBottomOuter;
 
-    // Renderujemy w skali 2× (retina) — cała logika rysuje w logicznej przestrzeni
+    // Renderujemy w skali 2× (retina) - cała logika rysuje w logicznej przestrzeni
     // 900px, a fizyczny canvas jest dwukrotnie większy dzięki ctx.scale().
     this.canvas = createCanvas(this.width * this.scale, this.height * this.scale);
     this.ctx = this.canvas.getContext('2d');
@@ -234,7 +234,7 @@ export class MonthlyTopkaCardV3 {
     const x = this.padX;
     const logoSize = 60;
 
-    // Inicjał zastępczy (gdy serwer nie ma ikony) — pierwszy znak, który nie jest emoji;
+    // Inicjał zastępczy (gdy serwer nie ma ikony) - pierwszy znak, który nie jest emoji;
     // charAt(0) przy nazwie zaczynającej się od emoji zwróciłby połówkę pary surogatów.
     const initial = splitGraphemes(guildName).find((g) => g.trim() && !isEmojiGrapheme(g)) ?? '?';
     await this.drawCircleImage(guildIconURL ?? null, x, y, logoSize, initial.toUpperCase(), {
@@ -246,7 +246,7 @@ export class MonthlyTopkaCardV3 {
 
     this.ctx.fillStyle = this.colors.textMuted;
     this.ctx.font = `bold 11px ${FONT}`;
-    // Nazwy serwerów często zawierają emoji (np. „🎮GAMEZONE🎮") — fillText narysowałby je jako
+    // Nazwy serwerów często zawierają emoji (np. „🎮GAMEZONE🎮") - fillText narysowałby je jako
     // prostokąty z kodem, więc emoji idą jako obrazki Twemoji.
     await fillTextWithEmojiTracked(this.ctx, guildName.toUpperCase(), textX, y + 16, {
       fontSize: 11,
@@ -258,7 +258,7 @@ export class MonthlyTopkaCardV3 {
     this.ctx.textAlign = 'left';
     this.ctx.fillText(`${monthName} ${year}`, textX, y + 50);
 
-    // Trzy statystyki, prawo-wyrównane do krawędzi treści — liczone od prawej,
+    // Trzy statystyki, prawo-wyrównane do krawędzi treści - liczone od prawej,
     // tak by żadna z nich (razem z podpisem) nie mogła wyjść poza krawędź.
     const stats: [string, string][] = [
       [pl(totalMessages), 'wiadomości'],
@@ -354,7 +354,7 @@ export class MonthlyTopkaCardV3 {
   }
 
   /**
-   * Wysokość karty podium dopasowana ściśle do treści — ta sama sekwencja odstępów,
+   * Wysokość karty podium dopasowana ściśle do treści - ta sama sekwencja odstępów,
    * którą rysuje drawPodiumCard(): awatar → 10 → wiersz medal/wynik/pkt → 8 → nick → 8 → linie (gap 3).
    * Górny/dolny padding karty są symetryczne (24 dla MVP, 20 dla bocznych).
    */
@@ -422,7 +422,7 @@ export class MonthlyTopkaCardV3 {
   }
 
   /**
-   * Medal Twemoji (drawImage, pobrany raz przy starcie i cache'owany) — NIE fillText
+   * Medal Twemoji (drawImage, pobrany raz przy starcie i cache'owany) - NIE fillText
    * z emoji, node-canvas nie renderuje glifów emoji. Jeśli pobranie się nie powiodło
    * (np. brak sieci przy starcie), zapasowo rysuje koło z cyfrą miejsca.
    */
@@ -465,7 +465,7 @@ export class MonthlyTopkaCardV3 {
     roundRect(this.ctx, x, y, width, height, 16);
     this.ctx.fill();
 
-    // Warstwa 2: nakładka — kolor akcentu tylko u góry, gradient kończy się PEŁNĄ
+    // Warstwa 2: nakładka - kolor akcentu tylko u góry, gradient kończy się PEŁNĄ
     // przezroczystością (nie kolorem tła), więc nie ma twardej krawędzi/plamy.
     const overlay = this.ctx.createLinearGradient(0, y, 0, y + height);
     for (const [stop, color] of tier.gradientStops) overlay.addColorStop(stop, color);
@@ -478,7 +478,7 @@ export class MonthlyTopkaCardV3 {
     roundRect(this.ctx, x, y, width, height, 16);
     this.ctx.stroke();
 
-    // Cała reszta karty rysowana na textBaseline='top' — każdy element ma z góry
+    // Cała reszta karty rysowana na textBaseline='top' - każdy element ma z góry
     // znaną wysokość (rozmiar fontu), więc odstępy z makiety mapują się 1:1 na
     // sumowanie cursorY, bez żadnych "domyślanych" poprawek pod baseline alfabetyczny.
     this.ctx.textBaseline = 'top';
@@ -610,7 +610,7 @@ export class MonthlyTopkaCardV3 {
     let rowY = lineY + 1 + 6;
     const rest = this.options.entries.slice(3);
 
-    // ROW_H stała 46px — tekst wyśrodkowany względem niej (textBaseline='middle'),
+    // ROW_H stała 46px - tekst wyśrodkowany względem niej (textBaseline='middle'),
     // bez liczenia z line-height i bez dodatkowego paddingu do wysokości wiersza.
     const ROW_H = this.tableRowHeight;
     this.ctx.textBaseline = 'middle';
@@ -649,7 +649,7 @@ export class MonthlyTopkaCardV3 {
       this.ctx.fillText(pl(entry.messageCount), msgRight, midY);
       this.ctx.fillText(formatHM(entry.voiceMinutes), voiceRight, midY);
 
-      // "Wynik" + "pkt" — oba prawo-wyrównane razem do tej samej krawędzi kolumny.
+      // "Wynik" + "pkt" - oba prawo-wyrównane razem do tej samej krawędzi kolumny.
       this.ctx.font = `11px ${FONT}`;
       this.ctx.fillStyle = this.colors.textDim;
       const pktWidth = this.ctx.measureText('pkt').width;

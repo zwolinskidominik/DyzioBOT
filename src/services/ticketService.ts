@@ -89,7 +89,7 @@ export async function getTicketTypes(guildId: string): Promise<ServiceResult<ITi
 
 /**
  * Validate prerequisites for ticket creation, including the per-user open
- * ticket limit (automation.maxOpenPerUser — 0 disables the check).
+ * ticket limit (automation.maxOpenPerUser - 0 disables the check).
  * Returns category ID, type metadata, and channel name to create.
  */
 export async function validateTicketCreation(
@@ -124,7 +124,7 @@ export async function validateTicketCreation(
     if (openCount >= maxOpenPerUser) {
       return fail(
         'LIMIT_REACHED',
-        `Masz już otwarte ${openCount} ${openCount === 1 ? 'zgłoszenie' : 'zgłoszenia'} na tym serwerze — zamknij je, zanim utworzysz kolejne (limit: ${maxOpenPerUser}).`,
+        `Masz już otwarte ${openCount} ${openCount === 1 ? 'zgłoszenie' : 'zgłoszenia'} na tym serwerze - zamknij je, zanim utworzysz kolejne (limit: ${maxOpenPerUser}).`,
       );
     }
   }
@@ -243,7 +243,7 @@ export interface IdleTicketGroup {
 
 export async function findIdleTicketGroups(): Promise<IdleTicketGroup[]> {
   // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
-  // operatory — bez tego auto-close ticketów rzuca CastError.
+  // operatory - bez tego auto-close ticketów rzuca CastError.
   const configs = await TicketConfigModel.find({ 'automation.autoCloseHours': mongoose.trusted({ $gt: 0 }) });
   const groups: IdleTicketGroup[] = [];
 

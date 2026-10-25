@@ -23,7 +23,7 @@ export class TournamentConfig {
 ### Eksperymentowanie z bronią
 -# Zeusy, kosy, granaty oraz wszelkie nietypowe bronie są mile widziane! Staraj się nie tryhardować - to nie jest mecz o rangę!
 ### Kultura
--# Szanujmy zarówno przeciwników, jak i swoich teammate'ów. Obrażanie, negatywne komentarze lub wyzwiska są zabronione – celem jest pozytywna atmosfera i dobra zabawa.` 
+-# Szanujmy zarówno przeciwników, jak i swoich teammate'ów. Obrażanie, negatywne komentarze lub wyzwiska są zabronione - celem jest pozytywna atmosfera i dobra zabawa.` 
   })
   public messageTemplate!: string;
 

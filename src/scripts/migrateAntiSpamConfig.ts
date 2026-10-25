@@ -7,7 +7,7 @@
  * do domyślnych ustawień).
  *
  * Użycie:
- *   npx tsx src/scripts/migrateAntiSpamConfig.ts            (dry-run — tylko podgląd)
+ *   npx tsx src/scripts/migrateAntiSpamConfig.ts            (dry-run - tylko podgląd)
  *   npx tsx src/scripts/migrateAntiSpamConfig.ts --apply     (faktyczny zapis)
  */
 
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
   await mongoose.connect(uri);
   console.log('Połączono z bazą.');
   console.log(
-    `Tryb: ${APPLY ? 'APPLY — zmiany zostaną zapisane' : 'DRY-RUN — tylko podgląd, nic nie zostanie zapisane'}`
+    `Tryb: ${APPLY ? 'APPLY - zmiany zostaną zapisane' : 'DRY-RUN - tylko podgląd, nic nie zostanie zapisane'}`
   );
 
   const collection = mongoose.connection.collection<OldFlatDoc>('antispamconfigs');
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
   for (const doc of docs) {
     try {
       if (doc.rate && typeof doc.rate === 'object' && 'on' in (doc.rate as object)) {
-        console.log(`  ⏩ ${doc.guildId} — już zmigrowany, pomijam`);
+        console.log(`  ⏩ ${doc.guildId} - już zmigrowany, pomijam`);
         skipped++;
         continue;
       }
@@ -112,7 +112,7 @@ async function main(): Promise<void> {
         // Stary system miał DWA osobne przełączniki: blockMassMentions (dużo @user/@role
         // w jednej wiadomości) i blockEveryoneHere (@everyone/@here, domyślnie WŁĄCZONE
         // i faktycznie egzekwowane przez starego handlera). Nowa reguła "mentions" łączy
-        // oba w jeden toggle — pomijanie blockEveryoneHere wyłączyłoby domyślnie aktywną
+        // oba w jeden toggle - pomijanie blockEveryoneHere wyłączyłoby domyślnie aktywną
         // ochronę przed @everyone/@here na każdym serwerze, który jej nigdy nie dotykał.
         mentions: {
           ...baseRule,
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
   console.log(`Błędów: ${failed}`);
 
   if (!APPLY) {
-    console.log('\nTo był dry-run — żadne dane nie zostały zmienione.');
+    console.log('\nTo był dry-run - żadne dane nie zostały zmienione.');
     console.log('Żeby faktycznie zapisać zmiany, uruchom:');
     console.log('  npx tsx src/scripts/migrateAntiSpamConfig.ts --apply');
   } else {

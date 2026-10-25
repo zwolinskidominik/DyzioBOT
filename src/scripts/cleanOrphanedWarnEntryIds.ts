@@ -7,16 +7,16 @@
  * `updateMany`, więc cofnięcie JEDNEGO ostrzeżenia oznaczało jako cofnięte WSZYSTKIE wpisy typu
  * "warn" na serwerze.
  *
- * Powiązania starych logów z konkretnymi ostrzeżeniami nie da się odtworzyć — ta informacja
+ * Powiązania starych logów z konkretnymi ostrzeżeniami nie da się odtworzyć - ta informacja
  * nigdy nie została poprawnie zapisana. Dlatego skrypt tylko usuwa bezużyteczne pole: takie
  * wpisy przestają się masowo dopasowywać, a próba ich cofnięcia kończy się czytelnym
  * "nie znaleziono" zamiast zepsucia historii.
  *
- * Ostrzeżeń w kolekcji `warns` skrypt NIE rusza — wygasają samoczynnie (warnExpiryDays,
+ * Ostrzeżeń w kolekcji `warns` skrypt NIE rusza - wygasają samoczynnie (warnExpiryDays,
  * domyślnie 90 dni, sprząta je cleanExpiredWarns), a wszystkie nowe mają już poprawne `_id`.
  *
  * Użycie:
- *   npx tsx src/scripts/cleanOrphanedWarnEntryIds.ts            (dry-run — tylko podgląd)
+ *   npx tsx src/scripts/cleanOrphanedWarnEntryIds.ts            (dry-run - tylko podgląd)
  *   npx tsx src/scripts/cleanOrphanedWarnEntryIds.ts --apply    (faktyczny zapis)
  */
 
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
 
   await mongoose.connect(uri);
   console.log('Połączono z bazą.');
-  console.log(`Tryb: ${APPLY ? 'APPLY — zmiany zostaną zapisane' : 'DRY-RUN — tylko podgląd, nic nie zostanie zapisane'}`);
+  console.log(`Tryb: ${APPLY ? 'APPLY - zmiany zostaną zapisane' : 'DRY-RUN - tylko podgląd, nic nie zostanie zapisane'}`);
 
   const candidates = await ModerationLogModel.find({ warnEntryId: { $exists: true, $ne: null } })
     .select('guildId targetId targetTag warnEntryId createdAt')
@@ -74,7 +74,7 @@ async function main(): Promise<void> {
     );
     console.log(`\nWyczyszczono warnEntryId w ${result.modifiedCount} wpisach.`);
   } else {
-    console.log('\nTo był dry-run — żadne dane nie zostały zmienione.');
+    console.log('\nTo był dry-run - żadne dane nie zostały zmienione.');
     console.log('Żeby faktycznie zapisać zmiany, uruchom:');
     console.log('  npx tsx src/scripts/cleanOrphanedWarnEntryIds.ts --apply');
   }

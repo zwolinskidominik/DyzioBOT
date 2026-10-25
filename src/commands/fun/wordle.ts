@@ -112,7 +112,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Odgadnij ukryte polskie słowo w 6 próbach 🟩')
   .addIntegerOption((o) =>
     o.setName('litery')
-      .setDescription('Liczba liter w słowie (domyślnie 5, zakres 5–7)')
+      .setDescription('Liczba liter w słowie (domyślnie 5, zakres 5-7)')
       .setMinValue(5).setMaxValue(7).setRequired(false),
   );
 
@@ -136,7 +136,7 @@ async function isPolishWord(word: string): Promise<boolean> {
     dictCache.set(word, valid);
     return valid;
   } catch {
-    // If API is unreachable, fail open — don't punish the player
+    // If API is unreachable, fail open - don't punish the player
     return true;
   }
 }
@@ -257,7 +257,7 @@ function renderImage(
     }
   }
 
-  /* Answer overlay — floats centered over grid on loss */
+  /* Answer overlay - floats centered over grid on loss */
   if (state === 'lost' && word) {
     const OTILE  = Math.round(TILE * 1.18);  // tiles slightly bigger than grid tiles
     const OGAP   = TGAP;
@@ -346,7 +346,7 @@ function makeButtons(userId: string, disabled = false) {
 function makeModal(userId: string, length: number) {
   return new ModalBuilder()
     .setCustomId(`wordle_modal_${userId}`)
-    .setTitle(`Wordle — wpisz ${length}-literowe słowo`)
+    .setTitle(`Wordle - wpisz ${length}-literowe słowo`)
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
@@ -402,7 +402,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     filter: (i) => i.user.id === userId,
   });
 
-  /* end helper — collector already declared above */
+  /* end helper - collector already declared above */
   const endGame = async (state: 'won' | 'lost') => {
     activeUsers.delete(userId);
     collector.stop('done');
@@ -443,7 +443,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     // Każdy modal-submit ma unikalne id. Jeśli kilka równoległych `awaitModalSubmit`
     // rozwiąże się tym samym submitem (po wielokrotnym kliknięciu "Zgadnij słowo"),
-    // tylko PIERWSZY ma prawo go przetworzyć — pozostałe cicho odrzucamy.
+    // tylko PIERWSZY ma prawo go przetworzyć - pozostałe cicho odrzucamy.
     if (processedSubmits.has(modalInter.id)) {
       return;
     }
@@ -462,7 +462,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     // Zapobiegaj zgłaszaniu tego samego słowa kilka razy (marnuje próbę).
     // To także obsługuje przypadek, gdy dwa równoległe `awaitModalSubmit` rozwiążą się
-    // tym samym submitem — pierwszy doda słowo, drugi wykryje duplikat.
+    // tym samym submitem - pierwszy doda słowo, drugi wykryje duplikat.
     if (submittedGuesses.has(rawInput)) {
       await modalInter.reply({ content: `❌ To słowo już zgadywałeś w tej grze!`, flags: MessageFlags.Ephemeral });
       return;

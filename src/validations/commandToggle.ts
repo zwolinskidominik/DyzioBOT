@@ -8,7 +8,7 @@ const UTILITY_CATEGORIES = new Set(['fun', 'misc']);
 
 /**
  * Pojedyncze komendy spoza fun/misc, które mimo kategorii "admin" (bo fizycznie
- * leżą w src/commands/admin/) też należą do modułu "Narzędzia" w dashboardzie —
+ * leżą w src/commands/admin/) też należą do modułu "Narzędzia" w dashboardzie -
  * reszta kategorii "admin" (giveaway, xp) ma WŁASNE gate'y (patrz moduleToggle.ts).
  */
 const ADDITIONAL_UTILITY_COMMANDS = new Set(['say', 'role', 'emoji-steal']);
@@ -37,6 +37,6 @@ export default async function commandToggle(
     return null;
   } catch (error) {
     logger.error(`Błąd sprawdzania commandToggle: ${error}`);
-    return null; // fail-open — błąd bazy nie powinien blokować komend
+    return null; // fail-open - błąd bazy nie powinien blokować komend
   }
 }

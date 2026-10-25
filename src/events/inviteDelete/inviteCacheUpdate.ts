@@ -4,7 +4,7 @@ import logger from '../../utils/logger';
 
 /**
  * Zaproszenie usunięte (ręcznie albo przez Discord po zużyciu limitu). Pamięci NIE odświeżamy:
- * Discord potrafi wysłać to zdarzenie, zanim przyjdzie dołączenie, które to zaproszenie zużyło —
+ * Discord potrafi wysłać to zdarzenie, zanim przyjdzie dołączenie, które to zaproszenie zużyło -
  * gdybyśmy je wyrzucili, nie dałoby się ustalić autora. Przy następnym dołączeniu
  * detectUsedInvite i tak porówna stan i wyczyści pamięć. W historii licznik zostaje.
  */

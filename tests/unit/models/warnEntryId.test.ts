@@ -4,11 +4,11 @@ import { WarnModel } from '../../../src/models/Warn';
  * Regresja: `WarnEntry` deklaruje `_id` jawnie (żeby TypeScript widział to pole), a taka
  * deklaracja WYŁĄCZA automatyczne nadawanie `_id` przez Mongoose. Bez `default` w modelu każdy
  * wpis miał `_id: undefined`, więc `String(w._id)` dawało dla wszystkich ten sam string
- * "undefined" — a wtedy usuwanie "po ID" trafiało w każdy wpis naraz.
+ * "undefined" - a wtedy usuwanie "po ID" trafiało w każdy wpis naraz.
  *
  * Test nie potrzebuje bazy: `_id` nadawane jest już przy tworzeniu podwpisu w pamięci.
  */
-describe('Warn — identyfikatory pojedynczych ostrzeżeń', () => {
+describe('Warn - identyfikatory pojedynczych ostrzeżeń', () => {
   function makeRecordWithTwoWarnings() {
     const doc = new WarnModel({ userId: 'u1', guildId: 'g1', warnings: [] });
     // `date` ma w schemacie default, ale typ WarnEntry wymaga go jawnie przy push().

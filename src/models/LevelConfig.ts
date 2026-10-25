@@ -50,7 +50,7 @@ export class LevelConfig {
   @prop({ default: false, type: () => Boolean })
   public enableLevelUpMessages!: boolean;
 
-  /** Domyślnie true (opt-out) — wcześniej wiadomości o nagrodzie były wysyłane bezwarunkowo. */
+  /** Domyślnie true (opt-out) - wcześniej wiadomości o nagrodzie były wysyłane bezwarunkowo. */
   @prop({ default: true, type: () => Boolean })
   public enableRewardMessages!: boolean;
 

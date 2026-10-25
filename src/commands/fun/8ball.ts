@@ -12,14 +12,14 @@ const POSITIVE = [
   'Bez wątpienia',
   'Na pewno tak',
   'Możesz na to liczyć',
-  'Tak — zdecydowanie',
-  'Jak dla mnie — tak',
-  'Moim zdaniem — tak',
+  'Tak - zdecydowanie',
+  'Jak dla mnie - tak',
+  'Moim zdaniem - tak',
   'Najprawdopodobniej',
   'Tak',
   'Perspektywy dobre',
   'Wszystko na to wskazuje',
-  'Znaki mówią — tak',
+  'Znaki mówią - tak',
   'Bardzo możliwe',
   'Czuć, że tak',
   'Bądź dobrej myśli',
@@ -41,8 +41,8 @@ const NEUTRAL = [
 
 const NEGATIVE = [
   'Nawet na to nie licz',
-  'Moja odpowiedź\nbrzmi — nie',
-  'Moje źródła\nmówią — nie',
+  'Moja odpowiedź\nbrzmi - nie',
+  'Moje źródła\nmówią - nie',
   'Perspektywy niezbyt dobre',
   'Bardzo wątpliwe',
   'Gwiazdy mówią nie',
@@ -123,7 +123,7 @@ function drawBall(ctx: Ctx2D, glowColor: string) {
   ctx.fill();
   ctx.restore();
 
-  // Main ball gradient — dark sphere
+  // Main ball gradient - dark sphere
   const ballGrad = ctx.createRadialGradient(CX - 70, CY - 80, 30, CX, CY, BALL_R);
   ballGrad.addColorStop(0, '#3a3a4a');
   ballGrad.addColorStop(0.4, '#1a1a24');
@@ -267,7 +267,7 @@ function drawQuestionFooter(ctx: Ctx2D, question: string, username: string) {
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.fillText(`Zapytał(a): ${username}`, CX, footerY + 30);
 
-  // Question — truncate if too long
+  // Question - truncate if too long
   ctx.font = 'bold 20px sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   let q = question;

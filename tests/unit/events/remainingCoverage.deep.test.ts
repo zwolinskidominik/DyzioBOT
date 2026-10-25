@@ -47,7 +47,7 @@ jest.mock('../../../src/utils/logHelpers', () => ({
   roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: mockSendLog,
   truncate: mockTruncate,
-  // Handlery logów budują pole moderatora tym helperem — bez niego rzucają TypeError.
+  // Handlery logów budują pole moderatora tym helperem - bez niego rzucają TypeError.
   moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
 }));
 

@@ -11,7 +11,7 @@ export default async function run(
 
   if (newMessage.author?.bot) return;
 
-  // Cache discord.js obejmuje tylko to, co bot widział od swojego startu — starsze wiadomości
+  // Cache discord.js obejmuje tylko to, co bot widział od swojego startu - starsze wiadomości
   // przychodzą jako partial (`content === null`). Wtedy sięgamy po kopię z bazy (patrz
   // messageSnapshotService), a dopiero bez niej piszemy, że treści nie znamy.
   let snapshot: StoredMessage | null = null;
@@ -28,7 +28,7 @@ export default async function run(
   await storeMessageSnapshot(newMessage);
 
   const oldContent =
-    previous === null ? '(treść nieznana — wiadomość sprzed włączenia logów)' : previous || '*Brak treści*';
+    previous === null ? '(treść nieznana - wiadomość sprzed włączenia logów)' : previous || '*Brak treści*';
   const newContent = newMessage.content || '*Brak treści*';
 
   await sendLog(client, newMessage.guild.id, 'messageEdit', {

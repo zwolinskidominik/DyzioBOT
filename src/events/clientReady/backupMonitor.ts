@@ -14,7 +14,7 @@ import logger from '../../utils/logger';
 
 /**
  * Co godzinę sprawdza kopie zapasowe MongoDB i pisze do właściciela w prywatnej wiadomości,
- * gdy coś przestało działać — oraz raz, gdy wszystko wróci do normy. Ten sam problem nie jest
+ * gdy coś przestało działać - oraz raz, gdy wszystko wróci do normy. Ten sam problem nie jest
  * powtarzany co godzinę (tylko zmiana stanu wysyła wiadomość).
  *
  * Włączane przez BACKUP_ALERT_USER_ID w .env produkcji (ID konta, które ma dostawać alerty).
@@ -40,7 +40,7 @@ export async function checkBackups(client: Client, userId: string, statusDir: st
 
   const hadProblems = lastAlertKey !== '';
 
-  // Stan zapamiętujemy dopiero po wysłaniu wiadomości — gdy DM się nie uda, kolejna
+  // Stan zapamiętujemy dopiero po wysłaniu wiadomości - gdy DM się nie uda, kolejna
   // godzinna kontrola spróbuje jeszcze raz.
   if (problems.length > 0) {
     logger.warn(`[BackupMonitor] Problem z kopiami: ${key}`);
@@ -70,7 +70,7 @@ export async function checkBackups(client: Client, userId: string, statusDir: st
   lastAlertKey = key;
 }
 
-/** Tylko do testów — stan alertu żyje w pamięci procesu. */
+/** Tylko do testów - stan alertu żyje w pamięci procesu. */
 export function resetBackupMonitorState(): void {
   lastAlertKey = '';
 }

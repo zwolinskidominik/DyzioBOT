@@ -5,7 +5,7 @@ jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
-// Gdy kanał logów nie istnieje, sendLog powiadamia o tym kanał systemowy — a to czyta
+// Gdy kanał logów nie istnieje, sendLog powiadamia o tym kanał systemowy - a to czyta
 // GuildSettings z bazy. W teście jednostkowym bazy nie ma, więc mockujemy powiadomienie.
 jest.mock('../../../src/utils/systemNotify', () => ({
   notifySystemChannel: jest.fn().mockResolvedValue(undefined),

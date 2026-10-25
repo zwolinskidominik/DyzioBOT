@@ -3,7 +3,7 @@ import { prop, getModelForClass, modelOptions } from '@typegoose/typegoose';
 export const DEFAULT_DISBOARD_MESSAGE =
   '### Cześć i czołem! <a:pepo_howody:1351311201614827583>  \n' +
   'Pomóżcie nam rosnąć w siłę! Zostawcie szczerą recenzję o naszym serwerze na Disboardzie. \n' +
-  'Każda opinia – niezależnie od tego, czy pozytywna, czy negatywna – jest dla nas bardzo cenna. \n\n' +
+  'Każda opinia - niezależnie od tego, czy pozytywna, czy negatywna - jest dla nas bardzo cenna. \n\n' +
   '**Z góry dziękuję każdemu, kto znajdzie chwilę, by pomóc.** <:pepe_ok:1351199540304285726> \n' +
   '**Link do zamieszczenia recenzji:** https://disboard.org/pl/server/881293681783623680\n' +
   '-# Dla każdego, kto zdecyduje się napisać swoją opinię i zgłosi się do administracji serwera, przewidziano jednorazową nagrodę w postaci bonusu +5.000 XP.';

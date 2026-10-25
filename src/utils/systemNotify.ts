@@ -12,10 +12,10 @@ interface SystemNotifyParams {
 
 /**
  * Wysyła powiadomienie systemowe na kanał skonfigurowany w module Ustawienia
- * (GuildSettings.systemNotifyChannelId) — np. gdy bot nie ma uprawnień do
+ * (GuildSettings.systemNotifyChannelId) - np. gdy bot nie ma uprawnień do
  * jakiegoś innego, skonfigurowanego wcześniej kanału (logi, urodziny, itp.).
  *
- * Celowo NIGDY nie rzuca ani nie propaguje błędu wyżej — to już JEST obsługa
+ * Celowo NIGDY nie rzuca ani nie propaguje błędu wyżej - to już JEST obsługa
  * błędu, więc porażka wysyłki samego powiadomienia może się tylko zalogować,
  * nigdy zapętlić (np. gdyby sam kanał powiadomień też miał zepsute uprawnienia).
  */

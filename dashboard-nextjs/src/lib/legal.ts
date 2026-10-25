@@ -16,13 +16,13 @@
  */
 export const LEGAL = {
   operatorName: "Dominik Zwoliński",
-  /** TODO: miejscowość zamieszkania (samo miasto, bez ulicy). */
-  city: "[MIEJSCOWOŚĆ — DO UZUPEŁNIENIA]",
+  /** Miejscowość zamieszkania (samo miasto, bez ulicy). */
+  city: "Żydowo",
   /** TODO: adres do korespondencji, np. „skrytka pocztowa nr 123, UP Warszawa 1, 00-001 Warszawa". */
   postalAddress: "[ADRES DO KORESPONDENCJI — DO UZUPEŁNIENIA]",
   email: "contact@deezy.cc",
-  /** TODO: stałe zaproszenie na serwer wsparcia DeezyBOT. */
-  supportServerUrl: "[LINK DO SERWERA WSPARCIA — DO UZUPEŁNIENIA]",
+  /** Stałe (niewygasające) zaproszenie na serwer wsparcia. Bot: SUPPORT_SERVER_URL w src/config/constants/links.ts. */
+  supportServerUrl: "https://discord.gg/D59aaJQ7zn",
   siteUrl: "https://deezy.cc",
   /** Publiczna strona statusu (Better Stack, monitoruje /api/health). Bot: STATUS_URL w src/config/constants/links.ts. */
   statusUrl: "https://status.deezy.cc",

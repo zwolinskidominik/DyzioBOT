@@ -106,7 +106,7 @@ function shade(baseHsl: { h: number; s: number }, lightness: number): string {
 /**
  * Wyprowadza spójną paletę akcentów karty rangi z jednego koloru motywu,
  * zamiast trzymać osobną hardcoded paletę per-kolor. Tła/tekst pozostają
- * neutralne (dark mode zawsze) — motywuje się tylko akcenty.
+ * neutralne (dark mode zawsze) - motywuje się tylko akcenty.
  */
 function derivePalette(themeColor: string) {
   const rgb = hexToRgb(themeColor);

@@ -7,7 +7,7 @@ const RESULT_EMOJI = ':game_die:';
 
 export const data = new SlashCommandBuilder()
   .setName('roll')
-  .setDescription('Wylosuj liczbę — domyślnie od 1 do 6 🎲')
+  .setDescription('Wylosuj liczbę - domyślnie od 1 do 6 🎲')
   .addIntegerOption((option) =>
     option
       .setName('max-liczba')

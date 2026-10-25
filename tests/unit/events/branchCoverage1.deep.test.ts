@@ -1,5 +1,5 @@
 /**
- * Branch-coverage tests batch 1 — targeting small log/event files
+ * Branch-coverage tests batch 1 - targeting small log/event files
  * that have low branch coverage due to moderator ternaries, guard clauses, etc.
  *
  * Files covered:
@@ -21,7 +21,7 @@
 
 /* ── mocks ──────────────────────────────────────────────────── */
 
-// moderatorField/truncate: handlery logów budują nimi pola embeda — bez nich fabryka zwraca
+// moderatorField/truncate: handlery logów budują nimi pola embeda - bez nich fabryka zwraca
 // undefined, wywołanie rzuca TypeError i sendLog nigdy nie dochodzi do skutku.
 jest.mock('../../../src/utils/logHelpers', () => ({
   roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
@@ -274,7 +274,7 @@ describe('logThreadDelete', () => {
 });
 
 /* ================================================================
-   logThreadUpdate — name, archived, locked branches
+   logThreadUpdate - name, archived, locked branches
    ================================================================ */
 describe('logThreadUpdate', () => {
   let run: (oldThread: any, newThread: any, client: any) => Promise<void>;
@@ -361,7 +361,7 @@ describe('logThreadUpdate', () => {
 });
 
 /* ================================================================
-   logInviteCreate — inviter, expiresTimestamp, channel, maxUses branches
+   logInviteCreate - inviter, expiresTimestamp, channel, maxUses branches
    ================================================================ */
 describe('logInviteCreate', () => {
   let run: (invite: any, client: any) => Promise<void>;
@@ -418,7 +418,7 @@ describe('logInviteCreate', () => {
 });
 
 /* ================================================================
-   logMemberRemove — kick vs leave, moderator, joinedAt
+   logMemberRemove - kick vs leave, moderator, joinedAt
    ================================================================ */
 describe('logMemberRemove', () => {
   let run: (member: any, client: any) => Promise<void>;
@@ -482,7 +482,7 @@ describe('logMemberRemove', () => {
 });
 
 /* ================================================================
-   logMemberJoin — straightforward, just error branch
+   logMemberJoin - straightforward, just error branch
    ================================================================ */
 describe('logMemberJoin', () => {
   let run: (member: any, client: any) => Promise<void>;
@@ -512,7 +512,7 @@ describe('logMemberJoin', () => {
 });
 
 /* ================================================================
-   boostDetection — !oldStatus && newStatus, oldStatus && !newStatus, channel found/not found
+   boostDetection - !oldStatus && newStatus, oldStatus && !newStatus, channel found/not found
    ================================================================ */
 describe('boostDetection', () => {
   let run: (oldMember: any, newMember: any) => Promise<void>;
@@ -594,7 +594,7 @@ describe('boostDetection', () => {
 });
 
 /* ================================================================
-   reactionRoleRemove — user.bot, partials, no guild, no data, no mapping, no member, no role, doesn't have role
+   reactionRoleRemove - user.bot, partials, no guild, no data, no mapping, no member, no role, doesn't have role
    ================================================================ */
 describe('reactionRoleRemove', () => {
   let run: (reaction: any, user: any) => Promise<void>;
@@ -743,7 +743,7 @@ describe('reactionRoleRemove', () => {
 });
 
 /* ================================================================
-   deleteStatsChannel — DM, wrong type, matching/not matching channels
+   deleteStatsChannel - DM, wrong type, matching/not matching channels
    ================================================================ */
 describe('deleteStatsChannel', () => {
   let run: (channel: any) => Promise<void>;
@@ -813,7 +813,7 @@ describe('deleteStatsChannel', () => {
 });
 
 /* ================================================================
-   cooldownHelpers — debounce + tryAcquireCooldown branches
+   cooldownHelpers - debounce + tryAcquireCooldown branches
    ================================================================ */
 describe('cooldownHelpers', () => {
   let debounce: (key: string, fn: () => void, delay?: number) => void;
@@ -874,7 +874,7 @@ describe('cooldownHelpers', () => {
 });
 
 /* ================================================================
-   guild.ts — getGuildConfig known/unknown guild, __getGuildAssetsUnsafeForTests
+   guild.ts - getGuildConfig known/unknown guild, __getGuildAssetsUnsafeForTests
    ================================================================ */
 describe('guild.ts config', () => {
   let getGuildConfig: (guildId: string) => any;

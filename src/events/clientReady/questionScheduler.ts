@@ -42,7 +42,7 @@ export default async function run(client: Client): Promise<void> {
               ? `<@&${questionConfig.pingRoleId}>\n\n**Pytanie dnia:**\n${randomQuestion.content}`
               : `**Pytanie dnia:**\n${randomQuestion.content}`;
 
-            // randomQuestion.content to tekst pytania wpisany przez admina w dashboardzie —
+            // randomQuestion.content to tekst pytania wpisany przez admina w dashboardzie -
             // bez allowedMentions każde "@everyone"/"@here" wpisane w treść pytania faktycznie
             // pingnie serwer przy wysyłce. Pozwalamy TYLKO na skonfigurowaną rolę (pingRoleId).
             const questionMessage = await questionChannel.send({

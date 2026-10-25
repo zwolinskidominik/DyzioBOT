@@ -4,7 +4,7 @@ import { getModerator, getAuditLogEntry } from '../../utils/auditLogHelpers';
 import { formatDurationPl } from '../../utils/moderationHelpers';
 import logger from '../../utils/logger';
 
-/** Audit log entry dla timeoutu bywa dostępny z opóźnieniem — szersze okno niż domyślne 5s, żeby moderator nie ginął. */
+/** Audit log entry dla timeoutu bywa dostępny z opóźnieniem - szersze okno niż domyślne 5s, żeby moderator nie ginął. */
 const TIMEOUT_AUDIT_LOG_MAX_AGE_MS = 15_000;
 
 /** Zawężenie typu dla wpisu audit logu opisującego zmianę pseudonimu (`key: 'nick'`). */
@@ -51,7 +51,7 @@ export default async function run(
     }
 
     if (oldMember.nickname !== newMember.nickname) {
-      // Cache membera bywa "zimny" (np. tuż po restarcie bota) — oldMember.nickname może być
+      // Cache membera bywa "zimny" (np. tuż po restarcie bota) - oldMember.nickname może być
       // nieprawidłowo puste, mimo że user miał wcześniej pseudonim. Audit log ma dokładny
       // zapis zmiany (nawet własnej), niezależny od stanu cache'a i bez ryzyka rate limitu
       // pełnego guild.members.fetch().

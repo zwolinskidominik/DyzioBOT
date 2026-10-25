@@ -535,7 +535,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction): Prom
     const winnerContent = winnerIds.length
       ? `🎉 Gratulacje ${winnerIds.map((id) => `<@${id}>`).join(', ')}! **${ga.prize}** jest Twoje!`
       : 'Brak zgłoszeń, więc nie udało się wyłonić zwycięzcy!';
-    // ga.prize to tekst wpisany przez admina — allow-list tylko realnych zwycięzców,
+    // ga.prize to tekst wpisany przez admina - allow-list tylko realnych zwycięzców,
     // żeby "@everyone" wklejone w nazwę nagrody nie wywołało masowego pingu.
     const winnerAllowedMentions = { parse: [] as const, users: winnerIds };
     let sent = false;

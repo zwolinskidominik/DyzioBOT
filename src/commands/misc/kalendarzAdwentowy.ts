@@ -15,7 +15,7 @@ export const data = new SlashCommandBuilder()
 
 export const options = {
   guildOnly: true,
-  // Rejestrowana i dostępna wyłącznie na oficjalnych serwerach bota — nie tylko dla deweloperów,
+  // Rejestrowana i dostępna wyłącznie na oficjalnych serwerach bota - nie tylko dla deweloperów,
   // dla wszystkich członków tych serwerów (patrz CommandHandler.registerCommands/executeCommand).
   restrictedGuildIds: [...OWNER_GUILD_IDS],
 };
@@ -46,7 +46,7 @@ function getTodayDay(): number {
   const polishTime = getPolishTime();
   const month = polishTime.getMonth();
 
-  // Grudzień (miesiąc 11, 0-indeksowany) — działa co roku, nie tylko w jednym konkretnym.
+  // Grudzień (miesiąc 11, 0-indeksowany) - działa co roku, nie tylko w jednym konkretnym.
   if (month !== 11) {
     return -1;
   }

@@ -1,7 +1,7 @@
 import { prop, getModelForClass, modelOptions, index } from '@typegoose/typegoose';
 
 /**
- * Kinds pokrywają się dokładnie z KINDS z prototypu dashboardu — `warn-remove`
+ * Kinds pokrywają się dokładnie z KINDS z prototypu dashboardu - `warn-remove`
  * i `unban` NIE są osobnymi wpisami, tylko akcjami cofającymi (undo) istniejący
  * wpis 'warn'/'ban' (ustawiają `undone: true` na oryginalnym wpisie).
  */
@@ -38,13 +38,13 @@ export class ModerationLog {
   @prop({ type: String, default: '' })
   public reason!: string;
 
-  /** Dodatkowy opis w UI — np. "1 godz." dla mute, "142 wiadomości" dla clear. */
+  /** Dodatkowy opis w UI - np. "1 godz." dla mute, "142 wiadomości" dla clear. */
   @prop({ type: String })
   public extra?: string;
 
   /**
    * Dla kind === 'warn': _id konkretnego wpisu w Warn.warnings, żeby undo
-   * (dashboard) wiedziało, który wpis usunąć — pozycja w tablicy się przesuwa
+   * (dashboard) wiedziało, który wpis usunąć - pozycja w tablicy się przesuwa
    * (wygasanie, inne usunięcia), więc odwołanie po indeksie byłoby kruche.
    */
   @prop({ type: String })

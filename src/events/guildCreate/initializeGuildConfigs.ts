@@ -16,7 +16,7 @@ import logger from '../../utils/logger';
 
 // Kolejność argumentów jak w każdym evencie: EventHandler woła handler(...argsEventu, client),
 // więc dla guildCreate najpierw przychodzi Guild, a Client na końcu. Wcześniej parametry były
-// zamienione — `guild` był tak naprawdę Clientem, guildId === undefined i konfiguracje nowego
+// zamienione - `guild` był tak naprawdę Clientem, guildId === undefined i konfiguracje nowego
 // serwera nie były tworzone.
 export default async (guild: Guild, _client: Client) => {
   try {

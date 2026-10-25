@@ -278,7 +278,7 @@ function startGameCollector(message: Message, state: GameState): void {
         components: [buildReplayRow()],
       });
 
-      // Record stats (fire-and-forget — don't block the game)
+      // Record stats (fire-and-forget - don't block the game)
       recordGame(i.guildId!, state.authorId, {
         won,
         wrongGuesses: state.wrongGuesses,
@@ -436,7 +436,7 @@ function startReplayCollector(
 }
 
 /* ══════════════════════════════════════════════════════════════
-   ██  DUEL MODE — 1 public scoreboard + 2 ephemeral games  ██
+   ██  DUEL MODE - 1 public scoreboard + 2 ephemeral games  ██
    ══════════════════════════════════════════════════════════════ */
 
 interface DuelPlayerState {
@@ -492,7 +492,7 @@ async function runDuel(interaction: ChatInputCommandInteraction, opponentId: str
       `${interaction.user} wyzwał ${opponent} na pojedynek!`,
       '',
       'Obaj gracze dostaną to samo słowo do odgadnięcia.',
-      'Wygra ten, kto odgadnie szybciej — lub z mniejszą liczbą błędów!',
+      'Wygra ten, kto odgadnie szybciej - lub z mniejszą liczbą błędów!',
       '',
       `⏱️ <@${opponentId}>, masz **60 sekund** na odpowiedź.`,
     ].join('\n'),
@@ -540,7 +540,7 @@ async function runDuel(interaction: ChatInputCommandInteraction, opponentId: str
       return;
     }
 
-    // Accepted — start the duel
+    // Accepted - start the duel
     await startDuelGame(interaction, i, interaction.user.id, interaction.user.tag, opponentId, opponentTag);
   });
 
@@ -704,7 +704,7 @@ function buildScoreboardEmbed(duel: DuelState, finished: boolean) {
     }
 
     return createBaseEmbed({
-      title: '🏆 Duel Wisielca — Koniec!',
+      title: '🏆 Duel Wisielca - Koniec!',
       description: [
         resultText,
         '',
@@ -717,7 +717,7 @@ function buildScoreboardEmbed(duel: DuelState, finished: boolean) {
   }
 
   return createBaseEmbed({
-    title: '⚔️ Duel Wisielca — Trwa!',
+    title: '⚔️ Duel Wisielca - Trwa!',
     description: [
       `${duel.category.emoji} Kategoria: **${duel.category.name}**`,
       '',
@@ -880,7 +880,7 @@ function startDuelCollectors(
     }
 
     if (lost && !duel.gameOver) {
-      // This player lost but opponent still playing — update scoreboard
+      // This player lost but opponent still playing - update scoreboard
       try {
         const scoreEmbed = buildScoreboardEmbed(duel, false);
         await scoreboardMessage.edit({ embeds: [scoreEmbed] });
@@ -888,7 +888,7 @@ function startDuelCollectors(
       return;
     }
 
-    // Ongoing — update scoreboard
+    // Ongoing - update scoreboard
     try {
       const scoreEmbed = buildScoreboardEmbed(duel, false);
       await scoreboardMessage.edit({ embeds: [scoreEmbed] });
@@ -1069,7 +1069,7 @@ function startDuelRematchCollector(scoreboardMessage: Message, duel: DuelState):
         return;
       }
 
-      // Start rematch game — use message-based approach since we don't have slash interaction
+      // Start rematch game - use message-based approach since we don't have slash interaction
       await startRematchGame(ci, newMsg, newDuel);
     });
 

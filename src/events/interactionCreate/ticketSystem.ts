@@ -171,10 +171,10 @@ interface TicketAccess {
 /**
  * Kto może zajmować / zamykać zgłoszenie.
  *
- * - Osoby z uprawnieniem „Zarządzanie kanałami" (administracja serwera) — zawsze, nawet bez roli
+ * - Osoby z uprawnieniem „Zarządzanie kanałami" (administracja serwera) - zawsze, nawet bez roli
  *   obsługi z konfiguracji ticketów.
  * - Role obsługi i twórca z zapisu TicketState. Zgłoszenia otwarte, zanim bot zaczął ten zapis
- *   prowadzić (albo których typ usunięto z konfiguracji), nie mają go — wtedy odczytujemy to samo
+ *   prowadzić (albo których typ usunięto z konfiguracji), nie mają go - wtedy odczytujemy to samo
  *   z uprawnień kanału, które bot ustawia przy tworzeniu zgłoszenia: role z dostępem = obsługa,
  *   członek z dostępem = twórca. Bez tego nikt nie mógł zamknąć takiego zgłoszenia przyciskiem.
  */
@@ -273,7 +273,7 @@ async function sendTicketMessages(
       : undefined;
 
   if (staffPing) {
-    // ticketType.roleIds pochodzi z configu admina — allow-list tylko tych ról,
+    // ticketType.roleIds pochodzi z configu admina - allow-list tylko tych ról,
     // żeby ewentualny błąd/manipulacja przy zapisie roleId nie wywołała @everyone.
     await channel.send({
       content: staffPing,

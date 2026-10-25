@@ -113,13 +113,13 @@ const LEAVE_SITUATIONS: SituationDef[] = [
     fill: { memberMention: "@malpinho", memberName: "malpinho", inviterName: "DISBOARD", inviteCount: "388", inviteCode: "disboard" },
   },
   {
-    id: "unknown", label: "Nieznany autor zaproszenia", accent: "#f59e0b", embedTitle: "❓ Odszedł — nieznane źródło",
+    id: "unknown", label: "Nieznany autor zaproszenia", accent: "#f59e0b", embedTitle: "❓ Odszedł - nieznane źródło",
     hint: "Kiedy użytkownik opuścił serwer, a nie wiadomo, kto go zaprosił.",
     defaultTemplate: "**{memberName}** opuścił serwer, ale nie wiem, kto go zaprosił.",
     fill: { memberMention: "@dominik0912", memberName: "dominik0912", inviterName: "nieznany", inviteCount: "0", inviteCode: "—" },
   },
   {
-    id: "vanity", label: "Niestandardowe zaproszenie", accent: "#a970ff", embedTitle: "✨ Odszedł — niestandardowe",
+    id: "vanity", label: "Niestandardowe zaproszenie", accent: "#a970ff", embedTitle: "✨ Odszedł - niestandardowe",
     hint: "Kiedy użytkownik wszedł przez zaproszenie niestandardowe i opuścił serwer.",
     defaultTemplate: "**{memberName}** opuścił serwer. Dołączył używając niestandardowego zaproszenia **{inviteCode}**.",
     fill: { memberMention: "@verona07491_48298", memberName: "verona07491_48298", inviterName: "niestandardowe zaproszenie", inviteCount: "0", inviteCode: "gamezone-881293681783623680" },

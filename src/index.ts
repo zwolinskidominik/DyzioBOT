@@ -14,7 +14,7 @@ const { TOKEN, MONGODB_URI, DEV_GUILD_IDS, DEV_USER_IDS, DEV_ROLE_IDS } = env();
 
 const client = new Client({
   // Bez GuildPresences: bot nie używa statusów ani aktywności członków (w co grają, Spotify).
-  // To uprzywilejowana intencja — mniej danych o użytkownikach i prostsza weryfikacja bota.
+  // To uprzywilejowana intencja - mniej danych o użytkownikach i prostsza weryfikacja bota.
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
@@ -37,7 +37,7 @@ new CommandHandler(client, {
 
 new EventHandler(client);
 
-// Blokuje NoSQL injection — operatory Mongo ($where, $gt, $ne, itp.) w obiektach
+// Blokuje NoSQL injection - operatory Mongo ($where, $gt, $ne, itp.) w obiektach
 // filtrujących pochodzących z niezaufanego inputu są odrzucane zamiast wykonane.
 mongoose.set('sanitizeFilter', true);
 
@@ -70,7 +70,7 @@ process.on('uncaughtException', (err, origin) => {
 });
 
 async function gracefulShutdown() {
-  logger.info('⚙️  Received shutdown signal — flushing caches…');
+  logger.info('⚙️  Received shutdown signal - flushing caches…');
   
   try {
     await flushXp();

@@ -12,7 +12,7 @@ const mockParseDuration = jest.fn();
 const mockFormatHumanDuration = jest.fn();
 
 // Odzwierciedla realną logikę applyTimeoutSafely() (moderationHelpers.ts) na tyle, żeby testy
-// warn.ts (które asertują na targetMember.timeout) nadal miały sens — bez tego warn.ts wywaliłby
+// warn.ts (które asertują na targetMember.timeout) nadal miały sens - bez tego warn.ts wywaliłby
 // się na "applyTimeoutSafely is not a function", bo cały moduł jest tu mockowany.
 const mockApplyTimeoutSafely = jest.fn(async (member: any, durationMs: number, reason: string) => {
   if (durationMs <= 0) return { muteEndTs: null, muteFailed: false };
@@ -64,7 +64,7 @@ jest.mock('../../../src/services/warnService', () => ({
 }));
 
 // Komendy moderacyjne sprawdzają dostęp ręcznie przez checkCommandAccess() (ModerationConfig
-// z bazy + extraRoleIds) — w teście jednostkowym nie ma bazy, więc przepuszczamy dostęp.
+// z bazy + extraRoleIds) - w teście jednostkowym nie ma bazy, więc przepuszczamy dostęp.
 // Konfiguracja kary za ostrzeżenie jest brana z tego samego wyniku (tryb "jedna kara").
 const modCommandDefaults = { on: true, dm: false, log: false, extraRoleIds: [] };
 const mockCheckCommandAccess = jest.fn().mockResolvedValue({
@@ -643,7 +643,7 @@ describe('warn command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(targetUser);
     interaction.options.getString = jest.fn().mockReturnValue('Spam');
-    // Kontrakt addWarn: { count, step, nextStep, isFinal, warnEntryId } — dawne
+    // Kontrakt addWarn: { count, step, nextStep, isFinal, warnEntryId } - dawne
     // shouldBan/punishment/nextPunishment już nie istnieją.
     mockAddWarn.mockResolvedValue({
       ok: true,
@@ -753,7 +753,7 @@ describe('warn command', () => {
 
     await run({ interaction, client: interaction.client });
 
-    // Nie próbujemy wywołać .timeout() na niemoderowalnym membrze — uniknięty gwarantowany DiscordAPIError[50013].
+    // Nie próbujemy wywołać .timeout() na niemoderowalnym membrze - uniknięty gwarantowany DiscordAPIError[50013].
     expect(targetMember.timeout).not.toHaveBeenCalled();
 
     const embed = mockCreateBaseEmbed.mock.results[0].value;

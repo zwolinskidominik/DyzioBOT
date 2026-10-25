@@ -19,7 +19,7 @@ function makeMember(id: string, highestPos: number, guildOwnerId = 'owner'): any
   };
 }
 
-/** Member z uprawnieniem Administrator — Discord nigdy nie pozwoli go wyciszyć (timeout). */
+/** Member z uprawnieniem Administrator - Discord nigdy nie pozwoli go wyciszyć (timeout). */
 function makeAdminMember(id: string, highestPos: number, guildOwnerId = 'owner'): any {
   return {
     ...makeMember(id, highestPos, guildOwnerId),

@@ -1,7 +1,7 @@
 /**
  * Milliseconds remaining until the next local midnight (00:00:00) in the
  * given IANA timezone, computed from the current instant. The Node process
- * itself may run in UTC (no `TZ` env var is set) — this reads the wall-clock
+ * itself may run in UTC (no `TZ` env var is set) - this reads the wall-clock
  * time via `Intl.DateTimeFormat` so callers get a correct result regardless
  * of the host's own timezone.
  */
@@ -18,7 +18,7 @@ export function getMsUntilMidnight(timeZone = 'Europe/Warsaw'): number {
 
   const get = (type: string): number => Number(parts.find((p) => p.type === type)?.value ?? 0);
 
-  // Intl can report hour "24" for midnight depending on locale/runtime — normalize to 0.
+  // Intl can report hour "24" for midnight depending on locale/runtime - normalize to 0.
   const hour = get('hour') % 24;
   const minute = get('minute');
   const second = get('second');

@@ -7,13 +7,13 @@
  * `warnEntryId: '$warnings._id'`, więc dla takich wpisów przychodzi `undefined`, walidacja
  * `z.string().min(1)` odrzuca żądanie i krzyżyk przy ostrzeżeniu nie działa.
  *
- * Nowe ostrzeżenia mają już poprawne `_id` — ten skrypt jest wyłącznie dla tych sprzed naprawy.
+ * Nowe ostrzeżenia mają już poprawne `_id` - ten skrypt jest wyłącznie dla tych sprzed naprawy.
  * Dopisuje TYLKO brakujące identyfikatory: treść, data, moderator i kolejność wpisów zostają
  * nietknięte. Zapis idzie przez sterownik (nie przez Mongoose), żeby nie ruszyć niczego poza
  * tablicą `warnings`.
  *
  * Użycie:
- *   npx tsx src/scripts/backfillWarnEntryIds.ts            (dry-run — tylko podgląd)
+ *   npx tsx src/scripts/backfillWarnEntryIds.ts            (dry-run - tylko podgląd)
  *   npx tsx src/scripts/backfillWarnEntryIds.ts --apply    (faktyczny zapis)
  */
 
@@ -46,9 +46,9 @@ async function main(): Promise<void> {
 
   await mongoose.connect(uri);
   console.log('Połączono z bazą.');
-  console.log(`Tryb: ${APPLY ? 'APPLY — zmiany zostaną zapisane' : 'DRY-RUN — tylko podgląd, nic nie zostanie zapisane'}`);
+  console.log(`Tryb: ${APPLY ? 'APPLY - zmiany zostaną zapisane' : 'DRY-RUN - tylko podgląd, nic nie zostanie zapisane'}`);
 
-  // Czytamy przez sterownik, żeby zobaczyć realny kształt dokumentów — hydratacja Mongoose
+  // Czytamy przez sterownik, żeby zobaczyć realny kształt dokumentów - hydratacja Mongoose
   // mogłaby dorobić `_id` w pamięci i zamaskować problem.
   const collection = WarnModel.collection;
   const docs = (await collection.find({}).toArray()) as unknown as RawWarnDoc[];
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   console.log(`Bez własnego _id: ${entriesMissing} (w ${toFix.length} dokumentach)`);
 
   if (entriesMissing === 0) {
-    console.log('\nWszystkie ostrzeżenia mają już poprawne identyfikatory — nie ma czego uzupełniać.');
+    console.log('\nWszystkie ostrzeżenia mają już poprawne identyfikatory - nie ma czego uzupełniać.');
     await mongoose.disconnect();
     process.exit(0);
   }
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
 
   console.log('\nPrzykładowe wpisy do uzupełnienia:');
   for (const { doc, missing } of toFix.slice(0, 5)) {
-    console.log(`  guild=${doc.guildId} user=${doc.userId} — brakuje ${missing} z ${doc.warnings?.length ?? 0}`);
+    console.log(`  guild=${doc.guildId} user=${doc.userId} - brakuje ${missing} z ${doc.warnings?.length ?? 0}`);
   }
 
   if (APPLY) {
@@ -98,7 +98,7 @@ async function main(): Promise<void> {
 
     for (const { doc, warnings } of toFix) {
       // Zapis podmienia całą tablicę, więc warunek `$size` pilnuje, że nikt (np. bot nadający
-      // ostrzeżenie w tej samej chwili) nie zmienił jej między odczytem a zapisem — inaczej
+      // ostrzeżenie w tej samej chwili) nie zmienił jej między odczytem a zapisem - inaczej
       // taki świeży wpis zostałby po cichu skasowany.
       const result = await collection.updateOne(
         { _id: doc._id, warnings: { $size: warnings.length } },
@@ -107,7 +107,7 @@ async function main(): Promise<void> {
 
       if (result.matchedCount === 0) {
         skipped += 1;
-        console.warn(`  POMINIĘTO guild=${doc.guildId} user=${doc.userId} — lista zmieniła się w trakcie, uruchom skrypt ponownie.`);
+        console.warn(`  POMINIĘTO guild=${doc.guildId} user=${doc.userId} - lista zmieniła się w trakcie, uruchom skrypt ponownie.`);
         continue;
       }
       updated += result.modifiedCount;
@@ -115,11 +115,11 @@ async function main(): Promise<void> {
 
     console.log(`\nUzupełniono identyfikatory w ${updated} dokumentach (${entriesMissing} ostrzeżeń).`);
     if (skipped > 0) {
-      console.log(`Pominięto ${skipped} dokumentów zmienionych w trakcie działania — po prostu uruchom skrypt jeszcze raz.`);
+      console.log(`Pominięto ${skipped} dokumentów zmienionych w trakcie działania - po prostu uruchom skrypt jeszcze raz.`);
     }
     console.log('Krzyżyk przy tych ostrzeżeniach w panelu powinien już działać.');
   } else {
-    console.log('\nTo był dry-run — żadne dane nie zostały zmienione.');
+    console.log('\nTo był dry-run - żadne dane nie zostały zmienione.');
     console.log('Żeby faktycznie zapisać zmiany, uruchom:');
     console.log('  npx tsx src/scripts/backfillWarnEntryIds.ts --apply');
   }

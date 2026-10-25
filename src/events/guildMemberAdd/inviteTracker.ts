@@ -38,7 +38,7 @@ export default async function run(member: GuildMember, _client: Client): Promise
 
     try {
       const invites = await guild.invites.fetch();
-      // Niestandardowy link (discord.gg/nazwa) nie jest zwracany przez invites.fetch() — jego
+      // Niestandardowy link (discord.gg/nazwa) nie jest zwracany przez invites.fetch() - jego
       // licznik użyć trzeba pobrać osobno, inaczej takie dołączenie nie zmienia żadnego licznika
       // i zawsze kończy się sytuacją „unknown".
       const vanity = await fetchGuildVanity(guild);
@@ -48,7 +48,7 @@ export default async function run(member: GuildMember, _client: Client): Promise
         inviteCode = detected.code;
       }
 
-      // Trwała historia liczników — po tym „ma X zaproszeń" nie spada, gdy link wygaśnie.
+      // Trwała historia liczników - po tym „ma X zaproszeń" nie spada, gdy link wygaśnie.
       await syncGuildInvites(guild.id, invites);
       if (detected?.consumedUses !== undefined) {
         await recordConsumedInvite(guild.id, detected.code, detected.inviterId, detected.consumedUses);
@@ -57,7 +57,7 @@ export default async function run(member: GuildMember, _client: Client): Promise
       logger.warn(`[InviteTracker] Nie można pobrać zaproszeń dla ${guild.name}: ${err}`);
     }
 
-    // Record the join (zawsze, niezależnie od tego czy wiadomość zostanie wysłana — statystyki/leaderboard to osobna sprawa)
+    // Record the join (zawsze, niezależnie od tego czy wiadomość zostanie wysłana - statystyki/leaderboard to osobna sprawa)
     const joinResult = await recordJoin({
       guildId: guild.id,
       joinedUserId: member.id,
@@ -85,12 +85,12 @@ export default async function run(member: GuildMember, _client: Client): Promise
       inviterName = await resolveInviterUsername(member.client, inviterId);
 
       // Suma użyć WSZYSTKICH zaproszeń tej osoby, jakie bot widział (także wygasłych/usuniętych/
-      // zużytych) — obejmuje historię sprzed wdrożenia bota, bo liczniki pochodzą z Discorda.
+      // zużytych) - obejmuje historię sprzed wdrożenia bota, bo liczniki pochodzą z Discorda.
       const usesResult = await getInviterTotalUses(guild.id, inviterId);
       if (usesResult.ok && usesResult.data !== null) {
         inviteCountText = `${usesResult.data}`;
       } else {
-        // Bot nie zna żadnego zaproszenia tej osoby (np. błąd bazy) — liczba dołączeń z bazy Deezy.
+        // Bot nie zna żadnego zaproszenia tej osoby (np. błąd bazy) - liczba dołączeń z bazy Deezy.
         const statsResult = await getInviterStats(guild.id, inviterId);
         if (statsResult.ok) inviteCountText = `${statsResult.data.active}`;
       }
@@ -101,7 +101,7 @@ export default async function run(member: GuildMember, _client: Client): Promise
       memberName: member.displayName,
       inviterName,
       inviteCount: inviteCountText,
-      inviteCode: inviteCode ?? '—',
+      inviteCode: inviteCode ?? '-',
     };
 
     const template = config.join.messages[situationKey];
@@ -112,7 +112,7 @@ export default async function run(member: GuildMember, _client: Client): Promise
   }
 }
 
-/** Bota dodano na serwer — próbujemy (best-effort) ustalić kto go dodał przez audit log. */
+/** Bota dodano na serwer - próbujemy (best-effort) ustalić kto go dodał przez audit log. */
 async function handleBotAdd(
   member: GuildMember,
   sectionEnabled: boolean,
@@ -131,7 +131,7 @@ async function handleBotAdd(
     const entry = logs.entries.find((e) => e.target?.id === member.id);
     if (entry?.executor?.username) inviterName = escapeMarkdown(entry.executor.username);
   } catch {
-    // brak uprawnień do audit logu — zostaw "nieznany"
+    // brak uprawnień do audit logu - zostaw "nieznany"
   }
 
   const ctx: MessageContext = {
@@ -139,7 +139,7 @@ async function handleBotAdd(
     memberName: member.user.username,
     inviterName,
     inviteCount: '0',
-    inviteCode: '—',
+    inviteCode: '-',
   };
 
   const resolved = buildInviteMessage(template, JOIN_SITUATIONS.botAdd, ctx, useEmbed, embedColor);

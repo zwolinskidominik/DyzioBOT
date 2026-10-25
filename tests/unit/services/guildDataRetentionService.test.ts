@@ -1,5 +1,5 @@
 /**
- * Unit tests for guildDataRetentionService — usuwanie danych serwerów 30 dni po usunięciu bota.
+ * Unit tests for guildDataRetentionService - usuwanie danych serwerów 30 dni po usunięciu bota.
  *
  * To kod kasujący dane, więc testujemy przede wszystkim bezpieczniki: niczego nie usuwamy bez
  * poprawnego ID serwera, bez wiarygodnej listy obecnych serwerów, ani dla serwera, na którym
@@ -117,7 +117,7 @@ describe('reconcileGuildDepartures', () => {
     // Kolekcje systemowe i sam rejestr odejść nie są skanowane.
     const scanned = mockCollection.mock.calls.map(([name]) => name);
     expect(scanned).toEqual(['levels', 'warns']);
-    // Bot ma włączone sanitizeFilter — operator $in musi przetrwać sanityzację (mongoose.trusted),
+    // Bot ma włączone sanitizeFilter - operator $in musi przetrwać sanityzację (mongoose.trusted),
     // inaczej Mongoose rzuca CastError i uzgadnianie w ogóle nie działa.
     const [filter] = mockDeparture.deleteMany.mock.calls[0];
     const sanitized = mongoose.sanitizeFilter(filter);
@@ -137,7 +137,7 @@ describe('purgeExpiredGuildData', () => {
     await purgeExpiredGuildData([GUILD_A], now);
     const cutoff = new Date(now.getTime() - GUILD_DATA_RETENTION_DAYS * 24 * 60 * 60 * 1000);
     const [filter] = mockDeparture.find.mock.calls[0];
-    // Musi przetrwać sanitizeFilter (patrz test reconcile) — sprawdzamy już po sanityzacji.
+    // Musi przetrwać sanitizeFilter (patrz test reconcile) - sprawdzamy już po sanityzacji.
     const sanitized = mongoose.sanitizeFilter(filter);
     expect(sanitized.leftAt).toEqual(expect.objectContaining({ $lte: cutoff }));
     expect(sanitized.leftAt.$eq).toBeUndefined();
@@ -164,7 +164,7 @@ describe('purgeExpiredGuildData', () => {
     expect(mockDeparture.deleteOne).toHaveBeenCalledWith({ guildId: GUILD_B });
   });
 
-  it('never purges a guild the bot is currently in — just drops the stale departure', async () => {
+  it('never purges a guild the bot is currently in - just drops the stale departure', async () => {
     due(GUILD_A);
 
     const result = await purgeExpiredGuildData([GUILD_A]);

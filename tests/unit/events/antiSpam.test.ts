@@ -42,7 +42,7 @@ jest.mock('../../../src/services/warnService', () => ({
 }));
 
 // antiSpam.ts korzysta teraz z applyTimeoutSafely() (moderationHelpers.ts), która importuje
-// pretty-ms (ESM-only) — bez mocka ts-jest nie potrafi tego zaimportować.
+// pretty-ms (ESM-only) - bez mocka ts-jest nie potrafi tego zaimportować.
 jest.mock('pretty-ms', () => ({
   __esModule: true,
   default: (ms: number) => `${ms}ms`,
@@ -111,7 +111,7 @@ beforeEach(() => {
 
 /* ── Early returns ────────────────────────────────────────── */
 
-describe('antiSpam handler — early returns', () => {
+describe('antiSpam handler - early returns', () => {
   it('ignores bot messages', async () => {
     const msg = mockMessage({ author: mockUser({ bot: true }) });
     const result = await run(msg, mockClient());
@@ -185,7 +185,7 @@ describe('antiSpam handler — early returns', () => {
 
 /* ── No spam ──────────────────────────────────────────────── */
 
-describe('antiSpam handler — no spam', () => {
+describe('antiSpam handler - no spam', () => {
   it('tracks message and returns undefined when no spam', async () => {
     (getConfig as jest.Mock).mockResolvedValue(buildConfig({ rate: { on: true } }));
 
@@ -217,7 +217,7 @@ describe('antiSpam handler — no spam', () => {
 
 /* ── Spam detected (reguła 'rate') ────────────────────────── */
 
-describe('antiSpam handler — rate rule detection', () => {
+describe('antiSpam handler - rate rule detection', () => {
   function makeSpamMessage() {
     const guild = mockGuild();
     guild.members.me = mockGuildMember({ id: 'bot-id', highestPos: 99 });
@@ -297,7 +297,7 @@ describe('antiSpam handler — rate rule detection', () => {
 
   it('applies the warn ladder consequences: bans when the warn hits the limit (shouldBan)', async () => {
     (getConfig as jest.Mock).mockResolvedValue(buildConfig({ rate: { on: true, action: 'warn' } }));
-    // Kontrakt addWarn: { count, step, nextStep, isFinal, warnEntryId } — o karze decyduje
+    // Kontrakt addWarn: { count, step, nextStep, isFinal, warnEntryId } - o karze decyduje
     // step.action, dawne shouldBan/punishment już nie istnieją.
     (addWarn as jest.Mock).mockResolvedValueOnce({
       ok: true,
@@ -313,7 +313,7 @@ describe('antiSpam handler — rate rule detection', () => {
     const { msg, member } = makeSpamMessage();
     await run(msg, mockClient());
 
-    // Wcześniej ten branch tylko zapisywał wpis do bazy i nic więcej — auto-ban z drabinki /warn
+    // Wcześniej ten branch tylko zapisywał wpis do bazy i nic więcej - auto-ban z drabinki /warn
     // był całkowicie ignorowany mimo osiągnięcia limitu.
     expect(member.ban).toHaveBeenCalledWith(expect.objectContaining({ reason: expect.stringContaining('Auto-ban') }));
   });
@@ -334,7 +334,7 @@ describe('antiSpam handler — rate rule detection', () => {
     const { msg, member } = makeSpamMessage();
     await run(msg, mockClient());
 
-    // Wcześniej ten branch nigdy nie wołał .timeout() — poziom kary z drabinki /warn (np. 15 minut
+    // Wcześniej ten branch nigdy nie wołał .timeout() - poziom kary z drabinki /warn (np. 15 minut
     // przy 1. ostrzeżeniu) był ignorowany, user dostawał tylko wpis w bazie i usunięcie wiadomości.
     expect(member.timeout).toHaveBeenCalledWith(900000, expect.stringContaining('Anti-Spam'));
   });
@@ -375,7 +375,7 @@ describe('antiSpam handler — rate rule detection', () => {
 
 /* ── Aplikacje zewnętrzne (instalowane na koncie użytkownika) ── */
 
-describe('antiSpam handler — external user-installed apps (raid bots)', () => {
+describe('antiSpam handler - external user-installed apps (raid bots)', () => {
   /** Wiadomość wysłana przez aplikację „APL." na komendę członka serwera (jak raid „Jalapeno"). */
   function makeAppRaidMessage(owners: Record<string, string> = { '1': 'raider-id' }) {
     const guild = mockGuild();
@@ -452,7 +452,7 @@ describe('antiSpam handler — external user-installed apps (raid bots)', () => 
 
 /* ── Invite link blocking (reguła 'invites') ──────────────── */
 
-describe('antiSpam handler — invite link blocking', () => {
+describe('antiSpam handler - invite link blocking', () => {
   function makeInviteMessage(content: string) {
     const guild = mockGuild({ id: 'current-guild' });
     guild.members.me = mockGuildMember({ id: 'bot-id', highestPos: 99 });
@@ -568,7 +568,7 @@ describe('antiSpam handler — invite link blocking', () => {
 
 /* ── Mass mention blocking (reguła 'mentions') ────────────── */
 
-describe('antiSpam handler — mass mention blocking', () => {
+describe('antiSpam handler - mass mention blocking', () => {
   function makeMentionMessage(opts: { userMentions?: number; roleMentions?: number; everyone?: boolean } = {}) {
     const guild = mockGuild({ id: 'guild-mention' });
     guild.members.me = mockGuildMember({ id: 'bot-id', highestPos: 99 });
@@ -661,7 +661,7 @@ describe('antiSpam handler — mass mention blocking', () => {
 
 /* ── Repeat detection (reguła 'repeat') ───────────────────── */
 
-describe('antiSpam handler — repeat rule detection', () => {
+describe('antiSpam handler - repeat rule detection', () => {
   function makeFloodMessage(content = 'spam everywhere') {
     const guild = mockGuild();
     guild.members.me = mockGuildMember({ id: 'bot-id', highestPos: 99 });

@@ -37,7 +37,7 @@ let fontsRegistered = false;
 
 /**
  * Register all project fonts (Inter + Daydream + Ageer) once.
- * Safe to call multiple times — subsequent calls are no-ops.
+ * Safe to call multiple times - subsequent calls are no-ops.
  */
 export function registerProjectFonts(): void {
   if (fontsRegistered) return;
@@ -56,7 +56,7 @@ export function registerProjectFonts(): void {
 
 /* ── Drawing primitives ───────────────────────────────────────── */
 
-/** Draw a rounded rectangle path (does NOT fill/stroke — caller decides). */
+/** Draw a rounded rectangle path (does NOT fill/stroke - caller decides). */
 export function roundRect(
   ctx: Ctx2D,
   x: number,

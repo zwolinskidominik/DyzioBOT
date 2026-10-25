@@ -57,7 +57,7 @@ jest.mock('../../../src/utils/logHelpers', () => ({
   roleMention: jest.fn((roleId: string, guildId: string) => (roleId === guildId ? '@everyone' : `<@&${roleId}>`)),
   sendLog: mockSendLog,
   truncate: jest.fn((s: string) => s),
-  // Logi głosowe dodają pole moderatora (rozłączenie/przeniesienie przez moderatora) — bez tej
+  // Logi głosowe dodają pole moderatora (rozłączenie/przeniesienie przez moderatora) - bez tej
   // funkcji fabryka zwraca undefined i handler wywala się przed sendLog.
   moderatorField: jest.fn((userId: string) => ({ name: 'Moderator:', value: `<@${userId}>`, inline: true })),
 }));
@@ -74,7 +74,7 @@ jest.mock('../../../src/services/twitchService', () => ({
   getActiveStreamers: mockGetActiveStreamers,
   setLiveStatus: mockSetLiveStatus,
   updateAvatarUrl: jest.fn(),
-  // Oba eksporty doszły do serwisu po napisaniu tego mocka — scheduler renderuje nimi treść
+  // Oba eksporty doszły do serwisu po napisaniu tego mocka - scheduler renderuje nimi treść
   // powiadomienia i zapisuje licznik wysyłek. Bez nich cały cykl wywalał się na TypeError.
   renderStreamMessageTemplate: jest.fn((template: string) => template ?? ''),
   logNotificationSent: jest.fn().mockResolvedValue(undefined),
@@ -586,7 +586,7 @@ describe('logVoiceStateUpdate', () => {
     expect(mockSendLog).toHaveBeenCalledWith(expect.anything(), 'g1', 'voiceMemberMove', expect.anything(), expect.anything());
   });
 
-  // Kanał pusty po wyjściu to ten, który tempChannel.ts zaraz skasuje — wzmianka <#id> pokazałaby
+  // Kanał pusty po wyjściu to ten, który tempChannel.ts zaraz skasuje - wzmianka <#id> pokazałaby
   // wtedy „nieznane", więc w logu ma trafić jego nazwa. Kanał z ludźmi zostaje klikalną wzmianką.
   it('writes the channel name when the left channel is now empty (temp channel about to be deleted)', async () => {
     const oldState = makeState({ channel: { id: 'ch1', name: 'Kanał Ani', members: { size: 0 } }, channelId: 'ch1' });
@@ -714,7 +714,7 @@ describe('twitchScheduler', () => {
 
     // Second cron callback is stream check
     await cronCallbacks[1]();
-    // setLiveStatus(guildId, kanał, isLive, snapshot) — czwarty argument (dane streamu:
+    // setLiveStatus(guildId, kanał, isLive, snapshot) - czwarty argument (dane streamu:
     // tytuł, gra, miniatura) doszedł wraz z podglądem powiadomienia w panelu.
     expect(mockSetLiveStatus).toHaveBeenCalledWith('g1', 'streamer1', true, expect.any(Object));
   });

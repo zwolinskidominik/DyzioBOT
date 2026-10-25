@@ -233,7 +233,7 @@ describe('help command (deep)', () => {
     expect(interaction.fetchReply).toHaveBeenCalled();
   });
 
-  it('links to the dashboard, terms, privacy policy and status page and shows the contact e-mail', async () => {
+  it('links to the dashboard, support server, terms, privacy policy and status page and shows the contact e-mail', async () => {
     const interaction = makeInteraction();
     await helpCmd.run({ interaction, client: {} });
 
@@ -241,6 +241,7 @@ describe('help command (deep)', () => {
     const urls = components[1].toJSON().components.map((c: { url?: string }) => c.url);
     expect(urls).toEqual([
       'https://deezy.cc',
+      'https://discord.gg/D59aaJQ7zn',
       'https://deezy.cc/terms',
       'https://deezy.cc/privacy',
       'https://status.deezy.cc/pl',

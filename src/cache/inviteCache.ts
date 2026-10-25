@@ -2,11 +2,11 @@ import { Client, Collection, Guild, Invite } from 'discord.js';
 import logger from '../utils/logger';
 
 /**
- * Pamięć podręczna zaproszeń — służy WYŁĄCZNIE do ustalenia, którego zaproszenia użyto przy
+ * Pamięć podręczna zaproszeń - służy WYŁĄCZNIE do ustalenia, którego zaproszenia użyto przy
  * dołączeniu (porównanie liczników przed/po). Trwała historia liczników (także zaproszeń, które
  * już wygasły) jest w bazie: services/inviteUsageService.ts.
  *
- * Oprócz licznika trzymamy autora, limit użyć i datę wygaśnięcia — dzięki temu zaproszenie,
+ * Oprócz licznika trzymamy autora, limit użyć i datę wygaśnięcia - dzięki temu zaproszenie,
  * które Discord skasował po ostatnim dozwolonym użyciu, nadal ma znanego autora, a takie, które
  * po prostu wygasło, nie jest mylone z użytym.
  */
@@ -22,7 +22,7 @@ interface CachedInvite {
 const inviteCache = new Map<string, Map<string, CachedInvite>>();
 
 /**
- * Licznik użyć niestandardowego linku (vanity) per gildia — TRZYMANY OSOBNO, bo
+ * Licznik użyć niestandardowego linku (vanity) per gildia - TRZYMANY OSOBNO, bo
  * `guild.invites.fetch()` NIE zwraca zaproszenia vanity (trzeba `guild.fetchVanityData()`).
  * Bez tego dołączenia przez discord.gg/nazwa nie dają żadnej różnicy w licznikach zwykłych
  * zaproszeń i zawsze lądowały w sytuacji „unknown".
@@ -40,7 +40,7 @@ export interface DetectedInvite {
   code: string;
   inviterId: string | null;
   /**
-   * Ustawione, gdy zaproszenie zniknęło z listy, bo zużyło limit — Discord nie poda już jego
+   * Ustawione, gdy zaproszenie zniknęło z listy, bo zużyło limit - Discord nie poda już jego
    * licznika, więc to jest liczba użyć PO tym dołączeniu (do zapisania w historii).
    */
   consumedUses?: number;
@@ -57,7 +57,7 @@ function toCached(invite: Invite): CachedInvite {
 
 /**
  * Pobiera dane vanity dla gildii (best-effort). Zwraca null, gdy serwer nie ma takiego linku
- * albo bot nie ma uprawnienia Zarządzanie serwerem — wtedy po prostu nie śledzimy tej ścieżki.
+ * albo bot nie ma uprawnienia Zarządzanie serwerem - wtedy po prostu nie śledzimy tej ścieżki.
  */
 export async function fetchGuildVanity(guild: Guild): Promise<VanityData | null> {
   if (!guild.vanityURLCode) return null;
@@ -74,7 +74,7 @@ export async function fetchGuildVanity(guild: Guild): Promise<VanityData | null>
 /**
  * Zapisuje pełny stan zaproszeń gildii (zastępuje poprzedni).
  *
- * `vanityUses` jest opcjonalne — gdy nie podano, licznik vanity zostaje nietknięty.
+ * `vanityUses` jest opcjonalne - gdy nie podano, licznik vanity zostaje nietknięty.
  */
 export async function cacheGuildInvites(
   guildId: string,
@@ -96,7 +96,7 @@ export async function cacheGuildInvites(
  */
 export function addInviteToCache(guildId: string, invite: Invite): void {
   const map = inviteCache.get(guildId);
-  if (!map) return; // brak stanu wyjściowego — pierwsze dołączenie i tak go zbuduje
+  if (!map) return; // brak stanu wyjściowego - pierwsze dołączenie i tak go zbuduje
   map.set(invite.code, toCached(invite));
 }
 
@@ -137,10 +137,10 @@ export function getCachedInvites(guildId: string): Map<string, number> | undefin
  * Po porównaniu pamięć dostaje aktualny stan.
  *
  * Kolejność:
- *  1. zaproszenie, któremu wzrósł licznik — pewne;
- *  2. niestandardowy link (vanity), któremu wzrósł licznik — pewne;
+ *  1. zaproszenie, któremu wzrósł licznik - pewne;
+ *  2. niestandardowy link (vanity), któremu wzrósł licznik - pewne;
  *  3. zaproszenie, które zniknęło, bo właśnie zużyło limit użyć (uses + 1 >= maxUses) i nie
- *     wygasło — Discord kasuje je przy ostatnim użyciu; autora znamy z pamięci.
+ *     wygasło - Discord kasuje je przy ostatnim użyciu; autora znamy z pamięci.
  *     Zaproszenia, które zniknęły z innego powodu (wygasły, ktoś je usunął), są ignorowane.
  */
 export async function detectUsedInvite(
@@ -180,7 +180,7 @@ export async function detectUsedInvite(
 
   await refresh(vanity?.uses ?? null);
 
-  // Dwa zużyte naraz — nie da się rozstrzygnąć, które było tym dołączeniem.
+  // Dwa zużyte naraz - nie da się rozstrzygnąć, które było tym dołączeniem.
   if (consumed.length === 1) {
     const [code, inv] = consumed[0];
     return { code, inviterId: inv.inviterId, consumedUses: inv.uses + 1 };
@@ -197,7 +197,7 @@ export function clearGuildCache(guildId: string): void {
 }
 
 /**
- * Resets entire cache — for testing.
+ * Resets entire cache - for testing.
  */
 export function _resetCache(): void {
   inviteCache.clear();

@@ -59,7 +59,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   // ── Fetch top 10 by wins ──────────────────────────────────────────────────
   // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
-  // operatory — bez tego rzuca CastError.
+  // operatory - bez tego rzuca CastError.
   const stats = await WordleStatModel
     .find({ guildId, wins: mongoose.trusted({ $gt: 0 }) })
     .sort({ wins: -1 })
@@ -100,7 +100,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   ctx.textBaseline = 'middle';
   ctx.fillStyle    = C_GREEN;
   ctx.font         = 'bold 32px sans-serif';
-  ctx.fillText('Wordle — Ranking', IMG_W / 2, HDR_H / 2);
+  ctx.fillText('Wordle - Ranking', IMG_W / 2, HDR_H / 2);
 
   // Header underline
   ctx.strokeStyle = C_LINE;
@@ -176,7 +176,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     ctx.fillText(`${s.wins} wyg. · ${winRate}% winrate`, TEXT_X, midY + 14);
 
     // ── Avg guesses (right-aligned) ───────────────────────────────────────────
-    const avg = s.wins > 0 ? (s.totalGuesses / s.wins).toFixed(2) : '—';
+    const avg = s.wins > 0 ? (s.totalGuesses / s.wins).toFixed(2) : '-';
 
     ctx.textAlign = 'right';
     ctx.fillStyle = C_GREEN;

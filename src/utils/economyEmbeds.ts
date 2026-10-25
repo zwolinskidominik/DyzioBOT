@@ -39,12 +39,12 @@ export function createBalanceEmbed(
   rank: number,
 ): EmbedBuilder {
   const { currencySymbol: sym } = cfg;
-  const rankLabel = rank > 0 ? `#${rank}` : '—';
+  const rankLabel = rank > 0 ? `#${rank}` : '-';
 
   return new EmbedBuilder()
     .setColor(0x22c358)
     .setAuthor({
-      name: `${user.displayName} — profil`,
+      name: `${user.displayName} - profil`,
       iconURL: user.displayAvatarURL({ size: 64 }),
     })
     .addFields(
@@ -127,14 +127,14 @@ export function createLeaderboardEmbed(
   const rows = data.entries.map((e) => {
     const medal = RANK_MEDALS[e.rank] ?? `**${e.rank}.**`;
     const value = fmtCoin(getValue(e), sym);
-    return `${medal} <@${e.userId}> — ${value}`;
+    return `${medal} <@${e.userId}> - ${value}`;
   });
 
   const description = rows.length > 0 ? rows.join('\n') : '_Brak użytkowników._';
 
   return new EmbedBuilder()
     .setColor(COLORS.ECONOMY)
-    .setTitle(`🏆 Ranking — ${MODE_LABELS[mode]}`)
+    .setTitle(`🏆 Ranking - ${MODE_LABELS[mode]}`)
     .setDescription(description)
     .setFooter({
       text: `Strona ${page}/${totalPages} · ${data.totalUsers} użytkowników`,

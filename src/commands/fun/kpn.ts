@@ -214,7 +214,7 @@ function startReplayCollector(
   replayCollector.on('end', async (collected) => {
     if (collected.size > 0) return;
 
-    // Time expired — remove replay button, keep result
+    // Time expired - remove replay button, keep result
     try {
       await message.edit({ components: [createChoiceButtons(true)] });
     } catch {

@@ -54,7 +54,7 @@ export default async function run(member: GuildMember, _client: Client): Promise
       memberName: member.displayName,
       inviterName,
       inviteCount: '0',
-      inviteCode: inviteCode ?? '—',
+      inviteCode: inviteCode ?? '-',
     };
 
     const template = config.leave.messages[situationKey];
@@ -82,7 +82,7 @@ async function handleBotRemove(
     memberName: member.user.username,
     inviterName: 'nieznany',
     inviteCount: '0',
-    inviteCode: '—',
+    inviteCode: '-',
   };
 
   const resolved = buildInviteMessage(template, LEAVE_SITUATIONS.botRemove, ctx, useEmbed, embedColor);

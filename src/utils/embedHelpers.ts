@@ -25,7 +25,7 @@ export function createBaseEmbed(opts: IBaseEmbedOptions = {}): EmbedBuilder {
   return embed;
 }
 
-/** Universal error embed for any command — red color with ❌ prefix. */
+/** Universal error embed for any command - red color with ❌ prefix. */
 export function createErrorEmbed(description: string): EmbedBuilder {
   return createBaseEmbed({
     isError: true,

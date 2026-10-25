@@ -11,13 +11,13 @@ export interface LogModerationActionParams {
   moderatorTag: string;
   reason?: string;
   extra?: string;
-  /** Tylko dla kind === 'warn' — _id konkretnego wpisu w Warn.warnings, do undo z dashboardu. */
+  /** Tylko dla kind === 'warn' - _id konkretnego wpisu w Warn.warnings, do undo z dashboardu. */
   warnEntryId?: string;
 }
 
 /**
  * Zapisuje wpis do historii kar (zakładka "Otrzymane kary" w dashboardzie).
- * Nigdy nie rzuca — logowanie nie może wywrócić samej akcji moderacyjnej,
+ * Nigdy nie rzuca - logowanie nie może wywrócić samej akcji moderacyjnej,
  * która już się wykonała po stronie Discorda.
  */
 export async function logModerationAction(params: LogModerationActionParams): Promise<void> {
@@ -38,7 +38,7 @@ export async function logModerationAction(params: LogModerationActionParams): Pr
   }
 }
 
-/** Oznacza wszystkie aktywne wpisy 'ban' danego użytkownika jako cofnięte — wołane przez /unban. */
+/** Oznacza wszystkie aktywne wpisy 'ban' danego użytkownika jako cofnięte - wołane przez /unban. */
 export async function markBanLogUndone(guildId: string, targetId: string): Promise<void> {
   try {
     await ModerationLogModel.updateMany(
@@ -51,7 +51,7 @@ export async function markBanLogUndone(guildId: string, targetId: string): Promi
 }
 
 /**
- * Oznacza wpis 'warn' powiązany z konkretnym wpisem Warn.warnings[]._id jako cofnięty —
+ * Oznacza wpis 'warn' powiązany z konkretnym wpisem Warn.warnings[]._id jako cofnięty -
  * wołane przez /warn-remove (i dashboard, przy usuwaniu ostrzeżenia z listy aktywnych).
  */
 export async function markWarnLogUndone(guildId: string, warnEntryId: string): Promise<void> {

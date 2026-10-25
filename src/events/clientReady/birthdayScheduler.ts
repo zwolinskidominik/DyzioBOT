@@ -72,7 +72,7 @@ export default async function run(client: Client): Promise<void> {
                   try {
                     await member.roles.add(birthdayConfig.roleId);
 
-                    // Rola urodzinowa ma obowiązywać tylko do końca dnia — rejestrujemy ją
+                    // Rola urodzinowa ma obowiązywać tylko do końca dnia - rejestrujemy ją
                     // jako tymczasową (jak /role temp), żeby istniejący hourly TEMP_ROLE_CHECK
                     // cron (tempRoleScheduler.ts) automatycznie ją zdjął po północy.
                     const durationMs = getMsUntilMidnight('Europe/Warsaw');
@@ -82,7 +82,7 @@ export default async function run(client: Client): Promise<void> {
                       birthdayConfig.roleId,
                       durationMs,
                       client.user?.id ?? 'system',
-                      'Rola urodzinowa – automatyczne zdjęcie o północy'
+                      'Rola urodzinowa - automatyczne zdjęcie o północy'
                     );
                     if (!trackResult.ok) {
                       logger.error(

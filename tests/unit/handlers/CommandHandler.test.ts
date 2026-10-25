@@ -244,7 +244,7 @@ describe('CommandHandler', () => {
     expect((handler as any).commandChanged(cmd1, cmd2)).toBe(true);
   });
 
-  describe('executeCommand — restrictedGuildIds', () => {
+  describe('executeCommand - restrictedGuildIds', () => {
     it('blocks execution outside the allowed guilds', async () => {
       mockReaddirSync.mockReturnValue([]);
       const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
@@ -309,7 +309,7 @@ describe('CommandHandler', () => {
     });
   });
 
-  describe('registerCommands — restrictedGuildIds', () => {
+  describe('registerCommands - restrictedGuildIds', () => {
     it('registers a restricted command only on its guild, never globally', async () => {
       mockReaddirSync.mockReturnValue([]);
       const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');

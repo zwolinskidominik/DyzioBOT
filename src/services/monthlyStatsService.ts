@@ -183,8 +183,8 @@ export async function isNewUser(guildId: string, userId: string): Promise<boolea
 /**
  * Pure function: łączony wynik aktywności = 1 pkt / `msgRate` wiadomości + 1 pkt / `voiceRate` min
  * na głosowym. Domyślne stawki (1 wiadomość, 2 minuty) odpowiadają dotychczasowemu, sztywnemu
- * wzorowi — konfigurowalne per-guild przez dashboard (Punktacja wyniku).
- * Używane WYŁĄCZNIE przez wersję v3 (grafika, jeden wspólny ranking) — nie zastępuje
+ * wzorowi - konfigurowalne per-guild przez dashboard (Punktacja wyniku).
+ * Używane WYŁĄCZNIE przez wersję v3 (grafika, jeden wspólny ranking) - nie zastępuje
  * dotychczasowych, osobnych rankingów `topMessages`/`topVoice` używanych przez wersję tekstową.
  */
 export function computeCombinedScore(
@@ -197,7 +197,7 @@ export function computeCombinedScore(
 }
 
 /**
- * Generate the combined (message + voice) leaderboard for a given month — v3.
+ * Generate the combined (message + voice) leaderboard for a given month - v3.
  */
 export async function generateCombinedLeaderboard(
   guildId: string,

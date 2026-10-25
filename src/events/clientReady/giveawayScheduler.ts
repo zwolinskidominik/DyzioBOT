@@ -52,7 +52,7 @@ export default async function run(client: Client): Promise<void> {
 
             if (!entry.winnerIds.length && entry.participants.length > 0) {
               logger.warn(
-                `Brak zwycięzców mimo uczestników (giveaway=${entry.giveawayId}) – uczest. w puli: ${entry.participants.length}`
+                `Brak zwycięzców mimo uczestników (giveaway=${entry.giveawayId}) - uczest. w puli: ${entry.participants.length}`
               );
             }
 
@@ -95,7 +95,7 @@ export default async function run(client: Client): Promise<void> {
               ? `🎉 Gratulacje ${entry.winnerIds.map((id) => `<@${id}>`).join(', ')}! **${entry.prize}** jest Twoje!`
               : 'Brak wystarczającej liczby uczestników, więc nie udało się wyłonić zwycięzcy!';
 
-            // entry.prize to tekst wpisany przez admina — allow-list tylko realnych
+            // entry.prize to tekst wpisany przez admina - allow-list tylko realnych
             // zwycięzców, żeby "@everyone" wklejone w nazwę nagrody nie wywołało pingu.
             const winnerAllowedMentions = { parse: [] as const, users: entry.winnerIds };
             let sent = false;

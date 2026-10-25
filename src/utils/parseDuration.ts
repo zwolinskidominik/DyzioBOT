@@ -31,7 +31,7 @@ const MAX_DURATION = 2.419e9;
 /**
  * Parse a human-readable duration string with validation.
  * Returns `null` when the string has no valid tokens or the result
- * falls outside the 5 s – 28 d range (used by moderation commands).
+ * falls outside the 5 s - 28 d range (used by moderation commands).
  */
 export function parseDuration(durationStr: string): number | null {
   const totalMs = parseRawDurationMs(durationStr);

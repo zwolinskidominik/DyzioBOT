@@ -29,7 +29,7 @@ describe('inviteUsageService', () => {
       { code: 'b', uses: 186, inviterId: 'u1' },
       { code: 'c', uses: 99, inviterId: 'u2' },
     ]));
-    // „b" wygasło — nie ma go już na liście
+    // „b" wygasło - nie ma go już na liście
     await syncGuildInvites(G, invites([
       { code: 'a', uses: 201, inviterId: 'u1' },
       { code: 'c', uses: 99, inviterId: 'u2' },

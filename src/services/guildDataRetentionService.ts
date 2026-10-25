@@ -13,7 +13,7 @@ import logger from '../utils/logger';
  * kolekcjach bazy (także tych zapisywanych przez dashboard) oraz pliki wgrane w Powitaniach.
  * Powrót bota przed upływem terminu anuluje usunięcie.
  *
- * Wartość jest zapisana w polityce prywatności (deezy.cc/privacy) — zmiana tutaj wymaga
+ * Wartość jest zapisana w polityce prywatności (deezy.cc/privacy) - zmiana tutaj wymaga
  * aktualizacji dokumentu.
  */
 export const GUILD_DATA_RETENTION_DAYS = 30;
@@ -23,7 +23,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Discord snowflake. Walidacja chroni przed deleteMany z pustym/dziwnym filtrem i przed path traversal. */
 const SNOWFLAKE = /^\d{17,20}$/;
 
-/** Kolekcje pomijane przy masowym usuwaniu — rejestr odejść obsługujemy osobno, na końcu. */
+/** Kolekcje pomijane przy masowym usuwaniu - rejestr odejść obsługujemy osobno, na końcu. */
 const SKIP_COLLECTIONS = new Set(['guilddepartures']);
 
 /** Katalogi z plikami per serwer (bind-mount ./assets współdzielony z dashboardem). */
@@ -65,7 +65,7 @@ export async function markGuildDeparted(guildId: string, at: Date = new Date()):
   }
 }
 
-/** Bot wrócił na serwer — usunięcie danych zostaje anulowane. */
+/** Bot wrócił na serwer - usunięcie danych zostaje anulowane. */
 export async function cancelGuildDeparture(guildId: string): Promise<ServiceResult<void>> {
   if (!isValidGuildId(guildId)) return fail('INVALID_GUILD', 'Nieprawidłowe ID serwera.');
   try {
@@ -79,17 +79,17 @@ export async function cancelGuildDeparture(guildId: string): Promise<ServiceResu
 
 /**
  * Uzgadnia rejestr odejść z rzeczywistością. Discord nie wysyła guildDelete, gdy bota usunięto
- * w czasie, kiedy był offline — dlatego porównujemy serwery, o których baza coś wie, z tymi,
+ * w czasie, kiedy był offline - dlatego porównujemy serwery, o których baza coś wie, z tymi,
  * na których bot faktycznie jest.
  *
  * Bezpiecznik: przy pustej liście obecnych serwerów (np. problem z gatewayem tuż po starcie)
- * NIC nie oznaczamy — inaczej za 30 dni skasowalibyśmy dane wszystkich serwerów.
+ * NIC nie oznaczamy - inaczej za 30 dni skasowalibyśmy dane wszystkich serwerów.
  */
 export async function reconcileGuildDepartures(
   presentGuildIds: readonly string[]
 ): Promise<ServiceResult<{ marked: number; cancelled: number }>> {
   if (presentGuildIds.length === 0) {
-    return fail('NOT_READY', 'Brak listy serwerów bota — pomijam uzgadnianie.');
+    return fail('NOT_READY', 'Brak listy serwerów bota - pomijam uzgadnianie.');
   }
 
   try {
@@ -113,7 +113,7 @@ export async function reconcileGuildDepartures(
     if (absent.length > 0 && absent.length > known.size / 2) {
       return fail(
         'SUSPICIOUS_GUILD_LIST',
-        `Bot nie widzi ${absent.length} z ${known.size} serwerów z bazy — pomijam uzgadnianie (czy to właściwa instancja/baza?).`
+        `Bot nie widzi ${absent.length} z ${known.size} serwerów z bazy - pomijam uzgadnianie (czy to właściwa instancja/baza?).`
       );
     }
 
@@ -138,7 +138,7 @@ export async function reconcileGuildDepartures(
 }
 
 async function purgeGuild(guildId: string): Promise<number> {
-  if (!isValidGuildId(guildId)) throw new Error(`Odmowa usunięcia — nieprawidłowe ID serwera: ${guildId}`);
+  if (!isValidGuildId(guildId)) throw new Error(`Odmowa usunięcia - nieprawidłowe ID serwera: ${guildId}`);
 
   const db = getDb();
   let deletedDocuments = 0;
@@ -157,7 +157,7 @@ async function purgeGuild(guildId: string): Promise<number> {
 
 /**
  * Kasuje dane serwerów, z których bot odszedł ponad GUILD_DATA_RETENTION_DAYS dni temu.
- * Serwery obecne na liście `presentGuildIds` są pomijane (a ich wpis usuwany) — to drugi
+ * Serwery obecne na liście `presentGuildIds` są pomijane (a ich wpis usuwany) - to drugi
  * bezpiecznik na wypadek, gdyby guildCreate nie anulował odejścia.
  */
 export async function purgeExpiredGuildData(
@@ -167,7 +167,7 @@ export async function purgeExpiredGuildData(
   try {
     const cutoff = new Date(now.getTime() - GUILD_DATA_RETENTION_DAYS * DAY_MS);
     const present = new Set(presentGuildIds);
-    // trusted — patrz komentarz w reconcileGuildDepartures (sanitizeFilter). cutoff liczymy sami.
+    // trusted - patrz komentarz w reconcileGuildDepartures (sanitizeFilter). cutoff liczymy sami.
     const due = await GuildDepartureModel.find({ leftAt: mongoose.trusted({ $lte: cutoff }) }).lean();
 
     const purgedGuilds: string[] = [];
@@ -187,7 +187,7 @@ export async function purgeExpiredGuildData(
         purgedGuilds.push(guildId);
         logger.info(`[Retention] Usunięto dane serwera ${guildId} (${GUILD_DATA_RETENTION_DAYS} dni po usunięciu bota).`);
       } catch (err) {
-        // Wpis zostaje — kolejne uruchomienie spróbuje ponownie.
+        // Wpis zostaje - kolejne uruchomienie spróbuje ponownie.
         logger.error(`[Retention] Nie udało się usunąć danych serwera ${guildId}: ${err}`);
       }
     }

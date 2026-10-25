@@ -232,7 +232,7 @@ const AVATAR_FALLBACK_GRADIENTS: [string, string][] = [
 ];
 
 /**
- * Miękka plama światła — odpowiednik CSS `radial-gradient(circle, rgba(c,a) 0%, rgba(c,0) 68%)`
+ * Miękka plama światła - odpowiednik CSS `radial-gradient(circle, rgba(c,a) 0%, rgba(c,0) 68%)`
  * na kwadratowym divie o boku `side`. CSS liczy promień do najdalszego narożnika (side/2·√2),
  * a kolor zanika już na 68% tego promienia.
  */
@@ -270,7 +270,7 @@ function fillAvatarFallback(ctx: Ctx2D, cx: number, cy: number, size: number, in
 }
 
 /**
- * Server Wrapped 800×1200 — dokładnie 2× podgląd z dashboardu (400×600,
+ * Server Wrapped 800×1200 - dokładnie 2× podgląd z dashboardu (400×600,
  * dashboard-nextjs/src/app/(dashboard)/[guildId]/wrapped/page.tsx). Współrzędne poniżej to
  * wartości z CSS podglądu pomnożone przez 2, z liniami tekstu jak w przeglądarce
  * (line-height: normal ≈ 1.21em, linia bazowa ≈ 0.97em od góry wiersza dla Inter).
@@ -308,7 +308,7 @@ export async function renderWrappedCanvas(data: WrappedData, theme: WrappedTheme
       ctx.drawImage(icon, W / 2 - AVATAR_D / 2, avatarCy - AVATAR_D / 2, AVATAR_D, AVATAR_D);
       ctx.restore();
     } catch {
-      // brak ikony — zostaje sama ramka
+      // brak ikony - zostaje sama ramka
     }
   }
   ctx.strokeStyle = ACCENT;
@@ -317,7 +317,7 @@ export async function renderWrappedCanvas(data: WrappedData, theme: WrappedTheme
   ctx.arc(W / 2, avatarCy, AVATAR_D / 2 - AVATAR_BORDER / 2, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Nazwa serwera (12px/800) — może zawierać emoji, więc przez Twemoji.
+  // Nazwa serwera (12px/800) - może zawierać emoji, więc przez Twemoji.
   ctx.fillStyle = WHITE;
   ctx.font = '800 24px Inter';
   await fillTextWithEmoji(ctx, data.serverName, W / 2, 151, { fontSize: 24, align: 'center', maxWidth: CONTENT_W });
@@ -451,7 +451,7 @@ export async function renderWrappedCanvas(data: WrappedData, theme: WrappedTheme
         fillAvatarFallback(ctx, avCx, centerY, AV_SIZE, i);
       }
 
-      // Wartość (od prawej) — najpierw, żeby wiedzieć, ile miejsca zostaje na nick.
+      // Wartość (od prawej) - najpierw, żeby wiedzieć, ile miejsca zostaje na nick.
       const valueRight = PAD_X + CONTENT_W - ROW_PAD_X;
       ctx.fillStyle = ACCENT;
       ctx.font = '700 16px Inter';
@@ -460,7 +460,7 @@ export async function renderWrappedCanvas(data: WrappedData, theme: WrappedTheme
       const valueW = ctx.measureText(valueStr).width;
       ctx.fillText(valueStr, valueRight, baseline);
 
-      // Nick (8px/600, ellipsis) — nicki często mają emoji.
+      // Nick (8px/600, ellipsis) - nicki często mają emoji.
       const nameX = avX + AV_SIZE + 12;
       ctx.fillStyle = WHITE;
       ctx.font = '600 16px Inter';
@@ -589,14 +589,14 @@ export async function collectPersonalWrappedData(
         }
       }
     } else {
-      // No games array data yet — fall back to all-time aggregated
+      // No games array data yet - fall back to all-time aggregated
       wordleWins = wordleDoc.wins ?? 0;
       wordleLosses = wordleDoc.losses ?? 0;
       wordleBestStreak = wordleDoc.bestStreak ?? 0;
     }
   }
 
-  // Giveaways (last 12 months — entered & won)
+  // Giveaways (last 12 months - entered & won)
   const giveawaysEntered = await GiveawayModel.countDocuments({
     guildId,
     participants: userId,
@@ -608,7 +608,7 @@ export async function collectPersonalWrappedData(
     createdAt: mongoose.trusted({ $gte: oneYearAgo }),
   });
 
-  // Invites — total people invited (last 12 months, not only active)
+  // Invites - total people invited (last 12 months, not only active)
   const invites = await InviteEntryModel.countDocuments({
     guildId,
     inviterId: userId,
@@ -810,7 +810,7 @@ export async function renderPersonalWrappedCanvas(
     ctx.font = '500 16px Inter';
     ctx.textAlign = 'left';
     ctx.fillText(
-      `${monthName} — ${formatNumberDotSep(topMonth.messages)} ${plural(topMonth.messages, ['wiadomość', 'wiadomości', 'wiadomości'])}`,
+      `${monthName} - ${formatNumberDotSep(topMonth.messages)} ${plural(topMonth.messages, ['wiadomość', 'wiadomości', 'wiadomości'])}`,
       PAD_X + 20,
       boxY + 57,
     );

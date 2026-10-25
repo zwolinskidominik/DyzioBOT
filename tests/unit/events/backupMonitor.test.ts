@@ -1,5 +1,5 @@
 /**
- * Unit tests for the backup monitor — DM do właściciela tylko przy zmianie stanu kopii.
+ * Unit tests for the backup monitor - DM do właściciela tylko przy zmianie stanu kopii.
  */
 import os from 'os';
 import path from 'path';

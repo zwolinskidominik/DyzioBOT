@@ -58,9 +58,9 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   await interaction.deferReply();
 
-  // ── Fetch top 10 — all players sorted by wins ──────────────────────────
+  // ── Fetch top 10 - all players sorted by wins ──────────────────────────
   // mongoose.trusted(): sanitizeFilter (index.ts) sanityzuje ręcznie pisane
-  // operatory — bez tego rzuca CastError.
+  // operatory - bez tego rzuca CastError.
   const stats = await HangmanStatsModel
     .find({ guildId, gamesPlayed: mongoose.trusted({ $gt: 0 }) })
     .sort({ wins: -1, losses: 1 })
@@ -101,7 +101,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   ctx.textBaseline = 'middle';
   ctx.fillStyle    = C_ORANGE;
   ctx.font         = 'bold 32px sans-serif';
-  ctx.fillText('Wisielec — Ranking', IMG_W / 2, HDR_H / 2);
+  ctx.fillText('Wisielec - Ranking', IMG_W / 2, HDR_H / 2);
 
   // Header underline
   ctx.strokeStyle = C_LINE;

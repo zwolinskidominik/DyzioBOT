@@ -1,5 +1,5 @@
 /**
- * Branch-coverage tests batch 2 — targeting commands and services
+ * Branch-coverage tests batch 2 - targeting commands and services
  * with low branch coverage.
  *
  * Files covered:
@@ -56,7 +56,7 @@ jest.mock('../../../src/config/bot', () => ({
 }));
 
 /* ================================================================
-   parseDuration — pure helper
+   parseDuration - pure helper
    ================================================================ */
 describe('parseDuration', () => {
   let parseRawDurationMs: (s: string) => number;
@@ -122,7 +122,7 @@ describe('parseDuration', () => {
 });
 
 /* ================================================================
-   giveawayService — pickWinnerIds, computeMultiplier (pure functions)
+   giveawayService - pickWinnerIds, computeMultiplier (pure functions)
    ================================================================ */
 describe('giveawayService pure functions', () => {
   let pickWinnerIds: (participants: string[], count: number) => string[];
@@ -187,7 +187,7 @@ describe('giveawayService pure functions', () => {
 });
 
 /* ================================================================
-   birthdayService — parseBirthdayDate, getDaysForm, formatBirthdayConfirmation
+   birthdayService - parseBirthdayDate, getDaysForm, formatBirthdayConfirmation
    ================================================================ */
 describe('birthdayService pure functions', () => {
   let parseBirthdayDate: (s: string) => any;
@@ -294,7 +294,7 @@ describe('birthdayService pure functions', () => {
 });
 
 /* ================================================================
-   embed.ts command — buildEmbed branches (no guild, extra fields)
+   embed.ts command - buildEmbed branches (no guild, extra fields)
    ================================================================ */
 describe('embed command', () => {
   let run: (opts: any) => Promise<void>;
@@ -385,7 +385,7 @@ describe('embed command', () => {
 });
 
 /* ================================================================
-   wrozba command — success, error from service, catch
+   wrozba command - success, error from service, catch
    ================================================================ */
 jest.mock('../../../src/services/fortuneService', () => ({
   getFortune: jest.fn(),
@@ -441,7 +441,7 @@ describe('wrozba command', () => {
 });
 
 /* ================================================================
-   warnings command — permission check, success, no warnings, error
+   warnings command - permission check, success, no warnings, error
    ================================================================ */
 jest.mock('../../../src/services/warnService', () => ({
   getWarnings: jest.fn(),
@@ -548,7 +548,7 @@ describe('warnings command', () => {
 });
 
 /* ================================================================
-   serverinfo command — success, joinedAt null, error
+   serverinfo command - success, joinedAt null, error
    ================================================================ */
 describe('serverinfo command', () => {
   let run: (opts: any) => Promise<void>;
@@ -624,7 +624,7 @@ describe('serverinfo command', () => {
 });
 
 /* ================================================================
-   toplvl command — success, error, NO_USERS, user fetch error, page > 1
+   toplvl command - success, error, NO_USERS, user fetch error, page > 1
    ================================================================ */
 jest.mock('../../../src/services/xpService', () => ({
   getLeaderboard: jest.fn(),
@@ -710,7 +710,7 @@ describe('toplvl command', () => {
 });
 
 /* ================================================================
-   birthday command — no guild, no birthday, birthday today, future, error
+   birthday command - no guild, no birthday, birthday today, future, error
    ================================================================ */
 jest.mock('../../../src/services/birthdayService', () => ({
   ...jest.requireActual('../../../src/services/birthdayService'),
@@ -810,7 +810,7 @@ describe('birthday command', () => {
 });
 
 /* ================================================================
-   canvasHelpers — formatNumberDotSep, formatNumberCompact
+   canvasHelpers - formatNumberDotSep, formatNumberCompact
    ================================================================ */
 describe('canvasHelpers formatters', () => {
   let formatNumberDotSep: (n: number) => string;

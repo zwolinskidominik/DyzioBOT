@@ -34,7 +34,7 @@ export function getTwitchClient(): ApiClient | null {
 
   const { TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET } = env();
   if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
-    logger.warn('Brak TWITCH_CLIENT_ID lub TWITCH_CLIENT_SECRET – Twitch API wyłączone.');
+    logger.warn('Brak TWITCH_CLIENT_ID lub TWITCH_CLIENT_SECRET - Twitch API wyłączone.');
     return null;
   }
 
@@ -60,7 +60,7 @@ export async function validateTwitchUser(
 ): Promise<TwitchUserInfo | null> {
   const client = getTwitchClient();
   if (!client) {
-    logger.warn('Twitch API niedostępne – pomijam walidację użytkownika.');
+    logger.warn('Twitch API niedostępne - pomijam walidację użytkownika.');
     return null; // graceful degradation: skip validation if no credentials
   }
 

@@ -20,7 +20,7 @@ class TempChannelConfiguration {
   @prop({ type: () => Boolean, default: true })
   public enabled!: boolean;
 
-  /** @deprecated legacy field kept for backward compatibility — derived from `creators` on every save. */
+  /** @deprecated legacy field kept for backward compatibility - derived from `creators` on every save. */
   @prop({ required: true, type: () => [String], default: [] })
   public channelIds!: string[];
 

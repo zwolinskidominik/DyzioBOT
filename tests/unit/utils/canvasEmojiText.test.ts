@@ -1,5 +1,5 @@
 /**
- * Unit tests for canvasEmojiText — emoji w tekście na canvasie rysowane jako Twemoji,
+ * Unit tests for canvasEmojiText - emoji w tekście na canvasie rysowane jako Twemoji,
  * bo node-canvas zamiast glifu emoji rysuje prostokąt z kodem (np. „01F3AE").
  */
 jest.mock('../../../src/utils/logger', () => ({

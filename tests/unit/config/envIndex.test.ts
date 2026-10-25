@@ -1,4 +1,4 @@
-// Tests for src/config/index.ts — env() caching
+// Tests for src/config/index.ts - env() caching
 
 // We must reset modules between tests to test the caching behaviour
 describe('env()', () => {

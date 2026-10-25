@@ -8,7 +8,7 @@ import logger from '../utils/logger';
  * Trwała historia liczników zaproszeń (kolekcja inviteusages).
  *
  * Liczba „ma X zaproszeń" to suma użyć WSZYSTKICH zaproszeń danej osoby, jakie bot kiedykolwiek
- * widział — także tych, które już wygasły, zostały usunięte albo zużyły limit. Zaproszenia,
+ * widział - także tych, które już wygasły, zostały usunięte albo zużyły limit. Zaproszenia,
  * które zniknęły, zanim bot zaczął je zapisywać, są nie do odzyskania (Discord ich nie podaje).
  */
 
@@ -18,7 +18,7 @@ function upsertOp(guildId: string, invite: Invite, now: Date) {
     updateOne: {
       filter: { guildId, code: invite.code },
       update: {
-        // Licznik tylko rośnie — chroni przed cofnięciem przez nieaktualną odpowiedź.
+        // Licznik tylko rośnie - chroni przed cofnięciem przez nieaktualną odpowiedź.
         $max: { uses: invite.uses ?? 0 },
         $set: { deleted: false, lastSeenAt: now, ...(inviterId ? { inviterId } : {}) },
         ...(inviterId ? {} : { $setOnInsert: { inviterId: null } }),
@@ -39,7 +39,7 @@ export async function recordInvite(guildId: string, invite: Invite, now: Date = 
   }
 }
 
-/** Zapisuje aktualną listę zaproszeń gildii; tych, których na niej nie ma, nie kasuje — oznacza jako usunięte. */
+/** Zapisuje aktualną listę zaproszeń gildii; tych, których na niej nie ma, nie kasuje - oznacza jako usunięte. */
 export async function syncGuildInvites(
   guildId: string,
   invites: Collection<string, Invite>,
@@ -63,7 +63,7 @@ export async function syncGuildInvites(
 }
 
 /**
- * Zaproszenie zużyło limit przy tym dołączeniu i Discord je skasował — zapisujemy ostatni
+ * Zaproszenie zużyło limit przy tym dołączeniu i Discord je skasował - zapisujemy ostatni
  * licznik, którego Discord już nie poda.
  */
 export async function recordConsumedInvite(
@@ -89,7 +89,7 @@ export async function recordConsumedInvite(
   }
 }
 
-/** Oznacza zaproszenie jako usunięte (inviteDelete) — licznik zostaje w historii. */
+/** Oznacza zaproszenie jako usunięte (inviteDelete) - licznik zostaje w historii. */
 export async function markInviteDeleted(guildId: string, code: string): Promise<ServiceResult<void>> {
   try {
     await InviteUsageModel.updateOne({ guildId, code }, { $set: { deleted: true } });
@@ -101,7 +101,7 @@ export async function markInviteDeleted(guildId: string, code: string): Promise<
 }
 
 /**
- * Suma użyć wszystkich zaproszeń danej osoby (także nieistniejących). `null` — bot nie zna
+ * Suma użyć wszystkich zaproszeń danej osoby (także nieistniejących). `null` - bot nie zna
  * żadnego zaproszenia tej osoby.
  */
 export async function getInviterTotalUses(guildId: string, inviterId: string): Promise<ServiceResult<number | null>> {

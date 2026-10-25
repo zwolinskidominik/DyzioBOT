@@ -6,7 +6,7 @@ class GuildSettings {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
-  /** Na razie tylko 'pl' jest realnie obsługiwane — 'en' zarezerwowane na przyszłość. */
+  /** Na razie tylko 'pl' jest realnie obsługiwane - 'en' zarezerwowane na przyszłość. */
   @prop({ default: 'pl', type: () => String })
   public language!: string;
 

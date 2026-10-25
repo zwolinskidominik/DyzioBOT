@@ -1,5 +1,5 @@
 /**
- * Weather helpers — Open-Meteo API (no API key required).
+ * Weather helpers - Open-Meteo API (no API key required).
  *
  * Geocoding API: https://geocoding-api.open-meteo.com/v1/search
  * Weather API:   https://api.open-meteo.com/v1/forecast
@@ -238,7 +238,7 @@ export function formatWeatherEmbed(location: GeoLocation, weather: CurrentWeathe
     : location.name;
 
   const flagEmoji = countryFlag(location.countryCode);
-  const title = `${emoji} Pogoda — ${locationName} ${flagEmoji}`;
+  const title = `${emoji} Pogoda - ${locationName} ${flagEmoji}`;
 
   const tempColor = weather.temperature <= 0
     ? '#5865F2' // cold blue
@@ -376,7 +376,7 @@ export function formatForecastEmbed(location: GeoLocation, days: DailyForecast[]
     : location.name;
 
   const flagEmoji = countryFlag(location.countryCode);
-  const title = `📅 Prognoza 7 dni — ${locationName} ${flagEmoji}`;
+  const title = `📅 Prognoza 7 dni - ${locationName} ${flagEmoji}`;
 
   const lines = days.map((day) => {
     const { emoji, label } = getWeatherInfo(day.weatherCode, true);

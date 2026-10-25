@@ -68,7 +68,7 @@ export interface SituationMeta {
   defaultTemplate: string;
 }
 
-/* ── Sytuacje: kolory/tytuły embeda i treści domyślne — 1:1 z prototypu ── */
+/* ── Sytuacje: kolory/tytuły embeda i treści domyślne - 1:1 z prototypu ── */
 
 export const JOIN_SITUATIONS: Record<JoinSituation, SituationMeta> = {
   normal: {
@@ -127,7 +127,7 @@ export const LEAVE_SITUATIONS: Record<LeaveSituation, SituationMeta> = {
     label: 'Nieznany autor zaproszenia',
     hint: 'Kiedy użytkownik opuścił serwer, a nie wiadomo, kto go zaprosił.',
     accent: '#f59e0b',
-    embedTitle: '❓ Odszedł — nieznane źródło',
+    embedTitle: '❓ Odszedł - nieznane źródło',
     defaultTemplate: '**{memberName}** opuścił serwer, ale nie wiem, kto go zaprosił.',
   },
   vanity: {
@@ -135,7 +135,7 @@ export const LEAVE_SITUATIONS: Record<LeaveSituation, SituationMeta> = {
     label: 'Niestandardowe zaproszenie',
     hint: 'Kiedy użytkownik wszedł przez zaproszenie niestandardowe i opuścił serwer.',
     accent: '#a970ff',
-    embedTitle: '✨ Odszedł — niestandardowe',
+    embedTitle: '✨ Odszedł - niestandardowe',
     defaultTemplate: '**{memberName}** opuścił serwer. Dołączył używając niestandardowego zaproszenia **{inviteCode}**.',
   },
   botRemove: {
@@ -154,7 +154,7 @@ export const LEAVE_SITUATIONS: Record<LeaveSituation, SituationMeta> = {
  * {inviterName} = unikalna nazwa użytkownika Discorda (np. natix08328), nie nick na serwerze
  * ani nazwa wyświetlana. Pobierana przez users.fetch, więc działa też, gdy zapraszający
  * już opuścił serwer. Znaki markdown (np. „_” w nazwie) są escapowane, bo szablony owijają
- * nazwę w **pogrubienie** — „__x__” zmieniłoby się w podkreślenie.
+ * nazwę w **pogrubienie** - „__x__” zmieniłoby się w podkreślenie.
  */
 export async function resolveInviterUsername(client: Client, inviterId: string): Promise<string> {
   const user = await client.users.fetch(inviterId).catch(() => null);
@@ -170,8 +170,8 @@ export interface MessageContext {
 }
 
 /**
- * Podstawia zmienne w szablonie. Wspiera nowe nazwy ({memberMention} itd.) oraz —
- * dla kompatybilności wstecznej z szablonami zapisanymi przed redesignem —
+ * Podstawia zmienne w szablonie. Wspiera nowe nazwy ({memberMention} itd.) oraz -
+ * dla kompatybilności wstecznej z szablonami zapisanymi przed redesignem -
  * stare nazwy ({user}, {username}, {inviter}, {activeCount}).
  */
 export function replaceVariables(template: string, ctx: MessageContext): string {
@@ -213,7 +213,7 @@ const EMPTY_LEAVE_MESSAGES: LeaveMessagesData = { normal: '', unknown: '', vanit
 export async function getConfig(guildId: string): Promise<ServiceResult<InviteTrackerConfigData>> {
   try {
     const doc = await InviteTrackerConfigModel.findOne({ guildId }).lean();
-    // `legacy` czyta pola sprzed redesignu (płaski kształt) — dokument może je jeszcze
+    // `legacy` czyta pola sprzed redesignu (płaski kształt) - dokument może je jeszcze
     // mieć, jeśli migracja (src/scripts/migrateInviteTrackerConfig.ts) nie została uruchomiona.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const legacy = doc as any;

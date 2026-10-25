@@ -7,7 +7,7 @@ export class WarnEntry {
    *
    * `default` jest KONIECZNY: jawna deklaracja `_id` wyłącza automatyczne nadawanie go przez
    * Mongoose, więc bez tego każdy wpis miał `_id: undefined`, a `String(w._id)` dawało
-   * dla wszystkich ten sam string "undefined" — czyli dokładne przeciwieństwo stabilnego ID. */
+   * dla wszystkich ten sam string "undefined" - czyli dokładne przeciwieństwo stabilnego ID. */
   @prop({ type: () => Types.ObjectId, default: () => new Types.ObjectId() })
   public _id?: Types.ObjectId;
 

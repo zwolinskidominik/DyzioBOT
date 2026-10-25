@@ -6,7 +6,7 @@ import logger from './logger';
 /**
  * Osobny, samodzielny generator grafiki dla miesięcznej "Topki" (wiadomości + głos).
  * Celowo NIE dotyka istniejącego `canvasLeaderboardCard.ts` (TOPKA LEVELI, /toplvl)
- * ani `monthlyStats.ts` (dotychczasowa wersja tekstowa) — to eksperymentalny wariant
+ * ani `monthlyStats.ts` (dotychczasowa wersja tekstowa) - to eksperymentalny wariant
  * do testów, żeby nic z obecnego działania nie ryzykować.
  */
 
@@ -121,8 +121,8 @@ export class MonthlyTopkaCard {
     const maxRows = Math.max(this.options.messagesEntries.length, this.options.voiceEntries.length);
 
     if (maxRows > 0) {
-      this.drawColumnTitle(leftX, y, '💬', `TOP ${this.options.messagesEntries.length} — Wiadomości`, this.colors.messages);
-      this.drawColumnTitle(rightX, y, '🎙️', `TOP ${this.options.voiceEntries.length} — Głos`, this.colors.voice);
+      this.drawColumnTitle(leftX, y, '💬', `TOP ${this.options.messagesEntries.length} - Wiadomości`, this.colors.messages);
+      this.drawColumnTitle(rightX, y, '🎙️', `TOP ${this.options.voiceEntries.length} - Głos`, this.colors.voice);
 
       const rowsStartY = y + this.sectionTitleHeight;
       const messagesStyle: ColumnStyle = {
@@ -306,7 +306,7 @@ export class MonthlyTopkaCard {
     } else if (rankDiff < 0) {
       draw(`▼ ${Math.abs(rankDiff)} (${sign}${formatNumberDotSep(valueDiff)})`, this.colors.down);
     } else {
-      draw(`– bez zmian (${sign}${formatNumberDotSep(valueDiff)})`, this.colors.neutral);
+      draw(`- bez zmian (${sign}${formatNumberDotSep(valueDiff)})`, this.colors.neutral);
     }
   }
 

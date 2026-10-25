@@ -8,13 +8,13 @@
  * Flaga w bazie mogła więc zostać na domyślnym `false` mimo że moduł realnie
  * działał (bo admin skonfigurował kanał, ale nigdy nie kliknął przełącznika,
  * który wcześniej i tak nic nie robił). Configi są też auto-tworzone dla KAŻDEJ
- * gildii przy dołączeniu bota (initializeGuildConfigs.ts) z enabled:false — więc
+ * gildii przy dołączeniu bota (initializeGuildConfigs.ts) z enabled:false - więc
  * samo istnienie dokumentu NIC nie mówi o tym, czy moduł był używany. Dlatego
  * migracja patrzy na konkretne pole wskazujące realną konfigurację, a dla
  * Levelingu/Logów dodatkowo na dane potwierdzające realne użycie.
  *
  * Użycie:
- *   npx tsx src/scripts/migrateEnabledFlags.ts            (dry-run — tylko podgląd)
+ *   npx tsx src/scripts/migrateEnabledFlags.ts            (dry-run - tylko podgląd)
  *   npx tsx src/scripts/migrateEnabledFlags.ts --apply     (faktyczny zapis)
  */
 
@@ -117,7 +117,7 @@ async function migrateTwitch(): Promise<ModuleReport> {
   return { module: 'Twitch', checked: docs.length, toUpdate: toUpdate.map((d) => d.guildId) };
 }
 
-/** Leveling nie ma pola-kanału — sygnałem realnego użycia są istniejące rekordy XP. */
+/** Leveling nie ma pola-kanału - sygnałem realnego użycia są istniejące rekordy XP. */
 async function migrateLeveling(): Promise<ModuleReport> {
   const docs = await LevelConfigModel.find({ enabled: { $ne: true } }).lean();
   const toUpdate: string[] = [];
@@ -136,7 +136,7 @@ async function migrateLeveling(): Promise<ModuleReport> {
   return { module: 'Leveling', checked: docs.length, toUpdate };
 }
 
-/** Logi nie mają pola-kanału — sygnałem realnego użycia jest niepusta mapa logChannels. */
+/** Logi nie mają pola-kanału - sygnałem realnego użycia jest niepusta mapa logChannels. */
 async function migrateLogs(): Promise<ModuleReport> {
   const docs = await LogConfigurationModel.find({ enabled: { $ne: true } }).lean();
   const toUpdate = docs.filter((d) => d.logChannels && Object.keys(d.logChannels).length > 0);
@@ -159,7 +159,7 @@ async function main(): Promise<void> {
 
   await mongoose.connect(uri);
   console.log(`Połączono z bazą.`);
-  console.log(`Tryb: ${APPLY ? 'APPLY — zmiany zostaną zapisane' : 'DRY-RUN — tylko podgląd, nic nie zostanie zapisane'}`);
+  console.log(`Tryb: ${APPLY ? 'APPLY - zmiany zostaną zapisane' : 'DRY-RUN - tylko podgląd, nic nie zostanie zapisane'}`);
 
   const reports = [
     await migrateSuggestions(),
@@ -175,7 +175,7 @@ async function main(): Promise<void> {
   reports.forEach(printReport);
 
   if (!APPLY) {
-    console.log('\nTo był dry-run — żadne dane nie zostały zmienione.');
+    console.log('\nTo był dry-run - żadne dane nie zostały zmienione.');
     console.log('Żeby faktycznie zapisać zmiany, uruchom:');
     console.log('  npx tsx src/scripts/migrateEnabledFlags.ts --apply');
   } else {

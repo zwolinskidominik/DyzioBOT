@@ -280,7 +280,7 @@ describe('clientReady / monthlyStats', () => {
     run = (await import('../../../src/events/clientReady/monthlyStats')).default;
   });
 
-  // monthlyStats.ts jest celowo wyłączony (ENABLED = false) — zastąpił go monthlyStatsV3.ts.
+  // monthlyStats.ts jest celowo wyłączony (ENABLED = false) - zastąpił go monthlyStatsV3.ts.
   // Plik zostaje sprawny na wypadek powrotu do starego formatu, ale nie może rejestrować crona,
   // bo oznaczałoby to podwójną wysyłkę co miesiąc.
   it('does not register a cron schedule while the legacy scheduler is disabled', () => {

@@ -4,15 +4,15 @@
  * `joinMessageVanity`/`leaveMessage`) na nowy, zagnieżdżony kształt z osobnymi
  * sekcjami `join`/`leave` (własny kanał, własny przełącznik, słownik szablonów
  * per sytuacja: normal/selfInvite/unknown/vanity/botAdd dla join,
- * normal/unknown/vanity/botRemove dla leave) — patrz src/models/InviteTrackerConfig.ts
+ * normal/unknown/vanity/botRemove dla leave) - patrz src/models/InviteTrackerConfig.ts
  * i src/services/inviteTrackerService.ts.
  *
  * getConfig() w inviteTrackerService.ts ma już defensywny fallback na stare pola,
- * więc bot działa poprawnie nawet bez tej migracji — ale usuwa ona zbędne stare
+ * więc bot działa poprawnie nawet bez tej migracji - ale usuwa ona zbędne stare
  * pola z bazy i sprawia, że każdy dokument ma jawny, kompletny nowy kształt.
  *
  * Użycie:
- *   npx tsx src/scripts/migrateInviteTrackerConfig.ts            (dry-run — tylko podgląd)
+ *   npx tsx src/scripts/migrateInviteTrackerConfig.ts            (dry-run - tylko podgląd)
  *   npx tsx src/scripts/migrateInviteTrackerConfig.ts --apply     (faktyczny zapis)
  */
 
@@ -30,7 +30,7 @@ async function main(): Promise<void> {
 
   await mongoose.connect(uri);
   console.log('Połączono z bazą.');
-  console.log(`Tryb: ${APPLY ? 'APPLY — zmiany zostaną zapisane' : 'DRY-RUN — tylko podgląd, nic nie zostanie zapisane'}`);
+  console.log(`Tryb: ${APPLY ? 'APPLY - zmiany zostaną zapisane' : 'DRY-RUN - tylko podgląd, nic nie zostanie zapisane'}`);
 
   const docs = await InviteTrackerConfigModel.find({}).lean();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
     }
     console.log(`\nZmigrowano ${legacyDocs.length} dokumentów.`);
   } else {
-    console.log('\nTo był dry-run — żadne dane nie zostały zmienione.');
+    console.log('\nTo był dry-run - żadne dane nie zostały zmienione.');
     console.log('Żeby faktycznie zapisać zmiany, uruchom:');
     console.log('  npx tsx src/scripts/migrateInviteTrackerConfig.ts --apply');
   }

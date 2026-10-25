@@ -10,7 +10,7 @@ import {
 import type { ICommandOptions } from '../../interfaces/Command';
 import { COLORS } from '../../config/constants/colors';
 import { OWNER_GUILD_IDS } from '../../config/constants/owner';
-import { CONTACT_EMAIL, PRIVACY_URL, SITE_URL, STATUS_URL, TERMS_URL } from '../../config/constants/links';
+import { CONTACT_EMAIL, PRIVACY_URL, SITE_URL, STATUS_URL, SUPPORT_SERVER_URL, TERMS_URL } from '../../config/constants/links';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
@@ -27,7 +27,7 @@ interface CommandInfo {
   name: string;
   description: string;
   usage?: string;
-  /** Komenda dostępna tylko na serwerach właściciela — nie pokazuj jej nigdzie indziej. */
+  /** Komenda dostępna tylko na serwerach właściciela - nie pokazuj jej nigdzie indziej. */
   ownerGuildsOnly?: boolean;
 }
 
@@ -148,7 +148,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
       embed.addFields({
         name: '📬 Pomoc i kontakt',
-        value: `Problem z botem, zgłoszenie nadużycia albo prośba o usunięcie danych: **${CONTACT_EMAIL}**`,
+        value: `Pytania i problemy z botem: [serwer wsparcia](${SUPPORT_SERVER_URL}). Zgłoszenie nadużycia albo prośba o usunięcie danych: **${CONTACT_EMAIL}**`,
         inline: false,
       });
 
@@ -160,6 +160,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     // wysyłają interakcji, więc nie trzeba ich wyłączać po upływie czasu kolektora.
     const linkRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setLabel('Panel').setStyle(ButtonStyle.Link).setURL(SITE_URL),
+      new ButtonBuilder().setLabel('Serwer wsparcia').setStyle(ButtonStyle.Link).setURL(SUPPORT_SERVER_URL),
       new ButtonBuilder().setLabel('Regulamin').setStyle(ButtonStyle.Link).setURL(TERMS_URL),
       new ButtonBuilder().setLabel('Polityka prywatności').setStyle(ButtonStyle.Link).setURL(PRIVACY_URL),
       new ButtonBuilder().setLabel('Status').setStyle(ButtonStyle.Link).setURL(STATUS_URL)

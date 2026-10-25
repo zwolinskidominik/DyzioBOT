@@ -10,7 +10,7 @@ import logger from '../utils/logger';
  * własnej kategorii pokrytej przez commandToggle.ts (fun/misc) ani własnego
  * bespoke systemu jak moderacja (checkCommandAccess) czy economy (isEconomyEnabled
  * w economyService). Każdy wpis w GATES odpowiada jednemu przełącznikowi w
- * dashboardzie — semantyka `isAllowed` MUSI być spójna z tym, co już sprawdza
+ * dashboardzie - semantyka `isAllowed` MUSI być spójna z tym, co już sprawdza
  * odpowiadający event/scheduler dla tego modułu (patrz komentarze przy każdym).
  */
 interface ModuleGate {
@@ -21,14 +21,14 @@ interface ModuleGate {
 
 const GATES: ModuleGate[] = [
   {
-    // Te same 4 komendy co folder misc/birthdays/ — mają WŁASNĄ kategorię
+    // Te same 4 komendy co folder misc/birthdays/ - mają WŁASNĄ kategorię
     // "birthdays" (nadawaną automatycznie przez CommandHandler dla podfolderów),
     // więc commandToggle.ts (fun/misc) ich nie obejmuje.
     commands: new Set(['birthday', 'birthdays-next', 'birthday-remember', 'birthday-set-user']),
     moduleLabel: 'Urodziny',
     isAllowed: async (guildId) => {
       const config = await BirthdayConfigurationModel.findOne({ guildId }).lean();
-      // Spójne z birthdayScheduler.ts — blokuje tylko jawne enabled:false, brak
+      // Spójne z birthdayScheduler.ts - blokuje tylko jawne enabled:false, brak
       // configu (nikt jeszcze nie skonfigurował kanału) traktujemy jako włączone.
       return config?.enabled !== false;
     },
@@ -38,7 +38,7 @@ const GATES: ModuleGate[] = [
     moduleLabel: 'Poziomy',
     isAllowed: async (guildId) => {
       const config = await LevelConfigModel.findOne({ guildId }).lean();
-      // Spójne z xpService.ts (przyznawanie XP) — wymaga jawnego enabled:true.
+      // Spójne z xpService.ts (przyznawanie XP) - wymaga jawnego enabled:true.
       return config?.enabled === true;
     },
   },
@@ -70,6 +70,6 @@ export default async function moduleToggle(
     return null;
   } catch (error) {
     logger.error(`Błąd sprawdzania moduleToggle (${commandName}): ${error}`);
-    return null; // fail-open — błąd bazy nie powinien blokować komend
+    return null; // fail-open - błąd bazy nie powinien blokować komend
   }
 }

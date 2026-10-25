@@ -32,10 +32,10 @@ async function runRetention(client: Client): Promise<void> {
 
 export default async function run(client: Client): Promise<void> {
   // Włączane jawnie (GUILD_DATA_RETENTION=on w .env produkcji). Domyślnie wyłączone, bo instancja
-  // developerska podpięta pod tę samą bazę widzi inne serwery niż produkcja — uruchomiona
+  // developerska podpięta pod tę samą bazę widzi inne serwery niż produkcja - uruchomiona
   // u niej retencja uznałaby serwery produkcyjne za opuszczone.
   if (env().GUILD_DATA_RETENTION !== 'on') {
-    logger.info('[Retention] Wyłączone (GUILD_DATA_RETENTION != on) — dane usuniętych serwerów nie są czyszczone.');
+    logger.info('[Retention] Wyłączone (GUILD_DATA_RETENTION != on) - dane usuniętych serwerów nie są czyszczone.');
     return;
   }
 

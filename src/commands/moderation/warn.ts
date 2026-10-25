@@ -25,7 +25,7 @@ export const data = new SlashCommandBuilder()
   );
 
 export const options = {
-  // userPermissions celowo pominięte — dostęp sprawdzamy ręcznie w run() przez
+  // userPermissions celowo pominięte - dostęp sprawdzamy ręcznie w run() przez
   // checkCommandAccess(), bo extraRoleIds z ModerationConfig ma prawo przepuścić
   // moderatora BEZ natywnego uprawnienia Discorda. CommandHandler zablokowałby
   // taką osobę zanim ta logika w ogóle się wykona.
@@ -104,7 +104,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const { count, step, nextStep, isFinal, warnEntryId } = result.data;
     const limit = effectiveSteps.length;
     const shouldDm = config.warnDm;
-    // Gate tylko dla ModerationLog (dashboard, zakładka "Otrzymane kary") — kanał logów Discorda
+    // Gate tylko dla ModerationLog (dashboard, zakładka "Otrzymane kary") - kanał logów Discorda
     // (sendLog niżej) ma WŁASNY, niezależny system włącz/wyłącz per event (LogConfiguration).
     const shouldWriteLog = config.warn.log;
 
@@ -150,7 +150,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
         await sendLog(interaction.client, guild.id, 'moderationCommand', {
           title: null,
-          description: `**⚖️ Użyto komendy \`/warn\` wobec <@${targetUser.id}> — auto-ban po ${count} ostrzeżeniach.**`,
+          description: `**⚖️ Użyto komendy \`/warn\` wobec <@${targetUser.id}> - auto-ban po ${count} ostrzeżeniach.**`,
           fields: [
             { name: 'Powód', value: reason, inline: false },
             { name: 'Kara', value: '**PERMANENTNY BAN**', inline: false },
@@ -191,7 +191,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
                   `**Serwer:** ${guild.name}\n` +
                   `**Powód ostrzeżenia:** ${reason}\n` +
                   `**Moderator:** <@${interaction.user.id}>\n\n` +
-                  `⚠️ **Osiągnięto ${count}/${limit} ostrzeżeń** — zostałeś wyrzucony z serwera.`,
+                  `⚠️ **Osiągnięto ${count}/${limit} ostrzeżeń** - zostałeś wyrzucony z serwera.`,
                 color: COLORS.ERROR,
               })]
             });
@@ -217,7 +217,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
         await sendLog(interaction.client, guild.id, 'moderationCommand', {
           title: null,
-          description: `**⚖️ Użyto komendy \`/warn\` wobec <@${targetUser.id}> — auto-kick po ${count} ostrzeżeniach.**`,
+          description: `**⚖️ Użyto komendy \`/warn\` wobec <@${targetUser.id}> - auto-kick po ${count} ostrzeżeniach.**`,
           fields: [
             { name: 'Powód', value: reason, inline: false },
             { name: 'Kara', value: '**WYRZUCENIE Z SERWERA**', inline: false },
@@ -252,7 +252,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     const { muteEndTs, muteFailed } = await applyTimeoutSafely(member, muteDurationMs, reason);
     const muteStatusText = muteFailed
-      ? '❌ Nie udało się nałożyć (brak uprawnień — użytkownik ma prawdopodobnie rolę Administratora)'
+      ? '❌ Nie udało się nałożyć (brak uprawnień - użytkownik ma prawdopodobnie rolę Administratora)'
       : 'Brak wyciszenia';
 
     if (shouldDm) {

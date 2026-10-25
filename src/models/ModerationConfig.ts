@@ -7,7 +7,7 @@ export type WarnAction = 'none' | 'mute' | 'kick' | 'ban';
 /**
  * Konfiguracja pojedynczej komendy moderacyjnej. `extraRoleIds` to role, które
  * mogą użyć komendy MIMO braku natywnego uprawnienia Discorda (własna warstwa
- * ponad `.setDefaultMemberPermissions()` — sprawdzana ręcznie w run() komendy,
+ * ponad `.setDefaultMemberPermissions()` - sprawdzana ręcznie w run() komendy,
  * bo CommandHandler blokowałby interakcję zanim ten kod się wykona).
  */
 export class ModerationCommandConfig {
@@ -29,7 +29,7 @@ export class WarnStepConfig {
   @prop({ type: String, default: 'mute' })
   public action!: WarnAction;
 
-  /** Czas wyciszenia w minutach — ma znaczenie tylko gdy action === 'mute'. */
+  /** Czas wyciszenia w minutach - ma znaczenie tylko gdy action === 'mute'. */
   @prop({ type: Number, default: 15 })
   public durationMinutes!: number;
 }
@@ -44,7 +44,7 @@ export class ModerationConfig {
   @prop({ required: true, unique: true, type: String })
   public guildId!: string;
 
-  /** Wyłącznik główny — gdy false, ŻADNA komenda moderacyjna nie działa, niezależnie od `on` per-komenda. */
+  /** Wyłącznik główny - gdy false, ŻADNA komenda moderacyjna nie działa, niezależnie od `on` per-komenda. */
   @prop({ type: Boolean, default: true })
   public enabled!: boolean;
 

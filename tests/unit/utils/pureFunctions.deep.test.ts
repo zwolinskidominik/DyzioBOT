@@ -7,7 +7,7 @@
 /* ─── timeHelpers ─────────────────────────────────────────────────── */
 import { formatClock } from '../../../src/utils/timeHelpers';
 
-describe('timeHelpers – formatClock', () => {
+describe('timeHelpers - formatClock', () => {
   it('formats seconds only (< 1 min)', () => {
     expect(formatClock(30_000)).toBe('0:30');
   });
@@ -142,7 +142,7 @@ describe('cooldownHelpers', () => {
 /* ─── xpMultiplier ────────────────────────────────────────────────── */
 import { getXpMultipliers } from '../../../src/utils/xpMultiplier';
 
-describe('xpMultiplier – getXpMultipliers', () => {
+describe('xpMultiplier - getXpMultipliers', () => {
   const mockMember = {
     roles: {
       cache: new Map([['role1', true], ['role2', true]]),
@@ -461,7 +461,7 @@ describe('moderationHelpers', () => {
 
 /* ─── config/bot ──────────────────────────────────────────────────── */
 // getBotConfig is already mocked above for embedHelpers, test the actual one separately
-describe('config/bot – getBotConfig', () => {
+describe('config/bot - getBotConfig', () => {
   it('returns config with emojis', () => {
     // We already mocked getBotConfig above, so validate the mock works
     const { getBotConfig } = require('../../../src/config/bot');
@@ -474,7 +474,7 @@ describe('config/bot – getBotConfig', () => {
 /* ─── config/guild ────────────────────────────────────────────────── */
 import { getGuildConfig } from '../../../src/config/guild';
 
-describe('config/guild – getGuildConfig', () => {
+describe('config/guild - getGuildConfig', () => {
   it('returns defaults for unknown guild', () => {
     const cfg = getGuildConfig('unknown-guild-id');
     expect(cfg.roles).toBeDefined();
@@ -499,7 +499,7 @@ import globalCooldown, {
   clearCooldowns,
 } from '../../../src/validations/globalCooldown';
 
-describe('validations – globalCooldown', () => {
+describe('validations - globalCooldown', () => {
   beforeEach(() => clearCooldowns());
 
   const makeInteraction = (userId: string) =>
