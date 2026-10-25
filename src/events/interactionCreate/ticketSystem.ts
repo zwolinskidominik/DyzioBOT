@@ -387,7 +387,7 @@ async function handleConfirmClose(interaction: ButtonInteraction): Promise<void>
   const channel = interaction.channel as TextChannel | null;
   const closedBy = interaction.user.tag;
 
-  setTimeout(async () => {
+  const closeTimer = setTimeout(async () => {
     try {
       if (channel) {
         await finalizeTicketClosure(channel, `zamknięte ręcznie przez ${closedBy}`);
@@ -397,6 +397,8 @@ async function handleConfirmClose(interaction: ButtonInteraction): Promise<void>
       logger.warn(`Nie udało się zamknąć ticketu: ${msg}`);
     }
   }, TICKET_CLOSE_DELAY);
+  // Bot i tak działa ciągle; unref tylko pozwala workerom Jesta zakończyć się po testach.
+  closeTimer.unref?.();
 }
 
 async function handleCancelClose(interaction: ButtonInteraction): Promise<void> {

@@ -42,6 +42,8 @@ export function startCleanup(): void {
       }
     }
   }, CLEANUP_INTERVAL_MS);
+  // Samo sprzątanie pamięci nie powinno trzymać procesu przy życiu (np. workerów Jesta po testach).
+  cleanupTimer.unref?.();
 }
 
 export function stopCleanup(): void {

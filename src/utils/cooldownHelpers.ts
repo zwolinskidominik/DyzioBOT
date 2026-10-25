@@ -9,6 +9,7 @@ export function debounce(key: string, fn: () => void, delay = 2000): void {
       debounceMap.delete(key);
     }
   }, delay);
+  t.unref?.();
   debounceMap.set(key, t);
 }
 
