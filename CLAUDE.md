@@ -51,7 +51,10 @@ npm run sync-commands # rejestracja slash commands w Discord
 
 ## Changelog na serwer wsparcia
 
-Po **każdej** zmianie wdrożonej na produkcję (bot lub dashboard), którą zobaczą użytkownicy, dopisz w odpowiedzi gotowy changelog do wklejenia na kanał `#changelog` serwera wsparcia (Deezy • Support):
+**Jeden zbiorczy changelog dziennie** (ustalone z Dominikiem). Po każdym wdrożeniu na produkcję (bot lub dashboard) zmiany widoczne dla użytkowników dopisuj do `ops/changelog-pending.md` - **nic nie wysyłaj od razu**. Gdy Dominik napisze „koniec dnia” (albo o to poprosi), złóż z pliku jeden changelog, wyślij go przez bota na `#changelog` i wyczyść plik. Dni bez wdrożeń = brak wpisu.
+Wyjątki wysyłane od razu: poważne błędy zauważalne dla użytkowników, bezpieczeństwo, zmiany wymagające działania od administratorów serwerów. Duże funkcje dodatkowo dostają ogłoszenie na `#announcements`.
+
+Format zbiorczego wpisu na kanał `#changelog` serwera wsparcia (Deezy • Support):
 - najpierw 🇵🇱 Polski, pod nim 🇬🇧 English (ustalone z Dominikiem),
 - w bloku kodu (żeby dało się skopiować 1:1), max ~2000 znaków,
 - konkretnie, językiem użytkownika — co się zmieniło dla niego, bez nazw plików i szczegółów technicznych,
