@@ -1,5 +1,6 @@
-import { Collection, Guild, GuildChannel, GuildMember, TextChannel } from 'discord.js';
+import { Client, Collection, Guild, GuildChannel, GuildMember, TextChannel } from 'discord.js';
 import { ChannelStatsModel } from '../models/ChannelStats';
+import { BOT_SERVER_COUNT_CHANNEL, SUPPORT_GUILD_ID } from '../config/constants/supportServer';
 import logger from './logger';
 
 const renameTokens = new Map<string, number>();
@@ -76,6 +77,20 @@ export async function updateChannelName(
 
   const newName = buildChannelName(channelConfig.template, newValue);
   await safeSetChannelName(channel as TextChannel, newName);
+}
+
+/**
+ * Licznik „🌐 Servers: N" na serwerze wsparcia - liczba serwerów, na których jest bot.
+ * Pomija się, gdy bot nie widzi serwera wsparcia (np. instancja developerska).
+ */
+export async function updateBotServerCount(client: Client): Promise<void> {
+  const guild = client.guilds.cache.get(SUPPORT_GUILD_ID);
+  if (!guild) return;
+  try {
+    await updateChannelName(guild, BOT_SERVER_COUNT_CHANNEL, client.guilds.cache.size);
+  } catch (err) {
+    logger.error(`Błąd przy aktualizacji licznika serwerów bota: ${err}`);
+  }
 }
 
 const BAN_CACHE_TTL = 10 * 60 * 1000;

@@ -101,6 +101,7 @@ jest.mock('../../../src/services/tempChannelService', () => ({
 }));
 
 jest.mock('../../../src/utils/channelHelpers', () => ({
+  updateBotServerCount: jest.fn().mockResolvedValue(undefined),
   safeSetChannelName: jest.fn().mockResolvedValue(undefined),
 }));
 

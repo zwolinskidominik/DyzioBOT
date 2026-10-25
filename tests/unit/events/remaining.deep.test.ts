@@ -111,6 +111,7 @@ jest.mock('../../../src/utils/canvasHelpers', () => ({
 }));
 
 jest.mock('../../../src/utils/channelHelpers', () => ({
+  updateBotServerCount: jest.fn().mockResolvedValue(undefined),
   safeSetChannelName: jest.fn().mockResolvedValue(undefined),
   updateChannelStats: jest.fn().mockResolvedValue(undefined),
 }));

@@ -19,6 +19,7 @@ jest.mock('../../../src/utils/logger', () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 jest.mock('../../../src/utils/channelHelpers', () => ({
+  updateBotServerCount: jest.fn().mockResolvedValue(undefined),
   deleteStatsChannel: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../../../src/services/tempChannelService', () => ({

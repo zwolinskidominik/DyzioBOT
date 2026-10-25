@@ -77,6 +77,7 @@ jest.mock('../../../src/services/birthdayService', () => ({
 
 const mockUpdateChannelStats = jest.fn();
 jest.mock('../../../src/utils/channelHelpers', () => ({
+  updateBotServerCount: jest.fn().mockResolvedValue(undefined),
   updateChannelStats: mockUpdateChannelStats,
 }));
 
