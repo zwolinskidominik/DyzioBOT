@@ -159,7 +159,7 @@ export async function POST(
       title: embedTitle.slice(0, 256),
       description: panelMessage.description.slice(0, 4000),
       color: embedColor,
-      timestamp: new Date().toISOString(),
+      // Bez timestampu: panel to stała wiadomość, „Dziś o 21:35” pod nim tylko myli.
       thumbnail: guildIconUrl ? { url: guildIconUrl } : undefined,
       ...(bannerAttachment ? { image: { url: `attachment://${bannerAttachment.filename}` } } : {}),
     };
