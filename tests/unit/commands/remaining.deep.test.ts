@@ -284,6 +284,26 @@ describe('say command', () => {
     expect(interaction.showModal).toHaveBeenCalled();
   });
 
+  it.each(['off', 'on'])('never pings @everyone/roles from the typed text (embed %s)', async (mode) => {
+    const interaction = makeInteraction();
+    interaction.showModal = jest.fn().mockResolvedValue(undefined);
+    interaction.awaitModalSubmit = jest.fn().mockResolvedValue({
+      fields: { getTextInputValue: jest.fn().mockImplementation((id: string) => {
+        if (id === 'sayMessage') return 'Changelog: @everyone role fix';
+        if (id === 'embedMode') return mode;
+        return '';
+      })},
+      reply: jest.fn().mockResolvedValue(undefined),
+    });
+    const { TextChannel } = require('discord.js');
+    Object.setPrototypeOf(interaction.channel, TextChannel.prototype);
+    interaction.channel.send = jest.fn().mockResolvedValue(undefined);
+    await sayCmd.run({ interaction, client: {} });
+    expect(interaction.channel.send).toHaveBeenCalledWith(
+      expect.objectContaining({ allowedMentions: { parse: [] } })
+    );
+  });
+
   it('rejects non-text channels', async () => {
     const interaction = makeInteraction();
     interaction.channel = null;

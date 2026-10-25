@@ -55,7 +55,9 @@ Po **każdej** zmianie wdrożonej na produkcję (bot lub dashboard), którą zob
 - najpierw 🇬🇧 English, pod nim 🇵🇱 Polski (polski jest drugorzędny),
 - w bloku kodu (żeby dało się skopiować 1:1), max ~2000 znaków,
 - konkretnie, językiem użytkownika — co się zmieniło dla niego, bez nazw plików i szczegółów technicznych,
-- podział: ✨ New / 🔧 Changed / 🐛 Fixed (pomiń puste sekcje), data wdrożenia w nagłówku.
+- podział: ✨ New / 🔧 Changed / 🐛 Fixed (pomiń puste sekcje), data wdrożenia w nagłówku,
+- punkty jako lista markdown Discorda (`- ` na początku linii), nie ręcznie wpisane `•`,
+- nigdy gołe `@everyone`/`@here`/wzmianki ról w treści — zawsze w backtickach (`` `@everyone` ``), żeby nikogo nie spingować przy wklejaniu.
 Zmiany czysto wewnętrzne (refaktor, testy, CI) pomijaj.
 
 ## Commity

@@ -87,11 +87,14 @@ async function handleModalSubmit(
   const messageContent = response.fields.getTextInputValue(CUSTOM_IDS.MESSAGE);
   const embedMode = response.fields.getTextInputValue(CUSTOM_IDS.EMBED_MODE);
 
+  // Tekst wpisany przez admina nie może pingować: „@everyone”, <@&rola> czy <@user> w treści
+  // (np. w changelogu) mają się wyświetlić, a nie wysłać powiadomienie do całego serwera.
+  const allowedMentions = { parse: [] };
   if (embedMode && embedMode.toLowerCase() === 'on') {
     const embed = createBaseEmbed({ description: messageContent });
-    await channel.send({ embeds: [embed] });
+    await channel.send({ embeds: [embed], allowedMentions });
   } else {
-    await channel.send(messageContent);
+    await channel.send({ content: messageContent, allowedMentions });
   }
 
   await response.reply({
