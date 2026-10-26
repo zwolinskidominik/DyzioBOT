@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -21,6 +21,12 @@ import { fetchGuildData } from "@/lib/cache";
 import { cn } from "@/lib/utils";
 import VariableInserter from "@/components/VariableInserter";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { birthdaysMessages } from "@/i18n/messages/birthdays";
+import { commonMessages } from "@/i18n/messages/common";
+import type { Widen } from "@/i18n/config";
+
+type BirthdaysText = Widen<typeof birthdaysMessages.pl>;
 import { DiscordMessagePreview } from "@/components/DiscordMessagePreview";
 
 /** Niewidoczny sentinel otaczający podstawioną wartość zmiennej — DiscordMessagePreview
@@ -35,29 +41,16 @@ function resolveBirthdayPreview(template: string): string {
   return template.replace(/\{user\}/g, mention("@Deezy"));
 }
 
-const MONTHS = [
-  { value: "1", label: "Styczeń" },
-  { value: "2", label: "Luty" },
-  { value: "3", label: "Marzec" },
-  { value: "4", label: "Kwiecień" },
-  { value: "5", label: "Maj" },
-  { value: "6", label: "Czerwiec" },
-  { value: "7", label: "Lipiec" },
-  { value: "8", label: "Sierpień" },
-  { value: "9", label: "Wrzesień" },
-  { value: "10", label: "Październik" },
-  { value: "11", label: "Listopad" },
-  { value: "12", label: "Grudzień" },
-];
+function createBirthdaySchema(t: BirthdaysText) {
+  return z.object({
+    birthdayChannelId: z.string().min(1, t.pickChannelError),
+    roleId: z.string().optional(),
+    message: z.string().min(1, t.messageError),
+    enabled: z.boolean().default(false),
+  });
+}
 
-const birthdaySchema = z.object({
-  birthdayChannelId: z.string().min(1, "Wybierz kanał urodzinowy"),
-  roleId: z.string().optional(),
-  message: z.string().min(1, "Wpisz wiadomość urodzinową"),
-  enabled: z.boolean().default(false),
-});
-
-type BirthdayFormData = z.infer<typeof birthdaySchema>;
+type BirthdayFormData = z.infer<ReturnType<typeof createBirthdaySchema>>;
 
 const DEFAULT_FORM_VALUES: BirthdayFormData = {
   birthdayChannelId: "",
@@ -125,6 +118,7 @@ interface SettingRowProps {
 
 function SettingRow({ title, description, icon, isOpen = false, onToggle, children }: SettingRowProps) {
   const isExpandable = Boolean(children && onToggle);
+  const m = useMessages(commonMessages).module;
 
   return (
     <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
@@ -144,7 +138,7 @@ function SettingRow({ title, description, icon, isOpen = false, onToggle, childr
         </button>
 
         {isExpandable ? (
-          <button type="button" onClick={onToggle} aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
+          <button type="button" onClick={onToggle} aria-label={isOpen ? m.collapse : m.expand} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
             <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
           </button>
         ) : null}
@@ -166,27 +160,31 @@ function daysUntilBirthday(date: Date): number {
   return Math.round((next.getTime() - today.getTime()) / 86400000);
 }
 
-function countdownText(days: number): string {
-  if (days === 0) return "Dziś!";
-  if (days === 1) return "1 dzień";
-  return `${days} dni`;
+function countdownText(days: number, t: BirthdaysText): string {
+  if (days === 0) return t.today;
+  return t.days(days);
 }
 
 function CountdownBadge({ days }: { days: number }) {
+  const t = useMessages(birthdaysMessages);
   if (days === 0 || days === 1) {
     return (
       <span className="shrink-0 rounded-full bg-pink-500/15 px-2 py-0.5 text-[11px] font-semibold text-pink-400">
-        {days === 0 ? "Dziś!" : "Jutro"}
+        {days === 0 ? t.today : t.tomorrow}
       </span>
     );
   }
-  return <span className="shrink-0 text-[11px] text-[#8d94a8]">za {days} dni</span>;
+  return <span className="shrink-0 text-[11px] text-[#8d94a8]">{t.inDays(days)}</span>;
 }
 
 export default function BirthdaysPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(birthdaysMessages);
+  const m = useMessages(commonMessages).module;
+  const birthdaySchema = useMemo(() => createBirthdaySchema(t), [t]);
+  const MONTHS = t.months.map((label, i) => ({ value: String(i + 1), label }));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -251,8 +249,8 @@ export default function BirthdaysPage() {
         }
       } catch (fetchError) {
         console.error('Error loading birthdays data:', fetchError);
-        setError("Nie udało się załadować danych urodzin. Sprawdź połączenie z internetem i spróbuj ponownie.");
-        toast.error("Nie udało się załadować danych");
+        setError(t.loadError);
+        toast.error(m.loadErrorShort);
       } finally {
         setLoading(false);
       }
@@ -279,14 +277,14 @@ export default function BirthdaysPage() {
       await response.json();
       savedValuesRef.current = data;
       reset(data, { keepDirty: false });
-      toast.success("Konfiguracja urodzin została zapisana!");
+      toast.success(t.saved);
     } catch (saveError) {
       console.error("Failed to save:", saveError);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [guildId, reset]);
+  }, [guildId, reset, t, m]);
 
   const handleCancel = useCallback(() => {
     reset(savedValuesRef.current, { keepDirty: false });
@@ -300,10 +298,10 @@ export default function BirthdaysPage() {
     id: `birthdays-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: "Urodziny",
+    label: t.title,
     onSave: submitFromDirtyBar,
     onCancel: handleCancel,
-  }), [guildId, handleCancel, isDirty, registerDirtyController, saving, submitFromDirtyBar]);
+  }), [guildId, handleCancel, isDirty, registerDirtyController, saving, submitFromDirtyBar, t]);
 
   const handleEditBirthday = async (userId: string) => {
     const day = parseInt(editDay);
@@ -311,12 +309,12 @@ export default function BirthdaysPage() {
     const year = editYear ? parseInt(editYear) : undefined;
 
     if (!day || !month || day < 1 || day > 31 || month < 1 || month > 12) {
-      toast.error("Nieprawidłowa data");
+      toast.error(t.invalidDate);
       return;
     }
 
     if (year && (year < 1900 || year > new Date().getFullYear())) {
-      toast.error("Nieprawidłowy rok");
+      toast.error(t.invalidYear);
       return;
     }
 
@@ -340,15 +338,15 @@ export default function BirthdaysPage() {
       setEditDay("");
       setEditMonth("");
       setEditYear("");
-      toast.success("Urodziny zostały zaktualizowane!");
+      toast.success(t.updated);
     } catch (editError) {
       console.error("Failed to update birthday:", editError);
-      toast.error("Nie udało się zaktualizować urodzin");
+      toast.error(t.updateError);
     }
   };
 
   const handleDeleteBirthday = async (userId: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć te urodziny?")) return;
+    if (!confirm(t.confirmDelete)) return;
 
     try {
       const response = await fetch(`/api/guild/${guildId}/birthdays/users?userId=${userId}`, {
@@ -360,10 +358,10 @@ export default function BirthdaysPage() {
       }
 
       setBirthdays(birthdays.filter(b => b.userId !== userId));
-      toast.success("Urodziny zostały usunięte!");
+      toast.success(t.deleted);
     } catch (deleteError) {
       console.error("Failed to delete birthday:", deleteError);
-      toast.error("Nie udało się usunąć urodzin");
+      toast.error(t.deleteError);
     }
   };
 
@@ -398,7 +396,7 @@ export default function BirthdaysPage() {
       <div className="min-h-full">
         <div className="w-full">
           <ErrorState
-            title="Nie udało się załadować urodzin"
+            title={t.loadErrorTitle}
             message={error}
             onRetry={handleRetry}
           />
@@ -437,8 +435,8 @@ export default function BirthdaysPage() {
   const selectedChannel = channels.find((c) => c.id === values.birthdayChannelId);
 
   const configSummary = values.birthdayChannelId
-    ? `# ${selectedChannel?.name ?? "nieznany kanał"}${selectedRole ? ` • 🎂 ${selectedRole.name}` : ""}`
-    : "Nie skonfigurowano jeszcze";
+    ? `# ${selectedChannel?.name ?? t.unknownChannel}${selectedRole ? ` • 🎂 ${selectedRole.name}` : ""}`
+    : t.notConfigured;
 
   const query = searchQuery.trim().toLowerCase();
   const filteredBirthdays = query
@@ -463,17 +461,17 @@ export default function BirthdaysPage() {
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Urodziny</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Automatyczne życzenia urodzinowe, rola na dzień urodzin i lista nadchodzących świętowań.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{values.enabled ? "Aktywne" : "Nieaktywne"}</span>
+              <span>{values.enabled ? m.active : m.inactive}</span>
               <DeezySwitch
                 checked={values.enabled || false}
                 onCheckedChange={(checked) => setValue("enabled", checked, { shouldDirty: true })}
-                aria-label="Włącz lub wyłącz urodziny"
+                aria-label={t.toggle}
               />
             </div>
           </header>
@@ -484,7 +482,7 @@ export default function BirthdaysPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł Urodzin jest <span className="font-semibold text-white/80">wyłączony na tym serwerze</span>. Bot nie wyśle życzeń, a komendy <span className="font-semibold text-white/80">/birthday</span>, <span className="font-semibold text-white/80">/birthdays-next</span>, <span className="font-semibold text-white/80">/birthday-remember</span> i <span className="font-semibold text-white/80">/birthday-set-user</span> nie zadziałają, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">/birthday</span>, <span className="font-semibold text-white/80">/birthdays-next</span>, <span className="font-semibold text-white/80">/birthday-remember</span>{t.and}<span className="font-semibold text-white/80">/birthday-set-user</span>{t.disabledMiddle2}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -506,11 +504,11 @@ export default function BirthdaysPage() {
                 style={{ background: "radial-gradient(circle, rgba(236,72,153,0.25), transparent 70%)" }}
               />
               <div className="relative">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#b3a6ff]">Najbliższe urodziny</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#b3a6ff]">{t.nearest}</p>
                 <div className="mt-2.5 flex items-center gap-3.5">
                   <img
                     src={getAvatarUrl(nearestBirthday.userId, nearestBirthday.avatar)}
-                    alt={nearestBirthday.username || "Użytkownik"}
+                    alt={nearestBirthday.username || t.user}
                     className="h-[52px] w-[52px] shrink-0 rounded-full"
                     style={{ boxShadow: "0 0 0 3px rgba(99,102,241,0.35)" }}
                   />
@@ -522,14 +520,14 @@ export default function BirthdaysPage() {
                     </p>
                     <p className="mt-0.5 break-words text-xs text-[#9aa2b8] lg:truncate">
                       {formatBirthday(nearestBirthday.date, nearestBirthday.yearSpecified)}
-                      {selectedRole ? <> • rola 🎂 {selectedRole.name} na 24h</> : null}
+                      {selectedRole ? t.roleFor24h(selectedRole.name) : null}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-[26px] font-extrabold leading-none" style={{ color: "#ec4899" }}>
-                      {countdownText(nearestBirthday.daysUntil)}
+                      {countdownText(nearestBirthday.daysUntil, t)}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-[#8d94a8]">do świętowania</p>
+                    <p className="mt-0.5 text-[11px] text-[#8d94a8]">{t.toCelebrate}</p>
                   </div>
                 </div>
               </div>
@@ -541,18 +539,18 @@ export default function BirthdaysPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-md bg-dark-800 p-4">
               <p className="text-2xl font-bold text-white">{birthdays.length}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">zapisanych urodzin</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.saved_count}</p>
             </div>
             <div className="rounded-md bg-dark-800 p-4">
               <p className="text-2xl font-bold text-pink-400">{thisMonthCount}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">w tym miesiącu</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.thisMonth}</p>
             </div>
           </div>
         </SlideIn>
 
         <SlideIn direction="up" delay={210}>
           <SettingRow
-            title="Konfiguracja — kanał, rola, wiadomość"
+            title={t.configTitle}
             description={configSummary}
             icon={<Settings className="h-4 w-4" />}
             isOpen={configOpen}
@@ -562,7 +560,7 @@ export default function BirthdaysPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className={labelClass}>
-                    Kanał urodzinowy <span className="text-destructive">*</span>
+                    {t.channel} <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={values.birthdayChannelId || ""}
@@ -575,14 +573,14 @@ export default function BirthdaysPage() {
                         placeholder={
                           <div className="flex items-center gap-2 text-[#9aa2b8]">
                             <Hash className="h-4 w-4" />
-                            <span>Wybierz kanał...</span>
+                            <span>{t.pickChannel}</span>
                           </div>
                         }
                       >
                         {values.birthdayChannelId ? (
                           <div className="flex items-center gap-2">
                             <Hash className="h-4 w-4 text-[#8d94a8]" />
-                            {selectedChannel?.name ?? "Wybierz kanał..."}
+                            {selectedChannel?.name ?? t.pickChannel}
                           </div>
                         ) : null}
                       </SelectValue>
@@ -604,14 +602,14 @@ export default function BirthdaysPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className={labelClass}>Rola urodzinowa (opcjonalna)</Label>
+                  <Label className={labelClass}>{t.role}</Label>
                   <div className="flex gap-2">
                     <Select
                       value={values.roleId || undefined}
                       onValueChange={(value) => setValue("roleId", value, { shouldDirty: true })}
                     >
                       <SelectTrigger className={inputClass}>
-                        <SelectValue placeholder="Brak roli" />
+                        <SelectValue placeholder={t.noRole} />
                       </SelectTrigger>
                       <SelectContent className="border-[#2f3341] bg-dark-900">
                         {roles.map((role) => (
@@ -632,26 +630,26 @@ export default function BirthdaysPage() {
                         type="button"
                         onClick={() => setValue("roleId", "", { shouldDirty: true })}
                         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[#3f4455] text-[#9aa2b8] transition-colors hover:border-red-500/50 hover:text-red-400"
-                        aria-label="Usuń rolę urodzinową"
+                        aria-label={t.removeRole}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     ) : null}
                   </div>
-                  <p className="text-[11px] text-[#8d94a8]">Rola nadawana użytkownikowi w dniu urodzin (zostanie usunięta następnego dnia).</p>
+                  <p className="text-[11px] text-[#8d94a8]">{t.roleHint}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className={labelClass}>
-                    Wiadomość urodzinowa <span className="text-destructive">*</span>
+                    {t.message} <span className="text-destructive">*</span>
                   </Label>
                   <VariableInserter
                     value={values.message || ""}
                     onChange={(value) => setValue("message", value, { shouldDirty: true })}
                     variables={[
-                      { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
+                      { name: t.user, display: t.user, value: "{user}", description: t.userVariableHint },
                     ]}
                     placeholder="🎉 Wszystkiego najlepszego z okazji urodzin, {user}! 🎂"
                     rows={3}
@@ -665,14 +663,14 @@ export default function BirthdaysPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd na żywo</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">{m.livePreview}</p>
                   <DiscordMessagePreview
                     compact
                     avatarUrl="/deezy.png"
                     content={
                       values.message?.trim()
                         ? resolveBirthdayPreview(values.message)
-                        : "*Brak treści wiadomości*"
+                        : t.noContent
                     }
                   />
                 </div>
@@ -684,13 +682,13 @@ export default function BirthdaysPage() {
         <SlideIn direction="up" delay={240}>
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-sm font-semibold text-white/90">Oś czasu urodzin</h2>
+              <h2 className="text-sm font-semibold text-white/90">{t.timeline}</h2>
               <div className="relative sm:w-64">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d94a8]" />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Szukaj użytkownika..."
+                  placeholder={t.searchUser}
                   className="h-9 border-transparent bg-dark-800 pl-9 text-sm text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
                 />
               </div>
@@ -701,14 +699,14 @@ export default function BirthdaysPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-dark-900">
                   <Cake className="h-8 w-8 text-[#8d94a8]" />
                 </div>
-                <h3 className="text-sm font-semibold text-white/90">Brak zapisanych urodzin</h3>
+                <h3 className="text-sm font-semibold text-white/90">{t.emptyTitle}</h3>
                 <p className="mx-auto mt-1 max-w-sm text-xs text-[#8d94a8]">
-                  Użytkownicy mogą ustawić swoje urodziny za pomocą komendy. Wszystkie urodziny pojawią się tutaj.
+                  {t.emptyText}
                 </p>
               </div>
             ) : filteredBirthdays.length === 0 ? (
               <div className="rounded-md bg-dark-800 py-12 text-center">
-                <p className="text-sm text-[#8d94a8]">Nie znaleziono użytkownika „{searchQuery.trim()}".</p>
+                <p className="text-sm text-[#8d94a8]">{t.userNotFound(searchQuery.trim())}</p>
               </div>
             ) : (
               <div className="relative space-y-5">
@@ -733,7 +731,7 @@ export default function BirthdaysPage() {
                                 <div className="flex items-center gap-3">
                                   <img
                                     src={getAvatarUrl(birthday.userId, birthday.avatar)}
-                                    alt={birthday.username || "Użytkownik"}
+                                    alt={birthday.username || t.user}
                                     className="h-9 w-9 rounded-full"
                                   />
                                   <p className="text-sm font-medium text-white/90">
@@ -742,7 +740,7 @@ export default function BirthdaysPage() {
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
                                   <div className="space-y-1">
-                                    <Label className="text-[11px] text-[#8d94a8]">Dzień</Label>
+                                    <Label className="text-[11px] text-[#8d94a8]">{t.day}</Label>
                                     <Input
                                       type="number"
                                       min="1"
@@ -754,10 +752,10 @@ export default function BirthdaysPage() {
                                     />
                                   </div>
                                   <div className="space-y-1">
-                                    <Label className="text-[11px] text-[#8d94a8]">Miesiąc</Label>
+                                    <Label className="text-[11px] text-[#8d94a8]">{t.month}</Label>
                                     <Select value={editMonth} onValueChange={(value) => setEditMonth(value)}>
                                       <SelectTrigger className={cn(inputClass, "h-9")}>
-                                        <SelectValue placeholder="Wybierz miesiąc..." />
+                                        <SelectValue placeholder={t.pickMonth} />
                                       </SelectTrigger>
                                       <SelectContent className="border-[#2f3341] bg-dark-900">
                                         {MONTHS.map((month) => (
@@ -769,7 +767,7 @@ export default function BirthdaysPage() {
                                     </Select>
                                   </div>
                                   <div className="space-y-1">
-                                    <Label className="text-[11px] text-[#8d94a8]">Rok (opcjonalny)</Label>
+                                    <Label className="text-[11px] text-[#8d94a8]">{t.year}</Label>
                                     <Input
                                       type="number"
                                       min="1900"
@@ -789,7 +787,7 @@ export default function BirthdaysPage() {
                                     className="bg-[#3b82f6] text-white hover:bg-[#2563eb]"
                                   >
                                     <Save className="mr-2 h-4 w-4" />
-                                    Zapisz
+                                    {m.save}
                                   </Button>
                                   <Button
                                     type="button"
@@ -802,7 +800,7 @@ export default function BirthdaysPage() {
                                       setEditYear("");
                                     }}
                                   >
-                                    Anuluj
+                                    {m.cancel}
                                   </Button>
                                 </div>
                               </div>
@@ -811,7 +809,7 @@ export default function BirthdaysPage() {
                                 <div className="flex min-w-0 items-center gap-3">
                                   <img
                                     src={getAvatarUrl(birthday.userId, birthday.avatar)}
-                                    alt={birthday.username || "Użytkownik"}
+                                    alt={birthday.username || t.user}
                                     className="h-9 w-9 shrink-0 rounded-full"
                                   />
                                   <div className="min-w-0">
@@ -835,7 +833,7 @@ export default function BirthdaysPage() {
                                       setEditYear(birthday.yearSpecified ? date.getFullYear().toString() : "");
                                     }}
                                     className={iconButtonClass}
-                                    aria-label={`Edytuj urodziny ${birthday.username || birthday.userId}`}
+                                    aria-label={t.editBirthday(birthday.username || birthday.userId)}
                                   >
                                     <Pencil className="h-4 w-4" />
                                   </button>
@@ -843,7 +841,7 @@ export default function BirthdaysPage() {
                                     type="button"
                                     onClick={() => handleDeleteBirthday(birthday.userId)}
                                     className={iconButtonDangerClass}
-                                    aria-label={`Usuń urodziny ${birthday.username || birthday.userId}`}
+                                    aria-label={t.deleteBirthday(birthday.username || birthday.userId)}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </button>
@@ -860,7 +858,7 @@ export default function BirthdaysPage() {
                           onClick={() => setExpandedMonths((current) => ({ ...current, [group.key]: !isExpanded }))}
                           className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-[#3f4455] py-2 text-xs font-medium text-[#9aa2b8] transition-colors hover:border-[#3b82f6] hover:text-white"
                         >
-                          {isExpanded ? "Zwiń" : `Pokaż pozostałe (${hiddenCount})`}
+                          {isExpanded ? t.collapse : t.showRest(hiddenCount)}
                           <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-180")} />
                         </button>
                       ) : null}

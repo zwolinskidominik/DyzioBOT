@@ -2,6 +2,8 @@
 
 import { useRef, useEffect, useState } from "react";
 import { EmojiToolbarButton } from "@/components/greetings/FieldToolbar";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Variable {
   name: string;
@@ -46,12 +48,13 @@ export default function VariableInserter({
   containerClassName = "",
   toolbarClassName = "",
   variableButtonClassName = "",
-  variableLabel = "Wstaw zmienną:",
+  variableLabel,
   emojiPicker = false,
   emojiHideTabs,
   unstyled = false,
 }: VariableInserterProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const ed = useMessages(commonMessages).editor;
   const [isInternalChange, setIsInternalChange] = useState(false);
 
   useEffect(() => {
@@ -279,7 +282,7 @@ export default function VariableInserter({
 
       {variables.length > 0 ? (
       <div className={`flex flex-wrap gap-2 ${toolbarClassName}`}>
-        <span className="text-xs text-muted-foreground self-center">{variableLabel}</span>
+        <span className="text-xs text-muted-foreground self-center">{variableLabel ?? ed.insertVariable}</span>
         {variables.map((variable) => (
           <button
             key={variable.value}

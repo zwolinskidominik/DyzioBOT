@@ -4,6 +4,9 @@ import { useState } from "react";
 import { ChevronDown, Hash, Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { EmojiDisplay } from "@/components/EmojiDisplay";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { reactionRolesMessages } from "@/i18n/messages/reactionRoles";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Role {
   id: string;
@@ -38,16 +41,6 @@ interface ActivePanelCardProps {
   onDelete: () => void;
 }
 
-function formatRoleCount(count: number): string {
-  if (count === 1) return "1 rola";
-  const lastDigit = count % 10;
-  const lastTwoDigits = count % 100;
-  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
-    return `${count} role`;
-  }
-  return `${count} ról`;
-}
-
 export function ActivePanelCard({
   reactionRole,
   channelName,
@@ -60,6 +53,8 @@ export function ActivePanelCard({
   onDelete,
 }: ActivePanelCardProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const t = useMessages(reactionRolesMessages);
+  const m = useMessages(commonMessages).module;
 
   const getRoleName = (roleId: string) => roles.find((r) => r.id === roleId)?.name ?? roleId;
   const getRoleColor = (roleId: string) => roles.find((r) => r.id === roleId)?.color ?? 0;
@@ -80,13 +75,13 @@ export function ActivePanelCard({
               drugiej linii — długa nazwa kanału rozpychała wcześniej cały nagłówek. Od lg bez zmian. */}
           <div className="min-w-0 space-y-0.5">
             <p className="break-words text-sm font-semibold text-white/90 lg:truncate">
-              {reactionRole.title ?? "Wybierz swoją rolę"}
+              {reactionRole.title ?? t.titlePlaceholder}
             </p>
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-[#8d94a8]">
               <Hash className="h-3 w-3 shrink-0" />
               <span className="min-w-0 break-all">{channelName}</span>
               <span>·</span>
-              <span className="shrink-0">{formatRoleCount(reactionRole.reactions.length)}</span>
+              <span className="shrink-0">{t.card.roleCount(reactionRole.reactions.length)}</span>
             </div>
           </div>
         </button>
@@ -96,7 +91,7 @@ export function ActivePanelCard({
             type="button"
             onClick={onResend}
             disabled={isResending || isEditing}
-            title="Wyślij ponownie"
+            title={t.card.resend}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#8d94a8] transition-colors hover:bg-dark-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isResending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -105,7 +100,7 @@ export function ActivePanelCard({
             type="button"
             onClick={onEdit}
             disabled={isEditing}
-            title="Edytuj"
+            title={m.edit}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#8d94a8] transition-colors hover:bg-dark-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Pencil className="h-4 w-4" />
@@ -113,7 +108,7 @@ export function ActivePanelCard({
           <button
             type="button"
             onClick={onDelete}
-            title="Usuń"
+            title={m.delete}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#8d94a8] transition-colors hover:bg-dark-900 hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
@@ -121,7 +116,7 @@ export function ActivePanelCard({
           <button
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
-            aria-label={isOpen ? "Zwiń panel" : "Rozwiń panel"}
+            aria-label={isOpen ? t.card.collapse : t.card.expand}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white"
           >
             <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />

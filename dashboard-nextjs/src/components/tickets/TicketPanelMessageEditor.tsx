@@ -11,12 +11,15 @@ import { EmojiDisplay } from "@/components/EmojiDisplay";
 import { cn } from "@/lib/utils";
 import { TicketBannerThumbnail } from "./TicketLivePreview";
 import { PanelMessagePreview, type PanelMessageDraft } from "./PanelMessagePreview";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { ticketsMessages } from "@/i18n/messages/tickets";
+import { commonMessages } from "@/i18n/messages/common";
 
-const PRESETS: { id: string; label: string }[] = [
-  { id: "ticketBanner.png", label: "Domyślny" },
-  { id: "ticketReport.png", label: "Zgłoszenie" },
-  { id: "ticketPartnership.png", label: "Partnerstwo" },
-  { id: "ticketIdea.png", label: "Pomysł" },
+const PRESETS: { id: string; labelKey: "default" | "report" | "partnership" | "idea" }[] = [
+  { id: "ticketBanner.png", labelKey: "default" },
+  { id: "ticketReport.png", labelKey: "report" },
+  { id: "ticketPartnership.png", labelKey: "partnership" },
+  { id: "ticketIdea.png", labelKey: "idea" },
 ];
 
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
@@ -44,6 +47,8 @@ interface TicketPanelMessageEditorProps {
  * always starts from the last saved value.
  */
 export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCancel }: TicketPanelMessageEditorProps) {
+  const e = useMessages(ticketsMessages).editor;
+  const m = useMessages(commonMessages).module;
   const [draft, setDraft] = useState<PanelMessageDraft>({ ...initialMessage, banner: { ...initialMessage.banner } });
 
   const canSave = draft.title.trim().length > 0;
@@ -60,14 +65,14 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
         <div className="space-y-4">
           <div className="grid grid-cols-[80px_1fr] gap-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#c4cad8]">Emoji</label>
+              <label className="text-xs font-medium text-[#c4cad8]">{e.emoji}</label>
               <div className="flex items-center gap-1">
                 <EmojiPicker
                   onEmojiSelect={(emoji) => setDraft((d) => ({ ...d, emoji }))}
                   trigger={
                     <button
                       type="button"
-                      title="Wybierz emoji"
+                      title={e.pickEmoji}
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-transparent bg-dark-900 text-white/90 transition-colors hover:border-[#3b82f6]"
                     >
                       {draft.emoji ? (
@@ -82,7 +87,7 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
                   <button
                     type="button"
                     onClick={() => setDraft((d) => ({ ...d, emoji: "" }))}
-                    title="Usuń emoji"
+                    title={e.removeEmoji}
                     className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#8d94a8] transition-colors hover:bg-red-500/20 hover:text-red-400"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -91,11 +96,11 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#c4cad8]">Tytuł</label>
+              <label className="text-xs font-medium text-[#c4cad8]">{e.titleLabel}</label>
               <Input
                 value={draft.title}
                 onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-                placeholder="np. Kontakt z Administracją"
+                placeholder={e.titlePlaceholder}
                 maxLength={256}
                 className="border-transparent bg-dark-900 text-white/90"
               />
@@ -103,18 +108,18 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#c4cad8]">Opis</label>
+            <label className="text-xs font-medium text-[#c4cad8]">{e.description}</label>
             <Textarea
               value={draft.description}
               onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
               rows={4}
-              placeholder="Krótki opis nad listą typów zgłoszeń"
+              placeholder={e.descriptionPlaceholder}
               className="border-transparent bg-dark-900 text-white/90"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#c4cad8]">Kolor</label>
+            <label className="text-xs font-medium text-[#c4cad8]">{e.color}</label>
             <div className="flex items-center gap-2">
               <label className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded-md border border-[#2f3341]">
                 <input
@@ -135,18 +140,18 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#c4cad8]">Placeholder dropdownu</label>
+            <label className="text-xs font-medium text-[#c4cad8]">{e.placeholderLabel}</label>
             <Input
               value={draft.placeholder}
               onChange={(e) => setDraft((d) => ({ ...d, placeholder: e.target.value }))}
-              placeholder="np. Wybierz odpowiednią kategorię"
+              placeholder={e.placeholderPlaceholder}
               maxLength={150}
               className="border-transparent bg-dark-900 text-white/90"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-[#c4cad8]">Grafika panelu</label>
+            <label className="text-xs font-medium text-[#c4cad8]">{e.panelImage}</label>
             <Tabs
               value={draft.banner.mode}
               onValueChange={(mode) =>
@@ -164,18 +169,18 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
               <TabsList className="bg-dark-900">
                 <TabsTrigger value="none">
                   <ImageOff className="mr-1.5 h-3.5 w-3.5" />
-                  Brak
+                  {e.none}
                 </TabsTrigger>
-                <TabsTrigger value="preset">Gotowe</TabsTrigger>
+                <TabsTrigger value="preset">{e.presets}</TabsTrigger>
                 <TabsTrigger value="text">
                   <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                  Stwórz z tekstu
+                  {e.fromText}
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="none" className="pt-3">
                 <p className="rounded-md border border-dashed border-[#2f3341] px-3 py-4 text-center text-xs text-[#8d94a8]">
-                  Bez grafiki — panel będzie samym embedem tekstowym z listą typów.
+                  {e.noPanelImage}
                 </p>
               </TabsContent>
 
@@ -196,7 +201,7 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
                       <div className="aspect-[3/1] overflow-hidden rounded">
                         <TicketBannerThumbnail banner={{ mode: "preset", presetId: preset.id }} className="h-full w-full" />
                       </div>
-                      <p className="truncate text-[11px] text-[#c4cad8]">{preset.label}</p>
+                      <p className="truncate text-[11px] text-[#c4cad8]">{e.presetNames[preset.labelKey]}</p>
                     </button>
                   ))}
                 </div>
@@ -206,7 +211,7 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
                 <Input
                   value={draft.banner.text ?? ""}
                   onChange={(e) => setDraft((d) => ({ ...d, banner: { mode: "text", text: e.target.value } }))}
-                  placeholder="Tekst na grafice"
+                  placeholder={e.imageText}
                   maxLength={80}
                   className="border-transparent bg-dark-900 text-white/90"
                 />
@@ -225,7 +230,7 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
         <div className="space-y-2 rounded-md bg-dark-900/30 p-3">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Podgląd
+            {e.preview}
           </div>
           <PanelMessagePreview message={draft} />
         </div>
@@ -238,7 +243,7 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
           onClick={onCancel}
           className="border-[#3a3f4e] bg-transparent text-[#8d94a8] hover:bg-dark-900 hover:text-white"
         >
-          Anuluj
+          {m.cancel}
         </Button>
         <Button
           type="button"
@@ -247,7 +252,7 @@ export function TicketPanelMessageEditor({ initialMessage, saving, onSave, onCan
           className="bg-[#3b82f6] text-white hover:bg-[#2563eb]"
         >
           {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
-          Zapisz
+          {m.save}
         </Button>
       </div>
     </div>

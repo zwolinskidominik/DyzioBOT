@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 import { EmojiDisplay } from "@/components/EmojiDisplay";
 import { TicketBannerThumbnail, type TicketTypeBannerDraft } from "./TicketLivePreview";
 
@@ -18,11 +20,13 @@ export interface PanelMessageDraft {
 /** Live, illustrative preview of the panel message (embed + select menu) sent to Discord on deploy. */
 export function PanelMessagePreview({ message }: { message: PanelMessageDraft }) {
   const [timestamp, setTimestamp] = useState<string | null>(null);
+  const { lang } = useLang();
+  const m = useMessages(commonMessages).module;
 
   useEffect(() => {
     const now = new Date();
-    setTimestamp(`dziś o ${now.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`);
-  }, []);
+    setTimestamp(m.todayAt(now.toLocaleTimeString(lang === "en" ? "en-US" : "pl-PL", { hour: "2-digit", minute: "2-digit" })));
+  }, [lang, m]);
 
   return (
     <div className="rounded-md bg-[#313338] p-4">

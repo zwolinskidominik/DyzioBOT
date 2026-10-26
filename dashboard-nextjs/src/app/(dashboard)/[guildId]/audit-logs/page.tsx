@@ -10,6 +10,12 @@ import { ScrollText, Search, X, ChevronLeft, ChevronRight, ChevronDown, Braces, 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { auditLogsMessages } from "@/i18n/messages/auditLogs";
+import type { Widen } from "@/i18n/config";
+
+type AuditText = Widen<typeof auditLogsMessages.pl>;
+type ModuleKey = keyof AuditText["modules"];
 
 interface AuditLogChange {
   field: string;
@@ -37,29 +43,31 @@ interface AuditLog {
  * (grep po `module:` przy każdym call site). NIE dodawaj tu modułu bez odpowiadającego wywołania —
  * ta lista musi zostać zsynchronizowana ręcznie przy każdej zmianie.
  */
-const MODULE_CONFIG: Record<string, { label: string; color: string }> = {
-  levels: { label: "System poziomów", color: "#3498DB" },
-  tickets: { label: "Tickety", color: "#5865F2" },
-  channel_stats: { label: "Kanały z licznikami", color: "#1ABC9C" },
-  wrapped: { label: "Server Wrapped", color: "#9B59B6" },
-  giveaway: { label: "Giveaway", color: "#F1C40F" },
-  tournament: { label: "Turniej", color: "#E67E22" },
-  temp_channels: { label: "Tymczasowe kanały", color: "#2ECC71" },
-  "invite-tracker": { label: "Invite Tracker", color: "#E91E63" },
-  logs: { label: "Logi", color: "#607D8B" },
+const MODULE_COLORS: Record<ModuleKey, string> = {
+  levels: "#3498DB",
+  tickets: "#5865F2",
+  channel_stats: "#1ABC9C",
+  wrapped: "#9B59B6",
+  giveaway: "#F1C40F",
+  tournament: "#E67E22",
+  temp_channels: "#2ECC71",
+  "invite-tracker": "#E91E63",
+  logs: "#607D8B",
 };
 
-const DAY_RANGE_OPTIONS: { value: string; label: string }[] = [
-  { value: "7", label: "Ostatnie 7 dni" },
-  { value: "30", label: "Ostatnie 30 dni" },
-  { value: "90", label: "Ostatnie 90 dni" },
-  { value: "all", label: "Cały czas" },
-];
+const MODULE_KEYS = Object.keys(MODULE_COLORS) as ModuleKey[];
+
+function isModuleKey(mod: string): mod is ModuleKey {
+  return mod in MODULE_COLORS;
+}
+
+const DAY_RANGE_VALUES = ["7", "30", "90", "all"] as const;
 
 const PAGE_SIZE_OPTIONS = [6, 10, 20];
 
-function getModuleConfig(mod: string): { label: string; color: string } {
-  return MODULE_CONFIG[mod] || { label: mod, color: "#6b7280" };
+function getModuleConfig(mod: string, t: AuditText): { label: string; color: string } {
+  if (isModuleKey(mod)) return { label: t.modules[mod], color: MODULE_COLORS[mod] };
+  return { label: mod, color: "#6b7280" };
 }
 
 function getActionColor(action: string): string {
@@ -70,45 +78,36 @@ function getActionColor(action: string): string {
   return "#9ca3af";
 }
 
-/** Polska odmiana liczebnikowa: 1 / 2-4 / 5+. */
-function plural(n: number, one: string, few: string, many: string): string {
-  if (n === 1) return one;
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return few;
-  return many;
-}
-
-function formatRelativeTime(date: Date): string | null {
+function formatRelativeTime(date: Date, t: AuditText): string | null {
   const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
   if (diffSec < 0) return null;
-  if (diffSec < 60) return "przed chwilą";
+  if (diffSec < 60) return t.justNow;
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} ${plural(diffMin, "minutę", "minuty", "minut")} temu`;
+  if (diffMin < 60) return t.minutesAgo(diffMin);
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour} ${plural(diffHour, "godzinę", "godziny", "godzin")} temu`;
+  if (diffHour < 24) return t.hoursAgo(diffHour);
   const diffDay = Math.floor(diffHour / 24);
-  if (diffDay < 7) return `${diffDay} ${plural(diffDay, "dzień", "dni", "dni")} temu`;
+  if (diffDay < 7) return t.daysAgo(diffDay);
   return null;
 }
 
-function formatExactTime(date: Date): string {
-  return new Intl.DateTimeFormat("pl-PL", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(date);
+function formatExactTime(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(date);
 }
 
 function dayKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
-function formatDayLabel(date: Date): string {
+function formatDayLabel(date: Date, t: AuditText, locale: string): string {
   const now = new Date();
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
 
-  if (dayKey(date) === dayKey(now)) return "Dzisiaj";
-  if (dayKey(date) === dayKey(yesterday)) return "Wczoraj";
+  if (dayKey(date) === dayKey(now)) return t.today;
+  if (dayKey(date) === dayKey(yesterday)) return t.yesterday;
 
-  return new Intl.DateTimeFormat("pl-PL", {
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "long",
     ...(date.getFullYear() !== now.getFullYear() ? { year: "numeric" as const } : {}),
@@ -124,9 +123,9 @@ function getAvatarUrl(userId: string, avatar?: string | null): string {
   return `https://cdn.discordapp.com/embed/avatars/${fallbackIndex}.png`;
 }
 
-function formatChangeValue(v: unknown): string {
-  if (v === undefined || v === null || v === "") return "brak";
-  if (typeof v === "boolean") return v ? "włączone" : "wyłączone";
+function formatChangeValue(v: unknown, t: AuditText): string {
+  if (v === undefined || v === null || v === "") return t.valueNone;
+  if (typeof v === "boolean") return v ? t.valueOn : t.valueOff;
   return String(v);
 }
 
@@ -136,7 +135,7 @@ interface DayGroup {
   logs: AuditLog[];
 }
 
-function groupByDay(logs: AuditLog[]): DayGroup[] {
+function groupByDay(logs: AuditLog[], t: AuditText, locale: string): DayGroup[] {
   const groups: DayGroup[] = [];
   const indexByKey = new Map<string, number>();
 
@@ -147,7 +146,7 @@ function groupByDay(logs: AuditLog[]): DayGroup[] {
     if (idx === undefined) {
       idx = groups.length;
       indexByKey.set(key, idx);
-      groups.push({ key, label: formatDayLabel(date), logs: [] });
+      groups.push({ key, label: formatDayLabel(date, t, locale), logs: [] });
     }
     groups[idx].logs.push(log);
   }
@@ -158,6 +157,9 @@ function groupByDay(logs: AuditLog[]): DayGroup[] {
 export default function AuditLogsPage() {
   const params = useParams();
   const guildId = params.guildId as string;
+  const t = useMessages(auditLogsMessages);
+  const { lang } = useLang();
+  const locale = lang === "en" ? "en-GB" : "pl-PL";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -175,11 +177,11 @@ export default function AuditLogsPage() {
 
   // Debounce search input before it drives a fetch.
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setSearch(searchInput.trim());
       setPage(0);
     }, 350);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [searchInput]);
 
   useEffect(() => {
@@ -208,7 +210,7 @@ export default function AuditLogsPage() {
         }
       } catch (err) {
         console.error("Error loading audit logs:", err);
-        if (!cancelled) setError("Nie udało się załadować logów panelu kontrolnego.");
+        if (!cancelled) setError(t.loadError);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -218,9 +220,9 @@ export default function AuditLogsPage() {
     return () => {
       cancelled = true;
     };
-  }, [guildId, moduleFilter, daysFilter, search, page, pageSize]);
+  }, [guildId, moduleFilter, daysFilter, search, page, pageSize, t]);
 
-  const dayGroups = useMemo(() => groupByDay(logs), [logs]);
+  const dayGroups = useMemo(() => groupByDay(logs, t, locale), [logs, t, locale]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasActiveFilters = Boolean(moduleFilter || search || daysFilter !== "30");
 
@@ -294,10 +296,10 @@ export default function AuditLogsPage() {
             <CardHeader>
               <CardTitle className="text-2xl flex items-center gap-2">
                 <ScrollText className="w-6 h-6 text-bot-primary" />
-                Logi panelu kontrolnego
+                {t.title}
               </CardTitle>
               <CardDescription>
-                Historia wszystkich zmian dokonanych w panelu administracyjnym
+                {t.subtitle}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -308,7 +310,7 @@ export default function AuditLogsPage() {
                   <Input
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Szukaj po użytkowniku, akcji lub opisie..."
+                    placeholder={t.searchPlaceholder}
                     className="pl-9"
                   />
                   {searchInput && (
@@ -324,12 +326,12 @@ export default function AuditLogsPage() {
 
                 <Select value={moduleFilter || "all"} onValueChange={(value) => { setModuleFilter(value === "all" ? "" : value); setPage(0); }}>
                   <SelectTrigger className="w-[190px]">
-                    <SelectValue placeholder="Wszystkie moduły" />
+                    <SelectValue placeholder={t.allModules} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Wszystkie moduły</SelectItem>
-                    {Object.entries(MODULE_CONFIG).map(([key, cfg]) => (
-                      <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                    <SelectItem value="all">{t.allModules}</SelectItem>
+                    {MODULE_KEYS.map((key) => (
+                      <SelectItem key={key} value={key}>{t.modules[key]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -339,8 +341,8 @@ export default function AuditLogsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {DAY_RANGE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    {DAY_RANGE_VALUES.map((value) => (
+                      <SelectItem key={value} value={value}>{t.ranges[value]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -348,12 +350,12 @@ export default function AuditLogsPage() {
                 {hasActiveFilters && (
                   <Button onClick={clearFilters} variant="ghost" size="sm">
                     <X className="w-4 h-4 mr-1" />
-                    Wyczyść
+                    {t.clear}
                   </Button>
                 )}
 
                 <span className="ml-auto text-sm text-muted-foreground whitespace-nowrap">
-                  Znaleziono: {total}
+                  {t.found(total)}
                 </span>
               </div>
 
@@ -362,7 +364,7 @@ export default function AuditLogsPage() {
                 {dayGroups.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <ScrollText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>{hasActiveFilters ? "Brak logów spełniających kryteria filtrowania" : "Brak logów panelu kontrolnego"}</p>
+                    <p>{hasActiveFilters ? t.noMatches : t.empty}</p>
                   </div>
                 ) : (
                   dayGroups.map((group, groupIdx) => (
@@ -371,16 +373,16 @@ export default function AuditLogsPage() {
                         <span className="text-xs font-semibold text-foreground">{group.label}</span>
                         <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.08)" }} />
                         <span className="text-xs text-muted-foreground">
-                          {group.logs.length} {plural(group.logs.length, "wpis", "wpisy", "wpisów")}
+                          {t.entries(group.logs.length)}
                         </span>
                       </div>
 
                       <div className="space-y-2">
                         {group.logs.map((log, logIdx) => {
                           const isMostRecent = groupIdx === 0 && logIdx === 0 && page === 0;
-                          const mod = getModuleConfig(log.module);
+                          const mod = getModuleConfig(log.module, t);
                           const date = new Date(log.createdAt);
-                          const relative = formatRelativeTime(date);
+                          const relative = formatRelativeTime(date, t);
                           const isExpanded = expanded.has(log._id);
                           const isJsonExpanded = jsonExpanded.has(log._id);
                           const hasChanges = Boolean(log.changes && log.changes.length > 0);
@@ -420,7 +422,7 @@ export default function AuditLogsPage() {
                                     </span>
                                     {isMostRecent && (
                                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "rgba(99,102,241,0.25)", color: "#a5b4fc" }}>
-                                        Najnowszy
+                                        {t.newest}
                                       </span>
                                     )}
                                   </div>
@@ -444,11 +446,11 @@ export default function AuditLogsPage() {
                                           <span className="text-muted-foreground">{change.label}:</span>
                                           {change.from !== undefined && (
                                             <>
-                                              <span className="break-all text-muted-foreground">{formatChangeValue(change.from)}</span>
+                                              <span className="break-all text-muted-foreground">{formatChangeValue(change.from, t)}</span>
                                               <ArrowRight className="w-3 h-3 shrink-0 text-muted-foreground" />
                                             </>
                                           )}
-                                          <span className="break-all font-medium">{formatChangeValue(change.to)}</span>
+                                          <span className="break-all font-medium">{formatChangeValue(change.to, t)}</span>
                                         </span>
                                       ))}
                                       {!isExpanded && log.changes!.length > 3 && (
@@ -457,7 +459,7 @@ export default function AuditLogsPage() {
                                           onClick={() => toggleExpanded(log._id)}
                                           className="text-[11px] text-bot-primary hover:underline px-1"
                                         >
-                                          +{log.changes!.length - 3} więcej
+                                          {t.more(log.changes!.length - 3)}
                                         </button>
                                       )}
                                       {isExpanded && log.changes!.length > 3 && (
@@ -466,7 +468,7 @@ export default function AuditLogsPage() {
                                           onClick={() => toggleExpanded(log._id)}
                                           className="text-[11px] text-muted-foreground hover:text-foreground px-1"
                                         >
-                                          zwiń
+                                          {t.collapse}
                                         </button>
                                       )}
                                     </div>
@@ -485,7 +487,7 @@ export default function AuditLogsPage() {
                                       className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground mt-2 transition-colors"
                                     >
                                       <Braces className="w-3 h-3" />
-                                      Szczegóły (starszy wpis, bez zapisanych wartości from/to)
+                                      {t.rawDetails}
                                       <ChevronDown className={`w-3 h-3 transition-transform ${isJsonExpanded ? "rotate-180" : ""}`} />
                                     </button>
                                   )}
@@ -502,11 +504,11 @@ export default function AuditLogsPage() {
 
                                 <div className="text-right shrink-0">
                                   <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                    {relative || formatExactTime(date)}
+                                    {relative || formatExactTime(date, locale)}
                                   </div>
                                   {relative && (
                                     <div className="text-[10px] text-muted-foreground/70 whitespace-nowrap mt-0.5">
-                                      {formatExactTime(date)}
+                                      {formatExactTime(date, locale)}
                                     </div>
                                   )}
                                 </div>
@@ -524,7 +526,7 @@ export default function AuditLogsPage() {
               {logs.length > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 mt-6 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>Na stronę:</span>
+                    <span>{t.perPage}</span>
                     <Select value={pageSize.toString()} onValueChange={(value) => { setPageSize(Number(value)); setPage(0); }}>
                       <SelectTrigger className="w-[70px] h-8">
                         <SelectValue />

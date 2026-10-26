@@ -15,6 +15,9 @@ import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { cn } from "@/lib/utils";
 import { TempChannelLivePreview, type TempChannelType } from "@/components/temp-channels/TempChannelLivePreview";
 import { TempChannelListItem } from "@/components/temp-channels/TempChannelListItem";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { tempChannelsMessages } from "@/i18n/messages/tempChannels";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Channel {
   id: string;
@@ -42,6 +45,8 @@ function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch
 export default function TempChannelsPage() {
   const params = useParams();
   const guildId = params?.guildId as string;
+  const t = useMessages(tempChannelsMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +81,7 @@ export default function TempChannelsPage() {
           setEnabled(configData.enabled !== false);
         }
       } catch {
-        setError("Nie udało się załadować danych tymczasowych kanałów. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -98,7 +103,7 @@ export default function TempChannelsPage() {
       setCreators(next);
       return true;
     } catch {
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
       return false;
     }
   };
@@ -114,24 +119,24 @@ export default function TempChannelsPage() {
         body: JSON.stringify({ creators, enabled: next }),
       });
       if (!response.ok) throw new Error("Failed to save");
-      toast.success(next ? "Tymczasowe kanały włączone" : "Tymczasowe kanały wyłączone");
+      toast.success(next ? t.turnedOn : t.turnedOff);
     } catch {
       setEnabled(previous);
-      toast.error("Nie udało się zapisać ustawienia");
+      toast.error(t.settingSaveError);
     } finally {
       setSavingEnabled(false);
     }
   };
 
-  const getChannelName = (channelId: string) => channels.find((c) => c.id === channelId)?.name ?? "Nieznany kanał";
+  const getChannelName = (channelId: string) => channels.find((c) => c.id === channelId)?.name ?? t.unknownChannel;
 
   const handleAddChannel = async () => {
     if (!selectedChannelId) {
-      toast.error("Wybierz kanał głosowy!");
+      toast.error(t.pickVoice);
       return;
     }
     if (creators.some((c) => c.channelId === selectedChannelId)) {
-      toast.error("Ten kanał jest już dodany!");
+      toast.error(t.alreadyAdded);
       return;
     }
 
@@ -140,7 +145,7 @@ export default function TempChannelsPage() {
     setAdding(false);
 
     if (ok) {
-      toast.success("Kanał tymczasowy dodany!");
+      toast.success(t.added);
       setSelectedChannelId("");
       setSelectedType("panel");
     }
@@ -150,20 +155,20 @@ export default function TempChannelsPage() {
     setSavingChannelId(channelId);
     const ok = await saveCreators(creators.map((c) => (c.channelId === channelId ? { ...c, type } : c)));
     setSavingChannelId(null);
-    if (ok) toast.success("Zaktualizowano typ kanału!");
+    if (ok) toast.success(t.typeUpdated);
   };
 
   const handleDeleteChannel = async (channelId: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć ten kanał kreator?")) return;
+    if (!confirm(t.confirmDelete)) return;
     const ok = await saveCreators(creators.filter((c) => c.channelId !== channelId));
-    if (ok) toast.success("Kanał usunięty!");
+    if (ok) toast.success(t.deleted);
   };
 
   if (error) {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Nie udało się załadować tymczasowych kanałów" message={error} onRetry={handleRetry} />
+          <ErrorState title={t.loadErrorTitle} message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -191,14 +196,14 @@ export default function TempChannelsPage() {
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Tymczasowe Kanały</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Konfiguracja systemu tymczasowych kanałów głosowych.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
-              <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} disabled={savingEnabled} aria-label="Włącz lub wyłącz tymczasowe kanały" />
+              <span>{enabled ? m.active : m.inactive}</span>
+              <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} disabled={savingEnabled} aria-label={t.toggle} />
             </div>
           </header>
         </SlideIn>
@@ -208,7 +213,7 @@ export default function TempChannelsPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł tymczasowych kanałów jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację, ale bot nie utworzy nowych kanałów, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -221,9 +226,9 @@ export default function TempChannelsPage() {
                 <Plus className="h-4 w-4" />
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-white/90">Nowy kanał tymczasowy</p>
+                <p className="text-sm font-semibold text-white/90">{t.newTitle}</p>
                 <p className="mt-1 text-xs text-[#8d94a8]">
-                  Wybierz kanał i typ — podgląd po prawej pokaże efekt od razu
+                  {t.newText}
                 </p>
               </div>
             </div>
@@ -240,7 +245,7 @@ export default function TempChannelsPage() {
                         placeholder={
                           <div className="flex items-center gap-2 text-[#8d94a8]">
                             <Mic className="h-4 w-4" />
-                            <span>Wybierz kanał głosowy...</span>
+                            <span>{t.pickVoicePlaceholder}</span>
                           </div>
                         }
                       >
@@ -254,7 +259,7 @@ export default function TempChannelsPage() {
                     </SelectTrigger>
                     <SelectContent className="border-[#2f3341] bg-dark-900">
                       {availableChannels.length === 0 ? (
-                        <div className="p-2 text-sm text-[#8d94a8]">Brak dostępnych kanałów głosowych</div>
+                        <div className="p-2 text-sm text-[#8d94a8]">{t.noVoice}</div>
                       ) : (
                         availableChannels.map((channel) => (
                           <SelectItem key={channel.id} value={channel.id}>
@@ -278,7 +283,7 @@ export default function TempChannelsPage() {
                       selectedType === "panel" ? "bg-[#3b82f6] text-white" : "text-[#8d94a8] hover:text-white",
                     )}
                   >
-                    Panel zarządzania
+                    {t.typePanel}
                   </button>
                   <button
                     type="button"
@@ -288,7 +293,7 @@ export default function TempChannelsPage() {
                       selectedType === "standard" ? "bg-[#3b82f6] text-white" : "text-[#8d94a8] hover:text-white",
                     )}
                   >
-                    Standardowy
+                    {t.typeStandard}
                   </button>
                 </div>
 
@@ -303,7 +308,7 @@ export default function TempChannelsPage() {
                   ) : (
                     <Plus className="mr-2 h-4 w-4" />
                   )}
-                  Dodaj kanał tymczasowy
+                  {t.addButton}
                 </Button>
               </div>
 
@@ -311,7 +316,7 @@ export default function TempChannelsPage() {
               <div className="space-y-2 rounded-md bg-dark-900/30 p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Podgląd na żywo
+                  {m.livePreview}
                 </div>
                 <TempChannelLivePreview type={selectedType} />
               </div>
@@ -321,7 +326,7 @@ export default function TempChannelsPage() {
             {creators.length > 0 ? (
               <div className="space-y-2 pt-2">
                 <p className="text-xs font-semibold text-[#c4cad8]">
-                  Skonfigurowane kanały tymczasowe ({creators.length})
+                  {t.configured(creators.length)}
                 </p>
                 <div className="space-y-2">
                   {creators.map((creator) => (

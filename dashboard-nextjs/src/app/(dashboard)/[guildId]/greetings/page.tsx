@@ -17,6 +17,12 @@ import { fetchGuildData } from "@/lib/cache";
 import { SlideIn } from "@/components/ui/animated";
 import { cn } from "@/lib/utils";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { greetingsMessages } from "@/i18n/messages/greetings";
+import { commonMessages } from "@/i18n/messages/common";
+import type { Widen } from "@/i18n/config";
+
+type GreetingsText = Widen<typeof greetingsMessages.pl>;
 import {
   GreetingMessageEditor,
   type GreetingMessageEditorValue,
@@ -33,7 +39,6 @@ import {
 } from "@/components/greetings/GreetingMessagePreview";
 import {
   CHANNEL_VARIABLE_FIELD,
-  CHANNEL_VARIABLE_LABEL,
   getMissingChannelVariables,
   getUsedChannelVariables,
   type ChannelVariableKey,
@@ -63,9 +68,10 @@ const imageModeSchema = z.enum(["gifs", "custom", "none"]);
 const thumbnailModeSchema = z.enum(["avatar", "custom", "none"]);
 const authorIconModeSchema = z.enum(["avatar", "none"]);
 
-const greetingsSchema = z.object({
+function createGreetingsSchema(t: GreetingsText) {
+  return z.object({
   enabled: z.boolean().default(true),
-  greetingsChannelId: z.string().min(1, "Wybierz kanał powitalny"),
+  greetingsChannelId: z.string().min(1, t.validation.pickGreetingsChannel),
   goodbyeChannelId: z.string().optional(),
   rulesChannelId: z.string().optional(),
   rolesChannelId: z.string().optional(),
@@ -138,7 +144,7 @@ const greetingsSchema = z.object({
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: [fieldId],
-        message: `Ustaw ${CHANNEL_VARIABLE_LABEL[key].toLowerCase()} — używasz tej zmiennej w wiadomości.`,
+        message: t.validation.setChannel(t.channelLabels[key]),
       });
     }
   });
@@ -148,12 +154,13 @@ const greetingsSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["goodbyeChannelId"],
-      message: "Wybierz kanał pożegnań — kanał powitalny nie jest dostępny jako zapasowy.",
+      message: t.validation.pickGoodbyeChannel,
     });
   }
 });
+}
 
-type GreetingsFormData = z.infer<typeof greetingsSchema>;
+type GreetingsFormData = z.infer<ReturnType<typeof createGreetingsSchema>>;
 type SettingsSection = "welcome" | "gifs" | "dm" | "goodbye";
 type PendingImageKey = `${GreetingModuleKey}.${GreetingImageSlot}`;
 
@@ -265,12 +272,13 @@ function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch
 }
 
 function ModuleDisabledNotice({ enabled, target }: { enabled: boolean; target: string }) {
+  const t = useMessages(greetingsMessages);
   if (enabled) return null;
   return (
     <div className="mb-4 flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-3 py-2 text-xs text-[#9aa2b8]">
       <EyeOff className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <span>
-        Ten typ wiadomości jest <span className="font-semibold text-white/80">wyłączony</span>. Możesz edytować i zapisać ustawienia, ale bot nie wyśle {target}, dopóki nie włączysz przełącznika powyżej.
+        {t.typeDisabledPrefix}<span className="font-semibold text-white/80">{t.typeDisabledStrong}</span>{t.typeDisabledSuffix(target)}
       </span>
     </div>
   );
@@ -278,6 +286,7 @@ function ModuleDisabledNotice({ enabled, target }: { enabled: boolean; target: s
 
 function SettingRow({ title, description, icon, checked, onCheckedChange, isOpen = false, onToggle, children }: SettingRowProps) {
   const isExpandable = Boolean(children && onToggle);
+  const m = useMessages(commonMessages).module;
 
   return (
     <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
@@ -299,7 +308,7 @@ function SettingRow({ title, description, icon, checked, onCheckedChange, isOpen
         {typeof checked === "boolean" && onCheckedChange ? <DeezySwitch checked={checked} onCheckedChange={onCheckedChange} /> : null}
 
         {isExpandable ? (
-          <button type="button" onClick={onToggle} aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
+          <button type="button" onClick={onToggle} aria-label={isOpen ? m.collapse : m.expand} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
             <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
           </button>
         ) : null}
@@ -311,6 +320,7 @@ function SettingRow({ title, description, icon, checked, onCheckedChange, isOpen
 }
 
 function ChannelSelectField({ id, label, required = false, helperText, channels, value, onValueChange, error }: ChannelSelectFieldProps) {
+  const t = useMessages(greetingsMessages);
   return (
     <div className="space-y-2">
       <Label htmlFor={id} className="text-xs font-semibold text-[#c4cad8]">
@@ -327,14 +337,14 @@ function ChannelSelectField({ id, label, required = false, helperText, channels,
             placeholder={
               <div className="flex items-center gap-2 text-[#8d94a8]">
                 <Hash className="h-4 w-4" />
-                <span>Wybierz kanał...</span>
+                <span>{t.pickChannel}</span>
               </div>
             }
           >
             {value ? (
               <div className="flex items-center gap-2">
                 <Hash className="h-4 w-4 text-[#8d94a8]" />
-                {channels.find((channel) => channel.id === value)?.name ?? "Wybierz kanał..."}
+                {channels.find((channel) => channel.id === value)?.name ?? t.pickChannel}
               </div>
             ) : null}
           </SelectValue>
@@ -423,6 +433,9 @@ export default function GreetingsPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(greetingsMessages);
+  const m = useMessages(commonMessages).module;
+  const greetingsSchema = useMemo(() => createGreetingsSchema(t), [t]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -706,7 +719,7 @@ export default function GreetingsPage() {
           reset(DEFAULT_FORM_VALUES, { keepDirty: false });
         }
       } catch (fetchError) {
-        setError("Nie udało się załadować danych greetings. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -734,7 +747,7 @@ export default function GreetingsPage() {
 
       if (!response.ok) {
         const result = await response.json().catch(() => null);
-        throw new Error(result?.error || "Nie udało się zapisać konfiguracji");
+        throw new Error(result?.error || m.saveError);
       }
 
       const result = await response.json();
@@ -746,13 +759,13 @@ export default function GreetingsPage() {
       reset(nextValues, { keepDirty: false });
       setGifs(nextGifs);
       setSavedGifs(nextGifs);
-      toast.success("Konfiguracja została zapisana!");
+      toast.success(m.saved);
     } catch (saveError) {
-      toast.error(saveError instanceof Error ? saveError.message : "Nie udało się zapisać konfiguracji");
+      toast.error(saveError instanceof Error ? saveError.message : m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [clearPendingAssets, deletedUploadGifNames, guildId, reset]);
+  }, [clearPendingAssets, deletedUploadGifNames, guildId, reset, m]);
 
   const submitFromDirtyBar = useCallback(() => {
     void handleSubmit(onSubmit, () => setOpenSections((sections) => ({ ...sections, welcome: true })))();
@@ -762,10 +775,10 @@ export default function GreetingsPage() {
     id: `greetings-${guildId}`,
     isDirty: hasDirtyChanges,
     isSaving: saving,
-    label: "Powitania, prywatne wiadomości i pożegnania",
+    label: t.saveLabel,
     onSave: submitFromDirtyBar,
     onCancel: handleCancel,
-  }), [guildId, handleCancel, hasDirtyChanges, registerDirtyController, saving, submitFromDirtyBar]);
+  }), [guildId, handleCancel, hasDirtyChanges, registerDirtyController, saving, submitFromDirtyBar, t]);
 
   const handleUploadGif = (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
@@ -774,11 +787,11 @@ export default function GreetingsPage() {
 
     if (!file) return;
     if (gifLimitReached) {
-      toast.error(`Możesz dodać maksymalnie ${MAX_GREETING_GIFS} GIF-ów`);
+      toast.error(t.maxGifs(MAX_GREETING_GIFS));
       return;
     }
     if (!file.type.includes("gif")) {
-      toast.error("Plik musi być w formacie GIF");
+      toast.error(t.gifOnly);
       return;
     }
 
@@ -806,7 +819,7 @@ export default function GreetingsPage() {
       return;
     }
 
-    if (!gif.pending && !confirm("Oznaczyć ten GIF do usunięcia po zapisaniu zmian?")) return;
+    if (!gif.pending && !confirm(t.confirmGifDelete)) return;
     if (gif.pending) URL.revokeObjectURL(gif.url);
     if (!gif.pending) setDeletedUploadGifNames((currentNames) => [...new Set([...currentNames, gif.name])]);
     setGifs((currentGifs) => currentGifs.filter((currentGif) => currentGif.name !== gif.name || currentGif.source !== gif.source));
@@ -820,11 +833,11 @@ export default function GreetingsPage() {
 
   const welcomeTopFields = (
     <>
-      <ChannelSelectField id="greetingsChannelId" label="Kanał powitalny" required channels={channels} value={values.greetingsChannelId} onValueChange={(value) => setStringField("greetingsChannelId", value)} error={errors.greetingsChannelId?.message} />
+      <ChannelSelectField id="greetingsChannelId" label={t.greetingsChannel} required channels={channels} value={values.greetingsChannelId} onValueChange={(value) => setStringField("greetingsChannelId", value)} error={errors.greetingsChannelId?.message} />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <ChannelSelectField id="rulesChannelId" label="Kanał regulaminu" channels={channels} value={values.rulesChannelId} onValueChange={(value) => setStringField("rulesChannelId", value)} error={errors.rulesChannelId?.message} />
-        <ChannelSelectField id="rolesChannelId" label="Kanał ról" channels={channels} value={values.rolesChannelId} onValueChange={(value) => setStringField("rolesChannelId", value)} error={errors.rolesChannelId?.message} />
-        <ChannelSelectField id="chatChannelId" label="Kanał czatu" channels={channels} value={values.chatChannelId} onValueChange={(value) => setStringField("chatChannelId", value)} error={errors.chatChannelId?.message} />
+        <ChannelSelectField id="rulesChannelId" label={t.channelLabels.rulesChannel} channels={channels} value={values.rulesChannelId} onValueChange={(value) => setStringField("rulesChannelId", value)} error={errors.rulesChannelId?.message} />
+        <ChannelSelectField id="rolesChannelId" label={t.channelLabels.rolesChannel} channels={channels} value={values.rolesChannelId} onValueChange={(value) => setStringField("rolesChannelId", value)} error={errors.rolesChannelId?.message} />
+        <ChannelSelectField id="chatChannelId" label={t.channelLabels.chatChannel} channels={channels} value={values.chatChannelId} onValueChange={(value) => setStringField("chatChannelId", value)} error={errors.chatChannelId?.message} />
       </div>
     </>
   );
@@ -833,11 +846,11 @@ export default function GreetingsPage() {
   const goodbyeTopFields = (
     <ChannelSelectField
       id="goodbyeChannelId"
-      label="Kanał pożegnań"
+      label={t.goodbyeChannel}
       helperText={
         goodbyeFallbackAvailable
-          ? "Jeśli zostawisz puste, bot użyje kanału powitalnego."
-          : "Kanał powitalny nie jest dostępny jako zapasowy — wybierz kanał pożegnań."
+          ? t.goodbyeFallback
+          : t.goodbyeNoFallback
       }
       channels={channels}
       value={values.goodbyeChannelId}
@@ -868,7 +881,7 @@ export default function GreetingsPage() {
       <div className="space-y-3 rounded-md border border-amber-500/30 bg-amber-500/10 p-4">
         <div className="flex items-start gap-2 text-xs text-amber-200/90">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>Ta wiadomość używa zmiennych kanałów, które nie są jeszcze ustawione. Skonfiguruj je, aby linki do kanałów działały.</span>
+          <span>{t.missingChannels}</span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {missing.map((key) => {
@@ -877,7 +890,7 @@ export default function GreetingsPage() {
               <ChannelSelectField
                 key={fieldId}
                 id={fieldId}
-                label={CHANNEL_VARIABLE_LABEL[key]}
+                label={t.channelLabels[key]}
                 channels={channels}
                 value={values[fieldId]}
                 onValueChange={(value) => setStringField(fieldId, value)}
@@ -894,7 +907,7 @@ export default function GreetingsPage() {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Nie udało się załadować greetings" message={error} onRetry={handleRetry} />
+          <ErrorState title={t.loadErrorTitle} message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -921,12 +934,12 @@ export default function GreetingsPage() {
           <SlideIn direction="up" delay={100}>
             <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 space-y-2">
-                <h1 className="text-2xl font-semibold text-white">Powitania i Pożegnania</h1>
-                <p className="max-w-2xl text-sm leading-6 text-[#969db0]">Automatycznie wysyłaj wiadomości, nadawaj kontekst nowym osobom i pożegnaj członków, którzy opuszczają serwer.</p>
+                <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
+                <p className="max-w-2xl text-sm leading-6 text-[#969db0]">{t.subtitle}</p>
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-                <span>{values.enabled ? "Aktywne" : "Nieaktywne"}</span>
-                <DeezySwitch checked={values.enabled || false} onCheckedChange={(checked) => setBooleanField("enabled", checked)} aria-label="Włącz lub wyłącz greetings" />
+                <span>{values.enabled ? m.active : m.inactive}</span>
+                <DeezySwitch checked={values.enabled || false} onCheckedChange={(checked) => setBooleanField("enabled", checked)} aria-label={t.toggle} />
               </div>
             </header>
           </SlideIn>
@@ -936,7 +949,7 @@ export default function GreetingsPage() {
               <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
                 <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>
-                  Cały moduł powitań jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Ustawienia poniżej możesz edytować i zapisać, ale bot nie wyśle żadnych wiadomości, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry.
+                  {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
                 </span>
               </div>
             </SlideIn>
@@ -944,40 +957,40 @@ export default function GreetingsPage() {
 
           <SlideIn direction="up" delay={150}>
             <div className="space-y-3">
-              <SettingRow title="Wyślij wiadomość, gdy użytkownik dołącza do serwera" description="Kanał, zmienne i edytor wiadomości powitalnej" icon={<MessageSquare className="h-4 w-4" />} checked={values.welcomeEnabled || false} onCheckedChange={(checked) => setBooleanField("welcomeEnabled", checked)} isOpen={openSections.welcome} onToggle={() => toggleSection("welcome")}>
-                <ModuleDisabledNotice enabled={values.welcomeEnabled || false} target="powitania" />
+              <SettingRow title={t.welcomeRow.title} description={t.welcomeRow.description} icon={<MessageSquare className="h-4 w-4" />} checked={values.welcomeEnabled || false} onCheckedChange={(checked) => setBooleanField("welcomeEnabled", checked)} isOpen={openSections.welcome} onToggle={() => toggleSection("welcome")}>
+                <ModuleDisabledNotice enabled={values.welcomeEnabled || false} target={t.targets.welcome} />
                 {renderChannelNotice("welcome")}
-                <GreetingMessageEditor moduleKey="welcome" title="Wiadomość powitalna" value={getEditorValue("welcome")} topFields={welcomeTopFields} activeGifCount={activeGifCount} onManageGifs={handleManageGifs} onValueChange={(field, value) => setMessageField("welcome", field, value)} onImageSelect={(slot, file) => handleImageSelect("welcome", slot, file)} onImageClear={(slot) => handleImageClear("welcome", slot)} />
+                <GreetingMessageEditor moduleKey="welcome" title={t.welcomeEditor} value={getEditorValue("welcome")} topFields={welcomeTopFields} activeGifCount={activeGifCount} onManageGifs={handleManageGifs} onValueChange={(field, value) => setMessageField("welcome", field, value)} onImageSelect={(slot, file) => handleImageSelect("welcome", slot, file)} onImageClear={(slot) => handleImageClear("welcome", slot)} />
               </SettingRow>
 
               <div ref={gifSectionRef} className={cn("rounded-md transition-shadow", gifHighlight && "ring-2 ring-bot-primary ring-offset-2 ring-offset-dark-950")}>
-              <SettingRow title="GIF-y powitalne" description="Domyślne GIF-y i grafiki dodane tylko dla tego serwera" icon={<ImageIcon className="h-4 w-4" />} isOpen={openSections.gifs} onToggle={() => toggleSection("gifs")}>
+              <SettingRow title={t.gifsRow.title} description={t.gifsRow.description} icon={<ImageIcon className="h-4 w-4" />} isOpen={openSections.gifs} onToggle={() => toggleSection("gifs")}>
                 <div className="space-y-5">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs text-[#8d94a8]">Ukrywanie, przywracanie i usuwanie GIF-ów zapisze się dopiero przez floating Zapisz.</p>
+                    <p className="text-xs text-[#8d94a8]">{t.gifsHint}</p>
                     <span className={cn("w-fit rounded-full border px-2.5 py-1 text-xs font-semibold", gifLimitReached ? "border-bot-primary/60 bg-bot-primary/10 text-[#9cc2ff]" : "border-[#2f3341] bg-dark-900 text-[#c4cad8]")}>{uploadedGifCount}/{MAX_GREETING_GIFS}</span>
                   </div>
 
                   <Label htmlFor="gif-upload" className={cn("block", gifLimitReached ? "cursor-not-allowed" : "cursor-pointer")}>
                     <div className={cn("rounded-md border border-dashed border-[#3a3f4e] bg-dark-900 p-6 text-center transition-colors", gifLimitReached ? "opacity-60" : "hover:border-bot-primary/70 hover:bg-dark-700")}>
                       <Upload className="mx-auto mb-3 h-8 w-8 text-[#9aa2b8]" />
-                      <p className="text-sm font-semibold text-white/85">{gifLimitReached ? `Limit ${MAX_GREETING_GIFS} własnych GIF-ów osiągnięty` : "Kliknij aby dodać GIF"}</p>
-                      <p className="mt-1 text-xs text-[#8d94a8]">{gifLimitReached ? "Usuń jedną grafikę serwera, aby dodać kolejną" : "Plik trafi na serwer dopiero po kliknięciu Zapisz"}</p>
+                      <p className="text-sm font-semibold text-white/85">{gifLimitReached ? t.gifLimit(MAX_GREETING_GIFS) : t.clickToAddGif}</p>
+                      <p className="mt-1 text-xs text-[#8d94a8]">{gifLimitReached ? t.removeOneGif : t.gifAfterSave}</p>
                     </div>
                     <input id="gif-upload" type="file" accept=".gif" className="hidden" onChange={handleUploadGif} disabled={gifLimitReached} />
                   </Label>
 
                   {gifs.length === 0 ? (
-                    <div className="rounded-md border border-[#2f3341] bg-dark-900 py-8 text-center"><p className="text-sm text-[#8d94a8]">Brak aktywnych GIF-ów</p></div>
+                    <div className="rounded-md border border-[#2f3341] bg-dark-900 py-8 text-center"><p className="text-sm text-[#8d94a8]">{t.noGifs}</p></div>
                   ) : (
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
                       {gifs.map((gif) => (
                         <div key={`${gif.source}-${gif.name}`} className={cn("group relative overflow-hidden rounded-md border border-[#2f3341] bg-dark-900", gif.disabled && "opacity-70")}>
                           <img src={gif.url} alt={gif.name} className={cn("h-32 w-full object-cover", gif.disabled && "blur-sm grayscale")} />
-                          <span className="absolute left-2 top-2 rounded bg-black/65 px-2 py-0.5 text-[10px] font-semibold uppercase text-white/90">{gif.pending ? "Draft" : gif.disabled ? "Ukryty" : gif.source === "default" ? "Default" : "Serwer"}</span>
+                          <span className="absolute left-2 top-2 rounded bg-black/65 px-2 py-0.5 text-[10px] font-semibold uppercase text-white/90">{gif.pending ? t.gifBadge.draft : gif.disabled ? t.gifBadge.hidden : gif.source === "default" ? t.gifBadge.default : t.gifBadge.server}</span>
                           <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/65 opacity-0 transition-opacity group-hover:opacity-100">
                             <Button type="button" size="sm" variant="secondary" onClick={() => setPreviewGif(gif.url)} className="bg-dark-800 text-white hover:bg-dark-700"><ImageIcon className="h-4 w-4" /></Button>
-                            <Button type="button" size="sm" variant={gif.source === "upload" ? "destructive" : "secondary"} onClick={() => handleDeleteGif(gif)} title={gif.source === "upload" ? "Usuń z tego serwera po zapisaniu" : gif.disabled ? "Przywróć do rotacji po zapisaniu" : "Ukryj z rotacji po zapisaniu"} className={gif.source === "upload" ? undefined : "bg-dark-800 text-white hover:bg-dark-700"}>
+                            <Button type="button" size="sm" variant={gif.source === "upload" ? "destructive" : "secondary"} onClick={() => handleDeleteGif(gif)} title={gif.source === "upload" ? t.gifDelete : gif.disabled ? t.gifRestore : t.gifHide} className={gif.source === "upload" ? undefined : "bg-dark-800 text-white hover:bg-dark-700"}>
                               {gif.source === "upload" ? <Trash2 className="h-4 w-4" /> : gif.disabled ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                             </Button>
                           </div>
@@ -989,23 +1002,23 @@ export default function GreetingsPage() {
               </SettingRow>
               </div>
 
-              <SettingRow title="Wyślij prywatną wiadomość do nowych użytkowników" description="Ten sam edytor, ale wiadomość idzie do DM użytkownika" icon={<Mail className="h-4 w-4" />} checked={values.dmEnabled || false} onCheckedChange={(checked) => setBooleanField("dmEnabled", checked)} isOpen={openSections.dm} onToggle={() => toggleSection("dm")}>
-                <ModuleDisabledNotice enabled={values.dmEnabled || false} target="prywatnej wiadomości" />
+              <SettingRow title={t.dmRow.title} description={t.dmRow.description} icon={<Mail className="h-4 w-4" />} checked={values.dmEnabled || false} onCheckedChange={(checked) => setBooleanField("dmEnabled", checked)} isOpen={openSections.dm} onToggle={() => toggleSection("dm")}>
+                <ModuleDisabledNotice enabled={values.dmEnabled || false} target={t.targets.dm} />
                 {renderChannelNotice("dm")}
-                <GreetingMessageEditor moduleKey="dm" title="Prywatna wiadomość powitalna" value={getEditorValue("dm")} activeGifCount={activeGifCount} onManageGifs={handleManageGifs} onValueChange={(field, value) => setMessageField("dm", field, value)} onImageSelect={(slot, file) => handleImageSelect("dm", slot, file)} onImageClear={(slot) => handleImageClear("dm", slot)} />
+                <GreetingMessageEditor moduleKey="dm" title={t.dmEditor} value={getEditorValue("dm")} activeGifCount={activeGifCount} onManageGifs={handleManageGifs} onValueChange={(field, value) => setMessageField("dm", field, value)} onImageSelect={(slot, file) => handleImageSelect("dm", slot, file)} onImageClear={(slot) => handleImageClear("dm", slot)} />
               </SettingRow>
 
-              <SettingRow title="Wyślij wiadomość, gdy użytkownik opuszcza serwer" description="Ten sam edytor dla wiadomości pożegnalnej" icon={<MessageSquare className="h-4 w-4" />} checked={values.goodbyeEnabled || false} onCheckedChange={(checked) => setBooleanField("goodbyeEnabled", checked)} isOpen={openSections.goodbye} onToggle={() => toggleSection("goodbye")}>
-                <ModuleDisabledNotice enabled={values.goodbyeEnabled || false} target="pożegnania" />
+              <SettingRow title={t.goodbyeRow.title} description={t.goodbyeRow.description} icon={<MessageSquare className="h-4 w-4" />} checked={values.goodbyeEnabled || false} onCheckedChange={(checked) => setBooleanField("goodbyeEnabled", checked)} isOpen={openSections.goodbye} onToggle={() => toggleSection("goodbye")}>
+                <ModuleDisabledNotice enabled={values.goodbyeEnabled || false} target={t.targets.goodbye} />
                 {renderChannelNotice("goodbye")}
-                <GreetingMessageEditor moduleKey="goodbye" title="Wiadomość pożegnalna" value={getEditorValue("goodbye")} topFields={goodbyeTopFields} hideGifs activeGifCount={activeGifCount} onManageGifs={handleManageGifs} onValueChange={(field, value) => setMessageField("goodbye", field, value)} onImageSelect={(slot, file) => handleImageSelect("goodbye", slot, file)} onImageClear={(slot) => handleImageClear("goodbye", slot)} />
+                <GreetingMessageEditor moduleKey="goodbye" title={t.goodbyeEditor} value={getEditorValue("goodbye")} topFields={goodbyeTopFields} hideGifs activeGifCount={activeGifCount} onManageGifs={handleManageGifs} onValueChange={(field, value) => setMessageField("goodbye", field, value)} onImageSelect={(slot, file) => handleImageSelect("goodbye", slot, file)} onImageClear={(slot) => handleImageClear("goodbye", slot)} />
               </SettingRow>
             </div>
           </SlideIn>
         </form>
 
         {previewGif ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setPreviewGif(null)}><div className="max-h-[80vh] max-w-3xl"><img src={previewGif} alt="Preview" className="max-h-full max-w-full rounded-lg" /></div></div>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setPreviewGif(null)}><div className="max-h-[80vh] max-w-3xl"><img src={previewGif} alt={t.previewAlt} className="max-h-full max-w-full rounded-lg" /></div></div>
         ) : null}
 
         <style jsx global>{`

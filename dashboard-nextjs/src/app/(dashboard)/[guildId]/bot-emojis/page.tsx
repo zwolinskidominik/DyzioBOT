@@ -23,6 +23,9 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { botEmojisMessages } from "@/i18n/messages/botEmojis";
+import { commonMessages } from "@/i18n/messages/common";
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -65,14 +68,6 @@ function hasOddName(name: string): boolean {
   return /^[0-9]/.test(name);
 }
 
-function plural(n: number, one: string, few: string, many: string): string {
-  if (n === 1) return one;
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return few;
-  return many;
-}
-
 async function copyToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
@@ -90,6 +85,8 @@ export default function BotEmojisPage() {
   const { data: session, status } = useSession();
   const currentUserId = (session?.user as { id?: string })?.id;
   const isOwner = status !== "loading" && OWNER_IDS.includes(currentUserId ?? "");
+  const t = useMessages(botEmojisMessages);
+  const m = useMessages(commonMessages).module;
 
   const [emojis, setEmojis] = useState<DiscordEmoji[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,11 +120,11 @@ export default function BotEmojisPage() {
       setEmojis(data);
       setSelectedId((prev) => (prev && data.some((e) => e.id === prev) ? prev : data[0]?.id ?? null));
     } catch {
-      toast.error("Nie udało się pobrać emoji");
+      toast.error(t.fetchError);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (isOwner) fetchEmojis();
@@ -145,11 +142,11 @@ export default function BotEmojisPage() {
 
     const allowed = ["image/png", "image/jpeg", "image/gif", "image/webp"];
     if (!allowed.includes(file.type)) {
-      toast.error("Dozwolone formaty: PNG, JPG, GIF, WebP");
+      toast.error(t.fileFormats);
       return;
     }
     if (file.size > 262144) {
-      toast.error("Plik jest za duży (max 256 KB)");
+      toast.error(t.fileTooBig);
       return;
     }
 
@@ -158,7 +155,7 @@ export default function BotEmojisPage() {
       setImageData(uri);
       setPreviewUrl(uri);
     } catch {
-      toast.error("Nie udało się odczytać pliku");
+      toast.error(t.fileReadError);
     }
   };
 
@@ -173,15 +170,15 @@ export default function BotEmojisPage() {
 
   const handleUpload = async () => {
     if (!emojiName || !imageData) {
-      toast.error("Podaj nazwę i wybierz plik");
+      toast.error(t.nameAndFile);
       return;
     }
     if (!/^[a-zA-Z0-9_]{2,32}$/.test(emojiName)) {
-      toast.error("Nazwa: 2–32 znaki, tylko litery / cyfry / podkreślenie");
+      toast.error(t.nameRules);
       return;
     }
     if (emojis.some((e) => e.name.toLowerCase() === emojiName.toLowerCase())) {
-      toast.error("Emoji o tej nazwie już istnieje");
+      toast.error(t.nameTaken);
       return;
     }
 
@@ -194,13 +191,13 @@ export default function BotEmojisPage() {
       });
 
       if (!res.ok) {
-        const err = (await res.json().catch(() => ({ error: "Błąd API" }))) as { error?: string };
-        toast.error(err.error ?? "Nie udało się dodać emoji");
+        const err = (await res.json().catch(() => ({ error: t.apiError }))) as { error?: string };
+        toast.error(err.error ?? t.addError);
         return;
       }
 
       const created = (await res.json()) as DiscordEmoji;
-      toast.success(`Emoji :${emojiName}: zostało dodane!`);
+      toast.success(t.added(emojiName));
       resetForm();
       setFormOpen(false);
       setSearch("");
@@ -209,7 +206,7 @@ export default function BotEmojisPage() {
       await fetchEmojis();
       setSelectedId(created.id ?? null);
     } catch {
-      toast.error("Błąd połączenia");
+      toast.error(m.connectionError);
     } finally {
       setUploading(false);
     }
@@ -225,7 +222,7 @@ export default function BotEmojisPage() {
 
   const handleDelete = async (emoji: DiscordEmoji) => {
     if (emoji.key) {
-      toast.error(`To emoji jest w konfiguracji bota (${emoji.key}) — usuń najpierw odwołanie w kodzie`);
+      toast.error(t.inConfig(emoji.key));
       setConfirmDeleteId(null);
       return;
     }
@@ -240,14 +237,14 @@ export default function BotEmojisPage() {
     try {
       const res = await fetchWithAuth(`/api/bot-emojis/manage?id=${emoji.id}`, { method: "DELETE" });
       if (!res.ok) {
-        const err = (await res.json().catch(() => ({ error: "Błąd API" }))) as { error?: string };
-        toast.error(err.error ?? "Nie udało się usunąć emoji");
+        const err = (await res.json().catch(() => ({ error: t.apiError }))) as { error?: string };
+        toast.error(err.error ?? t.deleteError);
         return;
       }
-      toast.success(`Usunięto emoji :${emoji.name}:`);
+      toast.success(t.deleted(emoji.name));
       setEmojis((prev) => prev.filter((e) => e.id !== emoji.id));
     } catch {
-      toast.error("Błąd połączenia");
+      toast.error(m.connectionError);
     } finally {
       setDeletingId(null);
     }
@@ -258,8 +255,8 @@ export default function BotEmojisPage() {
   const handleCopy = async (emoji: DiscordEmoji) => {
     setSelectedId(emoji.id);
     const ok = await copyToClipboard(emojiCode(emoji));
-    if (ok) toast.success(`Skopiowano kod :${emoji.name}:`);
-    else toast.error("Nie udało się skopiować");
+    if (ok) toast.success(t.copied(emoji.name));
+    else toast.error(t.copyError);
   };
 
   /* ── Derived list ── */
@@ -271,13 +268,13 @@ export default function BotEmojisPage() {
     const counts = new Map<string, { label: string; count: number }>();
     for (const e of emojis) {
       const id = e.group ?? "none";
-      const label = e.groupLabel ?? "Bez odwołania";
+      const label = e.groupLabel ?? t.noReference;
       const existing = counts.get(id);
       if (existing) existing.count += 1;
       else counts.set(id, { label, count: 1 });
     }
     return Array.from(counts.entries()).map(([id, v]) => ({ id, ...v }));
-  }, [emojis]);
+  }, [emojis, t]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -293,14 +290,14 @@ export default function BotEmojisPage() {
     else if (sort === "group") {
       list.sort(
         (a, b) =>
-          (a.groupLabel ?? "Bez odwołania").localeCompare(b.groupLabel ?? "Bez odwołania", "pl") ||
+          (a.groupLabel ?? t.noReference).localeCompare(b.groupLabel ?? t.noReference, "pl") ||
           a.name.localeCompare(b.name, "pl")
       );
     } else {
       list.sort((a, b) => (b.animated ? 1 : 0) - (a.animated ? 1 : 0) || a.name.localeCompare(b.name, "pl"));
     }
     return list;
-  }, [emojis, search, groupFilter, sort]);
+  }, [emojis, search, groupFilter, sort, t]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / perPage));
   const currentPage = Math.min(page, pageCount);
@@ -337,8 +334,8 @@ export default function BotEmojisPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4 text-center">
         <div className="text-6xl">🔒</div>
-        <h1 className="text-2xl font-bold">Moduł niedostępny</h1>
-        <p className="text-muted-foreground">Ta funkcja jest dostępna wyłącznie dla właścicieli bota.</p>
+        <h1 className="text-2xl font-bold">{t.unavailableTitle}</h1>
+        <p className="text-muted-foreground">{t.unavailableText}</p>
       </div>
     );
   }
@@ -351,17 +348,16 @@ export default function BotEmojisPage() {
             <div className="min-w-0 space-y-2">
               <h1 className="flex items-center gap-2 text-2xl font-semibold text-white">
                 <SmilePlus className="h-6 w-6 text-bot-primary" />
-                Emoji Bota
+                {t.title}
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Niestandardowe emoji dostępne we wszystkich komendach i modułach. Widać kod do wklejenia
-                i klucz konfiguracji, który się do emoji odwołuje.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <span className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-400">
                 <Lock className="h-3.5 w-3.5" />
-                Tylko właściciel bota
+                {m.ownerOnlyBadge}
               </span>
               <button
                 type="button"
@@ -372,7 +368,7 @@ export default function BotEmojisPage() {
                 )}
               >
                 {formOpen ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-                {formOpen ? "Zamknij" : "Dodaj emoji"}
+                {formOpen ? t.close : t.addEmoji}
               </button>
             </div>
           </header>
@@ -386,15 +382,15 @@ export default function BotEmojisPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-[10px] bg-dark-800 px-4 py-3.5">
                   <div className="text-[22px] font-extrabold text-white">{emojis.length}</div>
-                  <div className="mt-0.5 text-[11px] text-[#8d94a8]">emoji w zasobach bota</div>
+                  <div className="mt-0.5 text-[11px] text-[#8d94a8]">{t.statTotal}</div>
                 </div>
                 <div className="rounded-[10px] bg-dark-800 px-4 py-3.5">
                   <div className="text-[22px] font-extrabold text-[#a5b4fc]">{staticCount}</div>
-                  <div className="mt-0.5 text-[11px] text-[#8d94a8]">statyczne</div>
+                  <div className="mt-0.5 text-[11px] text-[#8d94a8]">{t.statStatic}</div>
                 </div>
                 <div className="rounded-[10px] bg-dark-800 px-4 py-3.5">
                   <div className="text-[22px] font-extrabold text-[#f9a8d4]">{animatedCount}</div>
-                  <div className="mt-0.5 text-[11px] text-[#8d94a8]">animowane (GIF)</div>
+                  <div className="mt-0.5 text-[11px] text-[#8d94a8]">{t.statAnimated}</div>
                 </div>
               </div>
             </SlideIn>
@@ -405,11 +401,11 @@ export default function BotEmojisPage() {
                   className="rounded-[10px] border p-5"
                   style={{ background: "#1F2129", borderColor: "rgba(99,102,241,0.4)", boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}
                 >
-                  <div className="mb-3.5 text-[13px] font-bold text-[#d8dbe6]">Dodaj nowe emoji</div>
+                  <div className="mb-3.5 text-[13px] font-bold text-[#d8dbe6]">{t.addNew}</div>
                   <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-[#c4cad8]">
-                        Nazwa <span className="text-red-500">*</span>
+                        {t.name} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -419,11 +415,11 @@ export default function BotEmojisPage() {
                         maxLength={32}
                         className="h-10 w-full rounded-md border border-[#2f3341] bg-dark-900 px-3 text-[13px] text-[#d8dbe6] outline-none transition-colors placeholder:text-[#6b7280] hover:border-[#3b82f6]/55 focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]/45"
                       />
-                      <p className="mt-1.5 text-[11px] text-[#6b7280]">2–32 znaki: litery, cyfry, podkreślenie (_)</p>
+                      <p className="mt-1.5 text-[11px] text-[#6b7280]">{t.nameHint}</p>
                     </div>
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-[#c4cad8]">
-                        Obraz <span className="text-red-500">*</span>
+                        {t.image} <span className="text-red-500">*</span>
                       </label>
                       <div className="flex gap-2">
                         <button
@@ -436,13 +432,13 @@ export default function BotEmojisPage() {
                         >
                           <Upload className="h-3.5 w-3.5 shrink-0" />
                           <span className="min-w-0 truncate">
-                            {imageData ? "Plik wybrany" : "Wybierz plik z dysku"}
+                            {imageData ? t.fileChosen : t.chooseFile}
                           </span>
                         </button>
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[#2f3341] bg-dark-900">
                           {previewUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={previewUrl} alt="podgląd" className="h-6 w-6 rounded object-contain" />
+                            <img src={previewUrl} alt={t.previewAlt} className="h-6 w-6 rounded object-contain" />
                           ) : (
                             <ImageIcon className="h-4 w-4 text-[#6b7280]" />
                           )}
@@ -455,7 +451,7 @@ export default function BotEmojisPage() {
                         onChange={handleFileChange}
                         className="hidden"
                       />
-                      <p className="mt-1.5 text-[11px] text-[#6b7280]">PNG, JPG, GIF, WebP — max 256 KB</p>
+                      <p className="mt-1.5 text-[11px] text-[#6b7280]">{t.formatsHint}</p>
                     </div>
                   </div>
                   <button
@@ -467,12 +463,12 @@ export default function BotEmojisPage() {
                     {uploading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Dodawanie...
+                        {t.adding}
                       </>
                     ) : (
                       <>
                         <Upload className="h-4 w-4" />
-                        Dodaj emoji
+                        {t.addEmoji}
                       </>
                     )}
                   </button>
@@ -488,14 +484,14 @@ export default function BotEmojisPage() {
                     type="text"
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    placeholder="Szukaj emoji po nazwie lub kluczu konfiguracji…"
+                    placeholder={t.searchPlaceholder}
                     className="min-w-0 flex-1 border-none bg-transparent text-xs text-[#d8dbe6] outline-none placeholder:text-[#6b7280]"
                   />
                   {search && (
                     <button
                       type="button"
                       onClick={() => { setSearch(""); setPage(1); }}
-                      title="Wyczyść"
+                      title={t.clear}
                       className="text-[#6b7280] transition-colors hover:text-white"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -505,10 +501,10 @@ export default function BotEmojisPage() {
 
                 <Select value={groupFilter || "all"} onValueChange={(v) => { setGroupFilter(v === "all" ? "" : v); setPage(1); }}>
                   <SelectTrigger className="h-[34px] w-[190px] border-[#2f3341] bg-dark-900 text-xs text-white/90">
-                    <SelectValue placeholder="Wszystkie grupy" />
+                    <SelectValue placeholder={t.allGroups} />
                   </SelectTrigger>
                   <SelectContent className="border-[#2f3341] bg-dark-900">
-                    <SelectItem value="all">Wszystkie grupy</SelectItem>
+                    <SelectItem value="all">{t.allGroups}</SelectItem>
                     {groupOptions.map((g) => (
                       <SelectItem key={g.id} value={g.id}>{g.label} · {g.count}</SelectItem>
                     ))}
@@ -520,9 +516,9 @@ export default function BotEmojisPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="border-[#2f3341] bg-dark-900">
-                    <SelectItem value="name">Nazwa A–Z</SelectItem>
-                    <SelectItem value="group">Grupa konfiguracji</SelectItem>
-                    <SelectItem value="type">Typ (GIF najpierw)</SelectItem>
+                    <SelectItem value="name">{t.sortName}</SelectItem>
+                    <SelectItem value="group">{t.sortGroup}</SelectItem>
+                    <SelectItem value="type">{t.sortType}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -534,9 +530,9 @@ export default function BotEmojisPage() {
                   <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-dark-900">
                     <SmilePlus className="h-10 w-10 text-[#6b7280]" />
                   </div>
-                  <h3 className="mb-2 text-lg font-semibold text-white">Brak emoji</h3>
+                  <h3 className="mb-2 text-lg font-semibold text-white">{t.emptyTitle}</h3>
                   <p className="mx-auto max-w-sm text-sm text-[#8d94a8]">
-                    Dodaj pierwsze emoji korzystając z przycisku „Dodaj emoji" powyżej.
+                    {t.emptyText}
                   </p>
                 </div>
               </SlideIn>
@@ -547,8 +543,8 @@ export default function BotEmojisPage() {
                   <div className="overflow-hidden rounded-[10px] bg-dark-800" style={{ boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
                     <div className="hidden grid-cols-[56px_minmax(0,1fr)_180px_76px] gap-3 border-b border-[#2f3341] px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-[#5f6b85] sm:grid">
                       <span />
-                      <span>Nazwa</span>
-                      <span>Klucz w konfiguracji</span>
+                      <span>{t.name}</span>
+                      <span>{t.configKey}</span>
                       <span />
                     </div>
 
@@ -562,7 +558,7 @@ export default function BotEmojisPage() {
                             className="hidden items-center gap-3 border-b border-[#23252f] px-4 py-3 sm:grid"
                             style={{ gridTemplateColumns: "56px minmax(0,1fr) 180px 76px", background: on ? "rgba(99,102,241,0.12)" : "transparent", borderLeft: `3px solid ${on ? "#6366f1" : "transparent"}` }}
                           >
-                            <button type="button" onClick={() => setSelectedId(e.id)} title="Pokaż szczegóły" className="flex items-center justify-center border-none bg-transparent p-0">
+                            <button type="button" onClick={() => setSelectedId(e.id)} title={t.showDetails} className="flex items-center justify-center border-none bg-transparent p-0">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={emojiUrl(e)} alt={e.name} className="h-10 w-10 rounded object-contain" />
                             </button>
@@ -571,7 +567,7 @@ export default function BotEmojisPage() {
                                 :{e.name}:
                               </span>
                               <span className={cn("mt-0.5 block text-xs", e.animated ? "text-[#f9a8d4]" : hasOddName(e.name) ? "text-[#fcd34d]" : "text-[#6b7280]")}>
-                                {e.animated ? "GIF · animowane" : hasOddName(e.name) ? "⚠ nietypowa nazwa" : "PNG · statyczne"}
+                                {e.animated ? t.animated : hasOddName(e.name) ? t.oddName : t.static}
                               </span>
                             </button>
                             <button
@@ -579,13 +575,13 @@ export default function BotEmojisPage() {
                               onClick={() => setSelectedId(e.id)}
                               className={cn("block min-w-0 truncate border-none bg-transparent p-0 text-left font-mono text-xs", e.key ? "text-[#9cc2ff]" : "text-[#4b5563]")}
                             >
-                              {e.key || "brak odwołania"}
+                              {e.key || t.noKey}
                             </button>
                             <div className="flex justify-end gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => handleCopy(e)}
-                                title="Kopiuj kod"
+                                title={t.copyCode}
                                 className="flex h-8 w-8 items-center justify-center rounded-md text-[#6b7280] transition-colors hover:bg-[rgba(99,102,241,0.15)] hover:text-[#a5b4fc]"
                               >
                                 <Copy className="h-4 w-4" />
@@ -594,7 +590,7 @@ export default function BotEmojisPage() {
                                 type="button"
                                 onClick={() => handleDelete(e)}
                                 disabled={deletingId === e.id}
-                                title={isConfirming ? "Kliknij ponownie, aby potwierdzić" : "Usuń emoji"}
+                                title={isConfirming ? t.clickAgain : t.deleteEmoji}
                                 className={cn(
                                   "flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50",
                                   isConfirming ? "bg-red-500/20 text-red-400" : "text-[#6b7280] hover:bg-red-500/10 hover:text-red-400"
@@ -611,7 +607,7 @@ export default function BotEmojisPage() {
                             style={{ background: on ? "rgba(99,102,241,0.12)" : "transparent", borderLeft: `3px solid ${on ? "#6366f1" : "transparent"}` }}
                           >
                             <div className="flex items-center gap-3">
-                              <button type="button" onClick={() => setSelectedId(e.id)} title="Pokaż szczegóły" className="shrink-0 border-none bg-transparent p-0">
+                              <button type="button" onClick={() => setSelectedId(e.id)} title={t.showDetails} className="shrink-0 border-none bg-transparent p-0">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={emojiUrl(e)} alt={e.name} className="h-10 w-10 rounded object-contain" />
                               </button>
@@ -620,14 +616,14 @@ export default function BotEmojisPage() {
                                   :{e.name}:
                                 </span>
                                 <span className={cn("mt-0.5 block text-xs", e.animated ? "text-[#f9a8d4]" : hasOddName(e.name) ? "text-[#fcd34d]" : "text-[#6b7280]")}>
-                                  {e.animated ? "GIF · animowane" : hasOddName(e.name) ? "⚠ nietypowa nazwa" : "PNG · statyczne"}
+                                  {e.animated ? t.animated : hasOddName(e.name) ? t.oddName : t.static}
                                 </span>
                               </button>
                               <div className="flex shrink-0 gap-1">
                                 <button
                                   type="button"
                                   onClick={() => handleCopy(e)}
-                                  title="Kopiuj kod"
+                                  title={t.copyCode}
                                   className="flex h-9 w-9 items-center justify-center rounded-md text-[#6b7280] transition-colors hover:bg-[rgba(99,102,241,0.15)] hover:text-[#a5b4fc]"
                                 >
                                   <Copy className="h-4 w-4" />
@@ -636,7 +632,7 @@ export default function BotEmojisPage() {
                                   type="button"
                                   onClick={() => handleDelete(e)}
                                   disabled={deletingId === e.id}
-                                  title={isConfirming ? "Kliknij ponownie, aby potwierdzić" : "Usuń emoji"}
+                                  title={isConfirming ? t.clickAgain : t.deleteEmoji}
                                   className={cn(
                                     "flex h-9 w-9 items-center justify-center rounded-md transition-colors disabled:opacity-50",
                                     isConfirming ? "bg-red-500/20 text-red-400" : "text-[#6b7280] hover:bg-red-500/10 hover:text-red-400"
@@ -652,7 +648,7 @@ export default function BotEmojisPage() {
                               className="block min-w-0 truncate border-none bg-transparent p-0 text-left font-mono text-xs"
                               style={{ color: e.key ? "#9cc2ff" : "#4b5563" }}
                             >
-                              <span className="font-sans text-[#5f6b85]">Klucz: </span>{e.key || "brak odwołania"}
+                              <span className="font-sans text-[#5f6b85]">{t.keyLabel}</span>{e.key || t.noKey}
                             </button>
                           </div>
                         </div>
@@ -661,15 +657,15 @@ export default function BotEmojisPage() {
 
                     {filtered.length === 0 && (
                       <div className="px-4 py-9 text-center text-sm text-[#8d94a8]">
-                        Brak emoji pasujących do filtrów.
+                        {t.noMatches}
                       </div>
                     )}
 
                     <div className="flex flex-wrap items-center gap-2.5 px-3.5 py-2.5">
                       <span className="text-[11px] text-[#6b7280]">
                         {filtered.length
-                          ? `${(currentPage - 1) * perPage + 1}–${Math.min(currentPage * perPage, filtered.length)} z ${filtered.length} ${plural(filtered.length, "emoji", "emoji", "emoji")}`
-                          : "brak wyników"}
+                          ? t.range((currentPage - 1) * perPage + 1, Math.min(currentPage * perPage, filtered.length), filtered.length)
+                          : t.noResults}
                       </span>
                       <span className="flex-1" />
                       <div className="flex items-center gap-1">
@@ -709,7 +705,7 @@ export default function BotEmojisPage() {
                         </SelectTrigger>
                         <SelectContent className="border-[#2f3341] bg-dark-900">
                           {PAGE_SIZE_OPTIONS.map((n) => (
-                            <SelectItem key={n} value={String(n)}>{n} / stronę</SelectItem>
+                            <SelectItem key={n} value={String(n)}>{t.perPage(n)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -718,7 +714,7 @@ export default function BotEmojisPage() {
 
                   {/* Szczegóły */}
                   <div className="sticky top-4 rounded-[10px] bg-dark-900 px-5 py-4" style={{ boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
-                    <div className="mb-3.5 text-[11px] font-bold uppercase tracking-wider text-[#6b7280]">Szczegóły emoji</div>
+                    <div className="mb-3.5 text-[11px] font-bold uppercase tracking-wider text-[#6b7280]">{t.details}</div>
 
                     {selected ? (
                       <>
@@ -730,9 +726,9 @@ export default function BotEmojisPage() {
 
                         <div className="mt-3 flex flex-col gap-2">
                           <div className="flex items-baseline justify-between gap-2 text-sm">
-                            <span className="shrink-0 text-[#6b7280]">Typ</span>
+                            <span className="shrink-0 text-[#6b7280]">{t.type}</span>
                             <span className={cn("min-w-0 text-right font-semibold", selected.animated ? "text-[#f9a8d4]" : "text-[#b9c0d0]")}>
-                              {selected.animated ? "GIF · animowane" : "PNG · statyczne"}
+                              {selected.animated ? t.animated : t.static}
                             </span>
                           </div>
                           <div className="flex items-baseline justify-between gap-2 text-sm">
@@ -740,17 +736,17 @@ export default function BotEmojisPage() {
                             <span className="min-w-0 truncate text-right font-mono text-[#b9c0d0]">{selected.id}</span>
                           </div>
                           <div className="flex items-baseline justify-between gap-2 text-sm">
-                            <span className="shrink-0 text-[#6b7280]">Grupa</span>
-                            <span className="min-w-0 text-right text-[#b9c0d0]">{selected.groupLabel ?? "Bez odwołania"}</span>
+                            <span className="shrink-0 text-[#6b7280]">{t.group}</span>
+                            <span className="min-w-0 text-right text-[#b9c0d0]">{selected.groupLabel ?? t.noReference}</span>
                           </div>
                           <div className="flex items-baseline justify-between gap-2 text-sm">
-                            <span className="shrink-0 text-[#6b7280]">Klucz</span>
-                            <span className="min-w-0 truncate text-right font-mono text-[#9cc2ff]">{selected.key ?? "brak odwołania"}</span>
+                            <span className="shrink-0 text-[#6b7280]">{t.key}</span>
+                            <span className="min-w-0 truncate text-right font-mono text-[#9cc2ff]">{selected.key ?? t.noKey}</span>
                           </div>
                         </div>
 
                         <div className="mt-3.5 border-t border-[#2f3341] pt-3">
-                          <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#5f6b85]">Kod do wiadomości</div>
+                          <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#5f6b85]">{t.messageCode}</div>
                           <button
                             type="button"
                             onClick={() => handleCopy(selected)}
@@ -765,19 +761,19 @@ export default function BotEmojisPage() {
                           <div className="mt-3 flex items-start gap-2 rounded-md bg-red-500/[0.08] px-3 py-2.5 text-xs leading-6 text-red-300">
                             <span className="shrink-0">⚠️</span>
                             <span>
-                              Emoji jest wpisane w <span className="font-mono">config/bot.ts</span> — usunięcie zepsuje {selected.groupLabel}.
+                              {t.inConfigPrefix}<span className="font-mono">config/bot.ts</span>{t.inConfigSuffix(selected.groupLabel ?? "")}
                             </span>
                           </div>
                         ) : (
                           <div className="mt-3 flex items-start gap-2 rounded-md bg-dark-800 px-3 py-2.5 text-xs leading-6 text-[#8d94a8]">
                             <span className="shrink-0">ℹ️</span>
-                            <span>Żadna część konfiguracji nie odwołuje się do tego emoji — można je usunąć bez ryzyka.</span>
+                            <span>{t.safeToDelete}</span>
                           </div>
                         )}
                         {hasOddName(selected.name) && (
                           <div className="mt-2 flex items-start gap-2 rounded-md bg-amber-500/[0.08] px-3 py-2.5 text-xs leading-6 text-amber-300">
                             <span className="shrink-0">⚠️</span>
-                            <span>Nazwa zaczyna się cyfrą — trudna do wpisania w Discordzie i nieczytelna w kodzie.</span>
+                            <span>{t.startsWithDigit}</span>
                           </div>
                         )}
 
@@ -787,13 +783,13 @@ export default function BotEmojisPage() {
                             onClick={() => handleCopy(selected)}
                             className="flex-1 rounded-md border border-[#2f3341] py-2.5 text-xs font-semibold text-[#c4cad8] transition-colors hover:bg-dark-800 hover:text-white"
                           >
-                            ⧉ Kopiuj kod
+                            {t.copyCodeButton}
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(selected)}
                             disabled={deletingId === selected.id}
-                            title="Usuń emoji"
+                            title={t.deleteEmoji}
                             className={cn(
                               "shrink-0 rounded-md border px-4 py-2.5 text-xs font-semibold transition-colors disabled:opacity-50",
                               confirmDeleteId === selected.id
@@ -801,12 +797,12 @@ export default function BotEmojisPage() {
                                 : "border-red-500/40 text-red-300 hover:bg-red-500/10"
                             )}
                           >
-                            {confirmDeleteId === selected.id ? "Na pewno?" : "🗑"}
+                            {confirmDeleteId === selected.id ? t.sure : "🗑"}
                           </button>
                         </div>
                       </>
                     ) : (
-                      <p className="py-8 text-center text-sm text-[#6b7280]">Brak emoji do wyświetlenia</p>
+                      <p className="py-8 text-center text-sm text-[#6b7280]">{t.nothing}</p>
                     )}
                   </div>
                 </div>

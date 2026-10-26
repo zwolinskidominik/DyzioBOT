@@ -14,7 +14,9 @@ import { SlideIn } from "@/components/ui/animated";
 import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useDirtyState } from "@/components/DirtyStateProvider";
-import { plural } from "@/lib/plural";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { channelStatsMessages } from "@/i18n/messages/channelStats";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface DiscordChannel {
   id: string;
@@ -59,40 +61,28 @@ interface StatVariable {
   description: string;
 }
 
-const STAT_CATEGORIES: Record<
-  CategoryKey,
-  {
-    name: string;
-    emoji: string;
-    variables: StatVariable[];
-    presets: string[];
-  }
-> = {
-  lastJoined: {
-    name: "Ostatnio dołączył",
-    emoji: "👤",
-    variables: [{ name: "Użytkownik", display: "Użytkownik", value: "{member}", description: "Nazwa ostatnio dołączonego użytkownika" }],
-    presets: ["👤 Ostatni: {member}", "🆕 Nowy: {member}"],
-  },
-  users: {
-    name: "Liczba użytkowników",
-    emoji: "👥",
-    variables: [{ name: "Liczba", display: "Liczba", value: "{count}", description: "Liczba użytkowników na serwerze" }],
-    presets: ["👥 Użytkownicy: {count}", "Użytkowników: {count}"],
-  },
-  bots: {
-    name: "Liczba botów",
-    emoji: "🤖",
-    variables: [{ name: "Liczba", display: "Liczba", value: "{count}", description: "Liczba botów na serwerze" }],
-    presets: ["🤖 Boty: {count}", "Botów: {count}"],
-  },
-  bans: {
-    name: "Liczba banów",
-    emoji: "🔨",
-    variables: [{ name: "Liczba", display: "Liczba", value: "{count}", description: "Liczba banów na serwerze" }],
-    presets: ["🔨 Bany: {count}", "Banów: {count}"],
-  },
+const STAT_CATEGORY_META: Record<CategoryKey, { emoji: string; variable: string }> = {
+  lastJoined: { emoji: "👤", variable: "{member}" },
+  users: { emoji: "👥", variable: "{count}" },
+  bots: { emoji: "🤖", variable: "{count}" },
+  bans: { emoji: "🔨", variable: "{count}" },
 };
+
+type ChannelStatsText = (typeof channelStatsMessages)["pl"];
+
+function buildCategories(t: ChannelStatsText): Record<CategoryKey, { name: string; emoji: string; variables: StatVariable[]; presets: string[] }> {
+  const build = (key: CategoryKey) => {
+    const c = t.categories[key];
+    const meta = STAT_CATEGORY_META[key];
+    return {
+      name: c.name,
+      emoji: meta.emoji,
+      variables: [{ name: c.variable, display: c.variable, value: meta.variable, description: c.variableHint }],
+      presets: [...c.presets],
+    };
+  };
+  return { lastJoined: build("lastJoined"), users: build("users"), bots: build("bots"), bans: build("bans") };
+}
 
 interface SavedState {
   enabled: boolean;
@@ -115,6 +105,9 @@ export default function ChannelStatsPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(channelStatsMessages);
+  const m = useMessages(commonMessages).module;
+  const STAT_CATEGORIES = buildCategories(t);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -182,7 +175,7 @@ export default function ChannelStatsPage() {
         }
       } catch (err) {
         console.error("Error loading channel stats data:", err);
-        setError("Nie udało się załadować danych statystyk kanałów. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -213,14 +206,14 @@ export default function ChannelStatsPage() {
       if (!response.ok) throw new Error("Failed to save configuration");
 
       savedRef.current = { enabled, templates: { ...templates } };
-      toast.success("Konfiguracja zapisana!");
+      toast.success(t.saved);
     } catch (err) {
       console.error("Error saving config:", err);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [enabled, templates, channelIds, guildId, savedRef]);
+  }, [enabled, templates, channelIds, guildId, savedRef, t, m]);
 
   const handleCancel = useCallback(() => {
     const s = savedRef.current;
@@ -234,17 +227,17 @@ export default function ChannelStatsPage() {
         id: `channel-stats-${guildId}`,
         isDirty,
         isSaving: saving,
-        label: "Kanały z licznikami",
+        label: t.title,
         onSave: handleSave,
         onCancel: handleCancel,
       }),
-    [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]
+    [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController, t]
   );
 
   const handleCreateChannel = async (category: CategoryKey) => {
     const template = templates[category];
     if (!template.trim()) {
-      toast.error("Szablon nazwy nie może być pusty");
+      toast.error(t.templateEmpty);
       return;
     }
 
@@ -260,17 +253,17 @@ export default function ChannelStatsPage() {
 
       const data = await response.json();
       setChannelIds((prev) => ({ ...prev, [category]: data.channelId }));
-      toast.success(`Utworzono kanał: ${STAT_CATEGORIES[category].name.toLowerCase()}`);
+      toast.success(t.created(STAT_CATEGORIES[category].name));
     } catch (err) {
       console.error("Error creating channel:", err);
-      toast.error("Nie udało się utworzyć kanału");
+      toast.error(t.createError);
     } finally {
       setCreatingChannel(null);
     }
   };
 
   const handleDeleteChannel = async (category: CategoryKey) => {
-    if (!confirm("Czy na pewno chcesz usunąć ten kanał licznika?")) return;
+    if (!confirm(t.confirmDelete)) return;
 
     try {
       setDeletingChannel(category);
@@ -283,10 +276,10 @@ export default function ChannelStatsPage() {
       if (!response.ok) throw new Error("Failed to delete channel");
 
       setChannelIds((prev) => ({ ...prev, [category]: undefined }));
-      toast.success(`Usunięto kanał: ${STAT_CATEGORIES[category].name.toLowerCase()}`);
+      toast.success(t.deleted(STAT_CATEGORIES[category].name));
     } catch (err) {
       console.error("Error deleting channel:", err);
-      toast.error("Nie udało się usunąć kanału");
+      toast.error(t.deleteError);
     } finally {
       setDeletingChannel(null);
     }
@@ -305,7 +298,7 @@ export default function ChannelStatsPage() {
       <div className="min-h-full">
         <div className="w-full">
           <ErrorState
-            title="Nie udało się załadować statystyk kanałów"
+            title={t.loadErrorTitle}
             message={error}
             onRetry={handleRetry}
           />
@@ -351,14 +344,14 @@ export default function ChannelStatsPage() {
             <div>
               <h1 className="text-2xl font-bold text-white/90 flex items-center gap-2">
                 <span aria-hidden>📊</span>
-                Kanały z licznikami
+                {t.title}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Bot tworzy kanały głosowe ze statystykami serwera i odświeża ich nazwy co 10 minut.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
+              <span>{enabled ? m.active : m.inactive}</span>
               <Switch checked={enabled} onCheckedChange={setEnabled} className="data-[state=checked]:bg-bot-primary" />
             </div>
           </div>
@@ -375,9 +368,7 @@ export default function ChannelStatsPage() {
                 >
                   <EyeOff className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>
-                    Liczniki są <span className="font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>wyłączone</span>.
-                    Możesz edytować szablony i zapisać ustawienia, ale nazwy kanałów nie będą odświeżane, dopóki nie
-                    włączysz przełącznika <span className="font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>Aktywne</span> u góry.
+                    {t.disabledPrefix}<span className="font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{m.active}</span>{t.disabledSuffix}
                   </span>
                 </div>
               </SlideIn>
@@ -398,14 +389,13 @@ export default function ChannelStatsPage() {
                 <div className="relative flex items-center justify-between gap-5">
                   <div className="min-w-0">
                     <p className="text-[10px] font-bold tracking-wider uppercase" style={{ color: "#93c5fd" }}>
-                      Aktywne liczniki
+                      {t.activeCounters}
                     </p>
                     <p className="mt-2 text-lg font-bold text-white">
-                      {createdCount} z {CATEGORY_ORDER.length}{" "}
-                      {plural(CATEGORY_ORDER.length, ["kanału utworzonego", "kanałów utworzonych", "kanałów utworzonych"])}
+                      {t.createdOf(createdCount, CATEGORY_ORDER.length)}
                     </p>
                     <p className="mt-1.5 text-[13px]" style={{ color: "#b9c0d0" }}>
-                      {enabled ? "Bot odświeża nazwy kanałów co 10 minut." : "Odświeżanie wstrzymane."}
+                      {enabled ? t.refreshing : t.paused}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
@@ -413,7 +403,7 @@ export default function ChannelStatsPage() {
                       10 min
                     </p>
                     <p className="mt-1 text-[11px]" style={{ color: "#8d94a8" }}>
-                      interwał
+                      {t.interval}
                     </p>
                   </div>
                 </div>
@@ -449,7 +439,7 @@ export default function ChannelStatsPage() {
                             className="rounded-full text-[10px] font-bold px-2.5 py-1"
                             style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}
                           >
-                            ✓ utworzony
+                            {t.createdBadge}
                           </span>
                           <Button
                             size="icon"
@@ -457,7 +447,7 @@ export default function ChannelStatsPage() {
                             className="text-muted-foreground hover:text-destructive h-[26px] w-[26px]"
                             disabled={deletingChannel === key}
                             onClick={() => handleDeleteChannel(key)}
-                            title="Usuń kanał"
+                            title={t.deleteChannel}
                           >
                             {deletingChannel === key ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -478,7 +468,7 @@ export default function ChannelStatsPage() {
                           ) : (
                             <Plus className="mr-1 w-3 h-3" />
                           )}
-                          Utwórz kanał
+                          {t.createChannel}
                         </Button>
                       )}
                     </div>
@@ -522,10 +512,10 @@ export default function ChannelStatsPage() {
               <div className="rounded-lg p-4" style={{ background: "#17181E", boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
                 <p className="text-[9px] font-bold tracking-wider uppercase flex items-center gap-1.5 mb-3" style={{ color: "#6b7280" }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e" }} />
-                  Podgląd na Discordzie
+                  {t.discordPreview}
                 </p>
                 <p className="text-[10px] font-bold tracking-wider uppercase px-1 pb-1.5" style={{ color: "#6b7280" }}>
-                  ▾ Statystyki
+                  {t.statsCategory}
                 </p>
 
                 <div className="flex flex-col gap-0.5">
@@ -546,7 +536,7 @@ export default function ChannelStatsPage() {
                           </span>
                         ) : (
                           <span className="truncate italic" style={{ color: "#4b5563" }}>
-                            {category.name} — brak kanału
+                            {t.noChannel(category.name)}
                           </span>
                         )}
                       </div>
@@ -555,7 +545,7 @@ export default function ChannelStatsPage() {
                 </div>
 
                 <p className="mt-3.5 pt-3 text-[11px] leading-relaxed" style={{ borderTop: "1px solid #2f3341", color: "#6b7280" }}>
-                  Kanały są zablokowane do wejścia — służą tylko jako etykiety w liście kanałów.
+                  {t.locked}
                 </p>
               </div>
             </SlideIn>

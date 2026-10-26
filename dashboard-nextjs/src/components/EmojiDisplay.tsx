@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { twemojiAssetPath } from '@/lib/emojiCodepoints';
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface EmojiDisplayProps {
   emoji: string;
@@ -8,6 +10,7 @@ interface EmojiDisplayProps {
 
 export function EmojiDisplay({ emoji, size = 20 }: EmojiDisplayProps) {
   const [imgError, setImgError] = useState(false);
+  const ed = useMessages(commonMessages).editor;
 
   // Discord custom emoji format: <:name:id> or <a:name:id>
   const discordEmojiRegex = /^<(a)?:([^:]+):(\d+)>$/;
@@ -22,7 +25,7 @@ export function EmojiDisplay({ emoji, size = 20 }: EmojiDisplayProps) {
         <span
           className="inline-block text-muted-foreground"
           style={{ fontSize: size * 0.75 }}
-          title={`:${name}: (emoji niedostępne)`}
+          title={`:${name}: (${ed.emojiUnavailable})`}
         >
           ❓
         </span>

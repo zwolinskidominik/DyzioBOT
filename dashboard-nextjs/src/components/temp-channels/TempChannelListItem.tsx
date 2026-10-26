@@ -5,6 +5,9 @@ import { Loader2, Mic, Pencil, Save, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { TempChannelType } from "./TempChannelLivePreview";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { tempChannelsMessages } from "@/i18n/messages/tempChannels";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface TempChannelListItemProps {
   channelId: string;
@@ -24,6 +27,8 @@ export function TempChannelListItem({
   onDelete,
 }: TempChannelListItemProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const t = useMessages(tempChannelsMessages);
+  const m = useMessages(commonMessages).module;
   const [draftType, setDraftType] = useState<TempChannelType>(type);
 
   const startEdit = () => {
@@ -59,14 +64,14 @@ export function TempChannelListItem({
                 type === "panel" ? "bg-[#3b82f6]/15 text-[#7fb0ff]" : "bg-[#8d94a8]/15 text-[#c4cad8]",
               )}
             >
-              {type === "panel" ? "Panel" : "Standardowy"}
+              {type === "panel" ? t.typePanelShort : t.typeStandard}
             </span>
           ) : null}
 
           <button
             type="button"
             onClick={isEditing ? cancelEdit : startEdit}
-            title={isEditing ? "Anuluj" : "Edytuj"}
+            title={isEditing ? m.cancel : m.edit}
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#8d94a8] transition-colors hover:bg-dark-800 hover:text-white"
           >
             {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
@@ -74,7 +79,7 @@ export function TempChannelListItem({
           <button
             type="button"
             onClick={() => onDelete(channelId)}
-            title="Usuń"
+            title={m.delete}
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#8d94a8] transition-colors hover:bg-dark-800 hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
@@ -93,7 +98,7 @@ export function TempChannelListItem({
                 draftType === "panel" ? "bg-[#3b82f6] text-white" : "text-[#8d94a8] hover:text-white",
               )}
             >
-              Panel zarządzania
+              {t.typePanel}
             </button>
             <button
               type="button"
@@ -103,7 +108,7 @@ export function TempChannelListItem({
                 draftType === "standard" ? "bg-[#3b82f6] text-white" : "text-[#8d94a8] hover:text-white",
               )}
             >
-              Standardowy
+              {t.typeStandard}
             </button>
           </div>
 
@@ -116,7 +121,7 @@ export function TempChannelListItem({
               disabled={saving}
               className="border-[#3a3f4e] bg-transparent text-[#8d94a8] hover:bg-dark-900 hover:text-white"
             >
-              Anuluj
+              {m.cancel}
             </Button>
             <Button
               type="button"
@@ -126,7 +131,7 @@ export function TempChannelListItem({
               className="bg-[#3b82f6] text-white hover:bg-[#2563eb]"
             >
               {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-              Zapisz
+              {m.save}
             </Button>
           </div>
         </div>

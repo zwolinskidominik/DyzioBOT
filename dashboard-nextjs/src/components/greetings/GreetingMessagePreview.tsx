@@ -1,6 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { greetingsMessages } from "@/i18n/messages/greetings";
 
 export type GreetingMessageMode = "embed" | "text";
 export type GreetingImageMode = "gifs" | "custom" | "none";
@@ -19,15 +21,13 @@ export interface GreetingVariable {
   description: string;
 }
 
-export const GREETING_VARIABLES: GreetingVariable[] = [
-  { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
-  { name: "Nazwa", display: "Nazwa użytkownika", value: "{username}", description: "Nazwa użytkownika bez wzmianki" },
-  { name: "Serwer", display: "Serwer", value: "{server}", description: "Nazwa serwera" },
-  { name: "Członkowie", display: "Liczba członków", value: "{memberCount}", description: "Liczba członków na serwerze" },
-  { name: "Regulamin", display: "Regulamin", value: "{rulesChannel}", description: "Kanał z regulaminem" },
-  { name: "Role", display: "Role", value: "{rolesChannel}", description: "Kanał z rolami" },
-  { name: "Czat", display: "Czat", value: "{chatChannel}", description: "Kanał czatu" },
-];
+const GREETING_VARIABLE_KEYS = ["user", "username", "server", "memberCount", "rulesChannel", "rolesChannel", "chatChannel"] as const;
+
+/** Zmienne powitań z nazwami i opisami w języku panelu. */
+export function useGreetingVariables(): GreetingVariable[] {
+  const t = useMessages(greetingsMessages).variables;
+  return GREETING_VARIABLE_KEYS.map((key) => ({ ...t[key], value: `{${key}}` }));
+}
 
 const DISCORD_FONT_FAMILY = '"gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif';
 
@@ -117,6 +117,7 @@ export function GreetingMessagePreview({
   imageUrl,
   onClick,
 }: GreetingMessagePreviewProps) {
+  const ed = useMessages(greetingsMessages).editor;
   const renderedTitle = renderGreetingMessagePreview(titleText);
   const renderedMessage = renderGreetingMessagePreview(message);
   const renderedHeader = renderGreetingMessagePreview(headerText);
@@ -158,7 +159,7 @@ export function GreetingMessagePreview({
           <div className={cn("min-w-0 max-w-full", thumbnailUrl ? "w-[303px]" : "w-[399px]")}>
             {hasHeader ? (
               <div className="flex items-center gap-2 text-[12px] leading-4 text-discord-muted">
-                {headerIconUrl ? <img src={headerIconUrl} alt="Ikona headera" className="h-8 w-8 rounded-[3px] object-cover" /> : null}
+                {headerIconUrl ? <img src={headerIconUrl} alt={ed.headerIcon} className="h-8 w-8 rounded-[3px] object-cover" /> : null}
                 <span>{renderGreetingRichText(headerText)}</span>
               </div>
             ) : null}
@@ -173,17 +174,17 @@ export function GreetingMessagePreview({
           </div>
 
           {thumbnailUrl ? (
-            <img src={thumbnailUrl} alt="Miniatura embeda" className="ml-4 mt-2 h-20 w-20 shrink-0 rounded-[3px] object-cover" />
+            <img src={thumbnailUrl} alt={ed.embedThumbnail} className="ml-4 mt-2 h-20 w-20 shrink-0 rounded-[3px] object-cover" />
           ) : null}
         </div>
 
         {imageUrl ? (
-          <img src={imageUrl} alt="Obraz embeda" className="mt-4 h-[213px] w-[399px] max-w-full rounded-[3px] object-cover" />
+          <img src={imageUrl} alt={ed.embedImage} className="mt-4 h-[213px] w-[399px] max-w-full rounded-[3px] object-cover" />
         ) : null}
 
         {hasFooter ? (
           <div className="mt-4 flex items-center gap-2 text-[12px] leading-4 text-discord-muted">
-            {footerIconUrl ? <img src={footerIconUrl} alt="Ikona footera" className="h-8 w-8 rounded-[3px] object-cover" /> : null}
+            {footerIconUrl ? <img src={footerIconUrl} alt={ed.footerIcon} className="h-8 w-8 rounded-[3px] object-cover" /> : null}
             <span>{renderGreetingRichText(footerText)}</span>
           </div>
         ) : null}

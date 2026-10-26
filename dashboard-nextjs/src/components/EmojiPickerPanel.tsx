@@ -6,6 +6,8 @@ import { Search, Lock, Bot as BotIcon } from "lucide-react";
 import { useEmojis } from "@/components/EmojiContext";
 import { cn } from "@/lib/utils";
 import emojiData from "@/data/emoji-data.json";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 // Split out of EmojiPicker.tsx and lazy-loaded (see EmojiPicker.tsx's
 // `dynamic(() => import("./EmojiPickerPanel"))`) so the ~250KB emoji dataset
@@ -120,6 +122,7 @@ interface EmojiPickerPanelProps {
 export default function EmojiPickerPanel({ onPick, hideTabs }: EmojiPickerPanelProps) {
   const { customEmojis, fetchEmojis } = useEmojis();
   const [search, setSearch] = useState("");
+  const ed = useMessages(commonMessages).editor;
   const [preview, setPreview] = useState<PreviewState>(null);
   const [activeSection, setActiveSection] = useState<string>("");
 
@@ -182,19 +185,19 @@ export default function EmojiPickerPanel({ onPick, hideTabs }: EmojiPickerPanelP
   const sections = useMemo<Section[]>(() => {
     const result: Section[] = [...customSections];
     if (showBot && botEmojis.length > 0) {
-      result.push({ id: "bot", type: "bot", label: "Emoji bota", emojis: botEmojis });
+      result.push({ id: "bot", type: "bot", label: ed.botEmoji, emojis: botEmojis });
     }
     for (const category of CATEGORIES) {
       result.push({
         id: `u-${category.key}`,
         type: "unicode",
-        label: category.label,
+        label: ed.emojiCategories[category.key as keyof typeof ed.emojiCategories] ?? category.label,
         icon: category.icon,
         emojis: UNICODE_EMOJIS[category.key] ?? [],
       });
     }
     return result;
-  }, [customSections, showBot, botEmojis]);
+  }, [customSections, showBot, botEmojis, ed]);
 
   const query = search.trim().toLowerCase();
   const isSearching = query.length > 0;
@@ -276,7 +279,7 @@ export default function EmojiPickerPanel({ onPick, hideTabs }: EmojiPickerPanelP
     if (!preview) {
       return (
         <div className="flex h-[44px] items-center px-3 text-xs text-[#949ba4]">
-          Najedź na emoji, aby zobaczyć szczegóły
+          {ed.hoverEmoji}
         </div>
       );
     }
@@ -327,7 +330,7 @@ export default function EmojiPickerPanel({ onPick, hideTabs }: EmojiPickerPanelP
             ref={searchInputRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Szukaj emoji"
+            placeholder={ed.searchEmoji}
             className="h-9 border-none bg-[#1e1f22] pr-9 text-sm text-white placeholder:text-[#6d7079] focus-visible:ring-0"
           />
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6d7079]" />
@@ -382,7 +385,7 @@ export default function EmojiPickerPanel({ onPick, hideTabs }: EmojiPickerPanelP
               {searchResults.unicode.length === 0 &&
               searchResults.custom.length === 0 &&
               searchResults.bot.length === 0 ? (
-                <p className="px-2 py-6 text-center text-sm text-[#949ba4]">Brak wyników</p>
+                <p className="px-2 py-6 text-center text-sm text-[#949ba4]">{ed.noResults}</p>
               ) : (
                 <>
                   <h3 className="px-1 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-[#949ba4]">

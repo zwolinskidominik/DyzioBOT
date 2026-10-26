@@ -12,10 +12,12 @@ import { SlideIn } from "@/components/ui/animated";
 import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { wrappedMessages } from "@/i18n/messages/wrapped";
+import { commonMessages } from "@/i18n/messages/common";
 import { plural } from "@/lib/plural";
 import {
   WRAPPED_THEMES,
-  WRAPPED_THEME_LABELS,
   THEME_PALETTES,
   DEFAULT_WRAPPED_THEME,
   type WrappedTheme,
@@ -137,20 +139,16 @@ const PREVIEW_BASE_H = 600;
 const PREVIEW_W = Math.round(PREVIEW_BASE_W * PREVIEW_SCALE);
 const PREVIEW_H = Math.round(PREVIEW_BASE_H * PREVIEW_SCALE);
 
-const CONTENT_TILES = [
-  { icon: "👥", label: "Liczba członków" },
-  { icon: "💬", label: "Liczba wiadomości" },
-  { icon: "🎙", label: "Liczba godzin na VC" },
-  { icon: "🎉", label: "Liczba giveawayów" },
-  { icon: "🔤", label: "Liczba rozegranych gier Wordle" },
-  { icon: "⭐", label: "Zdobyte poziomy" },
-];
+const CONTENT_TILE_ICONS = ["👥", "💬", "🎙", "🎉", "🔤", "⭐"];
 
 export default function WrappedPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { data: session, status } = useSession();
   const currentUserId = (session?.user as { id?: string })?.id;
+  const t = useMessages(wrappedMessages);
+  const m = useMessages(commonMessages).module;
+  const { lang } = useLang();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -228,7 +226,7 @@ export default function WrappedPage() {
         }
       } catch (fetchError) {
         console.error("Error loading wrapped config:", fetchError);
-        setError("Nie udało się załadować konfiguracji Server Wrapped. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -240,7 +238,7 @@ export default function WrappedPage() {
   const handleSave = useCallback(async () => {
     if (!config.channelId) {
       setChannelError(true);
-      toast.error("Wybierz kanał docelowy");
+      toast.error(t.pickChannel);
       return;
     }
     setSaving(true);
@@ -260,14 +258,14 @@ export default function WrappedPage() {
       };
       setConfig(next);
       savedConfigRef.current = next;
-      toast.success("Konfiguracja Wrapped została zapisana!");
+      toast.success(t.saved);
     } catch (saveError) {
       console.error("Error saving config:", saveError);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [config, guildId]);
+  }, [config, guildId, t, m]);
 
   const handleCancel = useCallback(() => {
     setConfig(savedConfigRef.current);
@@ -299,11 +297,11 @@ export default function WrappedPage() {
   const nextDate = useMemo(() => nextWrappedDate(), []);
   const daysLeft = useMemo(() => Math.ceil((nextDate.getTime() - Date.now()) / 86_400_000), [nextDate]);
   const serverAge = nextDate.getFullYear() - SERVER_FOUNDED_YEAR;
-  const nextDateLabel = `${DAY_NAME[nextDate.getDay()]}, 11 listopada ${nextDate.getFullYear()} • 12:00`;
-  const serverAgeLabel = `${serverAge}${serverAge === 1 ? " rok" : serverAge < 5 ? " lata" : " lat"}`;
-  const countdownLabel = `${daysLeft}${daysLeft === 1 ? " dzień" : " dni"}`;
+  const nextDateLabel = t.nextDate(lang === "en" ? nextDate.toLocaleDateString("en-US", { weekday: "long" }) : DAY_NAME[nextDate.getDay()], nextDate.getFullYear());
+  const serverAgeLabel = t.age(serverAge);
+  const countdownLabel = t.countdown(daysLeft);
   const channelName = config.channelId ? getChannelName(config.channelId) : undefined;
-  const channelLabel = channelName ? `# ${channelName}` : "brak kanału";
+  const channelLabel = channelName ? `# ${channelName}` : t.noChannel;
 
   const palette = THEME_PALETTES[config.colorTheme];
   const now = new Date();
@@ -342,8 +340,8 @@ export default function WrappedPage() {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
         <p className="text-4xl">🔒</p>
-        <h2 className="text-xl font-semibold">Brak dostępu</h2>
-        <p className="text-sm text-muted-foreground">Ten moduł jest dostępny wyłącznie dla właściciela bota na jego serwerach.</p>
+        <h2 className="text-xl font-semibold">{m.noAccess}</h2>
+        <p className="text-sm text-muted-foreground">{t.noAccessText}</p>
       </div>
     );
   }
@@ -352,7 +350,7 @@ export default function WrappedPage() {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Nie udało się załadować konfiguracji Server Wrapped" message={error} onRetry={handleRetry} />
+          <ErrorState title={t.loadErrorTitle} message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -386,7 +384,7 @@ export default function WrappedPage() {
             <div style={{ minWidth: 0 }}>
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#fff" }}>Server Wrapped</h1>
               <p style={{ margin: "8px 0 0", maxWidth: 640, fontSize: 14, lineHeight: 1.6, color: "#969db0" }}>
-                Roczne podsumowanie serwera wysyłane automatycznie w urodziny serwera.
+                {t.subtitle}
               </p>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -402,14 +400,14 @@ export default function WrappedPage() {
                   padding: "5px 12px",
                 }}
               >
-                🔒 Tylko właściciel bota
+                {t.ownerOnly}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>
-                <span>{config.enabled ? "Aktywne" : "Nieaktywne"}</span>
+                <span>{config.enabled ? m.active : m.inactive}</span>
                 <button
                   type="button"
                   onClick={() => setConfig((c) => ({ ...c, enabled: !c.enabled }))}
-                  aria-label="Włącz lub wyłącz Wrapped"
+                  aria-label={t.toggle}
                   style={{
                     position: "relative",
                     width: 44,
@@ -458,9 +456,7 @@ export default function WrappedPage() {
             >
               <Info size={14} style={{ flex: "none", marginTop: 2 }} />
               <span>
-                Moduł Wrapped jest <span style={{ fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>wyłączony</span>. Możesz zapisać
-                ustawienia, ale podsumowanie nie zostanie wysłane, dopóki nie włączysz przełącznika{" "}
-                <span style={{ fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>Aktywne</span> u góry.
+                {t.disabledPrefix}<span style={{ fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>{t.disabledStrong}</span>{t.disabledMiddle}<span style={{ fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -491,7 +487,7 @@ export default function WrappedPage() {
             <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "#b3a6ff", textTransform: "uppercase" }}>
-                  Najbliższe wrapped
+                  {t.nextWrapped}
                 </div>
                 <div style={{ marginTop: 10, fontSize: 16, fontWeight: 700, color: "#fff" }}>{nextDateLabel}</div>
                 <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, fontSize: 12, color: "#9aa2b8" }}>
@@ -499,13 +495,13 @@ export default function WrappedPage() {
                     {channelLabel}
                   </span>
                   <span>
-                    serwer skończy <span style={{ fontWeight: 700, color: "#fff" }}>{serverAgeLabel}</span>
+                    {t.serverWillBe}<span style={{ fontWeight: 700, color: "#fff" }}>{serverAgeLabel}</span>
                   </span>
                 </div>
               </div>
               <div style={{ textAlign: "right", flex: "none" }}>
                 <div style={{ fontSize: 26, fontWeight: 800, color: "#ec4899", lineHeight: 1 }}>{countdownLabel}</div>
-                <div style={{ marginTop: 2, fontSize: 11, color: "#8d94a8" }}>do wysyłki</div>
+                <div style={{ marginTop: 2, fontSize: 11, color: "#8d94a8" }}>{t.toSend}</div>
               </div>
             </div>
           </div>
@@ -529,7 +525,7 @@ export default function WrappedPage() {
                 }}
               >
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b" }} />
-                Podgląd grafiki (przykładowe dane)
+                {t.previewTitle}
               </div>
 
               <div
@@ -630,7 +626,7 @@ export default function WrappedPage() {
 
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "#6b7280", textTransform: "uppercase", marginBottom: 8 }}>
-                  Wersja kolorystyczna
+                  {t.colorVersion}
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {WRAPPED_THEMES.map((theme) => {
@@ -658,7 +654,7 @@ export default function WrappedPage() {
                         }}
                       >
                         <span style={{ width: 14, height: 14, borderRadius: "50%", background: tp.accent, flex: "none" }} />
-                        {WRAPPED_THEME_LABELS[theme]}
+                        {t.themes[theme]}
                       </button>
                     );
                   })}
@@ -667,7 +663,7 @@ export default function WrappedPage() {
 
               <div style={{ marginTop: 12 }}>
                 <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 10, color: "#6b7280", textAlign: "center" }}>
-                  Przykładowe dane — prawdziwe statystyki i ranking zobaczysz dopiero po realnej wysyłce, żeby zachować element zaskoczenia.
+                  {t.sampleNote}
                 </span>
               </div>
             </div>
@@ -696,7 +692,7 @@ export default function WrappedPage() {
                 >
                   <span style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, fontWeight: 700, color: "#d8dbe6" }}>
                     <Settings size={15} color="#aab2c8" />
-                    Konfiguracja — kanał wysyłki
+                    {t.configTitle}
                   </span>
                   <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 12, color: "#8d94a8" }}>{channelLabel}</span>
@@ -707,7 +703,7 @@ export default function WrappedPage() {
                 {configOpen && (
                   <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 6 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#c4cad8" }}>
-                      Kanał do wysyłania Wrapped <span style={{ color: "#ef4444" }}>*</span>
+                      {t.channel} <span style={{ color: "#ef4444" }}>*</span>
                     </label>
                     <select
                       value={config.channelId ?? ""}
@@ -727,16 +723,16 @@ export default function WrappedPage() {
                         cursor: "pointer",
                       }}
                     >
-                      <option value="">Wybierz kanał...</option>
+                      <option value="">{t.pickChannelPlaceholder}</option>
                       {channels.map((c) => (
                         <option key={c.id} value={c.id}>
                           # {c.name}
                         </option>
                       ))}
                     </select>
-                    {channelError && <p style={{ margin: 0, fontSize: 12, color: "#ef4444" }}>Wybierz kanał docelowy</p>}
+                    {channelError && <p style={{ margin: 0, fontSize: 12, color: "#ef4444" }}>{t.pickChannel}</p>}
                     <p style={{ margin: "2px 0 0", fontSize: 12, color: "#8d94a8" }}>
-                      Podsumowanie wysyłane raz w roku, 11 listopada o 12:00 — w urodziny serwera.
+                      {t.scheduleHint}
                     </p>
                   </div>
                 )}
@@ -744,13 +740,13 @@ export default function WrappedPage() {
 
               <div style={{ borderRadius: 10, background: "#1F2129", padding: 20, boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
                 <p style={{ margin: "0 0 12px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#6b7280", textTransform: "uppercase" }}>
-                  Co znajdzie się w podsumowaniu
+                  {t.contents}
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {CONTENT_TILES.map((tile) => (
-                    <div key={tile.label} style={{ borderRadius: 8, background: "#17181E", padding: "14px 10px", textAlign: "center" }}>
-                      <div style={{ fontSize: 20 }}>{tile.icon}</div>
-                      <div style={{ marginTop: 6, fontSize: 11, fontWeight: 600, color: "#d8dbe6" }}>{tile.label}</div>
+                  {CONTENT_TILE_ICONS.map((icon, i) => (
+                    <div key={icon} style={{ borderRadius: 8, background: "#17181E", padding: "14px 10px", textAlign: "center" }}>
+                      <div style={{ fontSize: 20 }}>{icon}</div>
+                      <div style={{ marginTop: 6, fontSize: 11, fontWeight: 600, color: "#d8dbe6" }}>{t.tiles[i]}</div>
                     </div>
                   ))}
                 </div>

@@ -35,7 +35,9 @@ import { ErrorState } from '@/components/ui/error-state';
 import { fetchGuildData } from '@/lib/cache';
 import { SlideIn } from '@/components/ui/animated';
 import { useDirtyState } from '@/components/DirtyStateProvider';
-import { plural } from '@/lib/plural';
+import { useMessages } from "@/i18n/LanguageProvider";
+import { streamConfigMessages } from "@/i18n/messages/streamConfig";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Channel {
   id: string;
@@ -75,12 +77,7 @@ interface GuildMember {
 
 const DEFAULT_MESSAGE_TEMPLATE = '@everyone {streamer} właśnie zaczął streama! {link}';
 
-const STREAM_VARIABLES = [
-  { name: 'Streamer', display: 'Streamer', value: '{streamer}', description: 'Nazwa kanału Twitch' },
-  { name: 'Gra', display: 'Gra', value: '{gra}', description: 'Aktualnie grana gra' },
-  { name: 'Tytuł', display: 'Tytuł', value: '{tytuł}', description: 'Tytuł streamu' },
-  { name: 'Link', display: 'Link', value: '{link}', description: 'Link do streamu' },
-];
+const STREAM_VARIABLE_TOKENS = { streamer: "{streamer}", game: "{gra}", title: "{tytuł}", link: "{link}" } as const;
 
 const AVATAR_COLORS = ['#8b5cf6', '#14b8a6', '#f97316', '#ec4899', '#3b82f6', '#eab308'];
 
@@ -137,6 +134,14 @@ export default function StreamConfigPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(streamConfigMessages);
+  const m = useMessages(commonMessages).module;
+  const STREAM_VARIABLES = (["streamer", "game", "title", "link"] as const).map((key) => ({
+    name: t.variables[key].name,
+    display: t.variables[key].name,
+    value: STREAM_VARIABLE_TOKENS[key],
+    description: t.variables[key].description,
+  }));
 
   const [config, setConfig] = useState<StreamConfig | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -200,7 +205,7 @@ export default function StreamConfigPage() {
         setMembers(membersData);
       } catch (error) {
         console.error('Error fetching data:', error);
-        setError("Nie udało się załadować danych stream-config. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -229,7 +234,7 @@ export default function StreamConfigPage() {
   const handleSave = useCallback(async () => {
     if (!selectedChannelId) {
       setChannelError(true);
-      toast.error('Wybierz kanał powiadomień');
+      toast.error(t.pickChannel);
       return;
     }
 
@@ -254,14 +259,14 @@ export default function StreamConfigPage() {
       const updatedConfig = await response.json();
       setConfig((prev) => ({ ...prev, ...updatedConfig, notificationsThisMonth: prev?.notificationsThisMonth ?? 0 }));
       savedRef.current = { enabled, channelId: selectedChannelId, messageTemplate };
-      toast.success('Konfiguracja zapisana!');
+      toast.success(t.saved);
     } catch (error) {
       console.error('Error saving configuration:', error);
-      toast.error('Błąd podczas zapisywania konfiguracji');
+      toast.error(t.saveError);
     } finally {
       setSaving(false);
     }
-  }, [enabled, selectedChannelId, messageTemplate, guildId]);
+  }, [enabled, selectedChannelId, messageTemplate, guildId, t]);
 
   const handleCancel = useCallback(() => {
     const s = savedRef.current;
@@ -274,7 +279,7 @@ export default function StreamConfigPage() {
     id: `stream-config-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: 'Powiadomienia Twitch',
+    label: t.title,
     onSave: handleSave,
     onCancel: handleCancel,
   }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]);
@@ -282,17 +287,17 @@ export default function StreamConfigPage() {
   const handleAddStreamer = async () => {
     const name = newTwitchChannel.trim();
     if (!name) {
-      setAddError('Podaj nazwę kanału Twitch');
+      setAddError(t.enterChannel);
       return;
     }
     if (!newUserId) {
-      setAddError('Wybierz użytkownika Discord');
+      setAddError(t.pickUser);
       return;
     }
 
     const normalized = name.toLowerCase();
     if (streamers.some((s) => s.twitchChannel.toLowerCase() === normalized)) {
-      setAddError('Ten kanał jest już śledzony');
+      setAddError(t.alreadyTracked);
       return;
     }
 
@@ -320,13 +325,13 @@ export default function StreamConfigPage() {
       toast.success(`Dodano streamera ${name}`);
     } catch (error) {
       console.error('Error adding streamer:', error);
-      setAddError(error instanceof Error ? error.message : 'Błąd podczas dodawania streamera');
+      setAddError(error instanceof Error ? error.message : t.addError);
     }
   };
 
   const handleEditStreamer = async (streamerId: string) => {
     if (!editTwitchChannel.trim() || !editUserId) {
-      toast.error('Podaj kanał Twitch i wybierz użytkownika Discord');
+      toast.error(t.channelAndUser);
       return;
     }
 
@@ -351,15 +356,15 @@ export default function StreamConfigPage() {
       setEditingId(null);
       setEditTwitchChannel('');
       setEditUserId('');
-      toast.success('Streamer został zaktualizowany!');
+      toast.success(t.updated);
     } catch (error) {
       console.error('Error updating streamer:', error);
-      toast.error(error instanceof Error ? error.message : 'Błąd podczas aktualizacji streamera');
+      toast.error(error instanceof Error ? error.message : t.updateError);
     }
   };
 
   const handleDeleteStreamer = async (streamerId: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć tego streamera?')) return;
+    if (!confirm(t.confirmDelete)) return;
 
     try {
       setDeleting(streamerId);
@@ -374,10 +379,10 @@ export default function StreamConfigPage() {
       const removed = streamers.find((s) => s._id === streamerId);
       setStreamers(streamers.filter((s) => s._id !== streamerId));
       if (previewStreamerId === streamerId) setPreviewStreamerId(null);
-      toast.success(`Usunięto ${removed?.twitchChannel ?? 'streamera'}`);
+      toast.success(t.deleted(removed?.twitchChannel ?? t.streamerWord));
     } catch (error) {
       console.error('Error deleting streamer:', error);
-      toast.error('Błąd podczas usuwania streamera');
+      toast.error(t.deleteError);
     } finally {
       setDeleting(null);
     }
@@ -404,7 +409,7 @@ export default function StreamConfigPage() {
       <div className="min-h-full">
         <div className="w-full">
           <ErrorState
-            title="Nie udało się załadować konfiguracji streamów"
+            title={t.loadErrorTitle}
             message={error}
             onRetry={handleRetry}
           />
@@ -451,14 +456,14 @@ export default function StreamConfigPage() {
             <div>
               <h1 className="text-2xl font-bold text-white/90 flex items-center gap-2">
                 <Tv className="w-6 h-6 text-bot-primary" />
-                Powiadomienia Twitch
+                {t.title}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Bot pilnuje śledzonych streamerów i ogłasza start transmisji na wybranym kanale.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
+              <span>{enabled ? m.active : m.inactive}</span>
               <Switch
                 checked={enabled}
                 onCheckedChange={setEnabled}
@@ -476,9 +481,7 @@ export default function StreamConfigPage() {
             >
               <EyeOff className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                Powiadomienia o streamach są <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>wyłączone</span>.
-                Możesz edytować listę i zapisać ustawienia, ale bot nie wyśle ogłoszeń, dopóki nie włączysz przełącznika{' '}
-                <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>Aktywne</span> u góry.
+                {t.disabledPrefix}<span className="font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -524,22 +527,22 @@ export default function StreamConfigPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-bold tracking-wider uppercase flex items-center gap-1" style={{ color: '#c9aaff' }}>
-                    <Radio className="w-3 h-3" /> Teraz na żywo
+                    <Radio className="w-3 h-3" /> {t.liveNow}
                   </p>
                   <p className="mt-1.5 text-lg font-bold text-white truncate">twitch.tv/{liveStreamer.twitchChannel}</p>
                   <p className="mt-1.5 text-[13px] text-[#b9c0d0] truncate">
-                    {liveStreamer.game || 'Nieznana gra'}
+                    {liveStreamer.game || t.unknownGame}
                     {liveStreamer.title ? ` · „${liveStreamer.title}"` : ''}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-[22px] font-extrabold leading-none" style={{ color: '#a970ff' }}>
-                    {liveStreamer.liveSince ? formatElapsed(liveStreamer.liveSince) : '—'}
+                    {liveStreamer.liveSince ? formatElapsed(liveStreamer.liveSince) : '-'}
                   </p>
                   <p className="mt-1 text-[11px] text-[#8d94a8]">
                     {typeof liveStreamer.viewerCount === 'number'
-                      ? `${liveStreamer.viewerCount.toLocaleString('pl-PL')} ${plural(liveStreamer.viewerCount, ['widz', 'widzów', 'widzów'])}`
-                      : '—'}
+                      ? t.viewers(liveStreamer.viewerCount)
+                      : '-'}
                   </p>
                 </div>
               </div>
@@ -548,9 +551,9 @@ export default function StreamConfigPage() {
             <div className="rounded-lg p-5 flex items-center gap-3.5" style={{ background: '#1F2129', border: '1px solid #2f3341' }}>
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#4b5563' }} />
               <div>
-                <p className="text-sm font-semibold text-[#d8dbe6]">Nikt teraz nie streamuje</p>
+                <p className="text-sm font-semibold text-[#d8dbe6]">{t.nobodyLive}</p>
                 <p className="mt-0.5 text-xs text-[#8d94a8]">
-                  Sprawdzamy status {streamers.length} {plural(streamers.length, ['kanału', 'kanałów', 'kanałów'])} co ok. 1 minutę.
+                  {t.checking(streamers.length)}
                 </p>
               </div>
             </div>
@@ -563,19 +566,19 @@ export default function StreamConfigPage() {
             <div className="rounded-lg p-4" style={{ background: '#1F2129' }}>
               <p className="text-2xl font-bold text-white">{streamers.length}</p>
               <p className="mt-0.5 text-[11px] text-[#8d94a8]">
-                {plural(streamers.length, ['śledzony streamer', 'śledzonych streamerów', 'śledzonych streamerów'])}
+                {t.trackedStreamers(streamers.length)}
               </p>
             </div>
             <div className="rounded-lg p-4" style={{ background: '#1F2129' }}>
               <p className="text-2xl font-bold" style={{ color: streamers.some((s) => s.isLive) ? '#ef4444' : '#8d94a8' }}>
                 {streamers.filter((s) => s.isLive).length}
               </p>
-              <p className="mt-0.5 text-[11px] text-[#8d94a8]">na żywo teraz</p>
+              <p className="mt-0.5 text-[11px] text-[#8d94a8]">{t.liveNowCount}</p>
             </div>
             <div className="rounded-lg p-4" style={{ background: '#1F2129' }}>
               <p className="text-2xl font-bold" style={{ color: '#a970ff' }}>{config?.notificationsThisMonth ?? 0}</p>
               <p className="mt-0.5 text-[11px] text-[#8d94a8]">
-                {plural(config?.notificationsThisMonth ?? 0, ['powiadomienie', 'powiadomienia', 'powiadomień'])} w tym miesiącu
+                {t.notificationsThisMonth(config?.notificationsThisMonth ?? 0)}
               </p>
             </div>
           </div>
@@ -586,11 +589,11 @@ export default function StreamConfigPage() {
           <div className="flex flex-col gap-4 min-w-0">
             <SlideIn direction="up" delay={100}>
               <div className="rounded-lg p-5" style={{ background: '#1F2129', boxShadow: '0 8px 18px rgba(8,10,16,0.16)' }}>
-                <p className="text-[13px] font-bold text-[#d8dbe6] mb-3">Konfiguracja</p>
+                <p className="text-[13px] font-bold text-[#d8dbe6] mb-3">{t.config}</p>
 
                 <div className="space-y-2">
                   <Label htmlFor="channel-select">
-                    Kanał powiadomień <span className="text-destructive">*</span>
+                    {t.channel} <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={selectedChannelId}
@@ -604,7 +607,7 @@ export default function StreamConfigPage() {
                       className="w-full"
                       style={channelError ? { borderColor: 'rgba(239,68,68,0.6)' } : undefined}
                     >
-                      <SelectValue placeholder="Wybierz kanał..." />
+                      <SelectValue placeholder={t.pickChannelPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
                       {channels.map((channel) => (
@@ -617,11 +620,11 @@ export default function StreamConfigPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {channelError && <p className="text-xs text-destructive">Wybierz kanał powiadomień</p>}
+                  {channelError && <p className="text-xs text-destructive">{t.pickChannel}</p>}
                 </div>
 
                 <div className="space-y-2 mt-4">
-                  <Label>Treść powiadomienia</Label>
+                  <Label>{t.content}</Label>
                   <VariableInserter
                     value={messageTemplate}
                     onChange={setMessageTemplate}
@@ -635,7 +638,7 @@ export default function StreamConfigPage() {
                     placeholder={DEFAULT_MESSAGE_TEMPLATE}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Bot sprawdza status streamerów co ok. 1 minutę.
+                    {t.checkHint}
                   </p>
                 </div>
               </div>
@@ -646,7 +649,7 @@ export default function StreamConfigPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between gap-4">
                     <CardTitle className="text-xl flex items-center gap-2">
-                      <span className="text-white/90">Streamerzy</span>
+                      <span className="text-white/90">{t.streamers}</span>
                       <span className="text-sm font-normal text-muted-foreground">{streamers.length}</span>
                     </CardTitle>
                     <Button
@@ -659,7 +662,7 @@ export default function StreamConfigPage() {
                       className="btn-gradient hover:scale-105"
                     >
                       <Plus className="mr-1 w-4 h-4" />
-                      Dodaj streamera
+                      {t.addStreamer}
                     </Button>
                   </div>
                 </CardHeader>
@@ -668,10 +671,10 @@ export default function StreamConfigPage() {
                     <div className="space-y-3 p-4 rounded-lg" style={{ background: '#17181E', border: '1px solid rgba(99,102,241,0.4)' }}>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">
-                          <Label htmlFor="twitchChannel" className="text-xs">Kanał Twitch</Label>
+                          <Label htmlFor="twitchChannel" className="text-xs">{t.twitchChannel}</Label>
                           <Input
                             id="twitchChannel"
-                            placeholder="np. OstryWojti"
+                            placeholder={t.twitchPlaceholder}
                             value={newTwitchChannel}
                             onChange={(e) => {
                               setNewTwitchChannel(e.target.value);
@@ -681,7 +684,7 @@ export default function StreamConfigPage() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="discordUser" className="text-xs">Użytkownik Discord</Label>
+                          <Label htmlFor="discordUser" className="text-xs">{t.discordUser}</Label>
                           <Select
                             value={newUserId}
                             onValueChange={(v) => {
@@ -690,7 +693,7 @@ export default function StreamConfigPage() {
                             }}
                           >
                             <SelectTrigger id="discordUser" style={{ background: '#1d202b', borderColor: '#2f3341' }}>
-                              <SelectValue placeholder="Wybierz..." />
+                              <SelectValue placeholder={t.pickShort} />
                             </SelectTrigger>
                             <SelectContent>
                               {members.map((member) => (
@@ -710,7 +713,7 @@ export default function StreamConfigPage() {
                           onClick={handleAddStreamer}
                           className="btn-gradient hover:scale-105"
                         >
-                          Dodaj
+                          {m.add}
                         </Button>
                         <Button
                           type="button"
@@ -721,7 +724,7 @@ export default function StreamConfigPage() {
                             setAddError('');
                           }}
                         >
-                          Anuluj
+                          {m.cancel}
                         </Button>
                       </div>
                     </div>
@@ -729,7 +732,7 @@ export default function StreamConfigPage() {
 
                   {streamers.length === 0 ? (
                     <div className="text-center py-10 px-4 text-sm text-muted-foreground">
-                      Brak streamerów — dodaj kanał Twitch, aby bot ogłaszał jego transmisje.
+                      {t.empty}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -742,7 +745,7 @@ export default function StreamConfigPage() {
                             {editingId === streamer._id ? (
                               <div className="space-y-3">
                                 <div className="space-y-2">
-                                  <Label htmlFor={`edit-channel-${streamer._id}`}>Kanał Twitch</Label>
+                                  <Label htmlFor={`edit-channel-${streamer._id}`}>{t.twitchChannel}</Label>
                                   <Input
                                     id={`edit-channel-${streamer._id}`}
                                     value={editTwitchChannel}
@@ -750,10 +753,10 @@ export default function StreamConfigPage() {
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <Label htmlFor={`edit-user-${streamer._id}`}>Użytkownik Discord</Label>
+                                  <Label htmlFor={`edit-user-${streamer._id}`}>{t.discordUser}</Label>
                                   <Select value={editUserId} onValueChange={setEditUserId}>
                                     <SelectTrigger id={`edit-user-${streamer._id}`}>
-                                      <SelectValue placeholder="Wybierz użytkownika..." />
+                                      <SelectValue placeholder={t.pickUserPlaceholder} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {members.map((member) => (
@@ -773,7 +776,7 @@ export default function StreamConfigPage() {
                                     className="btn-gradient hover:scale-105"
                                   >
                                     <Save className="mr-1 h-3 w-3" />
-                                    Zapisz
+                                    {m.save}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -785,7 +788,7 @@ export default function StreamConfigPage() {
                                     }}
                                   >
                                     <X className="mr-1 h-3 w-3" />
-                                    Anuluj
+                                    {m.cancel}
                                   </Button>
                                 </div>
                               </div>
@@ -822,8 +825,8 @@ export default function StreamConfigPage() {
                                     @{getMemberDisplay(streamer.userId)} ·{' '}
                                     {streamer.isLive
                                       ? typeof streamer.viewerCount === 'number'
-                                        ? `${streamer.viewerCount.toLocaleString('pl-PL')} ${plural(streamer.viewerCount, ['widz', 'widzów', 'widzów'])}`
-                                        : '—'
+                                        ? t.viewers(streamer.viewerCount)
+                                        : '-'
                                       : 'offline'}
                                   </p>
                                 </div>
@@ -833,7 +836,7 @@ export default function StreamConfigPage() {
                                     variant="ghost"
                                     className={previewStreamerId === streamer._id ? 'text-bot-primary' : 'text-muted-foreground'}
                                     onClick={() => setPreviewStreamerId(streamer._id)}
-                                    title="Pokaż w podglądzie"
+                                    title={t.showInPreview}
                                   >
                                     <Eye className="h-3.5 w-3.5" />
                                   </Button>
@@ -846,7 +849,7 @@ export default function StreamConfigPage() {
                                       setEditTwitchChannel(streamer.twitchChannel);
                                       setEditUserId(streamer.userId);
                                     }}
-                                    title="Edytuj"
+                                    title={m.edit}
                                   >
                                     <Edit2 className="h-3.5 w-3.5" />
                                   </Button>
@@ -856,7 +859,7 @@ export default function StreamConfigPage() {
                                     className="text-destructive"
                                     disabled={deleting === streamer._id}
                                     onClick={() => handleDeleteStreamer(streamer._id)}
-                                    title="Usuń"
+                                    title={m.delete}
                                   >
                                     {deleting === streamer._id ? (
                                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -883,7 +886,7 @@ export default function StreamConfigPage() {
               <div className="space-y-2 rounded-md bg-dark-800 p-5">
                 <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  Podgląd na żywo
+                  {m.livePreview}
                 </p>
 
                 {previewStreamer ? (
@@ -966,12 +969,12 @@ export default function StreamConfigPage() {
                     </div>
 
                     <p className="text-xs leading-5 text-[#8d94a8]">
-                      Podgląd używa danych kanału <span className="text-[#b9c0d0]">{previewStreamer.twitchChannel}</span> — kliknij ikonę oka przy streamerze, aby podejrzeć jego wiadomość.
+                      {t.previewUses(previewStreamer.twitchChannel)}
                     </p>
                   </>
                 ) : (
                   <p className="text-xs text-muted-foreground text-center py-8">
-                    Dodaj streamera, aby zobaczyć podgląd powiadomienia.
+                    {t.addToPreview}
                   </p>
                 )}
               </div>

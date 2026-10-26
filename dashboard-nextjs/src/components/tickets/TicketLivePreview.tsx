@@ -3,6 +3,9 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { EmojiDisplay } from "@/components/EmojiDisplay";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
+import { ticketsMessages } from "@/i18n/messages/tickets";
 
 export type TicketBannerMode = "preset" | "text" | "none";
 
@@ -70,12 +73,17 @@ export function TicketBannerThumbnail({ banner, className }: { banner: TicketTyp
   }
 
   const presetFile = banner.presetId || DEFAULT_PRESET;
+  return <PresetBanner presetFile={presetFile} className={className} />;
+}
+
+function PresetBanner({ presetFile, className }: { presetFile: string; className?: string | undefined }) {
+  const alt = useMessages(ticketsMessages).bannerAlt;
   return (
     <div className={className}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/api/tickets/assets/preset/${presetFile}`}
-        alt="Baner ticketa"
+        alt={alt}
         className="h-full w-full object-cover"
       />
     </div>
@@ -109,11 +117,13 @@ export function DropdownOptionPreview({ type }: { type: TicketTypeDraft }) {
 /** Live, illustrative preview of the Discord welcome message a ticket type will produce when a ticket is created. */
 export function TicketLivePreview({ type }: { type: TicketTypeDraft }) {
   const [timestamp, setTimestamp] = useState<string | null>(null);
+  const { lang } = useLang();
+  const m = useMessages(commonMessages).module;
 
   useEffect(() => {
     const now = new Date();
-    setTimestamp(`dziś o ${now.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`);
-  }, []);
+    setTimestamp(m.todayAt(now.toLocaleTimeString(lang === "en" ? "en-US" : "pl-PL", { hour: "2-digit", minute: "2-digit" })));
+  }, [lang, m]);
 
   const description = (type.description || "Witaj {user}!").replace(/\{user\}/g, "@Użytkownik");
 

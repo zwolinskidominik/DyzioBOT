@@ -32,6 +32,9 @@ import VariableInserter from "@/components/VariableInserter";
 import { CustomSlider } from "@/components/ui/custom-slider";
 import { useDirtyState } from "@/components/DirtyStateProvider";
 import { DiscordMessagePreview } from "@/components/DiscordMessagePreview";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { levelsMessages } from "@/i18n/messages/levels";
+import { commonMessages } from "@/i18n/messages/common";
 
 const PREVIEW_SAMPLE = { level: "67", roleName: "Aktywny" };
 
@@ -164,6 +167,7 @@ function SettingRow({
   children?: React.ReactNode;
 }) {
   const isExpandable = Boolean(children && onToggle);
+  const m = useMessages(commonMessages).module;
 
   return (
     <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
@@ -193,7 +197,7 @@ function SettingRow({
           <button
             type="button"
             onClick={onToggle}
-            aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"}
+            aria-label={isOpen ? m.collapse : m.expand}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white"
           >
             <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
@@ -379,6 +383,8 @@ export default function LevelsPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(levelsMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -451,7 +457,7 @@ export default function LevelsPage() {
         setLoading(false);
       } catch (error) {
         console.error("Error loading levels data:", error);
-        setError("Nie udało się załadować danych systemu poziomów. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -485,14 +491,14 @@ export default function LevelsPage() {
       }
 
       savedRef.current = config;
-      toast.success("Konfiguracja została zapisana!");
+      toast.success(m.saved);
     } catch (error) {
       console.error("Error saving config:", error);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [config, guildId]);
+  }, [config, guildId, m]);
 
   const handleCancel = useCallback(() => {
     setConfig(savedRef.current);
@@ -502,25 +508,25 @@ export default function LevelsPage() {
     id: `levels-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: "Poziomy",
+    label: t.title,
     onSave: handleSave,
     onCancel: handleCancel,
-  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]);
+  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController, t]);
 
   const addRoleReward = () => {
     const level = parseInt(newRewardLevel);
     if (!level || level < 1 || !newRewardRoleId) {
-      toast.error("Podaj poprawny poziom (min. 1) i wybierz rolę");
+      toast.error(t.invalidReward);
       return;
     }
 
     if (config.roleRewards.length >= MAX_ROLE_REWARDS) {
-      toast.error(`Limit ${MAX_ROLE_REWARDS} nagród został osiągnięty`);
+      toast.error(t.rewardLimit(MAX_ROLE_REWARDS));
       return;
     }
 
     if (config.roleRewards.some(r => r.level === level)) {
-      toast.error("Nagroda za ten poziom już istnieje");
+      toast.error(t.rewardExists);
       return;
     }
 
@@ -548,13 +554,13 @@ export default function LevelsPage() {
 
   const handleAddMultiplier = () => {
     if (!newMultiplierChannelId) {
-      toast.error("Wybierz kanał");
+      toast.error(t.pickChannel);
       return;
     }
 
     const multiplierValue = parseFloat(newMultiplierValue);
     if (isNaN(multiplierValue) || multiplierValue < 0.1 || multiplierValue > 10) {
-      toast.error("Mnożnik musi być liczbą między 0.1 a 10");
+      toast.error(t.multiplierRange);
       return;
     }
 
@@ -582,13 +588,13 @@ export default function LevelsPage() {
 
   const handleAddRoleMultiplier = () => {
     if (!newRoleMultiplierRoleId) {
-      toast.error("Wybierz rolę");
+      toast.error(t.pickRole);
       return;
     }
 
     const multiplierValue = parseFloat(newRoleMultiplierValue);
     if (isNaN(multiplierValue) || multiplierValue < 0.1 || multiplierValue > 10) {
-      toast.error("Mnożnik musi być liczbą między 0.1 a 10");
+      toast.error(t.multiplierRange);
       return;
     }
 
@@ -616,11 +622,11 @@ export default function LevelsPage() {
 
   const handleAddIgnoredChannel = () => {
     if (!selectedIgnoredChannel) {
-      toast.error("Wybierz kanał");
+      toast.error(t.pickChannel);
       return;
     }
     if (config.ignoredChannels.includes(selectedIgnoredChannel)) {
-      toast.error("Ten kanał jest już ignorowany");
+      toast.error(t.channelIgnored);
       return;
     }
     setConfig({ ...config, ignoredChannels: [...config.ignoredChannels, selectedIgnoredChannel] });
@@ -634,11 +640,11 @@ export default function LevelsPage() {
 
   const handleAddIgnoredRole = () => {
     if (!selectedIgnoredRole) {
-      toast.error("Wybierz rolę");
+      toast.error(t.pickRole);
       return;
     }
     if (config.ignoredRoles.includes(selectedIgnoredRole)) {
-      toast.error("Ta rola jest już ignorowana");
+      toast.error(t.roleIgnored);
       return;
     }
     setConfig({ ...config, ignoredRoles: [...config.ignoredRoles, selectedIgnoredRole] });
@@ -650,15 +656,15 @@ export default function LevelsPage() {
     setConfig({ ...config, ignoredRoles: config.ignoredRoles.filter(id => id !== roleId) });
   };
 
-  const getChannelName = (channelId: string) => channels.find(c => c.id === channelId)?.name || 'Nieznany kanał';
-  const getRoleName = (roleId: string) => roles.find(r => r.id === roleId)?.name || 'Nieznana rola';
+  const getChannelName = (channelId: string) => channels.find(c => c.id === channelId)?.name || t.unknownChannel;
+  const getRoleName = (roleId: string) => roles.find(r => r.id === roleId)?.name || t.unknownRole;
   const getRoleColor = (color: number) => (color === 0 ? '#99AAB5' : `#${color.toString(16).padStart(6, '0')}`);
 
   if (error) {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Błąd ładowania danych" message={error} onRetry={handleRetry} />
+          <ErrorState title={m.loadErrorGeneric} message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -689,14 +695,14 @@ export default function LevelsPage() {
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Poziomy</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Ustaw nagrody za XP i poziomy dla aktywnych członków.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{config.enabled ? "Aktywne" : "Nieaktywne"}</span>
-              <DeezySwitch checked={config.enabled} onCheckedChange={(checked) => setConfig({ ...config, enabled: checked })} aria-label="Włącz lub wyłącz system poziomów" />
+              <span>{config.enabled ? m.active : m.inactive}</span>
+              <DeezySwitch checked={config.enabled} onCheckedChange={(checked) => setConfig({ ...config, enabled: checked })} aria-label={t.toggle} />
             </div>
           </header>
         </SlideIn>
@@ -706,7 +712,7 @@ export default function LevelsPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł Poziomów jest <span className="font-semibold text-white/80">wyłączony na tym serwerze</span>. Możesz edytować konfigurację i nagrody, ale bot nie będzie naliczał XP, a komendy <span className="font-semibold text-white/80">/level</span>, <span className="font-semibold text-white/80">/toplvl</span> i <span className="font-semibold text-white/80">/xp</span> nie zadziałają, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">/level</span>, <span className="font-semibold text-white/80">/toplvl</span>{t.and}<span className="font-semibold text-white/80">/xp</span>{t.disabledMiddle2}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -715,8 +721,8 @@ export default function LevelsPage() {
         {/* ── Zasady zdobywania XP ─────────────────────────────── */}
         <SlideIn direction="up" delay={150}>
           <SettingRow
-            title="Zasady zdobywania XP"
-            description="Ustaw ile XP dają wiadomości i VC"
+            title={t.xpRules.title}
+            description={t.xpRules.description}
             icon={<Sparkles className="h-4 w-4" />}
             isOpen={openSections.xpRules}
             onToggle={() => toggleSection("xpRules")}
@@ -724,7 +730,7 @@ export default function LevelsPage() {
             <div className="space-y-6">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className={labelClass}>XP za wiadomość</label>
+                  <label className={labelClass}>{t.xpPerMsg}</label>
                   <span className="text-sm font-medium text-[#3b82f6]">{config.xpPerMsg}</span>
                 </div>
                 <CustomSlider
@@ -734,14 +740,14 @@ export default function LevelsPage() {
                   max={50}
                   step={5}
                   ticks={[0, 10, 20, 30, 40, 50]}
-                  ariaLabel="XP za wiadomość"
+                  ariaLabel={t.xpPerMsg}
                 />
-                <p className={helperClass}>Ile XP dostaje użytkownik za każdą wiadomość</p>
+                <p className={helperClass}>{t.xpPerMsgHint}</p>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className={labelClass}>XP za minutę na VC</label>
+                  <label className={labelClass}>{t.xpPerVc}</label>
                   <span className="text-sm font-medium text-[#3b82f6]">{config.xpPerMinVc}</span>
                 </div>
                 <CustomSlider
@@ -751,13 +757,13 @@ export default function LevelsPage() {
                   max={50}
                   step={5}
                   ticks={[0, 10, 20, 30, 40, 50]}
-                  ariaLabel="XP za minutę na kanale głosowym"
+                  ariaLabel={t.xpPerVcAria}
                 />
-                <p className={helperClass}>Ile XP za minutę spędzoną na kanale głosowym</p>
+                <p className={helperClass}>{t.xpPerVcHint}</p>
               </div>
 
               <div className="space-y-1.5">
-                <label className={labelClass}>Cooldown (sekundy)</label>
+                <label className={labelClass}>{t.cooldown}</label>
                 <Input
                   type="number"
                   min="0"
@@ -765,7 +771,7 @@ export default function LevelsPage() {
                   onChange={(e) => setConfig({ ...config, cooldownSec: parseInt(e.target.value) || 0 })}
                   className={cn(inputClass, "w-32")}
                 />
-                <p className={helperClass}>Minimalna przerwa między zdobywaniem XP z wiadomości</p>
+                <p className={helperClass}>{t.cooldownHint}</p>
               </div>
             </div>
           </SettingRow>
@@ -774,24 +780,24 @@ export default function LevelsPage() {
         {/* ── Wiadomości o awansie ─────────────────────────────── */}
         <SlideIn direction="up" delay={200}>
           <SettingRow
-            title="Wiadomości o awansie"
-            description="Powiadomienie i nagroda gdy ktoś zdobędzie poziom"
+            title={t.levelUp.title}
+            description={t.levelUp.description}
             icon={<TrendingUp className="h-4 w-4" />}
             isOpen={openSections.levelUpMessages}
             onToggle={() => toggleSection("levelUpMessages")}
           >
             <div className="space-y-5">
               <div className="space-y-1.5">
-                <label className={labelClass}>Kanał powiadomień</label>
+                <label className={labelClass}>{t.notifyChannel}</label>
                 <Select
                   value={config.notifyChannelId || "none"}
                   onValueChange={(value) => setConfig({ ...config, notifyChannelId: value === "none" ? undefined : value })}
                 >
                   <SelectTrigger className={inputClass}>
-                    <SelectValue placeholder="Brak (DM)" />
+                    <SelectValue placeholder={t.noneDm} />
                   </SelectTrigger>
                   <SelectContent className="border-[#3f4455] bg-dark-900">
-                    <SelectItem value="none">Brak (wiadomość prywatna)</SelectItem>
+                    <SelectItem value="none">{t.noneDmFull}</SelectItem>
                     {textChannels.map((channel) => (
                       <SelectItem key={channel.id} value={channel.id}>
                         <div className="flex items-center gap-2">
@@ -802,15 +808,15 @@ export default function LevelsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className={helperClass}>Gdzie wysyłać wiadomość o poziomie i wiadomość o nagrodzie — kanał wspólny dla obu</p>
+                <p className={helperClass}>{t.notifyHint}</p>
               </div>
 
               {/* Wiadomość o poziomie — własny toggle, niezależny od nagrody */}
               <div className="space-y-4 rounded-md border border-[#2f3341] bg-dark-900/50 p-4">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-white/90">Wiadomość o poziomie</p>
-                    <p className={cn("mt-0.5", helperClass)}>Wysyłaj wiadomość, gdy ktoś zdobędzie poziom bez przypisanej nagrody</p>
+                    <p className="text-xs font-medium text-white/90">{t.levelMessage}</p>
+                    <p className={cn("mt-0.5", helperClass)}>{t.levelMessageHint}</p>
                   </div>
                   <DeezySwitch
                     checked={config.enableLevelUpMessages}
@@ -824,8 +830,8 @@ export default function LevelsPage() {
                       value={config.levelUpMessage}
                       onChange={(value) => setConfig({ ...config, levelUpMessage: value })}
                       variables={[
-                        { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
-                        { name: "Poziom", display: "Poziom", value: "{level}", description: "Numer poziomu" },
+                        { name: t.variables.user.name, display: t.variables.user.name, value: "{user}", description: t.variables.user.description },
+                        { name: t.variables.level.name, display: t.variables.level.name, value: "{level}", description: t.variables.level.description },
                       ]}
                       rows={2}
                       emojiPicker
@@ -833,14 +839,14 @@ export default function LevelsPage() {
                       className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
                     />
                     <div className="space-y-1.5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">{t.preview}</p>
                       <DiscordMessagePreview
                         compact
                         avatarUrl="/deezy.png"
                         content={
                           config.levelUpMessage.trim()
                             ? resolveLevelsPreview(config.levelUpMessage)
-                            : "*Brak treści wiadomości*"
+                            : t.noContent
                         }
                       />
                     </div>
@@ -852,8 +858,8 @@ export default function LevelsPage() {
               <div className="space-y-4 rounded-md border border-[#2f3341] bg-dark-900/50 p-4">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-white/90">Wiadomość o nagrodzie</p>
-                    <p className={cn("mt-0.5", helperClass)}>Wysyłaj wiadomość, gdy ktoś zdobędzie poziom z przypisaną rolą-nagrodą</p>
+                    <p className="text-xs font-medium text-white/90">{t.rewardMessage}</p>
+                    <p className={cn("mt-0.5", helperClass)}>{t.rewardMessageHint}</p>
                   </div>
                   <DeezySwitch
                     checked={config.enableRewardMessages}
@@ -867,8 +873,8 @@ export default function LevelsPage() {
                       value={config.rewardMessage}
                       onChange={(value) => setConfig({ ...config, rewardMessage: value })}
                       variables={[
-                        { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka użytkownika" },
-                        { name: "Rola", display: "Rola", value: "{roleId}", description: "Wzmianka roli nagrody" },
+                        { name: t.variables.user.name, display: t.variables.user.name, value: "{user}", description: t.variables.user.description },
+                        { name: t.variables.role.name, display: t.variables.role.name, value: "{roleId}", description: t.variables.role.description },
                       ]}
                       rows={2}
                       emojiPicker
@@ -876,14 +882,14 @@ export default function LevelsPage() {
                       className="rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
                     />
                     <div className="space-y-1.5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">{t.preview}</p>
                       <DiscordMessagePreview
                         compact
                         avatarUrl="/deezy.png"
                         content={
                           config.rewardMessage.trim()
                             ? resolveLevelsPreview(config.rewardMessage)
-                            : "*Brak treści wiadomości*"
+                            : t.noContent
                         }
                       />
                     </div>
@@ -897,8 +903,8 @@ export default function LevelsPage() {
         {/* ── Karta /level ─────────────────────────────────────── */}
         <SlideIn direction="up" delay={250}>
           <SettingRow
-            title="Karta /level"
-            description="Kolor motywu i widoczność rangi na karcie"
+            title={t.rankCard.title}
+            description={t.rankCard.description}
             icon={<TrendingUp className="h-4 w-4" />}
             isOpen={openSections.rankCard}
             onToggle={() => toggleSection("rankCard")}
@@ -906,7 +912,7 @@ export default function LevelsPage() {
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <label className={labelClass}>Kolor motywu karty</label>
+                  <label className={labelClass}>{t.cardColor}</label>
                   <div className="flex flex-wrap gap-3">
                     {THEME_COLOR_PRESETS.map((preset) => {
                       const selected = config.cardThemeColor === preset.value;
@@ -931,8 +937,8 @@ export default function LevelsPage() {
 
                 <div className="flex items-center justify-between rounded-md border border-[#2f3341] bg-dark-900 px-4 py-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-white/90">Pokaż rangę na serwerze</p>
-                    <p className={cn("mt-0.5", helperClass)}>Ukryj, jeśli nie chcesz porównywać użytkowników rankingiem</p>
+                    <p className="text-xs font-medium text-white/90">{t.showRank}</p>
+                    <p className={cn("mt-0.5", helperClass)}>{t.showRankHint}</p>
                   </div>
                   <DeezySwitch
                     checked={config.showRankBadge}
@@ -943,8 +949,8 @@ export default function LevelsPage() {
 
               <div className="space-y-2">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd karty</p>
-                  <p className={helperClass}>Zobacz jak karta będzie wyglądać w Discordzie</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">{t.cardPreview}</p>
+                  <p className={helperClass}>{t.cardPreviewHint}</p>
                 </div>
                 <RankCardPreviewSvg themeColor={config.cardThemeColor} showRank={config.showRankBadge} />
               </div>
@@ -955,15 +961,15 @@ export default function LevelsPage() {
         {/* ── Nagrody za poziomy ───────────────────────────────── */}
         <SlideIn direction="up" delay={300}>
           <SettingRow
-            title="Nagrody za poziomy"
-            description={`Role przyznawane za osiągnięcie poziomu (${config.roleRewards.length}/${MAX_ROLE_REWARDS})`}
+            title={t.rewards.title}
+            description={t.rewards.description(config.roleRewards.length, MAX_ROLE_REWARDS)}
             icon={<Award className="h-4 w-4" />}
             isOpen={openSections.roleRewards}
             onToggle={() => toggleSection("roleRewards")}
           >
             <div className="space-y-4">
               {config.roleRewards.length === 0 ? (
-                <p className="py-4 text-center text-xs text-[#8d94a8]">Brak nagród — dodaj nagrody za osiągnięcie poziomów</p>
+                <p className="py-4 text-center text-xs text-[#8d94a8]">{t.noRewards}</p>
               ) : (
                 <div className="space-y-2">
                   {config.roleRewards.map((reward) => (
@@ -981,7 +987,7 @@ export default function LevelsPage() {
                       <button
                         type="button"
                         onClick={() => removeRoleReward(reward.level)}
-                        aria-label={`Usuń nagrodę za poziom ${reward.level}`}
+                        aria-label={t.removeReward(reward.level)}
                         className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-[#8d94a8] transition-colors hover:bg-red-500/20 hover:text-red-400"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -994,7 +1000,7 @@ export default function LevelsPage() {
               <div className={addBoxClass}>
                 <div className="flex flex-col gap-3 md:flex-row md:items-end">
                   <div className="w-full space-y-1.5 md:w-28">
-                    <label className={labelClass}>Poziom</label>
+                    <label className={labelClass}>{t.level}</label>
                     <Input
                       type="number"
                       min="1"
@@ -1007,10 +1013,10 @@ export default function LevelsPage() {
                   </div>
 
                   <div className="min-w-0 flex-1 space-y-1.5">
-                    <label className={labelClass}>Rola nagrody</label>
+                    <label className={labelClass}>{t.rewardRole}</label>
                     <Select value={newRewardRoleId} onValueChange={setNewRewardRoleId} disabled={rewardsAtCap}>
                       <SelectTrigger className={boxedInputClass}>
-                        <SelectValue placeholder="Wybierz rolę..." />
+                        <SelectValue placeholder={t.pickRolePlaceholder} />
                       </SelectTrigger>
                       <SelectContent className="border-[#3f4455] bg-dark-800">
                         {roles.map((role) => (
@@ -1032,15 +1038,15 @@ export default function LevelsPage() {
                     className={cn(dashedButtonClass, "h-11 md:w-auto md:shrink-0 md:px-6")}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    {rewardsAtCap ? `Limit ${MAX_ROLE_REWARDS} nagród` : "Dodaj nagrodę"}
+                    {rewardsAtCap ? t.rewardLimitButton(MAX_ROLE_REWARDS) : t.addReward}
                   </button>
                 </div>
               </div>
 
               <div className="flex items-center justify-between rounded-md border border-[#2f3341] bg-dark-900 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-white/90">Usuwaj poprzednie nagrody</p>
-                  <p className={cn("mt-0.5", helperClass)}>Przy zdobyciu nowej roli-nagrody odbierz wcześniejsze, niższe role</p>
+                  <p className="text-xs font-medium text-white/90">{t.removePrevious}</p>
+                  <p className={cn("mt-0.5", helperClass)}>{t.removePreviousHint}</p>
                 </div>
                 <DeezySwitch
                   checked={config.removePreviousRewards}
@@ -1054,8 +1060,8 @@ export default function LevelsPage() {
         {/* ── Mnożniki XP ──────────────────────────────────────── */}
         <SlideIn direction="up" delay={350}>
           <SettingRow
-            title="Mnożniki XP"
-            description={`Kanały i role z niestandardowym mnożnikiem (${config.channelMultipliers.length + config.roleMultipliers.length})`}
+            title={t.multipliers.title}
+            description={t.multipliers.description(config.channelMultipliers.length + config.roleMultipliers.length)}
             icon={<Hash className="h-4 w-4" />}
             isOpen={openSections.multipliers}
             onToggle={() => toggleSection("multipliers")}
@@ -1064,17 +1070,17 @@ export default function LevelsPage() {
               <div className="space-y-3">
                 <div className={cn("flex items-center gap-2", sectionLabelClass)}>
                   <Hash className="h-3.5 w-3.5" />
-                  Kanały
+                  {t.channels}
                 </div>
 
                 {showChannelMultiplierForm ? (
                   <div className={addBoxClass}>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div className="space-y-1.5">
-                        <label className={labelClass}>Kanał</label>
+                        <label className={labelClass}>{t.channel}</label>
                         <Select value={newMultiplierChannelId} onValueChange={setNewMultiplierChannelId}>
                           <SelectTrigger className={boxedInputClass}>
-                            <SelectValue placeholder="Wybierz kanał..." />
+                            <SelectValue placeholder={t.pickChannelPlaceholder} />
                           </SelectTrigger>
                           <SelectContent className="border-[#3f4455] bg-dark-800">
                             {textChannels.map((channel) => (
@@ -1087,7 +1093,7 @@ export default function LevelsPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className={labelClass}>Mnożnik</label>
+                        <label className={labelClass}>{t.multiplier}</label>
                         <Input
                           type="number"
                           min="0.1"
@@ -1104,7 +1110,7 @@ export default function LevelsPage() {
                     <div className="flex gap-2">
                       <button type="button" onClick={handleAddMultiplier} className={cn(dashedButtonClass, "flex-1")}>
                         <Plus className="h-3.5 w-3.5" />
-                        Dodaj mnożnik kanału
+                        {t.addChannelMultiplier}
                       </button>
                       <button
                         type="button"
@@ -1115,14 +1121,14 @@ export default function LevelsPage() {
                         }}
                         className="rounded-md border border-[#3f4455] px-4 py-3 text-xs font-medium text-[#9aa2b8] transition-colors hover:text-white"
                       >
-                        Anuluj
+                        {m.cancel}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowChannelMultiplierForm(true)} className={dashedButtonClass}>
                     <Plus className="h-3.5 w-3.5" />
-                    Dodaj mnożnik kanału
+                    {t.addChannelMultiplier}
                   </button>
                 )}
 
@@ -1134,7 +1140,7 @@ export default function LevelsPage() {
                         label={getChannelName(multiplier.channelId)}
                         badge={`${multiplier.multiplier}x`}
                         onRemove={() => handleDeleteMultiplier(multiplier.channelId)}
-                        removeLabel={`Usuń mnożnik kanału ${getChannelName(multiplier.channelId)}`}
+                        removeLabel={t.removeChannelMultiplier(getChannelName(multiplier.channelId))}
                       />
                     ))}
                   </div>
@@ -1144,17 +1150,17 @@ export default function LevelsPage() {
               <div className="space-y-3">
                 <div className={cn("flex items-center gap-2", sectionLabelClass)}>
                   <Users className="h-3.5 w-3.5" />
-                  Role
+                  {t.roles}
                 </div>
 
                 {showRoleMultiplierForm ? (
                   <div className={addBoxClass}>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                       <div className="space-y-1.5">
-                        <label className={labelClass}>Rola</label>
+                        <label className={labelClass}>{t.role}</label>
                         <Select value={newRoleMultiplierRoleId} onValueChange={setNewRoleMultiplierRoleId}>
                           <SelectTrigger className={boxedInputClass}>
-                            <SelectValue placeholder="Wybierz rolę..." />
+                            <SelectValue placeholder={t.pickRolePlaceholder} />
                           </SelectTrigger>
                           <SelectContent className="border-[#3f4455] bg-dark-800">
                             {roles.map((role) => (
@@ -1170,7 +1176,7 @@ export default function LevelsPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className={labelClass}>Mnożnik</label>
+                        <label className={labelClass}>{t.multiplier}</label>
                         <Input
                           type="number"
                           min="0.1"
@@ -1187,7 +1193,7 @@ export default function LevelsPage() {
                     <div className="flex gap-2">
                       <button type="button" onClick={handleAddRoleMultiplier} className={cn(dashedButtonClass, "flex-1")}>
                         <Plus className="h-3.5 w-3.5" />
-                        Dodaj mnożnik roli
+                        {t.addRoleMultiplier}
                       </button>
                       <button
                         type="button"
@@ -1198,14 +1204,14 @@ export default function LevelsPage() {
                         }}
                         className="rounded-md border border-[#3f4455] px-4 py-3 text-xs font-medium text-[#9aa2b8] transition-colors hover:text-white"
                       >
-                        Anuluj
+                        {m.cancel}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowRoleMultiplierForm(true)} className={dashedButtonClass}>
                     <Plus className="h-3.5 w-3.5" />
-                    Dodaj mnożnik roli
+                    {t.addRoleMultiplier}
                   </button>
                 )}
 
@@ -1218,7 +1224,7 @@ export default function LevelsPage() {
                         label={getRoleName(multiplier.roleId)}
                         badge={`${multiplier.multiplier}x`}
                         onRemove={() => handleDeleteRoleMultiplier(multiplier.roleId)}
-                        removeLabel={`Usuń mnożnik roli ${getRoleName(multiplier.roleId)}`}
+                        removeLabel={t.removeRoleMultiplier(getRoleName(multiplier.roleId))}
                       />
                     ))}
                   </div>
@@ -1231,8 +1237,8 @@ export default function LevelsPage() {
         {/* ── Wyjątki ──────────────────────────────────────────── */}
         <SlideIn direction="up" delay={400}>
           <SettingRow
-            title="Wyjątki"
-            description={`Kanały i role wykluczone ze zdobywania XP (${config.ignoredChannels.length + config.ignoredRoles.length})`}
+            title={t.exceptions.title}
+            description={t.exceptions.description(config.ignoredChannels.length + config.ignoredRoles.length)}
             icon={<Ban className="h-4 w-4 text-red-400" />}
             isOpen={openSections.exceptions}
             onToggle={() => toggleSection("exceptions")}
@@ -1241,14 +1247,14 @@ export default function LevelsPage() {
               <div className="space-y-3">
                 <div className={cn("flex items-center gap-2", sectionLabelClass)}>
                   <Hash className="h-3.5 w-3.5" />
-                  Ignorowane kanały
+                  {t.ignoredChannels}
                 </div>
 
                 {showIgnoredChannelForm ? (
                   <div className={addBoxClass}>
                     <Select value={selectedIgnoredChannel} onValueChange={setSelectedIgnoredChannel}>
                       <SelectTrigger className={boxedInputClass}>
-                        <SelectValue placeholder="Wybierz kanał..." />
+                        <SelectValue placeholder={t.pickChannelPlaceholder} />
                       </SelectTrigger>
                       <SelectContent className="border-[#3f4455] bg-dark-800">
                         {textChannels
@@ -1263,7 +1269,7 @@ export default function LevelsPage() {
                     <div className="flex gap-2">
                       <button type="button" onClick={handleAddIgnoredChannel} className={cn(dashedButtonClass, "flex-1")}>
                         <Plus className="h-3.5 w-3.5" />
-                        Dodaj kanał do ignorowanych
+                        {t.addIgnoredChannel}
                       </button>
                       <button
                         type="button"
@@ -1273,14 +1279,14 @@ export default function LevelsPage() {
                         }}
                         className="rounded-md border border-[#3f4455] px-4 py-3 text-xs font-medium text-[#9aa2b8] transition-colors hover:text-white"
                       >
-                        Anuluj
+                        {m.cancel}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowIgnoredChannelForm(true)} className={dashedButtonClass}>
                     <Plus className="h-3.5 w-3.5" />
-                    Dodaj kanał do ignorowanych
+                    {t.addIgnoredChannel}
                   </button>
                 )}
 
@@ -1291,7 +1297,7 @@ export default function LevelsPage() {
                         key={channelId}
                         label={getChannelName(channelId)}
                         onRemove={() => handleRemoveIgnoredChannel(channelId)}
-                        removeLabel={`Usuń z ignorowanych kanał ${getChannelName(channelId)}`}
+                        removeLabel={t.removeIgnoredChannel(getChannelName(channelId))}
                       />
                     ))}
                   </div>
@@ -1301,14 +1307,14 @@ export default function LevelsPage() {
               <div className="space-y-3">
                 <div className={cn("flex items-center gap-2", sectionLabelClass)}>
                   <Users className="h-3.5 w-3.5" />
-                  Ignorowane role
+                  {t.ignoredRoles}
                 </div>
 
                 {showIgnoredRoleForm ? (
                   <div className={addBoxClass}>
                     <Select value={selectedIgnoredRole} onValueChange={setSelectedIgnoredRole}>
                       <SelectTrigger className={boxedInputClass}>
-                        <SelectValue placeholder="Wybierz rolę..." />
+                        <SelectValue placeholder={t.pickRolePlaceholder} />
                       </SelectTrigger>
                       <SelectContent className="border-[#3f4455] bg-dark-800">
                         {roles
@@ -1326,7 +1332,7 @@ export default function LevelsPage() {
                     <div className="flex gap-2">
                       <button type="button" onClick={handleAddIgnoredRole} className={cn(dashedButtonClass, "flex-1")}>
                         <Plus className="h-3.5 w-3.5" />
-                        Dodaj rolę do ignorowanych
+                        {t.addIgnoredRole}
                       </button>
                       <button
                         type="button"
@@ -1336,14 +1342,14 @@ export default function LevelsPage() {
                         }}
                         className="rounded-md border border-[#3f4455] px-4 py-3 text-xs font-medium text-[#9aa2b8] transition-colors hover:text-white"
                       >
-                        Anuluj
+                        {m.cancel}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowIgnoredRoleForm(true)} className={dashedButtonClass}>
                     <Plus className="h-3.5 w-3.5" />
-                    Dodaj rolę do ignorowanych
+                    {t.addIgnoredRole}
                   </button>
                 )}
 
@@ -1355,7 +1361,7 @@ export default function LevelsPage() {
                         color={getRoleColor(roles.find(r => r.id === roleId)?.color || 0)}
                         label={getRoleName(roleId)}
                         onRemove={() => handleRemoveIgnoredRole(roleId)}
-                        removeLabel={`Usuń z ignorowanych rolę ${getRoleName(roleId)}`}
+                        removeLabel={t.removeIgnoredRole(getRoleName(roleId))}
                       />
                     ))}
                   </div>

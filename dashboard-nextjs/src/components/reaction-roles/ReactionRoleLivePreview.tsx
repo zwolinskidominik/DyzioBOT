@@ -3,6 +3,9 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { EmojiDisplay } from "@/components/EmojiDisplay";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { reactionRolesMessages } from "@/i18n/messages/reactionRoles";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Role {
   id: string;
@@ -44,11 +47,14 @@ function hexToRgba(hex: string, alpha: number): string {
 /** Live, illustrative preview of the Discord embed a reaction-role panel will produce. */
 export function ReactionRoleLivePreview({ title, reactions, roles, embedColor }: ReactionRoleLivePreviewProps) {
   const [timestamp, setTimestamp] = useState<string | null>(null);
+  const { lang } = useLang();
+  const m = useMessages(commonMessages).module;
+  const t = useMessages(reactionRolesMessages);
 
   useEffect(() => {
     const now = new Date();
-    setTimestamp(`dziś o ${now.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`);
-  }, []);
+    setTimestamp(m.todayAt(now.toLocaleTimeString(lang === "en" ? "en-US" : "pl-PL", { hour: "2-digit", minute: "2-digit" })));
+  }, [lang, m]);
 
   const getRole = (roleId: string) => roles.find((r) => r.id === roleId);
   // Musi odpowiadać dokładnie temu, co faktycznie wysyłamy do Discorda (kolor
@@ -81,7 +87,7 @@ export function ReactionRoleLivePreview({ title, reactions, roles, embedColor }:
             <p className="text-sm font-semibold text-white/90">{title || "Wybierz swoją rolę"}</p>
 
             {reactions.length === 0 ? (
-              <p className="text-xs text-[#6f7690]">Dodaj reakcje, aby zobaczyć podgląd wiadomości.</p>
+              <p className="text-xs text-[#6f7690]">{t.previewEmpty}</p>
             ) : (
               <div className="space-y-1">
                 {reactions.map((reaction, index) => {

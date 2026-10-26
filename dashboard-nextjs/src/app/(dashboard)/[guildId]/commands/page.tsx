@@ -11,6 +11,9 @@ import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { SlideIn } from "@/components/ui/animated";
 import { useDirtyState } from "@/components/DirtyStateProvider";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commandsMessages } from "@/i18n/messages/commands";
+import { commonMessages } from "@/i18n/messages/common";
 
 function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch>) {
   return (
@@ -24,9 +27,10 @@ function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch
   );
 }
 
+type CommandName = keyof (typeof commandsMessages)["pl"]["descriptions"];
+
 interface UtilityCommand {
-  name: string;
-  description: string;
+  name: CommandName;
   category: "fun" | "misc" | "admin";
 }
 
@@ -53,47 +57,33 @@ interface SavedConfigState {
  */
 const UTILITY_COMMANDS: UtilityCommand[] = [
   // fun/
-  { name: "dog", description: "Losowe zdjęcie psa na poprawę humoru 🐶", category: "fun" },
-  { name: "cat", description: "Losowe zdjęcie kota, bo czemu nie? 🐱", category: "fun" },
-  { name: "ciekawostka", description: "Poznaj losową ciekawostkę ze świata 🌎", category: "fun" },
-  { name: "8ball", description: "Zadaj pytanie, a magiczna kula wyda wyrok 🔮", category: "fun" },
-  { name: "kamien-papier-nozyce", description: "Zmierz się z Deezy w Kamień, Papier, Nożyce ✊", category: "fun" },
-  { name: "pogoda", description: "Sprawdź aktualną pogodę w dowolnym mieście ☁️", category: "fun" },
-  { name: "dowcip", description: "Deezy ma dla Ciebie losowy dowcip. Oby był dobry. 🤡", category: "fun" },
-  { name: "meme", description: "Wylosuj mema z różnych zakątków internetu 🗿", category: "fun" },
-  { name: "wisielec", description: "Odgadnij ukryte słowo, zanim będzie za późno 💀", category: "fun" },
-  { name: "wisielec-top", description: "Sprawdź, kto najlepiej radzi sobie z Wisielcem 🏆", category: "fun" },
-  { name: "wordle", description: "Odgadnij ukryte polskie słowo w 6 próbach 🟩", category: "fun" },
-  { name: "wordle-top", description: "Sprawdź najlepszych graczy Wordle na serwerze 🏆", category: "fun" },
+  { name: "dog", category: "fun" },
+  { name: "cat", category: "fun" },
+  { name: "ciekawostka", category: "fun" },
+  { name: "8ball", category: "fun" },
+  { name: "kamien-papier-nozyce", category: "fun" },
+  { name: "pogoda", category: "fun" },
+  { name: "dowcip", category: "fun" },
+  { name: "meme", category: "fun" },
+  { name: "wisielec", category: "fun" },
+  { name: "wisielec-top", category: "fun" },
+  { name: "wordle", category: "fun" },
+  { name: "wordle-top", category: "fun" },
   // misc/
-  { name: "help", description: "Sprawdź dostępne komendy i dowiedz się, jak ich używać", category: "misc" },
-  { name: "ping", description: "Sprawdź, czy Deezy żyje i jak szybko odpowiada 🏓", category: "misc" },
-  { name: "embed", description: "Stwórz własną wiadomość embed", category: "misc" },
-  { name: "emoji", description: "Wyświetl wszystkie emoji dostępne na serwerze", category: "misc" },
-  { name: "avatar", description: "Wyświetl avatar użytkownika w pełnym rozmiarze", category: "misc" },
-  { name: "faceit", description: "Sprawdź statystyki gracza z FACEIT", category: "misc" },
-  { name: "serverinfo", description: "Wyświetl najważniejsze informacje o serwerze", category: "misc" },
-  { name: "wrozba", description: "Sprawdź, co los przyniósł Ci na dziś 🔮", category: "misc" },
-  { name: "roll", description: "Wylosuj liczbę — domyślnie od 1 do 6 🎲", category: "misc" },
+  { name: "help", category: "misc" },
+  { name: "ping", category: "misc" },
+  { name: "embed", category: "misc" },
+  { name: "emoji", category: "misc" },
+  { name: "avatar", category: "misc" },
+  { name: "faceit", category: "misc" },
+  { name: "serverinfo", category: "misc" },
+  { name: "wrozba", category: "misc" },
+  { name: "roll", category: "misc" },
   // admin/ (tylko te 3 — reszta admin/ ma własne gate'y)
-  { name: "say", description: "Wyślij wiadomość na wybranym kanale jako Deezy", category: "admin" },
-  { name: "role", description: "Nadaj, odbierz lub ustaw czasową rolę użytkownika", category: "admin" },
-  { name: "emoji-steal", description: "Dodaj emoji z innego serwera do tego serwera", category: "admin" },
+  { name: "say", category: "admin" },
+  { name: "role", category: "admin" },
+  { name: "emoji-steal", category: "admin" },
 ];
-
-const CATEGORY_LABELS: Record<UtilityCommand["category"], string> = {
-  fun: "Rozrywka",
-  misc: "Ogólne",
-  admin: "Administracyjne",
-};
-
-function plural(n: number, one: string, few: string, many: string): string {
-  if (n === 1) return one;
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
-  return many;
-}
 
 const sortedDisabled = (arr: string[]) => [...arr].sort().join(",");
 
@@ -101,6 +91,8 @@ export default function NarzedziaPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(commandsMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +122,7 @@ export default function NarzedziaPage() {
       }
     } catch (err) {
       console.error("Error loading commands config:", err);
-      setError("Nie udało się załadować konfiguracji Narzędzi. Sprawdź połączenie z internetem i spróbuj ponownie.");
+      setError(t.loadError);
     } finally {
       setLoading(false);
     }
@@ -150,14 +142,14 @@ export default function NarzedziaPage() {
       });
       if (!res.ok) throw new Error("Failed to save");
       savedRef.current = { enabled, disabledCommands };
-      toast.success("Konfiguracja Narzędzi została zapisana!");
+      toast.success(t.saved);
     } catch (err) {
       console.error("Error saving commands config:", err);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [guildId, enabled, disabledCommands]);
+  }, [guildId, enabled, disabledCommands, t, m]);
 
   const handleCancel = useCallback(() => {
     setEnabled(savedRef.current.enabled);
@@ -168,10 +160,10 @@ export default function NarzedziaPage() {
     id: `commands-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: "Komendy",
+    label: t.title,
     onSave: handleSave,
     onCancel: handleCancel,
-  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]);
+  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController, t]);
 
   const toggleCommand = (name: string) => {
     setDisabledCommands((prev) =>
@@ -180,7 +172,7 @@ export default function NarzedziaPage() {
   };
 
   const toggleCategory = (category: UtilityCommand["category"]) => {
-    const names = UTILITY_COMMANDS.filter((c) => c.category === category).map((c) => c.name);
+    const names: string[] = UTILITY_COMMANDS.filter((c) => c.category === category).map((c) => c.name);
     const allOn = names.every((n) => !disabledCommands.includes(n));
     setDisabledCommands((prev) => {
       const withoutCategory = prev.filter((n) => !names.includes(n));
@@ -192,7 +184,7 @@ export default function NarzedziaPage() {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Nie udało się załadować Komend" message={error} onRetry={() => { setError(null); fetchData(); }} />
+          <ErrorState title={t.loadErrorTitle} message={error} onRetry={() => { setError(null); fetchData(); }} />
         </div>
       </div>
     );
@@ -212,7 +204,7 @@ export default function NarzedziaPage() {
 
   const q = search.trim().toLowerCase();
   const matches = (cmd: UtilityCommand) =>
-    !q || `${cmd.name} ${cmd.description}`.toLowerCase().includes(q);
+    !q || `${cmd.name} ${t.descriptions[cmd.name]}`.toLowerCase().includes(q);
 
   const onCount = UTILITY_COMMANDS.filter((c) => !disabledCommands.includes(c.name)).length;
   const totalCount = UTILITY_COMMANDS.length;
@@ -234,14 +226,14 @@ export default function NarzedziaPage() {
         <SlideIn direction="up" delay={100}>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-white">Komendy</h1>
+              <h1 className="text-2xl font-bold text-white">{t.title}</h1>
               <p className="mt-2 max-w-[640px] text-sm leading-6 text-[#969db0]">
-                {totalCount} {plural(totalCount, "komenda", "komendy", "komend")} rozrywkowych i ogólnych — włącz lub wyłącz pojedynczo albo cały moduł naraz.
+                {t.subtitle(totalCount)}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
-              <DeezySwitch checked={enabled} onCheckedChange={setEnabled} aria-label="Włącz lub wyłącz moduł Komendy" />
+              <span>{enabled ? m.active : m.inactive}</span>
+              <DeezySwitch checked={enabled} onCheckedChange={setEnabled} aria-label={t.toggle} />
             </div>
           </div>
         </SlideIn>
@@ -250,8 +242,7 @@ export default function NarzedziaPage() {
           <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-[#17181E] px-3 py-2 text-xs leading-6 text-[#9aa2b8]">
             <Wrench className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              Moduł <span className="font-semibold text-white/80">Komendy</span> jest wyłączony — żadna z poniższych
-              komend nie zadziała na tym serwerze, niezależnie od stanu przełączników poniżej.
+              {t.disabledPrefix}<span className="font-semibold text-white/80">{t.title}</span>{t.disabledSuffix}
             </span>
           </div>
         )}
@@ -261,11 +252,11 @@ export default function NarzedziaPage() {
             <div className="text-[22px] font-extrabold text-white">
               {onCount}<span className="text-[13px] font-semibold text-[#6b7280]">/{totalCount}</span>
             </div>
-            <div className="mt-0.5 text-[11px] text-[#8d94a8]">komend włączonych</div>
+            <div className="mt-0.5 text-[11px] text-[#8d94a8]">{t.enabledCount}</div>
           </div>
           <div className="rounded-[10px] bg-[#1F2129] px-4 py-3.5">
             <div className="text-[22px] font-extrabold text-[#a5b4fc]">{categoryCount}</div>
-            <div className="mt-0.5 text-[11px] text-[#8d94a8]">kategorie</div>
+            <div className="mt-0.5 text-[11px] text-[#8d94a8]">{t.categoriesCount}</div>
           </div>
         </div>
 
@@ -276,18 +267,18 @@ export default function NarzedziaPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Szukaj komendy… (np. wordle, avatar, roll)"
+              placeholder={t.searchPlaceholder}
               className="min-w-0 flex-1 bg-transparent text-xs text-[#d8dbe6] outline-none placeholder:text-[#6b7280]"
             />
             {q ? (
-              <button type="button" onClick={() => setSearch("")} title="Wyczyść" className="text-[#6b7280] transition-colors hover:text-white">
+              <button type="button" onClick={() => setSearch("")} title={t.clear} className="text-[#6b7280] transition-colors hover:text-white">
                 <X className="h-3.5 w-3.5" />
               </button>
             ) : null}
           </div>
           {q ? (
             <p className="mt-2 text-[11px] text-[#8d94a8]">
-              {shownTotal} {plural(shownTotal, "komenda", "komendy", "komend")} pasuje do zapytania
+              {t.matching(shownTotal)}
             </p>
           ) : null}
         </div>
@@ -300,9 +291,9 @@ export default function NarzedziaPage() {
             return (
               <div key={category}>
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[#2f3341] px-4 py-3">
-                  <span className="text-sm font-bold text-white">{CATEGORY_LABELS[category]}</span>
+                  <span className="text-sm font-bold text-white">{t.categories[category]}</span>
                   <span className="text-[11px] text-[#6b7280]">
-                    {names.length} {plural(names.length, "komenda", "komendy", "komend")} · {onN} włączonych
+                    {t.groupMeta(names.length, onN)}
                   </span>
                   <span className="flex-1" />
                   <button
@@ -310,7 +301,7 @@ export default function NarzedziaPage() {
                     onClick={() => toggleCategory(category)}
                     className="rounded-[5px] border border-[#2f3341] px-2.5 py-1 text-[10px] font-semibold text-[#8d94a8] transition-colors hover:border-bot-primary hover:text-white"
                   >
-                    {allOn ? "Wyłącz wszystkie" : "Włącz wszystkie"}
+                    {allOn ? t.disableAll : t.enableAll}
                   </button>
                 </div>
 
@@ -326,7 +317,7 @@ export default function NarzedziaPage() {
                           <span className="block truncate text-base font-semibold text-white">/{cmd.name}</span>
                           {/* Poniżej lg opis zawija się do kilku linii (na telefonie „truncate" ucinał
                               go w połowie); od lg bez zmian — jedna linia z wielokropkiem. */}
-                          <span className="block break-words text-sm text-[#8d94a8] lg:truncate">{cmd.description}</span>
+                          <span className="block break-words text-sm text-[#8d94a8] lg:truncate">{t.descriptions[cmd.name]}</span>
                         </div>
                         <Switch
                           checked={isOn}
@@ -344,7 +335,7 @@ export default function NarzedziaPage() {
 
           {q && shownTotal === 0 ? (
             <div className="px-4 py-8 text-center text-[13px] text-[#8d94a8]">
-              Brak komend pasujących do „{search}".
+              {t.noMatches(search)}
             </div>
           ) : null}
         </div>

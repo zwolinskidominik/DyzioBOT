@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Hash, Lock, Pencil, Users } from "lucide-react";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { tempChannelsMessages } from "@/i18n/messages/tempChannels";
 
 export type TempChannelType = "panel" | "standard";
 
@@ -21,11 +23,13 @@ const PANEL_BUTTONS: { label: string; emoji: string; className: string }[] = [
 /** Live, illustrative preview of what a newly created temp channel will look like. */
 export function TempChannelLivePreview({ type }: TempChannelLivePreviewProps) {
   const [timestamp, setTimestamp] = useState<string | null>(null);
+  const { lang } = useLang();
+  const t = useMessages(tempChannelsMessages).preview;
 
   useEffect(() => {
     const now = new Date();
-    setTimestamp(`dziś o ${now.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`);
-  }, []);
+    setTimestamp(t.todayAt(now.toLocaleTimeString(lang === "en" ? "en-US" : "pl-PL", { hour: "2-digit", minute: "2-digit" })));
+  }, [lang, t]);
 
   return (
     <div className="space-y-2 rounded-md bg-[#313338] p-4">
@@ -68,9 +72,9 @@ export function TempChannelLivePreview({ type }: TempChannelLivePreviewProps) {
         <div className="flex items-start gap-3 rounded border-l-4 border-[#6f7690] bg-[#2b2d31] px-3 py-2.5">
           <Users className="mt-0.5 h-4 w-4 shrink-0 text-[#8d94a8]" />
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-white/90">Kanał standardowy</p>
+            <p className="text-sm font-semibold text-white/90">{t.standardTitle}</p>
             <p className="text-xs text-[#8d94a8]">
-              Zwykły kanał głosowy bez panelu zarządzania — bez przycisków Limit, Nazwa, Lock, Kick czy Transfer.
+              {t.standardText}
             </p>
           </div>
         </div>
@@ -80,8 +84,8 @@ export function TempChannelLivePreview({ type }: TempChannelLivePreviewProps) {
         {type === "panel" ? <Pencil className="h-3 w-3" /> : <Lock className="h-3 w-3 opacity-0" />}
         <span>
           {type === "panel"
-            ? "Właściciel kanału może zarządzać nim przyciskami powyżej."
-            : "Kanał zniknie automatycznie, gdy wszyscy go opuszczą."}
+            ? t.panelHint
+            : t.standardHint}
         </span>
       </div>
     </div>

@@ -14,6 +14,9 @@ import { SlideIn } from "@/components/ui/animated";
 import EmbedColorPicker from "@/components/EmbedColorPicker";
 import { useDirtyState } from "@/components/DirtyStateProvider";
 import { cn } from "@/lib/utils";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { logsMessages, logEventTextEn } from "@/i18n/messages/logs";
+import { commonMessages } from "@/i18n/messages/common";
 
 function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch>) {
   return (
@@ -98,19 +101,23 @@ const LOG_EVENT_CONFIGS: Record<string, LogEventConfig> = {
   inviteCreate: { name: 'Wysłano zaproszenie', description: 'Utworzono zaproszenie', color: 0x1F8B4C, fieldsKey: 'invite', previewHeading: '📨 Utworzono zaproszenie.' },
 };
 
-const EVENT_CATEGORIES: Record<string, string[]> = {
-  'Moderacja': ['memberBan', 'memberUnban', 'memberKick', 'memberTimeout', 'moderationCommand', 'antiSpam'],
-  'Wiadomości': ['messageDelete', 'messageEdit'],
-  'Członkowie': ['memberJoin', 'memberLeave', 'memberNicknameChange', 'memberRoleAdd', 'memberRoleRemove'],
-  'Kanały głosowe': ['voiceJoin', 'voiceLeave', 'voiceMove', 'voiceDisconnect', 'voiceMemberMove', 'voiceStateChange'],
-  'Kanały': ['channelCreate', 'channelDelete', 'channelUpdate', 'channelPermissionUpdate'],
-  'Wątki': ['threadCreate', 'threadDelete', 'threadUpdate'],
-  'Role': ['roleCreate', 'roleDelete', 'roleUpdate'],
-  'Serwer': ['guildUpdate', 'inviteCreate'],
+type CategoryKey = "moderation" | "messages" | "members" | "voice" | "channels" | "threads" | "roles" | "server";
+
+const EVENT_CATEGORIES: Record<CategoryKey, string[]> = {
+  moderation: ['memberBan', 'memberUnban', 'memberKick', 'memberTimeout', 'moderationCommand', 'antiSpam'],
+  messages: ['messageDelete', 'messageEdit'],
+  members: ['memberJoin', 'memberLeave', 'memberNicknameChange', 'memberRoleAdd', 'memberRoleRemove'],
+  voice: ['voiceJoin', 'voiceLeave', 'voiceMove', 'voiceDisconnect', 'voiceMemberMove', 'voiceStateChange'],
+  channels: ['channelCreate', 'channelDelete', 'channelUpdate', 'channelPermissionUpdate'],
+  threads: ['threadCreate', 'threadDelete', 'threadUpdate'],
+  roles: ['roleCreate', 'roleDelete', 'roleUpdate'],
+  server: ['guildUpdate', 'inviteCreate'],
 };
 
+const CATEGORY_KEYS: CategoryKey[] = ["moderation", "messages", "members", "voice", "channels", "threads", "roles", "server"];
+
 const ALL_EVENTS = Object.values(EVENT_CATEGORIES).flat();
-const FIRST_CATEGORY = Object.keys(EVENT_CATEGORIES)[0];
+const FIRST_CATEGORY: CategoryKey = CATEGORY_KEYS[0];
 const FIRST_EVENT = EVENT_CATEGORIES[FIRST_CATEGORY][0];
 
 interface PreviewField {
@@ -241,18 +248,9 @@ function renderMentionText(text: string): React.ReactNode[] {
 
 const decimalToHex = (decimal: number): string => `#${decimal.toString(16).padStart(6, '0').toUpperCase()}`;
 
-/** Polska odmiana liczebnikowa: 1 / 2-4 / 5+. */
-function plural(n: number, one: string, few: string, many: string): string {
-  if (n === 1) return one;
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
-  return many;
-}
-
-function categoryOf(eventType: string): string {
-  for (const [label, events] of Object.entries(EVENT_CATEGORIES)) {
-    if (events.includes(eventType)) return label;
+function categoryOf(eventType: string): CategoryKey {
+  for (const key of CATEGORY_KEYS) {
+    if (EVENT_CATEGORIES[key].includes(eventType)) return key;
   }
   return FIRST_CATEGORY;
 }
@@ -263,13 +261,22 @@ function LogsPageContent() {
   const guildId = params?.guildId as string;
   const highlightEvent = searchParams?.get('highlight');
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(logsMessages);
+  const m = useMessages(commonMessages).module;
+  const { lang } = useLang();
+  /** Nazwa/opis/notka zdarzenia w języku panelu (podgląd embeda zostaje po polsku, jak u bota). */
+  const eventText = (eventType: string): { name: string; description: string; previewNote?: string | undefined } => {
+    const base = LOG_EVENT_CONFIGS[eventType];
+    const en = lang === "en" ? logEventTextEn[eventType] : undefined;
+    return en ?? { name: base?.name ?? eventType, description: base?.description ?? "", previewNote: base?.previewNote };
+  };
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>(FIRST_CATEGORY);
+  const [activeCategory, setActiveCategory] = useState<CategoryKey>(FIRST_CATEGORY);
   const [selectedEvent, setSelectedEvent] = useState<string>(FIRST_EVENT);
   const [config, setConfig] = useState<LogConfig>({
     guildId,
@@ -308,10 +315,10 @@ function LogsPageContent() {
 
   useEffect(() => {
     if (loading || !highlightEvent) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       document.getElementById(`log-event-${highlightEvent}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 50);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [loading, highlightEvent, activeCategory]);
 
   const fetchData = async () => {
@@ -339,7 +346,7 @@ function LogsPageContent() {
       }
     } catch (error) {
       console.error("Error loading data:", error);
-      setError("Nie udało się załadować danych logów. Sprawdź połączenie z internetem i spróbuj ponownie.");
+      setError(t.loadError);
     } finally {
       setLoading(false);
     }
@@ -351,7 +358,7 @@ function LogsPageContent() {
       setActiveCategory(categoryOf(missing));
       setSelectedEvent(missing);
       setSearch('');
-      toast.error(`Brak kanału dla: ${LOG_EVENT_CONFIGS[missing].name.toLowerCase()}`);
+      toast.error(t.missingChannel(eventText(missing).name));
       return;
     }
 
@@ -377,14 +384,15 @@ function LogsPageContent() {
       setConfig(merged);
       savedRef.current = merged;
 
-      toast.success("Konfiguracja logów została zapisana!");
+      toast.success(t.saved);
     } catch (error) {
       console.error("Error saving config:", error);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [guildId, config]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guildId, config, t, m, lang]);
 
   const handleCancel = useCallback(() => {
     setConfig(savedRef.current);
@@ -396,10 +404,10 @@ function LogsPageContent() {
     id: `logs-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: "System logów",
+    label: t.saveLabel,
     onSave: handleSave,
     onCancel: handleCancel,
-  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]);
+  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController, t]);
 
   const toggleEvent = (eventType: string) => {
     setConfig((prev) => ({
@@ -409,7 +417,7 @@ function LogsPageContent() {
     setSelectedEvent(eventType);
   };
 
-  const toggleAllInCategory = (category: string) => {
+  const toggleAllInCategory = (category: CategoryKey) => {
     const events = EVENT_CATEGORIES[category];
     const allOn = events.every((e) => config.enabledEvents[e]);
     setConfig((prev) => {
@@ -417,7 +425,7 @@ function LogsPageContent() {
       events.forEach((e) => { nextEnabled[e] = !allOn; });
       return { ...prev, enabledEvents: nextEnabled };
     });
-    toast.success(`${allOn ? 'Wyłączono' : 'Włączono'} kategorię ${category.toLowerCase()}`);
+    toast.success(t.categoryToggled(!allOn, t.categories[category]));
   };
 
   const setEventChannel = (eventType: string, channelId: string) => {
@@ -440,10 +448,10 @@ function LogsPageContent() {
       delete next[eventType];
       return { ...prev, colorOverrides: next };
     });
-    toast.success("Przywrócono domyślny kolor");
+    toast.success(t.colorReset);
   };
 
-  const getChannelName = (channelId: string) => channels.find((c) => c.id === channelId)?.name ?? 'Nieznany kanał';
+  const getChannelName = (channelId: string) => channels.find((c) => c.id === channelId)?.name ?? t.unknownChannel;
 
   const handleRetry = () => {
     setError(null);
@@ -455,7 +463,7 @@ function LogsPageContent() {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Nie udało się załadować logów" message={error} onRetry={handleRetry} />
+          <ErrorState title={t.loadErrorTitle} message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -483,27 +491,27 @@ function LogsPageContent() {
   const q = search.trim().toLowerCase();
   const matches = (eventType: string) => {
     if (!q) return true;
-    const cfg = LOG_EVENT_CONFIGS[eventType];
-    return `${cfg.name} ${cfg.description} ${categoryOf(eventType)}`.toLowerCase().includes(q);
+    const text = eventText(eventType);
+    return `${text.name} ${text.description} ${t.categories[categoryOf(eventType)]}`.toLowerCase().includes(q);
   };
 
   const onCount = ALL_EVENTS.filter((e) => config.enabledEvents[e]).length;
   const totalCount = ALL_EVENTS.length;
-  const categoryCount = Object.keys(EVENT_CATEGORIES).length;
+  const categoryCount = CATEGORY_KEYS.length;
   const usedChannels = new Set(
     ALL_EVENTS.filter((e) => config.enabledEvents[e] && config.logChannels[e]).map((e) => config.logChannels[e])
   );
   const shownTotal = ALL_EVENTS.filter(matches).length;
 
-  const headerSummary = `${totalCount} ${plural(totalCount, 'zdarzenie', 'zdarzenia', 'zdarzeń')} w ${categoryCount} ${plural(categoryCount, 'kategorii', 'kategoriach', 'kategoriach')}.`;
+  const headerSummary = t.summary(totalCount, categoryCount);
 
-  const categoriesToShow = q ? Object.keys(EVENT_CATEGORIES) : [activeCategory];
+  const categoriesToShow: CategoryKey[] = q ? CATEGORY_KEYS : [activeCategory];
   const renderedGroups = categoriesToShow
     .map((category) => {
       const rows = EVENT_CATEGORIES[category].filter(matches);
       return rows.length > 0 ? { category, rows } : null;
     })
-    .filter((g): g is { category: string; rows: string[] } => g !== null);
+    .filter((g): g is { category: CategoryKey; rows: string[] } => g !== null);
 
   const selConfig = LOG_EVENT_CONFIGS[selectedEvent] ?? LOG_EVENT_CONFIGS[FIRST_EVENT];
   const selEventType = LOG_EVENT_CONFIGS[selectedEvent] ? selectedEvent : FIRST_EVENT;
@@ -523,17 +531,17 @@ function LogsPageContent() {
         <SlideIn direction="up" delay={100}>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-white">System Logów</h1>
+              <h1 className="text-2xl font-bold text-white">{t.title}</h1>
               <p className="mt-2 max-w-[640px] text-sm leading-6 text-[#969db0]">
-                {headerSummary} Każde ma własny kanał i kolor embeda — kliknij wiersz, aby zobaczyć podgląd.
+                {headerSummary}{t.summarySuffix}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{isEnabled ? "Aktywne" : "Nieaktywne"}</span>
+              <span>{isEnabled ? m.active : m.inactive}</span>
               <DeezySwitch
                 checked={isEnabled}
                 onCheckedChange={(checked) => setConfig((prev) => ({ ...prev, enabled: checked }))}
-                aria-label="Włącz lub wyłącz system logów"
+                aria-label={t.toggle}
               />
             </div>
           </div>
@@ -543,9 +551,7 @@ function LogsPageContent() {
           <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-[#17181E] px-3 py-2 text-xs leading-6 text-[#9aa2b8]">
             <ShieldOff className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>
-              System logów jest <span className="font-semibold text-white/80">wyłączony</span>. Możesz konfigurować
-              zdarzenia i zapisać ustawienia, ale bot nie wyśle logów, dopóki nie włączysz przełącznika{' '}
-              <span className="font-semibold text-white/80">Aktywne</span> u góry.
+              {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
             </span>
           </div>
         )}
@@ -554,7 +560,7 @@ function LogsPageContent() {
 
           {/* Sidebar kategorii */}
           <div className="flex flex-col gap-[3px] rounded-[10px] bg-[#1F2129] p-2.5 lg:sticky lg:top-4">
-            {Object.keys(EVENT_CATEGORIES).map((category) => {
+            {CATEGORY_KEYS.map((category) => {
               const events = EVENT_CATEGORIES[category];
               const onN = events.filter((e) => config.enabledEvents[e]).length;
               const active = !q && category === activeCategory;
@@ -573,7 +579,7 @@ function LogsPageContent() {
                     className="min-w-0 flex-1 truncate text-xs"
                     style={{ color: active ? '#fff' : '#c4cad8', fontWeight: active ? 700 : 600 }}
                   >
-                    {category}
+                    {t.categories[category]}
                   </span>
                   <span
                     className="shrink-0 text-[10px] font-bold"
@@ -594,12 +600,12 @@ function LogsPageContent() {
                 <div className="text-[22px] font-extrabold text-white">
                   {onCount}<span className="text-[13px] font-semibold text-[#6b7280]">/{totalCount}</span>
                 </div>
-                <div className="mt-0.5 text-[11px] text-[#8d94a8]">zdarzeń włączonych</div>
+                <div className="mt-0.5 text-[11px] text-[#8d94a8]">{t.enabledEvents}</div>
               </div>
               <div className="rounded-[10px] bg-[#1F2129] px-4 py-3.5">
                 <div className="text-[22px] font-extrabold text-[#a5b4fc]">{usedChannels.size}</div>
                 <div className="mt-0.5 text-[11px] text-[#8d94a8]">
-                  {plural(usedChannels.size, 'kanał docelowy', 'kanały docelowe', 'kanałów docelowych')}
+                  {t.targetChannels(usedChannels.size)}
                 </div>
               </div>
             </div>
@@ -611,18 +617,18 @@ function LogsPageContent() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Szukaj zdarzenia… (np. ban, rola, wątek)"
+                  placeholder={t.searchPlaceholder}
                   className="min-w-0 flex-1 bg-transparent text-xs text-[#d8dbe6] outline-none placeholder:text-[#6b7280]"
                 />
                 {q ? (
-                  <button type="button" onClick={() => setSearch('')} title="Wyczyść" className="text-[#6b7280] transition-colors hover:text-white">
+                  <button type="button" onClick={() => setSearch('')} title={t.clear} className="text-[#6b7280] transition-colors hover:text-white">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 ) : null}
               </div>
               {q ? (
                 <p className="mt-2 text-[11px] text-[#8d94a8]">
-                  {shownTotal} {plural(shownTotal, 'zdarzenie', 'zdarzenia', 'zdarzeń')} pasuje do zapytania
+                  {t.matching(shownTotal)}
                 </p>
               ) : null}
             </div>
@@ -635,9 +641,9 @@ function LogsPageContent() {
                 return (
                   <div key={category}>
                     <div className="flex items-center gap-2.5 border-b border-[#2f3341] px-4 py-3">
-                      <span className="text-sm font-bold text-white">{category}</span>
+                      <span className="text-sm font-bold text-white">{t.categories[category]}</span>
                       <span className="text-[11px] text-[#6b7280]">
-                        {events.length} {plural(events.length, 'zdarzenie', 'zdarzenia', 'zdarzeń')} · {onN} włączonych
+                        {t.groupMeta(events.length, onN)}
                       </span>
                       <span className="flex-1" />
                       <button
@@ -645,13 +651,14 @@ function LogsPageContent() {
                         onClick={() => toggleAllInCategory(category)}
                         className="rounded-[5px] border border-[#2f3341] px-2.5 py-1 text-[10px] font-semibold text-[#8d94a8] transition-colors hover:border-bot-primary hover:text-white"
                       >
-                        {allOn ? 'Wyłącz wszystkie' : 'Włącz wszystkie'}
+                        {allOn ? t.disableAll : t.enableAll}
                       </button>
                     </div>
 
                     <div className="flex flex-col gap-1.5 p-3.5">
                       {rows.map((eventType) => {
                         const eventConfig = LOG_EVENT_CONFIGS[eventType];
+                        const eventLabels = eventText(eventType);
                         const isOn = !!config.enabledEvents[eventType];
                         const channelId = config.logChannels[eventType] || '';
                         const rowColor = config.colorOverrides[eventType] || decimalToHex(eventConfig.color);
@@ -670,7 +677,7 @@ function LogsPageContent() {
                             <button
                               type="button"
                               onClick={() => setSelectedEvent(eventType)}
-                              title="Pokaż w podglądzie"
+                              title={t.showInPreview}
                               className="h-[30px] w-[3px] shrink-0 rounded-sm"
                               style={{ background: rowColor }}
                             />
@@ -681,9 +688,9 @@ function LogsPageContent() {
                               style={{ opacity: isOn ? 1 : 0.5 }}
                             >
                               <span className="block truncate text-[13px] font-semibold" style={{ color: isOn ? '#fff' : '#b9c0d0' }}>
-                                {eventConfig.name}
+                                {eventLabels.name}
                               </span>
-                              <span className="block truncate text-[11px] text-[#6b7280]">{eventConfig.description}</span>
+                              <span className="block truncate text-[11px] text-[#6b7280]">{eventLabels.description}</span>
                             </button>
 
                             <Select value={channelId} onValueChange={(value) => setEventChannel(eventType, value)}>
@@ -694,14 +701,14 @@ function LogsPageContent() {
                                   borderColor: isOn && !channelId ? 'rgba(239,68,68,0.55)' : '#2f3341',
                                 }}
                               >
-                                <SelectValue placeholder="— brak kanału —">
+                                <SelectValue placeholder={t.noChannel}>
                                   {channelId ? (
                                     <div className="flex items-center gap-1.5">
                                       <Hash className="h-3.5 w-3.5 text-muted-foreground" />
                                       {getChannelName(channelId)}
                                     </div>
                                   ) : (
-                                    "— brak kanału —"
+                                    t.noChannel
                                   )}
                                 </SelectValue>
                               </SelectTrigger>
@@ -732,7 +739,7 @@ function LogsPageContent() {
 
               {q && shownTotal === 0 ? (
                 <div className="px-4 py-8 text-center text-[13px] text-[#8d94a8]">
-                  Brak zdarzeń pasujących do „{search}".
+                  {t.noMatches(search)}
                 </div>
               ) : null}
             </div>
@@ -742,7 +749,7 @@ function LogsPageContent() {
           <div className="rounded-[10px] bg-[#17181E] p-4 shadow-[0_8px_18px_rgba(8,10,16,0.16)] lg:sticky lg:top-4">
             <div className="mb-3 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: selOn ? '#22c55e' : '#4b5563' }} />
-              Podgląd na żywo
+              {m.livePreview}
             </div>
 
             <div className="flex gap-2.5">
@@ -803,10 +810,10 @@ function LogsPageContent() {
                   ) : null}
                 </div>
                 <div className="mt-1 text-[11px] text-[#6b7280]">
-                  {selChannelName ? `→ # ${selChannelName}` : '→ brak kanału'}
+                  {selChannelName ? t.toChannel(selChannelName) : t.toNoChannel}
                 </div>
-                {selConfig.previewNote ? (
-                  <div className="mt-1.5 text-[11px] italic leading-5 text-[#8d94a8]">{selConfig.previewNote}</div>
+                {eventText(selEventType).previewNote ? (
+                  <div className="mt-1.5 text-[11px] italic leading-5 text-[#8d94a8]">{eventText(selEventType).previewNote}</div>
                 ) : null}
               </div>
             </div>
@@ -814,25 +821,25 @@ function LogsPageContent() {
             {!selOn ? (
               <div className="mt-2.5 flex items-start gap-1.5 text-[11px] leading-6" style={{ color: '#fcd34d' }}>
                 <span className="shrink-0">⚠️</span>
-                <span>To zdarzenie jest wyłączone — log nie zostanie wysłany.</span>
+                <span>{t.eventOff}</span>
               </div>
             ) : null}
             {selOn && !selChannelId ? (
               <div className="mt-2.5 flex items-start gap-1.5 text-[11px] leading-6" style={{ color: '#fca5a5' }}>
                 <span className="shrink-0">⚠️</span>
-                <span>Brak kanału — wybierz go w kolumnie „Kanał", inaczej log nie ma gdzie trafić.</span>
+                <span>{t.noChannelWarning}</span>
               </div>
             ) : null}
 
             <div className="mt-3.5 border-t border-[#2f3341] pt-3">
               <div className="mb-2 flex items-baseline justify-between gap-2.5">
-                <span className="text-[11px] font-semibold text-[#c4cad8]">Kolor embeda</span>
+                <span className="text-[11px] font-semibold text-[#c4cad8]">{t.embedColor}</span>
                 <button
                   type="button"
                   onClick={() => resetEventColor(selEventType)}
                   className="flex items-center gap-1 text-[11px] font-semibold text-[#8d94a8] transition-colors hover:text-white"
                 >
-                  <RotateCcw className="h-3 w-3" /> Domyślny
+                  <RotateCcw className="h-3 w-3" /> {t.defaultColor}
                 </button>
               </div>
               <div className="flex items-center gap-2">
@@ -846,7 +853,7 @@ function LogsPageContent() {
             </div>
 
             <div className="mt-3.5 border-t border-[#2f3341] pt-3 text-[11px] leading-6 text-[#6b7280]">
-              Kategoria: <span className="text-[#b9c0d0]">{selCategory}</span>
+              {t.category}<span className="text-[#b9c0d0]">{t.categories[selCategory]}</span>
             </div>
           </div>
         </div>

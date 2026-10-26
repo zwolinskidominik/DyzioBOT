@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/popover";
 import EmojiPicker from "@/components/EmojiPicker";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { greetingsMessages } from "@/i18n/messages/greetings";
 
 export interface ToolbarVariable {
   name: string;
@@ -38,13 +40,14 @@ function pickHoverEmoji(exclude?: string | null) {
 export const EmojiTriggerButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement>>(
   function EmojiTriggerButton({ className, onMouseEnter, ...props }, ref) {
     const [emoji, setEmoji] = useState<string>(() => pickHoverEmoji());
+    const tb = useMessages(greetingsMessages).toolbar;
 
     return (
       <button
         ref={ref}
         type="button"
-        aria-label="Wstaw emoji"
-        title="Wstaw emoji"
+        aria-label={tb.insertEmoji}
+        title={tb.insertEmoji}
         onMouseEnter={(event) => {
           setEmoji((current) => pickHoverEmoji(current));
           onMouseEnter?.(event);
@@ -89,20 +92,21 @@ export function VariablesMenu({
   onInsert: (text: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const tb = useMessages(greetingsMessages).toolbar;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label="Wstaw zmienną"
-          title="Wstaw zmienną"
+          aria-label={tb.insertVariable}
+          title={tb.insertVariable}
           className="flex h-7 w-7 items-center justify-center rounded text-[#b5bac1] transition-colors hover:bg-[#404249] hover:text-white"
         >
           <Braces className="h-[18px] w-[18px]" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" side="top" sideOffset={8} className="w-60 rounded-lg border border-[#1f2024] bg-[#2b2d31] p-1">
-        <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#949ba4]">Zmienne</p>
+        <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#949ba4]">{tb.variables}</p>
         <div className="max-h-64 overflow-y-auto">
           {variables.map((variable) => (
             <button

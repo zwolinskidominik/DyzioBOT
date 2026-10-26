@@ -14,6 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { SlideIn } from "@/components/ui/animated";
 import { toSortedDiscordChannels } from "@/lib/discordOrdering";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { levelsMessages } from "@/i18n/messages/levels";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Channel {
   id: string;
@@ -29,6 +32,8 @@ interface ChannelMultiplier {
 export default function ChannelMultipliersPage() {
   const params = useParams();
   const guildId = params.guildId as string;
+  const t = useMessages(levelsMessages);
+  const m = useMessages(commonMessages).module;
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,8 +88,8 @@ export default function ChannelMultipliersPage() {
         }
       } catch (error) {
         console.error("Error loading data:", error);
-        setError("Nie udało się załadować danych. Sprawdź połączenie z internetem i spróbuj ponownie.");
-        toast.error("Nie udało się załadować danych");
+        setError(m.loadError);
+        toast.error(m.loadErrorShort);
       } finally {
         setLoading(false);
       }
@@ -95,13 +100,13 @@ export default function ChannelMultipliersPage() {
 
   const handleAdd = async () => {
     if (!newChannelId) {
-      toast.error("Wybierz kanał");
+      toast.error(t.pickChannel);
       return;
     }
 
     const multiplierValue = parseFloat(newMultiplier);
     if (isNaN(multiplierValue) || multiplierValue < 0.1 || multiplierValue > 10) {
-      toast.error("Mnożnik musi być liczbą między 0.1 a 10");
+      toast.error(t.multiplierRange);
       return;
     }
 
@@ -131,10 +136,10 @@ export default function ChannelMultipliersPage() {
 
       setNewChannelId("");
       setNewMultiplier("1.5");
-      toast.success("Mnożnik został dodany!");
+      toast.success(t.cm.added);
     } catch (error) {
       console.error("Error adding multiplier:", error);
-      toast.error("Nie udało się dodać mnożnika");
+      toast.error(t.cm.addError);
     } finally {
       setSaving(false);
     }
@@ -151,10 +156,10 @@ export default function ChannelMultipliersPage() {
       }
 
       setMultipliers(multipliers.filter(m => m.channelId !== channelId));
-      toast.success("Mnożnik został usunięty!");
+      toast.success(t.cm.deleted);
     } catch (error) {
       console.error("Error deleting multiplier:", error);
-      toast.error("Nie udało się usunąć mnożnika");
+      toast.error(t.cm.deleteError);
     }
   };
 
@@ -171,11 +176,11 @@ export default function ChannelMultipliersPage() {
           <Button asChild variant="outline" className="mb-6">
             <Link href={`/${guildId}/levels`}>
               <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do poziomów
+              {t.cm.back}
             </Link>
           </Button>
           <ErrorState
-            title="Nie udało się załadować mnożników"
+            title={t.cm.loadErrorTitle}
             message={error}
             onRetry={handleRetry}
           />
@@ -219,7 +224,7 @@ export default function ChannelMultipliersPage() {
           <Button asChild variant="outline" className="mb-6">
             <Link href={`/${guildId}/levels`}>
               <ArrowLeft className="mr-2 w-4 h-4" />
-              Powrót do poziomów
+              {t.cm.back}
             </Link>
           </Button>
         </SlideIn>
@@ -236,23 +241,23 @@ export default function ChannelMultipliersPage() {
               <CardTitle className="text-2xl flex items-center gap-2">
                 <TrendingUp className="w-6 h-6 text-bot-primary" />
                 <span className="text-white/90">
-                  Mnożniki XP dla Kanałów
+                  {t.cm.title}
                 </span>
               </CardTitle>
               <CardDescription>
-                Ustaw niestandardowe mnożniki XP dla wybranych kanałów (np. 2.0 = podwójne XP, 0.5 = połowa XP)
+                {t.cm.description}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Add New Multiplier */}
               <div className="rounded-lg bg-background/50 p-4 space-y-4">
-                <h3 className="font-semibold text-sm">Dodaj nowy mnożnik</h3>
+                <h3 className="font-semibold text-sm">{t.cm.addNew}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="channel">Kanał</Label>
+                    <Label htmlFor="channel">{t.channel}</Label>
                     <Select value={newChannelId} onValueChange={setNewChannelId}>
                       <SelectTrigger id="channel">
-                        <SelectValue placeholder="Wybierz kanał..." />
+                        <SelectValue placeholder={t.pickChannelPlaceholder} />
                       </SelectTrigger>
                       <SelectContent>
                         {channels.map((channel) => (
@@ -268,7 +273,7 @@ export default function ChannelMultipliersPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="multiplier">Mnożnik</Label>
+                    <Label htmlFor="multiplier">{t.multiplier}</Label>
                     <Input
                       id="multiplier"
                       type="number"
@@ -290,12 +295,12 @@ export default function ChannelMultipliersPage() {
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                      Dodawanie...
+                      {t.cm.adding}
                     </>
                   ) : (
                     <>
                       <Plus className="mr-2 w-4 h-4" />
-                      Dodaj mnożnik
+                      {t.cm.add}
                     </>
                   )}
                 </Button>
@@ -303,12 +308,12 @@ export default function ChannelMultipliersPage() {
 
               {/* Current Multipliers */}
               <div className="space-y-3">
-                <h3 className="font-semibold text-sm">Aktualne mnożniki ({multipliers.length})</h3>
+                <h3 className="font-semibold text-sm">{t.cm.current(multipliers.length)}</h3>
                 {multipliers.length === 0 ? (
                   <div className="text-center py-8 px-4 rounded-lg bg-background/50">
                     <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">
-                      Brak ustawionych mnożników dla kanałów
+                      {t.cm.empty}
                     </p>
                   </div>
                 ) : (

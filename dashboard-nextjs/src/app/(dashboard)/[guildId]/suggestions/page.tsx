@@ -20,6 +20,9 @@ import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 import EmbedColorPicker from "@/components/EmbedColorPicker";
 import { SuggestionEmbedPreview, type SuggestionVotingFormat } from "@/components/suggestions/SuggestionEmbedPreview";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { suggestionsMessages } from "@/i18n/messages/suggestions";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Channel {
   id: string;
@@ -68,6 +71,8 @@ export default function SuggestionsPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(suggestionsMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -141,8 +146,8 @@ export default function SuggestionsPage() {
 
       } catch (error) {
         console.error("Error loading data:", error);
-        setError("Nie udało się załadować danych sugestii. Sprawdź połączenie z internetem i spróbuj ponownie.");
-        toast.error("Nie udało się załadować danych");
+        setError(t.loadError);
+        toast.error(m.loadErrorShort);
       } finally {
         setLoading(false);
       }
@@ -162,7 +167,7 @@ export default function SuggestionsPage() {
 
   const handleSave = useCallback(async () => {
     if (!selectedChannelId) {
-      toast.error("Wybierz kanał sugestii");
+      toast.error(t.pickChannel);
       return;
     }
 
@@ -191,14 +196,14 @@ export default function SuggestionsPage() {
         anonymous,
         embedColor,
       };
-      toast.success("Konfiguracja została zapisana!");
+      toast.success(m.saved);
     } catch (error) {
       console.error("Error saving config:", error);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [anonymous, embedColor, enabled, guildId, selectedChannelId, votingFormat]);
+  }, [anonymous, embedColor, enabled, guildId, selectedChannelId, votingFormat, t, m]);
 
   const handleCancel = useCallback(() => {
     const s = savedRef.current;
@@ -214,13 +219,13 @@ export default function SuggestionsPage() {
     id: `suggestions-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: "Sugestie",
-    onSave: channelMissing ? () => { toast.error("Wybierz kanał sugestii"); } : handleSave,
+    label: t.title,
+    onSave: channelMissing ? () => { toast.error(t.pickChannel); } : handleSave,
     onCancel: handleCancel,
-  }), [guildId, isDirty, saving, channelMissing, handleSave, handleCancel, registerDirtyController]);
+  }), [guildId, isDirty, saving, channelMissing, handleSave, handleCancel, registerDirtyController, t]);
 
   const handleDelete = async () => {
-    if (!confirm("Czy na pewno chcesz usunąć konfigurację sugestii?")) return;
+    if (!confirm(t.confirmDelete)) return;
 
     try {
       const response = await fetch(`/api/guild/${guildId}/suggestions/config`, {
@@ -238,10 +243,10 @@ export default function SuggestionsPage() {
       setAnonymous(false);
       setEmbedColor("#4C4C54");
       savedRef.current = DEFAULT_SAVED_STATE;
-      toast.success("Konfiguracja została usunięta!");
+      toast.success(m.deleted);
     } catch (error) {
       console.error("Error deleting config:", error);
-      toast.error("Nie udało się usunąć konfiguracji");
+      toast.error(m.deleteError);
     }
   };
 
@@ -256,7 +261,7 @@ export default function SuggestionsPage() {
       <div className="min-h-full">
         <div className="w-full">
           <ErrorState
-            title="Nie udało się załadować sugestii"
+            title={t.loadErrorTitle}
             message={error}
             onRetry={handleRetry}
           />
@@ -319,9 +324,9 @@ export default function SuggestionsPage() {
   }
 
   const votingFormatOptions: { value: SuggestionVotingFormat; label: string; description: string; icon: typeof ListOrdered }[] = [
-    { value: "counts", label: "Liczniki", description: "Same liczby głosów, bez procentów", icon: ListOrdered },
-    { value: "percent", label: "Procenty", description: "Wynik jako udział procentowy głosów", icon: Percent },
-    { value: "bar", label: "Pasek głosów", description: "Liczby, procenty i segmentowy pasek poparcia", icon: BarChart3 },
+    { value: "counts", ...t.formats.counts, icon: ListOrdered },
+    { value: "percent", ...t.formats.percent, icon: Percent },
+    { value: "bar", ...t.formats.bar, icon: BarChart3 },
   ];
 
   return (
@@ -330,14 +335,14 @@ export default function SuggestionsPage() {
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Sugestie</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Wygląd i sposób publikacji sugestii na serwerze.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
-              <DeezySwitch checked={enabled} onCheckedChange={setEnabled} aria-label="Włącz lub wyłącz sugestie" />
+              <span>{enabled ? m.active : m.inactive}</span>
+              <DeezySwitch checked={enabled} onCheckedChange={setEnabled} aria-label={t.toggle} />
             </div>
           </header>
         </SlideIn>
@@ -347,7 +352,7 @@ export default function SuggestionsPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł sugestii jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację, ale bot nie będzie publikował sugestii, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -364,19 +369,19 @@ export default function SuggestionsPage() {
                   <Lightbulb className="h-4 w-4" />
                 </span>
                 <div className="min-w-0">
-                  <CardTitle className="text-sm font-semibold text-white/90">Konfiguracja</CardTitle>
-                  <p className="mt-1 text-xs text-[#8d94a8]">Kanał sugestii, format głosowania, kolor embeda</p>
+                  <CardTitle className="text-sm font-semibold text-white/90">{t.configTitle}</CardTitle>
+                  <p className="mt-1 text-xs text-[#8d94a8]">{t.configText}</p>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Channel Select */}
                 <div className="space-y-2">
                   <Label htmlFor="channel">
-                    Kanał sugestii <span className="text-destructive">*</span>
+                    {t.channel} <span className="text-destructive">*</span>
                   </Label>
                   <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
                     <SelectTrigger id="channel" className="w-full">
-                      <SelectValue placeholder="Wybierz kanał..." />
+                      <SelectValue placeholder={t.channelPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
                       {channels.map((channel) => (
@@ -390,13 +395,13 @@ export default function SuggestionsPage() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Kanał, na którym będą publikowane sugestie od użytkowników
+                    {t.channelHint}
                   </p>
                 </div>
 
                 {/* Voting Format */}
                 <div className="space-y-2">
-                  <Label>Format głosowania</Label>
+                  <Label>{t.votingFormat}</Label>
                   <Tabs value={votingFormat} onValueChange={(value) => setVotingFormat(value as SuggestionVotingFormat)}>
                     {/* Poniżej lg lista przełączników zawija się (trzy etykiety z ikonami nie mieszczą
                         się w jednym rzędzie na telefonie i „Pasek głosowania" był ucinany).
@@ -424,8 +429,8 @@ export default function SuggestionsPage() {
                   <div className="flex items-center gap-2">
                     <EyeOff className="h-4 w-4 text-[#8d94a8]" />
                     <div>
-                      <p className="text-sm font-medium text-white/90">Zgłoszenie anonimowe</p>
-                      <p className="text-xs text-muted-foreground">Ukryj tożsamość autora sugestii w embedzie</p>
+                      <p className="text-sm font-medium text-white/90">{t.anonymous}</p>
+                      <p className="text-xs text-muted-foreground">{t.anonymousHint}</p>
                     </div>
                   </div>
                   <Switch checked={anonymous} onCheckedChange={setAnonymous} />
@@ -433,7 +438,7 @@ export default function SuggestionsPage() {
 
                 {/* Embed color */}
                 <div className="space-y-2">
-                  <Label>Kolor embeda</Label>
+                  <Label>{t.embedColor}</Label>
                   <div className="flex items-center gap-3 rounded-lg border border-[#2f3341] bg-dark-900 px-3 py-2.5">
                     <EmbedColorPicker
                       value={embedColor}
@@ -456,7 +461,7 @@ export default function SuggestionsPage() {
             <Card className="rounded-md border-0 bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)] lg:sticky lg:top-6">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold uppercase tracking-wide text-[#8d94a8]">
-                  Podgląd na żywo
+                  {m.livePreview}
                 </CardTitle>
               </CardHeader>
               <CardContent>

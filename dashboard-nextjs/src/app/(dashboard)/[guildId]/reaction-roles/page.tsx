@@ -24,6 +24,9 @@ import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { notifyModulesStatusChanged } from "@/lib/modulesStatusBus";
 import { SlideIn } from "@/components/ui/animated";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { reactionRolesMessages } from "@/i18n/messages/reactionRoles";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Channel {
   id: string;
@@ -77,6 +80,7 @@ function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch
 }
 
 function SettingRow({ title, description, icon, isOpen = false, onToggle, children }: SettingRowProps) {
+  const m = useMessages(commonMessages).module;
   return (
     <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
       <div className={cn("flex min-h-[68px] items-center gap-4 border border-transparent px-5 py-3 transition-colors", isOpen && "border-[#2f3341] bg-dark-800")}>
@@ -100,7 +104,7 @@ function SettingRow({ title, description, icon, isOpen = false, onToggle, childr
           <button
             type="button"
             onClick={onToggle}
-            aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"}
+            aria-label={isOpen ? m.collapse : m.expand}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white"
           >
             <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
@@ -118,6 +122,8 @@ function SettingRow({ title, description, icon, isOpen = false, onToggle, childr
 export default function ReactionRolesPage() {
   const params = useParams();
   const guildId = params?.guildId as string;
+  const t = useMessages(reactionRolesMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -166,7 +172,7 @@ export default function ReactionRolesPage() {
           setEnabled(configData.enabled !== false);
         }
       } catch {
-        setError("Nie udało się załadować danych. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(m.loadError);
       } finally {
         setLoading(false);
       }
@@ -186,11 +192,11 @@ export default function ReactionRolesPage() {
         body: JSON.stringify({ enabled: next }),
       });
       if (!res.ok) throw new Error("Failed to save");
-      toast.success(next ? "Role za reakcje włączone" : "Role za reakcje wyłączone");
+      toast.success(next ? t.turnedOn : t.turnedOff);
       notifyModulesStatusChanged();
     } catch {
       setEnabled(previous);
-      toast.error("Nie udało się zapisać ustawienia");
+      toast.error(t.settingSaveError);
     } finally {
       setSavingEnabled(false);
     }
@@ -215,7 +221,7 @@ export default function ReactionRolesPage() {
 
   const addReaction = () => {
     if (!currentEmoji || !currentRoleId) {
-      toast.error("Wybierz emoji i rolę");
+      toast.error(t.pickEmojiAndRole);
       return;
     }
 
@@ -224,19 +230,19 @@ export default function ReactionRolesPage() {
     const isUnicodeEmoji = unicodeEmojiRegex.test(currentEmoji.trim());
 
     if (!isCustomEmoji && !isUnicodeEmoji) {
-      toast.error("Wprowadź prawidłowe emoji");
+      toast.error(t.invalidEmoji);
       return;
     }
     if (reactions.length >= 20) {
-      toast.error("Maksymalnie 20 reakcji na wiadomość");
+      toast.error(t.maxReactions);
       return;
     }
     if (reactions.some((r) => r.emoji === currentEmoji)) {
-      toast.error("To emoji jest już używane");
+      toast.error(t.emojiUsed);
       return;
     }
     if (reactions.some((r) => r.roleId === currentRoleId)) {
-      toast.error("Ta rola jest już przypisana");
+      toast.error(t.roleUsed);
       return;
     }
 
@@ -256,8 +262,8 @@ export default function ReactionRolesPage() {
   };
 
   const handleSend = async () => {
-    if (!selectedChannelId) { toast.error("Wybierz kanał"); return; }
-    if (reactions.length === 0) { toast.error("Dodaj przynajmniej jedną reakcję"); return; }
+    if (!selectedChannelId) { toast.error(t.pickChannel); return; }
+    if (reactions.length === 0) { toast.error(t.addAtLeastOne); return; }
 
     setSaving(true);
     try {
@@ -269,21 +275,21 @@ export default function ReactionRolesPage() {
 
       if (!response.ok) throw new Error("Failed to create");
 
-      toast.success("Wiadomość z reakcjami została wysłana!");
+      toast.success(t.sent);
       setSelectedChannelId("");
       setTitle("");
       setEmbedColor(DEFAULT_EMBED_COLOR);
       setReactions([]);
       await refreshReactionRoles();
     } catch {
-      toast.error("Nie udało się wysłać wiadomości");
+      toast.error(t.sendError);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (messageId: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć tę wiadomość z reakcjami?")) return;
+    if (!confirm(t.confirmDelete)) return;
 
     try {
       const response = await fetchWithAuth(`/api/guild/${guildId}/reaction-roles?messageId=${messageId}`, {
@@ -291,11 +297,11 @@ export default function ReactionRolesPage() {
       });
       if (!response.ok) throw new Error("Failed to delete");
 
-      toast.success("Wiadomość została usunięta");
+      toast.success(t.deleted);
       if (editingPanel?.messageId === messageId) handleCancelEdit();
       await refreshReactionRoles();
     } catch {
-      toast.error("Nie udało się usunąć wiadomości");
+      toast.error(t.deleteError);
     }
   };
 
@@ -335,11 +341,11 @@ export default function ReactionRolesPage() {
       });
       if (!response.ok) throw new Error("Failed to update");
 
-      toast.success("Panel zaktualizowany i ponownie wysłany!");
+      toast.success(t.updated);
       handleCancelEdit();
       await refreshReactionRoles();
     } catch {
-      toast.error("Nie udało się zaktualizować panelu");
+      toast.error(t.updateError);
     } finally {
       setSaving(false);
     }
@@ -355,10 +361,10 @@ export default function ReactionRolesPage() {
       });
       if (!response.ok) throw new Error("Failed to resend");
 
-      toast.success("Panel wysłany ponownie!");
+      toast.success(t.resent);
       await refreshReactionRoles();
     } catch {
-      toast.error("Nie udało się wysłać panelu ponownie");
+      toast.error(t.resendError);
     } finally {
       setResending(null);
     }
@@ -391,7 +397,7 @@ export default function ReactionRolesPage() {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Nie udało się załadować reaction-roles" message={error} onRetry={handleRetry} />
+          <ErrorState title={t.loadErrorTitle} message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -422,14 +428,14 @@ export default function ReactionRolesPage() {
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Role za Reakcje</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Zarządzaj wiadomościami z reakcjami, które przypisują role użytkownikom na serwerze.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
-              <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} disabled={savingEnabled} aria-label="Włącz lub wyłącz role za reakcje" />
+              <span>{enabled ? m.active : m.inactive}</span>
+              <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} disabled={savingEnabled} aria-label={t.toggle} />
             </div>
           </header>
         </SlideIn>
@@ -439,7 +445,7 @@ export default function ReactionRolesPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł ról za reakcje jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację, ale bot nie będzie przypisywał ról, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -449,11 +455,11 @@ export default function ReactionRolesPage() {
           <div className="space-y-3">
             {/* ── Create / Edit panel ─────────────────────────────────── */}
             <SettingRow
-              title={editingPanel ? "Edytuj panel" : "Nowy panel"}
+              title={editingPanel ? t.editPanel : t.newPanel}
               description={
                 editingPanel
-                  ? "Zmodyfikuj konfigurację — podgląd aktualizuje się od razu"
-                  : "Skonfiguruj wiadomość i role, podgląd aktualizuje się od razu"
+                  ? t.editPanelHint
+                  : t.newPanelHint
               }
               icon={editingPanel ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               isOpen={formOpen}
@@ -464,7 +470,7 @@ export default function ReactionRolesPage() {
                 {/* Channel */}
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold text-[#c4cad8]">
-                    Kanał docelowy <span className="text-destructive">*</span>
+                    {t.targetChannel} <span className="text-destructive">*</span>
                   </Label>
                   <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
                     <SelectTrigger className="h-11 border-transparent bg-dark-900 text-white/90 focus:ring-[#3b82f6]/50 focus:ring-offset-0">
@@ -474,14 +480,14 @@ export default function ReactionRolesPage() {
                         placeholder={
                           <div className="flex items-center gap-2 text-[#8d94a8]">
                             <Hash className="h-4 w-4" />
-                            <span>Wybierz kanał...</span>
+                            <span>{t.pickChannelPlaceholder}</span>
                           </div>
                         }
                       >
                         {selectedChannelId ? (
                           <div className="flex items-center gap-2">
                             <Hash className="h-4 w-4 text-[#8d94a8]" />
-                            {channels.find((ch) => ch.id === selectedChannelId)?.name ?? "Wybierz kanał..."}
+                            {channels.find((ch) => ch.id === selectedChannelId)?.name ?? t.pickChannelPlaceholder}
                           </div>
                         ) : null}
                       </SelectValue>
@@ -502,16 +508,16 @@ export default function ReactionRolesPage() {
                 {/* Title */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
-                    <Label className="text-xs font-semibold text-[#c4cad8]">Tytuł embeda (opcjonalnie)</Label>
+                    <Label className="text-xs font-semibold text-[#c4cad8]">{t.embedTitle}</Label>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-[#8d94a8]">Kolor embeda</span>
+                      <span className="text-xs text-[#8d94a8]">{t.embedColor}</span>
                       <EmbedColorPicker value={embedColor} onChange={setEmbedColor} onPreviewChange={setPreviewEmbedColor} />
                     </div>
                   </div>
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Wybierz swoją rolę"
+                    placeholder={t.titlePlaceholder}
                     maxLength={256}
                     className="h-11 border-transparent bg-dark-900 text-sm text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
                   />
@@ -519,17 +525,17 @@ export default function ReactionRolesPage() {
 
                 {/* Add reaction subsection */}
                 <div className="space-y-4 rounded-md border border-[#2f3341] bg-dark-900 p-4">
-                  <p className="text-xs font-semibold text-[#c4cad8]">Dodaj reakcję</p>
+                  <p className="text-xs font-semibold text-[#c4cad8]">{t.addReaction}</p>
 
                   <div className="grid grid-cols-1 gap-4">
                     {/* Emoji */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-[#c4cad8]">Emoji</Label>
+                      <Label className="text-xs font-semibold text-[#c4cad8]">{t.emoji}</Label>
                       <div className="flex gap-2">
                         <Input
                           value={currentEmoji}
                           onChange={(e) => setCurrentEmoji(e.target.value)}
-                          placeholder="Lub wpisz własne emoji"
+                          placeholder={t.customEmoji}
                           maxLength={10}
                           className="h-11 flex-1 border-transparent bg-dark-800 text-sm text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
                         />
@@ -541,7 +547,7 @@ export default function ReactionRolesPage() {
 
                     {/* Role combobox */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-[#c4cad8]">Rola</Label>
+                      <Label className="text-xs font-semibold text-[#c4cad8]">{t.role}</Label>
                       <Popover
                         open={rolePopoverOpen}
                         onOpenChange={(open) => {
@@ -556,7 +562,7 @@ export default function ReactionRolesPage() {
                               role="combobox"
                               aria-expanded={rolePopoverOpen}
                               aria-controls="rr-role-options"
-                              placeholder="Wybierz rolę..."
+                              placeholder={t.pickRole}
                               value={roleInputValue}
                               onFocus={(e) => {
                                 setRolePopoverOpen(true);
@@ -585,7 +591,7 @@ export default function ReactionRolesPage() {
                         >
                           <div className="max-h-64 overflow-y-auto overscroll-contain">
                             {filteredRoles.length === 0 ? (
-                              <div className="py-6 text-center text-sm text-[#8d94a8]">Nie znaleziono roli</div>
+                              <div className="py-6 text-center text-sm text-[#8d94a8]">{t.roleNotFound}</div>
                             ) : (
                               filteredRoles.map((role) => (
                                 <button
@@ -609,11 +615,11 @@ export default function ReactionRolesPage() {
 
                     {/* Description */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-[#c4cad8]">Opis (opcjonalnie)</Label>
+                      <Label className="text-xs font-semibold text-[#c4cad8]">{t.description}</Label>
                       <Input
                         value={currentDescription}
                         onChange={(e) => setCurrentDescription(e.target.value)}
-                        placeholder="Opcjonalny opis..."
+                        placeholder={t.descriptionPlaceholder}
                         maxLength={100}
                         className="h-11 border-transparent bg-dark-800 text-sm text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
                       />
@@ -627,7 +633,7 @@ export default function ReactionRolesPage() {
                     className="w-full border-dashed border-[#3a3f4e] bg-transparent text-[#8d94a8] hover:border-[#3b82f6]/50 hover:bg-dark-800 hover:text-white"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Dodaj reakcję
+                    {t.addReaction}
                   </Button>
                 </div>
 
@@ -635,7 +641,7 @@ export default function ReactionRolesPage() {
                 {reactions.length > 0 ? (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-[#c4cad8]">
-                      Skonfigurowane reakcje ({reactions.length}/20)
+                      {t.configured(reactions.length)}
                     </p>
                     <div className="space-y-2">
                       {reactions.map((reaction, index) => (
@@ -685,7 +691,7 @@ export default function ReactionRolesPage() {
                       disabled={saving}
                       className="w-full border-[#3a3f4e] bg-transparent text-[#8d94a8] hover:bg-dark-900 hover:text-white"
                     >
-                      Anuluj edycję
+                      {t.cancelEdit}
                     </Button>
                   ) : null}
                   <Button
@@ -697,17 +703,17 @@ export default function ReactionRolesPage() {
                     {saving ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {editingPanel ? "Zapisywanie..." : "Wysyłanie..."}
+                        {editingPanel ? t.saving : t.sending}
                       </>
                     ) : editingPanel ? (
                       <>
                         <Save className="mr-2 h-4 w-4" />
-                        Zapisz zmiany
+                        {t.saveChanges}
                       </>
                     ) : (
                       <>
                         <Send className="mr-2 h-4 w-4" />
-                        Wyślij wiadomość
+                        {t.sendMessage}
                       </>
                     )}
                   </Button>
@@ -718,11 +724,11 @@ export default function ReactionRolesPage() {
               <div className="space-y-2 rounded-md bg-dark-900/30 p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Podgląd na żywo
+                  {m.livePreview}
                 </div>
                 <ReactionRoleLivePreview title={title} reactions={previewReactions} roles={roles} embedColor={previewEmbedColor || embedColor} />
                 <p className="text-xs text-[#6f7690]">
-                  Podgląd aktualizuje się automatycznie podczas edycji formularza.
+                  {t.previewHint}
                 </p>
               </div>
               </div>
@@ -734,9 +740,9 @@ export default function ReactionRolesPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-dark-900">
                   <Smile className="h-8 w-8 text-[#8d94a8]" />
                 </div>
-                <p className="text-sm font-semibold text-white/80">Brak wiadomości z reakcjami</p>
+                <p className="text-sm font-semibold text-white/80">{t.emptyTitle}</p>
                 <p className="mx-auto mt-1 max-w-xs text-xs text-[#8d94a8]">
-                  Utwórz pierwszą wiadomość z reakcjami powyżej.
+                  {t.emptyText}
                 </p>
               </div>
             ) : (

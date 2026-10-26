@@ -20,6 +20,9 @@ import {
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { Search, Lock, Plus, X, Trash2, Pencil, Save, Loader2, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { hangmanMessages } from "@/i18n/messages/hangman";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface HangmanCategory {
   name: string;
@@ -66,15 +69,8 @@ export default function HangmanBrowserPage() {
   const { data: session, status } = useSession();
   const currentUserId = (session?.user as { id?: string })?.id;
 
-  if (status !== 'loading' && !OWNER_IDS.includes(currentUserId ?? '')) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
-        <p className="text-4xl">🔒</p>
-        <h2 className="text-xl font-semibold">Brak dostępu</h2>
-        <p className="text-muted-foreground text-sm">Ten moduł jest dostępny wyłącznie dla właściciela bota.</p>
-      </div>
-    );
-  }
+  const t = useMessages(hangmanMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,12 +118,12 @@ export default function HangmanBrowserPage() {
       setData(result);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Nie udało się załadować danych"
+        err instanceof Error ? err.message : m.loadErrorShort
       );
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, m]);
 
   useEffect(() => {
     fetchData();
@@ -187,7 +183,7 @@ export default function HangmanBrowserPage() {
     if (!word) return;
 
     if (!/^[a-ząćęłńóśźż]+(\s[a-ząćęłńóśźż]+){0,3}$/.test(word)) {
-      setWordError("Tylko polskie litery i spacje (bez q, v, x)");
+      setWordError(t.onlyPolish);
       return;
     }
 
@@ -202,14 +198,14 @@ export default function HangmanBrowserPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setWordError(json.error || "Błąd");
+        setWordError(json.error || m.error);
         return;
       }
       setNewWord("");
       await fetchData(true);
       requestAnimationFrame(() => wordInputRef.current?.focus());
     } catch {
-      setWordError("Błąd połączenia");
+      setWordError(m.connectionError);
     } finally {
       setSavingWord(false);
     }
@@ -239,7 +235,7 @@ export default function HangmanBrowserPage() {
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim() || !newCategoryEmoji.trim()) {
-      setCategoryError("Podaj nazwę i emoji");
+      setCategoryError(t.nameAndEmoji);
       return;
     }
     setSavingCategory(true);
@@ -256,7 +252,7 @@ export default function HangmanBrowserPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setCategoryError(json.error || "Błąd");
+        setCategoryError(json.error || m.error);
         return;
       }
       setSelectedCategory(newCategoryName.trim());
@@ -265,7 +261,7 @@ export default function HangmanBrowserPage() {
       setShowAddCategory(false);
       await fetchData();
     } catch {
-      setCategoryError("Błąd połączenia");
+      setCategoryError(m.connectionError);
     } finally {
       setSavingCategory(false);
     }
@@ -284,7 +280,7 @@ export default function HangmanBrowserPage() {
     const trimmedName = editName.trim();
     const trimmedEmoji = editEmoji.trim();
     if (!trimmedName || !trimmedEmoji) {
-      setEditError("Podaj nazwę i emoji");
+      setEditError(t.nameAndEmoji);
       return;
     }
     setSavingEdit(true);
@@ -302,14 +298,14 @@ export default function HangmanBrowserPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setEditError(json.error || "Błąd");
+        setEditError(json.error || m.error);
         return;
       }
       setSelectedCategory(trimmedName);
       setEditingCategory(false);
       await fetchData();
     } catch {
-      setEditError("Błąd połączenia");
+      setEditError(m.connectionError);
     } finally {
       setSavingEdit(false);
     }
@@ -357,6 +353,17 @@ export default function HangmanBrowserPage() {
     }
   };
 
+  // Po wszystkich hookach: wcześniejszy return zmieniał liczbę hooków między renderami.
+  if (status !== 'loading' && !OWNER_IDS.includes(currentUserId ?? '')) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
+        <p className="text-4xl">🔒</p>
+        <h2 className="text-xl font-semibold">{m.noAccess}</h2>
+        <p className="text-muted-foreground text-sm">{m.ownerOnlyText}</p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-full">
@@ -385,8 +392,8 @@ export default function HangmanBrowserPage() {
       <div className="min-h-full">
         <div className="w-full">
           <ErrorState
-            title="Błąd ładowania"
-            message={error || "Nie udało się załadować danych wisielca"}
+            title={m.loadErrorGeneric}
+            message={error || t.loadError}
             onRetry={() => window.location.reload()}
           />
         </div>
@@ -402,14 +409,14 @@ export default function HangmanBrowserPage() {
         <SlideIn delay={0}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Wisielec — Zarządzanie Słowami</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Przeglądaj, dodawaj i usuwaj kategorie oraz hasła w grze /wisielec.
+                {t.subtitle}
               </p>
             </div>
             <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-400">
               <Lock className="h-3.5 w-3.5" />
-              Tylko właściciel bota
+              {m.ownerOnlyBadge}
             </span>
           </header>
         </SlideIn>
@@ -418,15 +425,15 @@ export default function HangmanBrowserPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-md bg-dark-800 p-4">
               <p className="text-2xl font-bold text-white">{data.totalCategories}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">kategorii</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.statCategories}</p>
             </div>
             <div className="rounded-md bg-dark-800 p-4">
               <p className="text-2xl font-bold text-emerald-400">{data.totalWords}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">łącznie słów</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.statWords}</p>
             </div>
             <div className="rounded-md bg-dark-800 p-4">
               <p className="text-2xl font-bold text-pink-400">{avgPerCategory}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">śr. na kategorię</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.statAvg}</p>
             </div>
           </div>
         </SlideIn>
@@ -435,7 +442,7 @@ export default function HangmanBrowserPage() {
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d94a8]" />
             <Input
-              placeholder="Szukaj słowa lub kategorii we wszystkich kategoriach..."
+              placeholder={t.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={cn(inputClass, "pl-9")}
@@ -443,8 +450,8 @@ export default function HangmanBrowserPage() {
           </div>
           {normalizedSearch ? (
             <p className="mt-2 text-xs text-[#8d94a8]">
-              Znaleziono <span className="font-semibold text-white/90">{totalMatchingWords}</span> słów w{" "}
-              <span className="font-semibold text-white/90">{filteredCategories.length}</span> kategoriach dla „{search}"
+              {t.foundPrefix}<span className="font-semibold text-white/90">{totalMatchingWords}</span>{t.foundMiddle}
+              <span className="font-semibold text-white/90">{filteredCategories.length}</span>{t.foundSuffix(search)}
             </p>
           ) : null}
         </SlideIn>
@@ -452,7 +459,7 @@ export default function HangmanBrowserPage() {
         {filteredCategories.length === 0 ? (
           <div className="rounded-md bg-dark-800 py-16 text-center">
             <Search className="mx-auto mb-3 h-10 w-10 text-[#8d94a8] opacity-50" />
-            <p className="text-sm text-[#8d94a8]">Nie znaleziono słów ani kategorii pasujących do „{search}"</p>
+            <p className="text-sm text-[#8d94a8]">{t.notFound(search)}</p>
           </div>
         ) : (
           <SlideIn delay={130}>
@@ -487,7 +494,7 @@ export default function HangmanBrowserPage() {
                         {canDrag ? (
                           <span
                             className="flex h-9 w-6 shrink-0 cursor-grab items-center justify-center text-[#6f7690] active:cursor-grabbing"
-                            title="Przeciągnij, aby zmienić kolejność"
+                            title={t.drag}
                           >
                             <GripVertical className="h-4 w-4" />
                           </span>
@@ -519,13 +526,13 @@ export default function HangmanBrowserPage() {
                 {showAddCategory ? (
                   <div className="space-y-2 rounded-md bg-dark-700 p-3">
                     <Input
-                      placeholder="Nazwa kategorii"
+                      placeholder={t.categoryName}
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
                       className={cn(inputClass, "h-9 bg-dark-900")}
                     />
                     <Input
-                      placeholder="Emoji"
+                      placeholder={t.emoji}
                       value={newCategoryEmoji}
                       onChange={(e) => setNewCategoryEmoji(e.target.value)}
                       className={cn(inputClass, "h-9 bg-dark-900")}
@@ -539,7 +546,7 @@ export default function HangmanBrowserPage() {
                         disabled={savingCategory}
                         className="flex-1 bg-[#3b82f6] text-white hover:bg-[#2563eb]"
                       >
-                        {savingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : "Dodaj"}
+                        {savingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : m.add}
                       </Button>
                       <Button
                         type="button"
@@ -547,14 +554,14 @@ export default function HangmanBrowserPage() {
                         size="sm"
                         onClick={() => { setShowAddCategory(false); setNewCategoryName(""); setNewCategoryEmoji(""); setCategoryError(""); }}
                       >
-                        Anuluj
+                        {m.cancel}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowAddCategory(true)} className={dashedButtonClass}>
                     <Plus className="h-3.5 w-3.5" />
-                    Nowa kategoria
+                    {t.newCategory}
                   </button>
                 )}
               </div>
@@ -581,29 +588,29 @@ export default function HangmanBrowserPage() {
                         <div className="flex min-w-0 items-center gap-2.5">
                           <span className="text-2xl leading-none">{selectedCategoryData.emoji}</span>
                           <h2 className="truncate text-base font-semibold text-white">{selectedCategoryData.name}</h2>
-                          <span className="shrink-0 text-xs text-[#8d94a8]">{selectedCategoryData.wordCount} słów</span>
+                          <span className="shrink-0 text-xs text-[#8d94a8]">{t.wordsCount(selectedCategoryData.wordCount)}</span>
                         </div>
                       )}
                       <div className="flex shrink-0 items-center gap-1">
                         {editingCategory ? (
                           <>
-                            <button type="button" onClick={handleEditCategory} disabled={savingEdit} className={iconButtonClass} aria-label="Zapisz zmiany">
+                            <button type="button" onClick={handleEditCategory} disabled={savingEdit} className={iconButtonClass} aria-label={t.saveChanges}>
                               {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             </button>
-                            <button type="button" onClick={() => setEditingCategory(false)} className={iconButtonClass} aria-label="Anuluj edycję">
+                            <button type="button" onClick={() => setEditingCategory(false)} className={iconButtonClass} aria-label={t.cancelEdit}>
                               <X className="h-4 w-4" />
                             </button>
                           </>
                         ) : (
                           <>
-                            <button type="button" onClick={startEditCategory} className={iconButtonClass} aria-label="Edytuj kategorię">
+                            <button type="button" onClick={startEditCategory} className={iconButtonClass} aria-label={t.editCategory}>
                               <Pencil className="h-4 w-4" />
                             </button>
                             <button
                               type="button"
                               onClick={() => setDeleteConfirm({ type: "category", categoryName: selectedCategoryData.name })}
                               className={iconButtonDangerClass}
-                              aria-label="Usuń kategorię"
+                              aria-label={t.deleteCategory}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -616,7 +623,7 @@ export default function HangmanBrowserPage() {
                     <div className="mt-4 flex gap-2">
                       <Input
                         ref={wordInputRef}
-                        placeholder="Dodaj nowe słowo... (Enter)"
+                        placeholder={t.addPlaceholder}
                         value={newWord}
                         onChange={(e) => setNewWord(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") handleAddWord(); }}
@@ -629,14 +636,14 @@ export default function HangmanBrowserPage() {
                         className="shrink-0 bg-[#3b82f6] text-white hover:bg-[#2563eb]"
                       >
                         {savingWord ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                        Dodaj
+                        {m.add}
                       </Button>
                     </div>
                     {wordError ? <p className="mt-1.5 text-xs text-destructive">{wordError}</p> : null}
-                    <p className="mt-1.5 text-[11px] text-[#6f7690]">Tylko polskie litery i spacje (bez q, v, x), max. 4 wyrazy.</p>
+                    <p className="mt-1.5 text-[11px] text-[#6f7690]">{t.hint}</p>
 
                     {groupedWords.length === 0 ? (
-                      <p className="mt-4 text-sm text-[#8d94a8]">Ta kategoria nie ma jeszcze żadnych słów.</p>
+                      <p className="mt-4 text-sm text-[#8d94a8]">{t.emptyCategory}</p>
                     ) : (
                       <div className="mt-4 space-y-3">
                         {groupedWords.map((group) => (
@@ -658,7 +665,7 @@ export default function HangmanBrowserPage() {
                                       type="button"
                                       onClick={() => setDeleteConfirm({ type: "word", categoryName: selectedCategoryData.name, word })}
                                       className="text-[#8d94a8] opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
-                                      aria-label={`Usuń słowo ${word}`}
+                                      aria-label={t.removeWord(word)}
                                     >
                                       <X className="h-3 w-3" />
                                     </button>
@@ -672,7 +679,7 @@ export default function HangmanBrowserPage() {
                     )}
                   </>
                 ) : (
-                  <p className="py-12 text-center text-sm text-[#8d94a8]">Wybierz kategorię z listy po lewej.</p>
+                  <p className="py-12 text-center text-sm text-[#8d94a8]">{t.pickCategory}</p>
                 )}
               </div>
             </div>
@@ -681,8 +688,8 @@ export default function HangmanBrowserPage() {
 
         {data.categories.length === 0 ? (
           <div className="rounded-md bg-dark-800 py-16 text-center">
-            <p className="text-sm font-semibold text-white/90">Brak kategorii</p>
-            <p className="mx-auto mt-1 max-w-sm text-xs text-[#8d94a8]">Dodaj pierwszą kategorię, aby zacząć budować pulę haseł do gry /wisielec.</p>
+            <p className="text-sm font-semibold text-white/90">{t.noCategories}</p>
+            <p className="mx-auto mt-1 max-w-sm text-xs text-[#8d94a8]">{t.noCategoriesText}</p>
           </div>
         ) : null}
 
@@ -690,23 +697,23 @@ export default function HangmanBrowserPage() {
         <Dialog open={deleteConfirm !== null} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Potwierdź usunięcie</DialogTitle>
+              <DialogTitle>{t.confirmTitle}</DialogTitle>
               <DialogDescription>
                 {deleteConfirm?.type === "category"
-                  ? `Czy na pewno chcesz usunąć kategorię „${deleteConfirm.categoryName}" i wszystkie jej słowa?`
-                  : `Czy na pewno chcesz usunąć słowo „${deleteConfirm?.word}" z kategorii „${deleteConfirm?.categoryName}"?`}
+                  ? t.confirmCategory(deleteConfirm.categoryName)
+                  : t.confirmWord(deleteConfirm?.word ?? "", deleteConfirm?.categoryName ?? "")}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
-                Anuluj
+                {m.cancel}
               </Button>
               <Button
                 variant="destructive"
                 disabled={deleting}
                 onClick={deleteConfirm?.type === "category" ? handleRemoveCategory : handleRemoveWord}
               >
-                {deleting ? "Usuwanie..." : "Usuń"}
+                {deleting ? m.deleting : m.delete}
               </Button>
             </DialogFooter>
           </DialogContent>

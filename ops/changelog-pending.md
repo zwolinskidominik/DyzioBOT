@@ -5,7 +5,9 @@ widoczne dla użytkowników. Na koniec dnia złóż z nich jeden wpis na `#chang
 
 Ostatni wysłany wpis: 25.10.2026.
 
-## Wstrzymane (ogłosić razem z pełną angielską wersją panelu)
+## Czeka na wdrożenie (etap 2 gotowy w kodzie, niezacommitowany)
 
-- Panel deezy.cc po angielsku: przełącznik PL/EN, język dobierany do przeglądarki (etap 1: strona główna, lista serwerów, menu, pasek zapisu). / English dashboard: PL/EN switcher, language follows the browser (stage 1).
+- Panel deezy.cc w całości po angielsku: przełącznik PL/EN, język dobierany do przeglądarki, przetłumaczone wszystkie moduły. / Fully English dashboard: PL/EN switcher, language follows the browser, every module translated.
 - Polityka prywatności 1.3: ciasteczko z wybranym językiem panelu. / Privacy Policy 1.3: dashboard language cookie.
+- Uwaga do treści: wiadomości wysyłane przez bota (embedy, przyciski, podglądy) nadal są po polsku, angielska wersja bota przyjdzie później. / Note: messages sent by the bot are still Polish, the English bot comes later.
+- Duża funkcja: po wdrożeniu dodatkowo ogłoszenie na `#announcements`.

@@ -13,6 +13,11 @@ import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { settingsMessages } from "@/i18n/messages/settings";
+import type { Widen } from "@/i18n/config";
+
+type SettingsText = Widen<typeof settingsMessages.pl>;
 
 interface Channel {
   id: string;
@@ -37,45 +42,20 @@ interface FormState {
 
 const DEFAULT_FORM: FormState = { language: "pl", nick: "", bio: "" };
 
-const LANGS: { id: "pl" | "en"; flag: string; label: string; short: string; enabled: boolean }[] = [
-  { id: "pl", flag: "🇵🇱", label: "Polski", short: "PL", enabled: true },
-  { id: "en", flag: "🇬🇧", label: "English (wkrótce)", short: "EN", enabled: false },
+const LANGS: { id: "pl" | "en"; flag: string; labelKey: "polish" | "englishSoon"; short: string; enabled: boolean }[] = [
+  { id: "pl", flag: "🇵🇱", labelKey: "polish", short: "PL", enabled: true },
+  { id: "en", flag: "🇬🇧", labelKey: "englishSoon", short: "EN", enabled: false },
 ];
 
 interface DangerDef {
   id: "levels" | "economy" | "warnings";
   endpoint: string;
-  title: string;
-  action: string;
-  meta: string;
-  warn: string;
 }
 
 const DANGERS: DangerDef[] = [
-  {
-    id: "levels",
-    endpoint: "reset-levels",
-    title: "Zresetuj poziomy użytkowników",
-    action: "Zresetuj",
-    meta: "Usunie XP i poziomy wszystkich użytkowników na serwerze.",
-    warn: "XP, poziomy i miejsce w rankingu zostaną usunięte wszystkim użytkownikom.",
-  },
-  {
-    id: "economy",
-    endpoint: "reset-economy",
-    title: "Wyzeruj pieniądze użytkowników",
-    action: "Wyzeruj",
-    meta: "Wyzeruje portfel i bank wszystkich użytkowników.",
-    warn: "salda portfela i banku wszystkich użytkowników zostaną wyzerowane.",
-  },
-  {
-    id: "warnings",
-    endpoint: "reset-warnings",
-    title: "Zresetuj ostrzeżenia użytkowników",
-    action: "Zresetuj",
-    meta: "Usunie wszystkie ostrzeżenia na serwerze.",
-    warn: "wszystkie ostrzeżenia wszystkich użytkowników zostaną usunięte.",
-  },
+  { id: "levels", endpoint: "reset-levels" },
+  { id: "economy", endpoint: "reset-economy" },
+  { id: "warnings", endpoint: "reset-warnings" },
 ];
 
 interface DangerRowState {
@@ -95,17 +75,18 @@ function fileToDataUri(file: File): Promise<string> {
 }
 
 async function pickImage(
-  e: React.ChangeEvent<HTMLInputElement>
+  e: React.ChangeEvent<HTMLInputElement>,
+  t: SettingsText
 ): Promise<{ dataUri: string; file: File } | null> {
   const file = e.target.files?.[0];
   if (!file) return null;
   const allowed = ["image/png", "image/jpeg", "image/gif", "image/webp"];
   if (!allowed.includes(file.type)) {
-    toast.error("Dozwolone formaty: PNG, JPG, GIF, WebP");
+    toast.error(t.fileFormats);
     return null;
   }
   if (file.size > 8 * 1024 * 1024) {
-    toast.error("Obraz jest za duży (max 8 MB)");
+    toast.error(t.fileTooBig);
     return null;
   }
   const dataUri = await fileToDataUri(file);
@@ -133,6 +114,7 @@ export default function SettingsPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(settingsMessages);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -219,7 +201,7 @@ export default function SettingsPage() {
         savedRef.current = nextForm;
       } catch (err) {
         console.error("Error loading settings:", err);
-        setError("Nie udało się załadować ustawień. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -239,7 +221,7 @@ export default function SettingsPage() {
 
   const handleSave = useCallback(async () => {
     if (profileEditable && !nameTrim) {
-      toast.error("Nazwa bota nie może być pusta");
+      toast.error(t.nameEmptyToast);
       return;
     }
 
@@ -279,14 +261,14 @@ export default function SettingsPage() {
       setForm(nextForm);
       savedRef.current = nextForm;
 
-      toast.success("Ustawienia zostały zapisane!");
+      toast.success(t.saved);
     } catch (err) {
       console.error("Error saving settings:", err);
-      toast.error(err instanceof Error ? err.message : "Nie udało się zapisać ustawień");
+      toast.error(err instanceof Error ? err.message : t.saveError);
     } finally {
       setSaving(false);
     }
-  }, [form, guildId, nameTrim, profileEditable]);
+  }, [form, guildId, nameTrim, profileEditable, t]);
 
   const handleCancel = useCallback(() => {
     setForm(savedRef.current);
@@ -300,31 +282,31 @@ export default function SettingsPage() {
         id: `settings-${guildId}`,
         isDirty,
         isSaving: saving,
-        label: "Ustawienia",
+        label: t.saveLabel,
         onSave: handleSave,
         onCancel: handleCancel,
       }),
-    [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]
+    [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController, t]
   );
 
   const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profileEditable) return;
-    const picked = await pickImage(e);
+    const picked = await pickImage(e, t);
     e.target.value = "";
     if (!picked) return;
     setForm((f) => ({ ...f, pendingAvatar: picked.dataUri }));
     setAvatarFileName(`${picked.file.name} · ${Math.round(picked.file.size / 1024)} KB`);
-    toast.success("Avatar podmieniony — zapisz, aby wysłać do Discorda");
+    toast.success(t.avatarPicked);
   };
 
   const handleBannerPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profileEditable) return;
-    const picked = await pickImage(e);
+    const picked = await pickImage(e, t);
     e.target.value = "";
     if (!picked) return;
     setForm((f) => ({ ...f, pendingBanner: picked.dataUri }));
     setBannerFileName(`${picked.file.name} · ${Math.round(picked.file.size / 1024)} KB`);
-    toast.success("Banner podmieniony — zapisz, aby wysłać do Discorda");
+    toast.success(t.bannerPicked);
   };
 
   const previewAvatar = form.pendingAvatar !== undefined ? form.pendingAvatar : liveAvatarUrl;
@@ -345,28 +327,23 @@ export default function SettingsPage() {
   const confirmDanger = async (d: DangerDef) => {
     const row = dangerState[d.id];
     if (!guild || row.value.trim() !== guild.name) {
-      toast.error(`Wpisz dokładnie „${guild?.name ?? ""}", aby potwierdzić`);
+      toast.error(t.danger.typeExact(guild?.name ?? ""));
       return;
     }
     try {
       const res = await fetch(`/api/guild/${guildId}/settings/danger/${d.endpoint}`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data.error || "Nie udało się wykonać operacji");
+        toast.error(data.error || t.danger.failed);
         return;
       }
       const count = data.deletedCount ?? data.usersAffected ?? 0;
-      const doneMeta =
-        d.id === "levels"
-          ? `Poziomy zresetowane — ${count} osób wyczyszczonych`
-          : d.id === "economy"
-            ? `Salda wyzerowane — ${count} kont`
-            : `Ostrzeżenia zresetowane — ${count} wpisów`;
+      const doneMeta = t.danger[d.id].done(count);
       setDangerState((s) => ({ ...s, [d.id]: { open: false, value: "", done: true, doneMeta } }));
       toast.success(doneMeta);
     } catch (err) {
       console.error("Error running danger action:", err);
-      toast.error("Nie udało się wykonać operacji");
+      toast.error(t.danger.failed);
     }
   };
 
@@ -397,9 +374,9 @@ export default function SettingsPage() {
       <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-3.5 pb-20">
         <SlideIn direction="up">
           <div>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: COLORS.textPrimary }}>Ustawienia</h1>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: COLORS.textPrimary }}>{t.title}</h1>
             <p style={{ margin: "8px 0 0", maxWidth: 620, fontSize: 14, lineHeight: 1.6, color: COLORS.textMuted }}>
-              Wygląd bota na tym serwerze, język i powiadomienia systemowe.
+              {t.subtitle}
             </p>
           </div>
         </SlideIn>
@@ -407,9 +384,9 @@ export default function SettingsPage() {
         {/* Profil na tym serwerze */}
         <SlideIn direction="up" delay={80}>
           <div style={{ borderRadius: 10, background: COLORS.card, padding: 20, boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 3 }}>Profil na tym serwerze</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 3 }}>{t.profile.title}</div>
             <p style={{ margin: "0 0 16px", fontSize: 12, lineHeight: 1.6, color: COLORS.textMuted }}>
-              Nazwa, opis, avatar i banner widoczne tylko tutaj — na innych serwerach bot wygląda inaczej.
+              {t.profile.text}
             </p>
             {/* Na razie zablokowane poza serwerami z PROFILE_EDIT_GUILD_IDS — rozmyte, z napisem „Wkrótce”.
                 pointer-events/aria-hidden: rozmyte pola nie dają się kliknąć ani wybrać klawiaturą. */}
@@ -426,7 +403,7 @@ export default function SettingsPage() {
               <div className="flex min-w-0 flex-col gap-3.5">
                 <div>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary }}>Nazwa</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary }}>{t.profile.name}</label>
                     <span style={{ fontSize: 11, color: form.nick.length > 28 ? COLORS.warn : COLORS.textFaint }}>
                       {form.nick.length}/32
                     </span>
@@ -458,20 +435,20 @@ export default function SettingsPage() {
                     }}
                   />
                   {profileEditable && !nameTrim && (
-                    <p style={{ margin: "6px 0 0", fontSize: 11, color: COLORS.dangerText }}>Nazwa nie może być pusta.</p>
+                    <p style={{ margin: "6px 0 0", fontSize: 11, color: COLORS.dangerText }}>{t.profile.nameEmpty}</p>
                   )}
                 </div>
 
                 <div>
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary }}>Opis</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary }}>{t.profile.bio}</label>
                     <span style={{ fontSize: 11, color: form.bio.length > 170 ? COLORS.warn : COLORS.textFaint }}>
                       {form.bio.length}/190
                     </span>
                   </div>
                   <textarea
                     rows={3}
-                    placeholder="Krótki opis widoczny w profilu bota…"
+                    placeholder={t.profile.bioPlaceholder}
                     value={form.bio}
                     onChange={(e) => {
                       if (!profileEditable) return;
@@ -519,9 +496,9 @@ export default function SettingsPage() {
                       )}
                     </span>
                     <span style={{ minWidth: 0, flex: 1 }}>
-                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: COLORS.textPrimary }}>Avatar</span>
+                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: COLORS.textPrimary }}>{t.profile.avatar}</span>
                       <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10, color: COLORS.textFaint }}>
-                        {avatarFileName ?? (hasAvatar ? "Aktualny avatar" : "512×512 · max 8 MB")}
+                        {avatarFileName ?? (hasAvatar ? t.profile.currentAvatar : "512×512 · max 8 MB")}
                       </span>
                     </span>
                     <button
@@ -531,7 +508,7 @@ export default function SettingsPage() {
                       className="flex-none rounded-[5px] border-none bg-[#23252f] px-[11px] py-1.5 font-sans text-[11px] font-semibold text-[#c4cad8] hover:bg-[#2f3341] hover:text-white"
                       style={{ cursor: profileEditable ? "pointer" : "not-allowed" }}
                     >
-                      Zmień
+                      {t.profile.change}
                     </button>
                     <input
                       ref={avatarInputRef}
@@ -560,9 +537,9 @@ export default function SettingsPage() {
                       )}
                     </span>
                     <span style={{ minWidth: 0, flex: 1 }}>
-                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: COLORS.textPrimary }}>Banner</span>
+                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: COLORS.textPrimary }}>{t.profile.banner}</span>
                       <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10, color: COLORS.textFaint }}>
-                        {bannerFileName ?? (hasBanner ? "Aktualny banner" : "960×540 · max 8 MB")}
+                        {bannerFileName ?? (hasBanner ? t.profile.currentBanner : "960×540 · max 8 MB")}
                       </span>
                     </span>
                     <button
@@ -572,7 +549,7 @@ export default function SettingsPage() {
                       className="flex-none rounded-[5px] border-none bg-[#23252f] px-[11px] py-1.5 font-sans text-[11px] font-semibold text-[#c4cad8] hover:bg-[#2f3341] hover:text-white"
                       style={{ cursor: profileEditable ? "pointer" : "not-allowed" }}
                     >
-                      Zmień
+                      {t.profile.change}
                     </button>
                     <input
                       ref={bannerInputRef}
@@ -583,13 +560,13 @@ export default function SettingsPage() {
                     />
                   </div>
                 </div>
-                <p style={{ margin: 0, fontSize: 11, color: COLORS.textFaint }}>PNG, JPG, GIF, WebP — max 8 MB</p>
+                <p style={{ margin: 0, fontSize: 11, color: COLORS.textFaint }}>{t.profile.formatsHint}</p>
               </div>
 
               {/* Podgląd na żywo */}
               <div style={{ borderRadius: 10, background: COLORS.input, padding: 14 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: COLORS.textFaint, textTransform: "uppercase", marginBottom: 10 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: COLORS.success }} /> Podgląd na żywo
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: COLORS.success }} /> {t.profile.livePreview}
                 </div>
                 <div style={{ borderRadius: 10, background: COLORS.card, overflow: "hidden" }}>
                   <div
@@ -618,18 +595,18 @@ export default function SettingsPage() {
                     </span>
                     <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 16, fontWeight: 700, color: COLORS.textPrimary }}>
-                        {nameTrim || "Nazwa bota"}
+                        {nameTrim || t.profile.botNameFallback}
                       </span>
                       <span style={{ flex: "none", background: "#5865F2", borderRadius: 3, fontSize: 9, fontWeight: 700, color: "#fff", padding: "1px 5px" }}>
                         BOT
                       </span>
                     </div>
                     <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.6, color: form.bio.trim() ? "#b9c0d0" : COLORS.textFaint }}>
-                      {form.bio.trim() || "Brak opisu — dodaj krótki tekst, który zobaczą użytkownicy."}
+                      {form.bio.trim() || t.profile.noBio}
                     </div>
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${COLORS.border}`, display: "flex", gap: 14, fontSize: 10, color: COLORS.textMuted }}>
-                      <span><span style={{ display: "block", fontWeight: 700, color: COLORS.textPrimary }}>{totalModules}</span>modułów</span>
-                      <span><span style={{ display: "block", fontWeight: 700, color: COLORS.textPrimary }}>PL</span>język</span>
+                      <span><span style={{ display: "block", fontWeight: 700, color: COLORS.textPrimary }}>{totalModules}</span>{t.profile.modules}</span>
+                      <span><span style={{ display: "block", fontWeight: 700, color: COLORS.textPrimary }}>PL</span>{t.profile.language}</span>
                     </div>
                   </div>
                 </div>
@@ -663,7 +640,7 @@ export default function SettingsPage() {
                     boxShadow: "0 8px 24px rgba(8,10,16,0.35)",
                   }}
                 >
-                  Wkrótce
+                  {t.profile.comingSoon}
                 </span>
               </div>
             )}
@@ -675,8 +652,8 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-3">
           <SlideIn direction="up" delay={140}>
             <div style={{ borderRadius: 10, background: COLORS.card, padding: "18px 20px", boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 3 }}>Język</div>
-              <p style={{ margin: "0 0 12px", fontSize: 12, color: COLORS.textMuted }}>Język odpowiedzi bota na tym serwerze.</p>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 3 }}>{t.language.title}</div>
+              <p style={{ margin: "0 0 12px", fontSize: 12, color: COLORS.textMuted }}>{t.language.text}</p>
               <div style={{ display: "flex", gap: 6 }}>
                 {LANGS.map((l) => {
                   const selected = form.language === l.id;
@@ -704,7 +681,7 @@ export default function SettingsPage() {
                         cursor: l.enabled ? "pointer" : "not-allowed",
                       }}
                     >
-                      {l.flag} {l.label}
+                      {l.flag} {t.language[l.labelKey]}
                     </button>
                   );
                 })}
@@ -714,8 +691,8 @@ export default function SettingsPage() {
 
           <SlideIn direction="up" delay={200}>
             <div style={{ borderRadius: 10, background: COLORS.card, padding: "18px 20px", boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 3 }}>Powiadomienia systemowe</div>
-              <p style={{ margin: "0 0 12px", fontSize: 12, color: COLORS.textMuted }}>Błędy uprawnień i nowości w modułach, których używasz.</p>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, marginBottom: 3 }}>{t.notify.title}</div>
+              <p style={{ margin: "0 0 12px", fontSize: 12, color: COLORS.textMuted }}>{t.notify.text}</p>
               <select
                 value={form.systemNotifyChannelId ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, systemNotifyChannelId: e.target.value || undefined }))}
@@ -735,24 +712,24 @@ export default function SettingsPage() {
                   WebkitAppearance: "none",
                 }}
               >
-                <option value="">Brak — wybierz kanał…</option>
+                <option value="">{t.notify.none}</option>
                 {channels.map((c) => (
                   <option key={c.id} value={c.id}># {c.name}</option>
                 ))}
               </select>
               <p style={{ margin: "8px 0 0", fontSize: 11, lineHeight: 1.6, color: selectedChannel ? COLORS.textFaint : COLORS.warn }}>
                 {selectedChannel
-                  ? `Bot będzie pisać na #${selectedChannel.name} — tylko wtedy, gdy coś wymaga Twojej uwagi.`
-                  : "⚠️ Bez kanału nie dowiesz się o brakujących uprawnieniach ani usuniętych kanałach."}
+                  ? t.notify.selected(selectedChannel.name)
+                  : t.notify.missing}
               </p>
 
               <div style={{ marginTop: 12, borderRadius: 8, background: COLORS.input, padding: 12 }}>
                 <p style={{ margin: "0 0 8px", fontSize: 12.5, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
-                  Przykładowe powiadomienia systemowe
+                  {t.notify.examplesTitle}
                 </p>
                 <ul style={{ margin: 0, paddingLeft: 18, listStyleType: "disc", listStylePosition: "outside", fontSize: 12.5, lineHeight: 1.7, color: COLORS.textMuted }}>
-                  <li style={{ marginBottom: 5 }}>Błędy: Bot nie ma uprawnień (np. na #general) lub usunięto przypisany kanał (np. powitań).</li>
-                  <li>Twoje moduły: Nowości i przerwy techniczne funkcji, których już używasz (np. skrzynki w Ekonomii).</li>
+                  <li style={{ marginBottom: 5 }}>{t.notify.exampleErrors}</li>
+                  <li>{t.notify.exampleModules}</li>
                 </ul>
               </div>
             </div>
@@ -763,26 +740,27 @@ export default function SettingsPage() {
         <SlideIn direction="up" delay={260}>
           <div style={{ borderRadius: 10, background: COLORS.card, border: "1px solid rgba(239,68,68,0.35)", padding: "18px 20px", boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.dangerText }}>Strefa nieodwracalna</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.dangerText }}>{t.danger.title}</span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 999, border: "1px solid rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.1)", color: COLORS.warn, fontSize: 10, fontWeight: 700, padding: "3px 9px" }}>
-                <Lock className="h-2.5 w-2.5" /> Tylko właściciel serwera
+                <Lock className="h-2.5 w-2.5" /> {t.danger.ownerOnly}
               </span>
             </div>
             <p style={{ margin: "0 0 14px", fontSize: 12, lineHeight: 1.6, color: COLORS.textMuted }}>
-              Każda akcja usuwa dane bezpowrotnie i wymaga wpisania nazwy serwera.
+              {t.danger.text}
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {DANGERS.map((d) => {
                 const row = dangerState[d.id];
+                const dt = t.danger[d.id];
                 const ok = guild ? row.value.trim() === guild.name : false;
                 return (
                   <div key={d.id} style={{ borderRadius: 8, background: COLORS.input, border: `1px solid ${row.open ? "rgba(239,68,68,0.45)" : "transparent"}`, padding: "11px 13px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
                       <span style={{ minWidth: 0, flex: 1 }}>
-                        <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: row.done ? COLORS.textMuted : COLORS.textPrimary }}>{d.title}</span>
+                        <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: row.done ? COLORS.textMuted : COLORS.textPrimary }}>{dt.title}</span>
                         <span style={{ display: "block", marginTop: 1, fontSize: 11, color: row.done ? COLORS.successText : COLORS.textMuted }}>
-                          {row.done ? row.doneMeta : d.meta}
+                          {row.done ? row.doneMeta : dt.meta}
                         </span>
                       </span>
 
@@ -791,7 +769,7 @@ export default function SettingsPage() {
                           type="button"
                           disabled={!isOwner}
                           onClick={() => openDanger(d.id)}
-                          title={!isOwner ? "Tylko właściciel serwera Discord może użyć tej funkcji." : undefined}
+                          title={!isOwner ? t.danger.ownerOnlyHint : undefined}
                           className={isOwner ? "hover:!bg-[rgba(239,68,68,0.12)]" : "cursor-not-allowed opacity-40"}
                           style={{
                             flex: "none",
@@ -806,13 +784,13 @@ export default function SettingsPage() {
                             cursor: isOwner ? "pointer" : "not-allowed",
                           }}
                         >
-                          {d.action}
+                          {dt.action}
                         </button>
                       )}
 
                       {row.done && (
                         <span style={{ flex: "none", display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: COLORS.successText }}>
-                          <Check className="h-3.5 w-3.5" /> wykonane
+                          <Check className="h-3.5 w-3.5" /> {t.danger.done}
                         </span>
                       )}
                     </div>
@@ -820,12 +798,12 @@ export default function SettingsPage() {
                     {row.open && (
                       <div style={{ marginTop: 11, paddingTop: 11, borderTop: `1px solid ${COLORS.border}` }}>
                         <div style={{ fontSize: 11, lineHeight: 1.6, color: COLORS.textSecondary, marginBottom: 7 }}>
-                          Wpisz <span style={{ fontFamily: "ui-monospace, monospace", color: "#fff" }}>{guild?.name}</span>, aby potwierdzić — {d.warn}
+                          {t.danger.confirmPrefix} <span style={{ fontFamily: "ui-monospace, monospace", color: "#fff" }}>{guild?.name}</span>{t.danger.confirmSuffix(dt.warn)}
                         </div>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                           <input
                             type="text"
-                            placeholder="nazwa serwera"
+                            placeholder={t.danger.placeholder}
                             value={row.value}
                             onChange={(e) => typeDanger(d.id, e.target.value)}
                             className="focus:!border-[#6366f1]"
@@ -861,7 +839,7 @@ export default function SettingsPage() {
                               cursor: ok ? "pointer" : "default",
                             }}
                           >
-                            {d.action}
+                            {dt.action}
                           </button>
                           <button
                             type="button"
@@ -881,7 +859,7 @@ export default function SettingsPage() {
                               cursor: "pointer",
                             }}
                           >
-                            Anuluj
+                            {t.danger.cancel}
                           </button>
                         </div>
                       </div>

@@ -16,6 +16,9 @@ import VariableInserter from "@/components/VariableInserter";
 import { DiscordMessagePreview } from "@/components/DiscordMessagePreview";
 import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { disboardMessages } from "@/i18n/messages/disboard";
+import { commonMessages } from "@/i18n/messages/common";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_MESSAGE =
@@ -61,6 +64,9 @@ export default function DisboardPage() {
   const { data: session, status } = useSession();
   const currentUserId = (session?.user as { id?: string })?.id;
   const { registerDirtyController } = useDirtyState();
+  const { lang } = useLang();
+  const t = useMessages(disboardMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,7 +116,7 @@ export default function DisboardPage() {
         }
       } catch (err) {
         console.error(err);
-        setError("Nie udało się załadować danych. Spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -121,7 +127,7 @@ export default function DisboardPage() {
 
   const handleSave = useCallback(async () => {
     if (config.enabled && !config.channelId) {
-      toast.error("Wybierz kanał, na który będą wysyłane przypominajki.");
+      toast.error(t.pickChannel);
       return;
     }
 
@@ -150,14 +156,14 @@ export default function DisboardPage() {
       savedConfigRef.current = nextConfig;
       setLastSentAt(data.lastSentAt ?? null);
       setNextSendAt(data.nextSendAt ?? null);
-      toast.success("Konfiguracja Disboard została zapisana.");
+      toast.success(t.saved);
     } catch (err) {
       console.error(err);
-      toast.error("Nie udało się zapisać konfiguracji.");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [config, guildId]);
+  }, [config, guildId, t, m]);
 
   const handleCancel = useCallback(() => {
     setConfig(savedConfigRef.current);
@@ -172,15 +178,15 @@ export default function DisboardPage() {
     id: `disboard-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: "Przypominajka Disboard",
+    label: t.title,
     onSave: handleSave,
     onCancel: handleCancel,
-  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]);
+  }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController, t]);
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "—";
+    if (!dateStr) return "-";
     const date = new Date(dateStr);
-    return date.toLocaleString("pl-PL", {
+    return date.toLocaleString(lang === "en" ? "en-GB" : "pl-PL", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -195,8 +201,8 @@ export default function DisboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
         <p className="text-4xl">🔒</p>
-        <h2 className="text-xl font-semibold">Brak dostępu</h2>
-        <p className="text-muted-foreground text-sm">Ten moduł jest dostępny wyłącznie dla właściciela bota na jego serwerach.</p>
+        <h2 className="text-xl font-semibold">{t.noAccessTitle}</h2>
+        <p className="text-muted-foreground text-sm">{t.noAccessText}</p>
       </div>
     );
   }
@@ -206,7 +212,7 @@ export default function DisboardPage() {
       <div className="min-h-full">
         <div className="w-full">
           <ErrorState
-            title="Nie udało się załadować przypominajki"
+            title={t.loadErrorTitle}
             message={error}
             onRetry={() => window.location.reload()}
           />
@@ -238,23 +244,23 @@ export default function DisboardPage() {
             <div className="min-w-0 space-y-2">
               <h1 className="flex items-center gap-2 text-2xl font-semibold text-white">
                 <Star className="h-6 w-6 text-yellow-500" />
-                Przypominajka Disboard
+                {t.title}
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Automatyczna przypominajka o zostawieniu recenzji na Disboardzie (~2 razy w miesiącu).
+                {t.subtitle}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <span className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-400">
                 <Lock className="h-3.5 w-3.5" />
-                Tylko właściciel bota
+                {t.ownerOnly}
               </span>
               <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-                <span>{config.enabled ? "Aktywne" : "Nieaktywne"}</span>
+                <span>{config.enabled ? m.active : m.inactive}</span>
                 <DeezySwitch
                   checked={config.enabled}
                   onCheckedChange={(checked) => setConfig((c) => ({ ...c, enabled: checked }))}
-                  aria-label="Włącz lub wyłącz przypominajkę Disboard"
+                  aria-label={t.toggle}
                 />
               </div>
             </div>
@@ -266,7 +272,7 @@ export default function DisboardPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Przypominajka Disboard jest <span className="font-semibold text-white/80">globalnie wyłączona</span>. Możesz edytować konfigurację, ale bot nie wyśle wiadomości, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -277,7 +283,7 @@ export default function DisboardPage() {
             {/* Kanał docelowy */}
             <div className="max-w-sm space-y-2">
               <label className={labelClass}>
-                Kanał do wysyłania przypominajek <span className="text-destructive">*</span>
+                {t.channel} <span className="text-destructive">*</span>
               </label>
               <Select
                 value={config.channelId || ""}
@@ -288,14 +294,14 @@ export default function DisboardPage() {
                     placeholder={
                       <div className="flex items-center gap-2 text-[#9aa2b8]">
                         <Hash className="h-4 w-4" />
-                        <span>Wybierz kanał...</span>
+                        <span>{t.channelPlaceholder}</span>
                       </div>
                     }
                   >
                     {config.channelId ? (
                       <div className="flex items-center gap-2">
                         <Hash className="h-4 w-4 text-[#8d94a8]" />
-                        {selectedChannel?.name ?? "Wybierz kanał..."}
+                        {selectedChannel?.name ?? t.channelPlaceholder}
                       </div>
                     ) : null}
                   </SelectValue>
@@ -316,10 +322,10 @@ export default function DisboardPage() {
             {/* Treść wiadomości: edytor zintegrowany z podglądem, jak w module Turniej CS2 */}
             <div className="space-y-3">
               <label className={labelClass}>
-                Treść wiadomości <span className="text-destructive">*</span>
+                {t.content} <span className="text-destructive">*</span>
               </label>
               <p className="text-[11px] text-[#8d94a8]">
-                Obsługuje pełne formatowanie Discord Markdown (pogrubienie, nagłówki, emotki, linki, itp.)
+                {t.contentHint}
               </p>
 
               <div className="w-full max-w-[880px]">
@@ -331,8 +337,8 @@ export default function DisboardPage() {
                       type="button"
                       onClick={() => setEditorMode((mode) => (mode === "editor" ? "preview" : "editor"))}
                       className="flex h-8 w-8 items-center justify-center rounded-md bg-[#3b82f6] text-white transition-colors hover:bg-[#2563eb]"
-                      aria-label={editorMode === "editor" ? "Pokaż podgląd wiadomości" : "Wróć do edytora"}
-                      title={editorMode === "editor" ? "PODGLĄD" : "EDYTOR"}
+                      aria-label={editorMode === "editor" ? t.showPreview : t.backToEditor}
+                      title={editorMode === "editor" ? t.previewTitle : t.editorTitle}
                     >
                       {editorMode === "editor" ? <Eye className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
                     </button>
@@ -342,7 +348,7 @@ export default function DisboardPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-white">Deezy</span>
                       <span className="rounded bg-[#5865f2] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">BOT</span>
-                      <span className="text-xs text-[#8d94a8]">dziś</span>
+                      <span className="text-xs text-[#8d94a8]">{t.today}</span>
                     </div>
 
                     {editorMode === "preview" ? (
@@ -355,7 +361,7 @@ export default function DisboardPage() {
                           value={config.message}
                           onChange={(value) => setConfig((c) => ({ ...c, message: value }))}
                           variables={[]}
-                          placeholder="Wpisz treść przypominajki..."
+                          placeholder={t.placeholder}
                           rows={8}
                           unstyled
                           className="rounded-md border border-[#3f4455] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors hover:border-[#3b82f6]/70 focus:border-[#3b82f6] font-mono"
@@ -373,11 +379,11 @@ export default function DisboardPage() {
                 className="flex items-center gap-1.5 rounded-md border border-[#3f4455] bg-dark-900 px-3 py-1.5 text-xs font-semibold text-[#c4cad8] transition-colors hover:border-[#3b82f6]/70 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <RotateCcw className="h-3 w-3" />
-                Przywróć domyślną treść
+                {t.restoreDefault}
               </button>
 
               <p className="text-[11px] text-[#6f7690]">
-                Kliknij ikonę oka, aby zobaczyć podgląd wiadomości tak, jak zobaczą ją użytkownicy na Discordzie.
+                {t.eyeHint}
               </p>
             </div>
 
@@ -386,12 +392,12 @@ export default function DisboardPage() {
               <div className="rounded-md border border-[#2f3341] bg-dark-900 p-4">
                 <h4 className="flex items-center gap-2 text-xs font-semibold text-[#c4cad8]">
                   <CalendarClock className="h-3.5 w-3.5 text-[#8d94a8]" />
-                  Harmonogram
+                  {t.schedule}
                 </h4>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                  <span className="text-[#8d94a8]">Ostatnio wysłano:</span>
+                  <span className="text-[#8d94a8]">{t.lastSent}</span>
                   <span className="text-white/90">{formatDate(lastSentAt)}</span>
-                  <span className="text-[#8d94a8]">Następna wysyłka:</span>
+                  <span className="text-[#8d94a8]">{t.nextSend}</span>
                   <span className="text-white/90">{formatDate(nextSendAt)}</span>
                 </div>
               </div>
@@ -401,8 +407,7 @@ export default function DisboardPage() {
             <div className="flex items-start gap-2 rounded-md border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-xs text-[#9aa2b8]">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
               <span>
-                Przypominajki są wysyłane losowo, średnio co 12–18 dni (około 2 razy w miesiącu),
-                w godzinach 10:00–20:00. Dzięki temu nie są nachalne i wyglądają naturalnie.
+                {t.info}
               </span>
             </div>
           </div>

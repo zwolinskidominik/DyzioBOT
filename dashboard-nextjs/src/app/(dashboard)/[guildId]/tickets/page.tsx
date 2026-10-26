@@ -20,6 +20,9 @@ import { TicketTypeDrawer } from "@/components/tickets/TicketTypeDrawer";
 import { TicketPanelMessageEditor, EMPTY_PANEL_MESSAGE } from "@/components/tickets/TicketPanelMessageEditor";
 import type { PanelMessageDraft } from "@/components/tickets/PanelMessagePreview";
 import type { TicketTypeDraft } from "@/components/tickets/TicketLivePreview";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { ticketsMessages } from "@/i18n/messages/tickets";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Channel {
   id: string;
@@ -110,6 +113,7 @@ function SettingRow({
   children?: React.ReactNode;
 }) {
   const isExpandable = Boolean(children && onToggle);
+  const m = useMessages(commonMessages).module;
 
   return (
     <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
@@ -139,7 +143,7 @@ function SettingRow({
           <button
             type="button"
             onClick={onToggle}
-            aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"}
+            aria-label={isOpen ? m.collapse : m.expand}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white"
           >
             <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
@@ -158,6 +162,8 @@ export default function TicketsPage() {
   const params = useParams();
   const guildId = params?.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(ticketsMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -246,7 +252,7 @@ export default function TicketsPage() {
           };
         }
       } catch {
-        setError("Nie udało się załadować danych ticketów. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -284,11 +290,11 @@ export default function TicketsPage() {
         if (!response.ok) throw new Error("Failed to save");
         return true;
       } catch {
-        toast.error("Nie udało się zapisać konfiguracji");
+        toast.error(m.saveError);
         return false;
       }
     },
-    [guildId, getChannelCategoryId]
+    [guildId, getChannelCategoryId, m]
   );
 
   const currentSnapshot: ConfigSnapshot = { enabled, panelChannelId, types, automation, panelMessage };
@@ -332,7 +338,7 @@ export default function TicketsPage() {
 
       setTypes(nextTypes);
       setDrawerOpen(false);
-      toast.success("Zapisano zmiany w panelu");
+      toast.success(t.panelSaved);
       setHighlightedId(nextId);
       window.setTimeout(() => setHighlightedId((current) => (current === nextId ? null : current)), 1800);
     } finally {
@@ -341,12 +347,12 @@ export default function TicketsPage() {
   };
 
   const handleDeleteType = async (typeId: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć ten typ ticketa?")) return;
+    if (!confirm(t.confirmDeleteType)) return;
     const nextTypes = types.filter((t) => t.id !== typeId);
     const ok = await persistConfig(enabled, panelChannelId, nextTypes, automation, panelMessage);
     if (ok) {
       setTypes(nextTypes);
-      toast.success("Typ ticketa usunięty");
+      toast.success(t.typeDeleted);
     }
   };
 
@@ -358,7 +364,7 @@ export default function TicketsPage() {
     const ok = await persistConfig(enabled, panelChannelId, next, automation, panelMessage);
     if (ok) {
       setTypes(next);
-      toast.success("Zapisano zmiany w panelu");
+      toast.success(t.panelSaved);
     }
   };
 
@@ -377,7 +383,7 @@ export default function TicketsPage() {
     const ok = await persistConfig(enabled, panelChannelId, types, next, panelMessage);
     if (ok) {
       setAutomation(next);
-      toast.success("Zapisano zmiany w panelu");
+      toast.success(t.panelSaved);
     }
   };
 
@@ -388,7 +394,7 @@ export default function TicketsPage() {
       if (!ok) return;
       setPanelMessage(draft);
       setPanelMessageDrawerOpen(false);
-      toast.success("Zapisano zmiany w panelu");
+      toast.success(t.panelSaved);
     } finally {
       setSavingPanelMessage(false);
     }
@@ -400,7 +406,7 @@ export default function TicketsPage() {
       const response = await fetchWithAuth(`/api/guild/${guildId}/tickets/deploy`, { method: "POST" });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        toast.error(data?.error ?? "Nie udało się wdrożyć panelu na Discord");
+        toast.error(data?.error ?? t.deployError);
         return;
       }
       setPanelMessageId(data?.panelMessageId);
@@ -408,14 +414,14 @@ export default function TicketsPage() {
       if (data?.warning) {
         toast.warning(data.warning);
       } else {
-        toast.success("Panel ticketów wdrożony na Discord!");
+        toast.success(t.deployed);
       }
     } catch {
-      toast.error("Nie udało się wdrożyć panelu na Discord");
+      toast.error(t.deployError);
     } finally {
       setDeploying(false);
     }
-  }, [guildId, enabled, panelChannelId, types, automation, panelMessage]);
+  }, [guildId, enabled, panelChannelId, types, automation, panelMessage, t]);
 
   const handleDiscardChanges = useCallback(async () => {
     const snapshot = deployedSnapshotRef.current;
@@ -432,9 +438,9 @@ export default function TicketsPage() {
       setTypes(snapshot.types);
       setAutomation(snapshot.automation);
       setPanelMessage(snapshot.panelMessage);
-      toast.info("Cofnięto niewdrożone zmiany");
+      toast.info(t.discarded);
     }
-  }, [persistConfig]);
+  }, [persistConfig, t]);
 
   useEffect(
     () =>
@@ -442,12 +448,12 @@ export default function TicketsPage() {
         id: `tickets-${guildId}`,
         isDirty,
         isSaving: deploying,
-        label: "Wdróż zmiany, aby użytkownicy zobaczyli nowy panel ticketów na Discord.",
-        saveLabel: "Deploy na Discord",
+        label: t.deployHint,
+        saveLabel: t.deployButton,
         onSave: handleDeploy,
         onCancel: handleDiscardChanges,
       }),
-    [guildId, isDirty, deploying, handleDeploy, handleDiscardChanges, registerDirtyController]
+    [guildId, isDirty, deploying, handleDeploy, handleDiscardChanges, registerDirtyController, t]
   );
 
   const handleRetry = () => {
@@ -459,7 +465,7 @@ export default function TicketsPage() {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Nie udało się załadować ticketów" message={error} onRetry={handleRetry} />
+          <ErrorState title={t.loadErrorTitle} message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -489,14 +495,14 @@ export default function TicketsPage() {
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Tickety</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Jeden kanał, lista rozwijana z typami zgłoszeń.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
-              <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} aria-label="Włącz lub wyłącz tickety" />
+              <span>{enabled ? m.active : m.inactive}</span>
+              <DeezySwitch checked={enabled} onCheckedChange={(v) => void handleToggleEnabled(v)} aria-label={t.toggle} />
             </div>
           </header>
         </SlideIn>
@@ -506,7 +512,7 @@ export default function TicketsPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł ticketów jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację i typy zgłoszeń, ale bot nie utworzy nowych ticketów, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -515,22 +521,22 @@ export default function TicketsPage() {
         {/* ── Ogólne ───────────────────────────────────────────── */}
         <SlideIn direction="up" delay={150}>
           <SettingRow
-            title="Ogólne"
-            description="Kanał panelu, aktywność systemu"
+            title={t.general.title}
+            description={t.general.description}
             icon={<Cog className="h-4 w-4" />}
             isOpen={openSections.ogolne}
             onToggle={() => toggleSection("ogolne")}
           >
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[#c4cad8]">Kanał panelu ticketów</label>
+                <label className="text-xs font-medium text-[#c4cad8]">{t.panelChannel}</label>
                 <Select value={panelChannelId} onValueChange={(v) => void handlePanelChannelChange(v)}>
                   <SelectTrigger className="h-11 border-transparent bg-dark-900 text-white/90 focus:ring-[#3b82f6]/50 focus:ring-offset-0">
-                    <SelectValue placeholder="Wybierz kanał...">
+                    <SelectValue placeholder={t.pickChannel}>
                       {panelChannelId ? (
                         <div className="flex items-center gap-2">
                           <Hash className="h-4 w-4 text-[#8d94a8]" />
-                          {channels.find((c) => c.id === panelChannelId)?.name ?? "Nieznany kanał"}
+                          {channels.find((c) => c.id === panelChannelId)?.name ?? t.unknownChannel}
                         </div>
                       ) : undefined}
                     </SelectValue>
@@ -546,7 +552,7 @@ export default function TicketsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-[#6f7690]">Kategoria zostanie automatycznie pobrana z wybranego kanału.</p>
+                <p className="text-[11px] text-[#6f7690]">{t.categoryHint}</p>
               </div>
 
               <div className="overflow-hidden rounded-md border border-[#2f3341]">
@@ -559,7 +565,7 @@ export default function TicketsPage() {
                       {panelMessage.emoji ? `${panelMessage.emoji} ` : ""}
                       {panelMessage.title}
                     </p>
-                    <p className="mt-0.5 break-words text-[11px] text-[#6f7690] lg:truncate">Tytuł, opis, kolor, baner i placeholder dropdownu</p>
+                    <p className="mt-0.5 break-words text-[11px] text-[#6f7690] lg:truncate">{t.panelMessageHint}</p>
                   </div>
                   <Button
                     type="button"
@@ -569,7 +575,7 @@ export default function TicketsPage() {
                     className="w-full shrink-0 border-[#3a3f4e] bg-transparent text-[#c4cad8] hover:bg-dark-800 hover:text-white lg:w-auto"
                   >
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                    {panelMessageDrawerOpen ? "Zwiń" : "Personalizuj wiadomość"}
+                    {panelMessageDrawerOpen ? t.collapse : t.customizeMessage}
                   </Button>
                 </div>
 
@@ -586,7 +592,7 @@ export default function TicketsPage() {
               </div>
 
               <p className="text-xs text-[#6f7690]">
-                {panelMessageId ? "Panel jest aktualnie wdrożony na Discord." : "Panel nie został jeszcze wdrożony na Discord."}
+                {panelMessageId ? t.panelDeployed : t.panelNotDeployed}
               </p>
             </div>
           </SettingRow>
@@ -595,8 +601,8 @@ export default function TicketsPage() {
         {/* ── Typy ticketów ────────────────────────────────────── */}
         <SlideIn direction="up" delay={200}>
           <SettingRow
-            title="Typy ticketów"
-            description={`${types.length} ${types.length === 1 ? "typ" : "typów"} · przeciągnij ☰, aby zmienić kolejność`}
+            title={t.typesTitle}
+            description={t.typesDescription(types.length)}
             icon={<Plus className="h-4 w-4" />}
             isOpen={openSections.typy}
             onToggle={() => toggleSection("typy")}
@@ -625,7 +631,7 @@ export default function TicketsPage() {
                 </div>
               ) : (
                 <p className="py-4 text-center text-xs text-[#8d94a8]">
-                  Brak skonfigurowanych typów. Dodaj pierwszy, aby aktywować panel ticketów.
+                  {t.noTypes}
                 </p>
               )}
 
@@ -635,7 +641,7 @@ export default function TicketsPage() {
                 className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-[#3a3f4e] bg-transparent px-4 py-2.5 text-xs font-medium text-[#8d94a8] transition-colors hover:border-[#3b82f6] hover:text-white"
               >
                 <Plus className="h-4 w-4" />
-                Dodaj typ ticketu...
+                {t.addType}
               </button>
             </div>
           </SettingRow>
@@ -644,15 +650,15 @@ export default function TicketsPage() {
         {/* ── Automatyzacja ────────────────────────────────────── */}
         <SlideIn direction="up" delay={250}>
           <SettingRow
-            title="Automatyzacja"
-            description="Limity, auto-zamykanie, transkrypty, claim"
+            title={t.automation.title}
+            description={t.automation.description}
             icon={<Timer className="h-4 w-4" />}
             isOpen={openSections.automatyzacja}
             onToggle={() => toggleSection("automatyzacja")}
           >
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[#c4cad8]">Limit otwartych ticketów na użytkownika</label>
+                <label className="text-xs font-medium text-[#c4cad8]">{t.maxOpen}</label>
                 <Input
                   type="number"
                   min={0}
@@ -661,11 +667,11 @@ export default function TicketsPage() {
                   onBlur={(e) => void handleAutomationChange({ maxOpenPerUser: Math.max(0, Number(e.target.value) || 0) })}
                   className="h-10 w-32 border-transparent bg-dark-900 text-white/90"
                 />
-                <p className="text-[11px] text-[#6f7690]">0 = bez limitu.</p>
+                <p className="text-[11px] text-[#6f7690]">{t.noLimit}</p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[#c4cad8]">Auto-zamykanie po bezczynności (godziny)</label>
+                <label className="text-xs font-medium text-[#c4cad8]">{t.autoClose}</label>
                 <Input
                   type="number"
                   min={0}
@@ -674,14 +680,14 @@ export default function TicketsPage() {
                   onBlur={(e) => void handleAutomationChange({ autoCloseHours: Math.max(0, Number(e.target.value) || 0) })}
                   className="h-10 w-32 border-transparent bg-dark-900 text-white/90"
                 />
-                <p className="text-[11px] text-[#6f7690]">0 = wyłączone. Sprawdzane co 15 minut.</p>
+                <p className="text-[11px] text-[#6f7690]">{t.autoCloseHint}</p>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-medium text-[#c4cad8]">Transkrypty przy zamknięciu</p>
-                    <p className="mt-0.5 text-[11px] text-[#6f7690]">Wyślij zapis rozmowy na wskazany kanał po zamknięciu ticketa.</p>
+                    <p className="text-xs font-medium text-[#c4cad8]">{t.transcripts}</p>
+                    <p className="mt-0.5 text-[11px] text-[#6f7690]">{t.transcriptsHint}</p>
                   </div>
                   <DeezySwitch
                     checked={automation.transcriptEnabled}
@@ -695,11 +701,11 @@ export default function TicketsPage() {
                     onValueChange={(v) => void handleAutomationChange({ transcriptChannelId: v })}
                   >
                     <SelectTrigger className="h-10 border-transparent bg-dark-900 text-white/90 focus:ring-[#3b82f6]/50 focus:ring-offset-0">
-                      <SelectValue placeholder="Wybierz kanał na transkrypty...">
+                      <SelectValue placeholder={t.transcriptChannel}>
                         {automation.transcriptChannelId ? (
                           <div className="flex items-center gap-2">
                             <Hash className="h-4 w-4 text-[#8d94a8]" />
-                            {channels.find((c) => c.id === automation.transcriptChannelId)?.name ?? "Nieznany kanał"}
+                            {channels.find((c) => c.id === automation.transcriptChannelId)?.name ?? t.unknownChannel}
                           </div>
                         ) : undefined}
                       </SelectValue>
@@ -719,7 +725,7 @@ export default function TicketsPage() {
               </div>
 
               <p className="text-[11px] text-[#6f7690]">
-                „Zajmij zgłoszenie" (claim) jest zawsze aktywne — moderator może przypisać się do ticketa jednym kliknięciem.
+                {t.claimHint}
               </p>
             </div>
           </SettingRow>
@@ -733,7 +739,7 @@ export default function TicketsPage() {
               className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-[#3a3f4e] bg-transparent px-4 py-3 text-xs font-medium text-[#8d94a8] transition-colors hover:border-[#3b82f6] hover:text-white"
             >
               <Ticket className="h-4 w-4" />
-              Aktywuj system ticketów dla tego serwera
+              {t.activate}
             </button>
           </SlideIn>
         ) : null}

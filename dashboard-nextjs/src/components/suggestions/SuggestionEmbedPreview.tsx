@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 export type SuggestionVotingFormat = "counts" | "percent" | "bar";
 
@@ -19,11 +21,13 @@ const SAMPLE_DOWNVOTES = 2;
 /** Live, illustrative preview of the suggestion embed posted to Discord. */
 export function SuggestionEmbedPreview({ votingFormat, anonymous, embedColor }: SuggestionPreviewSettings) {
   const [timestamp, setTimestamp] = useState<string | null>(null);
+  const { lang } = useLang();
+  const m = useMessages(commonMessages).module;
 
   useEffect(() => {
     const now = new Date();
-    setTimestamp(`dziś o ${now.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`);
-  }, []);
+    setTimestamp(m.todayAt(now.toLocaleTimeString(lang === "en" ? "en-US" : "pl-PL", { hour: "2-digit", minute: "2-digit" })));
+  }, [lang, m]);
 
   const total = SAMPLE_UPVOTES + SAMPLE_DOWNVOTES;
   const upPercent = total ? Math.round((SAMPLE_UPVOTES / total) * 100) : 0;

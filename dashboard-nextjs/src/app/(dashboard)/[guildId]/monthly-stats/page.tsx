@@ -14,10 +14,14 @@ import { SlideIn } from "@/components/ui/animated";
 import { fetchGuildData } from "@/lib/cache";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { monthlyStatsMessages } from "@/i18n/messages/monthlyStats";
+import { commonMessages } from "@/i18n/messages/common";
 import {
   RawMonth,
   MONTH_NAMES_NOMINATIVE,
   monthPublishLabel,
+  nextPublishDate,
   monthPublishShortDate,
   scoreUsers,
   estimateCardHeight,
@@ -60,12 +64,13 @@ interface PreviewEntry {
 
 type MetricId = "score" | "messages" | "voice" | "active";
 
-const METRICS: { id: MetricId; label: string; head: string }[] = [
-  { id: "score", label: "Punkty", head: "Punkty aktywności w miesiącu" },
-  { id: "messages", label: "Wiadomości", head: "Wiadomości w miesiącu" },
-  { id: "voice", label: "Voice chat", head: "Czas na voice chacie" },
-  { id: "active", label: "Aktywni", head: "Aktywne osoby" },
-];
+const METRIC_IDS: MetricId[] = ["score", "messages", "voice", "active"];
+
+/** Etykiety miesięcy z API są po polsku; po angielsku liczymy je z identyfikatora RRRR-MM. */
+function monthDate(monthId: string): Date {
+  const [year, mm] = monthId.split("-");
+  return new Date(Number(year), Number(mm) - 1, 1);
+}
 
 interface SavedConfigState {
   channelId: string;
@@ -79,6 +84,16 @@ export default function MonthlyStatsPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(monthlyStatsMessages);
+  const m = useMessages(commonMessages).module;
+  const { lang } = useLang();
+  const en = lang === "en";
+  const monthFull = (id: string, fallback: string) =>
+    en ? monthDate(id).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : fallback;
+  const monthAbbrLabel = (id: string, fallback: string) =>
+    en ? monthDate(id).toLocaleDateString("en-US", { month: "short" }).toLowerCase() : fallback;
+  const publishLabel = (id: string) =>
+    en ? nextPublishDate(id).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }) : monthPublishLabel(id);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -192,7 +207,7 @@ export default function MonthlyStatsPage() {
         }
       } catch (err) {
         console.error("Error loading monthly stats data:", err);
-        setError("Nie udało się załadować danych statystyk miesięcznych. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -208,14 +223,14 @@ export default function MonthlyStatsPage() {
       const member = membersById.get(entry.userId);
       return {
         userId: entry.userId,
-        username: member ? (member.discriminator === "0" ? member.username : `${member.username}#${member.discriminator}`) : "Nieznany użytkownik",
+        username: member ? (member.discriminator === "0" ? member.username : `${member.username}#${member.discriminator}`) : t.unknownUser,
         avatarURL: avatarUrlFor(entry.userId, member?.avatar ?? null),
         messageCount: entry.messageCount,
         voiceMinutes: entry.voiceMinutes,
         score: entry.score,
       };
     },
-    [membersById]
+    [membersById, t]
   );
 
   const monthsComputed = useMemo(
@@ -256,8 +271,12 @@ export default function MonthlyStatsPage() {
 
   const diff = prevMonth && selected ? metricValue(selected) - metricValue(prevMonth) : 0;
   const pctDiff = prevMonth && selected && metricValue(prevMonth) ? Math.round((diff / metricValue(prevMonth)) * 100) : 0;
-  const prevMonthName = prevMonth ? MONTH_NAMES_NOMINATIVE[prevMonth.id.split("-")[1]]?.toLowerCase() : "";
-  const trendLabel = !prevMonth ? "brak porównania" : `${diff >= 0 ? "↑" : "↓"} ${Math.abs(pctDiff)}% vs ${prevMonthName}`;
+  const prevMonthName = prevMonth
+    ? en
+      ? monthDate(prevMonth.id).toLocaleDateString("en-US", { month: "long" })
+      : MONTH_NAMES_NOMINATIVE[prevMonth.id.split("-")[1]]?.toLowerCase()
+    : "";
+  const trendLabel = !prevMonth ? t.noComparison : `${diff >= 0 ? "↑" : "↓"} ${Math.abs(pctDiff)}% vs ${prevMonthName}`;
   const trendBg = !prevMonth ? "#23252f" : diff >= 0 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)";
   const trendFg = !prevMonth ? "#8d94a8" : diff >= 0 ? "#86efac" : "#fca5a5";
 
@@ -282,7 +301,7 @@ export default function MonthlyStatsPage() {
   const handleSave = useCallback(async () => {
     if (!config.channelId) {
       setChannelError(true);
-      toast.error("Wybierz kanał publikacji");
+      toast.error(t.pickChannel);
       return;
     }
 
@@ -311,14 +330,14 @@ export default function MonthlyStatsPage() {
         msgRate: saved.msgRate,
         voiceRate: saved.voiceRate,
       };
-      toast.success("Konfiguracja statystyk została zapisana!");
+      toast.success(t.saved);
     } catch (err) {
       console.error("Error saving config:", err);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [config, guildId]);
+  }, [config, guildId, t, m]);
 
   const handleCancel = useCallback(() => {
     const s = savedRef.current;
@@ -332,11 +351,11 @@ export default function MonthlyStatsPage() {
         id: `monthly-stats-${guildId}`,
         isDirty,
         isSaving: saving,
-        label: "Statystyki miesięczne",
+        label: t.title,
         onSave: handleSave,
         onCancel: handleCancel,
       }),
-    [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]
+    [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController, t]
   );
 
   const handleRetry = () => {
@@ -346,7 +365,7 @@ export default function MonthlyStatsPage() {
   };
 
   const selectedChannel = channels.find((c) => c.id === config.channelId);
-  const publishChannelLabel = selectedChannel ? `# ${selectedChannel.name}` : "brak kanału";
+  const publishChannelLabel = selectedChannel ? `# ${selectedChannel.name}` : t.noChannel;
   const now = new Date();
   const currentMonthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
@@ -354,7 +373,7 @@ export default function MonthlyStatsPage() {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Nie udało się załadować statystyk miesięcznych" message={error} onRetry={handleRetry} />
+          <ErrorState title={t.loadErrorTitle} message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -386,14 +405,14 @@ export default function MonthlyStatsPage() {
             <div className="min-w-0">
               <h1 className="text-2xl font-bold text-white/90 flex items-center gap-2">
                 <BarChart3 className="w-6 h-6 text-bot-primary" />
-                Statystyki miesięczne
+                {t.title}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Bot generuje grafikę z topką aktywności i publikuje ją pierwszego dnia każdego miesiąca.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{config.enabled ? "Aktywne" : "Nieaktywne"}</span>
+              <span>{config.enabled ? m.active : m.inactive}</span>
               <Switch
                 checked={config.enabled}
                 onCheckedChange={(checked) => setConfig((prev) => ({ ...prev, enabled: checked }))}
@@ -411,9 +430,7 @@ export default function MonthlyStatsPage() {
             >
               <EyeOff className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                Statystyki miesięczne są <span className="font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>wyłączone</span>. Możesz
-                zapisać ustawienia, ale bot nie opublikuje grafiki, dopóki nie włączysz przełącznika{" "}
-                <span className="font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>Aktywne</span> u góry.
+                {t.disabledPrefix}<span className="font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -428,48 +445,48 @@ export default function MonthlyStatsPage() {
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-5">
               <div className="min-w-0">
                 <div className="text-[11px] font-bold uppercase" style={{ letterSpacing: "0.08em", color: "#6b7280" }}>
-                  {METRICS.find((m) => m.id === metric)?.head}
+                  {t.metrics[metric].head}
                 </div>
                 <div className="mt-2 flex items-baseline gap-2.5">
-                  <span className="text-[30px] font-extrabold text-white leading-none">{selected ? metricFormat(selected) : "—"}</span>
+                  <span className="text-[30px] font-extrabold text-white leading-none">{selected ? metricFormat(selected) : "-"}</span>
                   <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: trendBg, color: trendFg }}>
                     {trendLabel}
                   </span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5 lg:shrink-0 lg:justify-end">
-                {METRICS.map((m) => (
+                {METRIC_IDS.map((id) => (
                   <button
-                    key={m.id}
+                    key={id}
                     type="button"
-                    onClick={() => setMetric(m.id)}
+                    onClick={() => setMetric(id)}
                     className="rounded-md px-3 py-1.5 text-[11px] font-semibold transition-colors"
                     style={{
-                      border: `1px solid ${m.id === metric ? "#6366f1" : "#2f3341"}`,
-                      background: m.id === metric ? "rgba(99,102,241,0.15)" : "#17181E",
-                      color: m.id === metric ? "#fff" : "#b9c0d0",
+                      border: `1px solid ${id === metric ? "#6366f1" : "#2f3341"}`,
+                      background: id === metric ? "rgba(99,102,241,0.15)" : "#17181E",
+                      color: id === metric ? "#fff" : "#b9c0d0",
                     }}
                   >
-                    {m.label}
+                    {t.metrics[id].label}
                   </button>
                 ))}
               </div>
             </div>
 
             <div className="flex items-end gap-2.5" style={{ height: 130 }}>
-              {monthsComputed.map((m) => {
-                const isSel = m.id === selectedMonthId;
-                const h = Math.max(12, Math.round((metricValue(m) / maxVal) * 100));
+              {monthsComputed.map((mo) => {
+                const isSel = mo.id === selectedMonthId;
+                const h = Math.max(12, Math.round((metricValue(mo) / maxVal) * 100));
                 return (
                   <button
-                    key={m.id}
+                    key={mo.id}
                     type="button"
-                    onClick={() => setSelectedMonthId(m.id)}
-                    title={`Pokaż grafikę: ${m.full}`}
+                    onClick={() => setSelectedMonthId(mo.id)}
+                    title={t.showMonth(monthFull(mo.id, mo.full))}
                     className="flex-1 min-w-0 flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0"
                   >
                     <span className="text-[10px] font-bold" style={{ color: isSel ? "#c7d2fe" : "#4b5563" }}>
-                      {metricFormat(m)}
+                      {metricFormat(mo)}
                     </span>
                     <span
                       className="w-full rounded-t transition-all"
@@ -479,14 +496,14 @@ export default function MonthlyStatsPage() {
                       }}
                     />
                     <span className="text-[10px]" style={{ fontWeight: isSel ? 700 : 500, color: isSel ? "#a5b4fc" : "#6b7280" }}>
-                      {m.abbr}
+                      {monthAbbrLabel(mo.id, mo.abbr)}
                     </span>
                   </button>
                 );
               })}
             </div>
             <p className="mt-3 text-[11px]" style={{ color: "#6b7280" }}>
-              Kliknij miesiąc, aby wygenerować jego grafikę w podglądzie obok.
+              {t.clickMonth}
             </p>
           </div>
         </SlideIn>
@@ -496,11 +513,11 @@ export default function MonthlyStatsPage() {
           <div className="flex flex-col gap-4 min-w-0">
             <SlideIn direction="up" delay={100}>
               <div className="rounded-lg p-5" style={{ background: "#1F2129", boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
-                <p className="text-[13px] font-bold text-[#d8dbe6] mb-3.5">Konfiguracja</p>
+                <p className="text-[13px] font-bold text-[#d8dbe6] mb-3.5">{t.config}</p>
 
                 <div className="space-y-2">
                   <Label>
-                    Kanał publikacji <span className="text-destructive">*</span>
+                    {t.publishChannel} <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={config.channelId || ""}
@@ -510,7 +527,7 @@ export default function MonthlyStatsPage() {
                     }}
                   >
                     <SelectTrigger style={channelError ? { borderColor: "rgba(239,68,68,0.6)" } : undefined}>
-                      <SelectValue placeholder="Wybierz kanał..." />
+                      <SelectValue placeholder={t.pickChannelPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
                       {channels.map((channel) => (
@@ -523,11 +540,11 @@ export default function MonthlyStatsPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {channelError && <p className="text-xs text-destructive">Wybierz kanał publikacji</p>}
+                  {channelError && <p className="text-xs text-destructive">{t.pickChannel}</p>}
                 </div>
 
                 <div className="mt-[18px] flex items-baseline justify-between gap-3">
-                  <Label className="text-[#c4cad8]">Osób na grafice</Label>
+                  <Label className="text-[#c4cad8]">{t.peopleOnImage}</Label>
                   <span className="text-[15px] font-extrabold" style={{ color: "#b8c8ff" }}>
                     {config.topCount}
                   </span>
@@ -539,37 +556,37 @@ export default function MonthlyStatsPage() {
                     min={3}
                     max={15}
                     step={1}
-                    ariaLabel="Osób na grafice"
+                    ariaLabel={t.peopleOnImage}
                   />
                 </div>
                 <div className="mt-3 flex items-start gap-2 rounded-md px-2.5 py-2 text-[11px] leading-relaxed" style={{ background: tight ? "rgba(245,158,11,0.1)" : "#17181E", color: tight ? "#fcd34d" : "#8d94a8" }}>
                   {tight ? <TriangleAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" /> : <Check className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
                   <span>
                     {tight
-                      ? `Przy ${config.topCount} osobach grafika staje się bardzo wysoka (${estH} px) — na telefonie tabela będzie drobna.`
-                      : `Podium pokazuje top 3, pozostałe ${Math.max(0, config.topCount - 3)} osób trafia do tabeli. Wysokość grafiki: ${estH} px.`}
+                      ? t.tooTall(config.topCount, estH)
+                      : t.podiumInfo(Math.max(0, config.topCount - 3), estH)}
                   </span>
                 </div>
 
-                <p className="mt-[18px] mb-2 text-[12px] font-semibold text-[#c4cad8]">Punktacja wyniku</p>
+                <p className="mt-[18px] mb-2 text-[12px] font-semibold text-[#c4cad8]">{t.scoring}</p>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2.5 rounded-lg px-3 py-2.5" style={{ background: "#17181E" }}>
-                    <Label className="flex-1 text-[12px] text-[#d8dbe6]">{msgRateLabel(config.msgRate)}</Label>
+                    <Label className="flex-1 text-[12px] text-[#d8dbe6]">{t.msgRate(config.msgRate)}</Label>
                     <span className="text-[13px] font-extrabold" style={{ color: "#b8c8ff" }}>
-                      1 pkt
+                      {t.point}
                     </span>
                   </div>
-                  <CustomSlider value={config.msgRate} onChange={(v) => setConfig((prev) => ({ ...prev, msgRate: v }))} min={1} max={5} step={1} ariaLabel="Wiadomości za punkt" />
+                  <CustomSlider value={config.msgRate} onChange={(v) => setConfig((prev) => ({ ...prev, msgRate: v }))} min={1} max={5} step={1} ariaLabel={t.msgRateAria} />
 
                   <div className="flex items-center gap-2.5 rounded-lg px-3 py-2.5" style={{ background: "#17181E" }}>
-                    <Label className="flex-1 text-[12px] text-[#d8dbe6]">{config.voiceRate} min na voice chat</Label>
+                    <Label className="flex-1 text-[12px] text-[#d8dbe6]">{t.voiceRate(config.voiceRate)}</Label>
                     <span className="text-[13px] font-extrabold" style={{ color: "#b8c8ff" }}>
-                      1 pkt
+                      {t.point}
                     </span>
                   </div>
-                  <CustomSlider value={config.voiceRate} onChange={(v) => setConfig((prev) => ({ ...prev, voiceRate: v }))} min={1} max={5} step={1} ariaLabel="Minut na voice chat za punkt" />
+                  <CustomSlider value={config.voiceRate} onChange={(v) => setConfig((prev) => ({ ...prev, voiceRate: v }))} min={1} max={5} step={1} ariaLabel={t.voiceRateAria} />
                   <p className="text-[11px] leading-relaxed" style={{ color: "#6b7280" }}>
-                    Im mniejsza wartość, tym mocniej liczy się czas na kanałach głosowych. Wpływa na kolejność i MVP.
+                    {t.voiceHint}
                   </p>
                 </div>
               </div>
@@ -578,11 +595,11 @@ export default function MonthlyStatsPage() {
             <SlideIn direction="up" delay={150}>
               <div className="rounded-lg p-4" style={{ background: "#17181E", boxShadow: "0 8px 18px rgba(8,10,16,0.16)" }}>
                 <div className="text-[11px] font-bold uppercase" style={{ letterSpacing: "0.06em", color: "#6b7280" }}>
-                  Najbliższa publikacja
+                  {t.nextPublish}
                 </div>
-                <div className="mt-2 text-sm font-bold text-white">{monthPublishLabel(currentMonthId)}, 00:00</div>
+                <div className="mt-2 text-sm font-bold text-white">{publishLabel(currentMonthId)}, 00:00</div>
                 <div className="mt-1 text-xs" style={{ color: "#8d94a8" }}>
-                  {publishChannelLabel} · grafika 900 × {estH} px
+                  {publishChannelLabel} · {t.imageSize(estH)}
                 </div>
               </div>
             </SlideIn>
@@ -594,7 +611,7 @@ export default function MonthlyStatsPage() {
               <div className="flex items-center gap-2.5 mb-3.5">
                 <span className="flex items-center gap-1.5 text-[9px] font-bold uppercase" style={{ letterSpacing: "0.08em", color: "#6b7280" }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e" }} />
-                  Podgląd na żywo
+                  {m.livePreview}
                 </span>
                 <span className="flex-1" />
                 {selected && (
@@ -606,14 +623,14 @@ export default function MonthlyStatsPage() {
                         : { background: "rgba(255,255,255,0.06)", color: "#9aa2b8" }
                     }
                   >
-                    {selected.isCurrent ? "w trakcie" : "zakończony"}
+                    {selected.isCurrent ? t.inProgress : t.finished}
                   </span>
                 )}
               </div>
 
               {!selected || shown.length === 0 ? (
                 <div className="py-14 text-center text-sm text-muted-foreground">
-                  Brak statystyk za ten miesiąc — nie ma jeszcze czego pokazać na grafice.
+                  {t.noStats}
                 </div>
               ) : (
                 <div className="flex gap-2.5">
@@ -653,8 +670,8 @@ export default function MonthlyStatsPage() {
 
                     <div className="mt-2 text-[11px]" style={{ color: "#6b7280" }}>
                       {shown.length < config.topCount
-                        ? `Ustawiono ${config.topCount} osób, ale w tym miesiącu aktywnych było tylko ${shown.length}.`
-                        : `Grafika 900 × ${estH} px — Discord wyświetli ją w pełnej szerokości wiadomości.`}
+                        ? t.fewerActive(config.topCount, shown.length)
+                        : t.fullWidth(estH)}
                     </div>
                   </div>
                 </div>

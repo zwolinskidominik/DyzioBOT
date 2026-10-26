@@ -19,6 +19,9 @@ import { EmojiDisplay } from "@/components/EmojiDisplay";
 import VariableInserter from "@/components/VariableInserter";
 import { cn } from "@/lib/utils";
 import { TicketLivePreview, TicketBannerThumbnail, DropdownOptionPreview, type TicketTypeDraft } from "./TicketLivePreview";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { ticketsMessages } from "@/i18n/messages/tickets";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Role {
   id: string;
@@ -32,6 +35,7 @@ function getRoleColor(color: number): string {
 }
 
 function RoleBadge({ role, onRemove }: { role: Role; onRemove: () => void }) {
+  const m = useMessages(commonMessages).module;
   return (
     <div className="flex items-center gap-2 rounded-md border border-[#2f3341] bg-dark-900 px-3 py-2">
       <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: getRoleColor(role.color) }} />
@@ -40,7 +44,7 @@ function RoleBadge({ role, onRemove }: { role: Role; onRemove: () => void }) {
         type="button"
         onClick={onRemove}
         className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-[#8d94a8] transition-colors hover:bg-red-500/20 hover:text-red-400"
-        aria-label={`Usuń rolę ${role.name}`}
+        aria-label={m.removeRole(role.name)}
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
@@ -50,18 +54,20 @@ function RoleBadge({ role, onRemove }: { role: Role; onRemove: () => void }) {
 
 function RoleAddSelect({ roles, excludeIds, onAdd }: { roles: Role[]; excludeIds: string[]; onAdd: (id: string) => void }) {
   const available = roles.filter((r) => !excludeIds.includes(r.id));
+  const m = useMessages(commonMessages).module;
+  const d = useMessages(ticketsMessages).drawer;
   return (
     <div className="w-full">
       <Select value="" onValueChange={onAdd}>
         <SelectTrigger className="h-9 border-dashed border-[#596276] bg-dark-900 text-[#8d94a8] hover:border-[#3b82f6] hover:text-white focus:ring-[#3b82f6]/50">
           <div className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            <span>Dodaj rolę obsługującą…</span>
+            <span>{d.addSupportRole}</span>
           </div>
         </SelectTrigger>
         <SelectContent className="border-[#2f3341] bg-dark-900">
           {available.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-[#8d94a8]">Brak dostępnych ról</div>
+            <div className="px-3 py-2 text-xs text-[#8d94a8]">{m.noRoles}</div>
           ) : (
             available.map((role) => (
               <SelectItem key={role.id} value={role.id}>
@@ -78,11 +84,11 @@ function RoleAddSelect({ roles, excludeIds, onAdd }: { roles: Role[]; excludeIds
   );
 }
 
-const PRESETS: { id: string; label: string }[] = [
-  { id: "ticketBanner.png", label: "Domyślny" },
-  { id: "ticketReport.png", label: "Zgłoszenie" },
-  { id: "ticketPartnership.png", label: "Partnerstwo" },
-  { id: "ticketIdea.png", label: "Pomysł" },
+const PRESETS: { id: string; labelKey: "default" | "report" | "partnership" | "idea" }[] = [
+  { id: "ticketBanner.png", labelKey: "default" },
+  { id: "ticketReport.png", labelKey: "report" },
+  { id: "ticketPartnership.png", labelKey: "partnership" },
+  { id: "ticketIdea.png", labelKey: "idea" },
 ];
 
 const EMPTY_DRAFT: TicketTypeDraft = {
@@ -109,6 +115,9 @@ interface TicketTypeDrawerProps {
 
 export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, saving, onSave }: TicketTypeDrawerProps) {
   const [draft, setDraft] = useState<TicketTypeDraft>(EMPTY_DRAFT);
+  const e = useMessages(ticketsMessages).editor;
+  const dt = useMessages(ticketsMessages).drawer;
+  const m = useMessages(commonMessages).module;
 
   useEffect(() => {
     if (open) {
@@ -128,9 +137,9 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto border-[#2f3341] bg-dark-800 text-white/90">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edytuj typ ticketa" : "Nowy typ ticketa"}</DialogTitle>
+          <DialogTitle>{isEditing ? dt.editTitle : dt.newTitle}</DialogTitle>
           <DialogDescription className="text-[#8d94a8]">
-            Skonfiguruj nazwę, opis, role obsługujące i grafikę — podgląd po prawej pokaże efekt od razu.
+            {dt.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -139,14 +148,14 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
           <div className="space-y-4">
             <div className="grid grid-cols-[80px_1fr] gap-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[#c4cad8]">Emoji</label>
+                <label className="text-xs font-medium text-[#c4cad8]">{e.emoji}</label>
                 <div className="flex items-center gap-1">
                   <EmojiPicker
                     onEmojiSelect={(emoji) => setDraft((d) => ({ ...d, emoji }))}
                     trigger={
                       <button
                         type="button"
-                        title="Wybierz emoji"
+                        title={e.pickEmoji}
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-transparent bg-dark-900 text-white/90 transition-colors hover:border-[#3b82f6]"
                       >
                         {draft.emoji ? (
@@ -161,7 +170,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                     <button
                       type="button"
                       onClick={() => setDraft((d) => ({ ...d, emoji: "" }))}
-                      title="Usuń emoji"
+                      title={e.removeEmoji}
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[#8d94a8] transition-colors hover:bg-red-500/20 hover:text-red-400"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -170,11 +179,11 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[#c4cad8]">Nazwa typu</label>
+                <label className="text-xs font-medium text-[#c4cad8]">{dt.typeName}</label>
                 <Input
                   value={draft.name}
                   onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                  placeholder="np. Dział pomocy"
+                  placeholder={dt.typeNamePlaceholder}
                   maxLength={60}
                   className="border-transparent bg-dark-900 text-white/90"
                 />
@@ -182,21 +191,21 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#c4cad8]">Opis w dropdownie</label>
+              <label className="text-xs font-medium text-[#c4cad8]">{dt.dropdownDescription}</label>
               <Input
                 value={draft.dropdownDescription ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, dropdownDescription: e.target.value }))}
-                placeholder="np. Zgłoś problem techniczny"
+                placeholder={dt.dropdownPlaceholder}
                 maxLength={100}
                 className="border-transparent bg-dark-900 text-white/90"
               />
               <p className="text-[11px] text-[#8d94a8]">
-                Krótki tekst pod nazwą typu na liście wyboru. Jeśli puste, użyjemy skróconej wiadomości powitalnej.
+                {dt.dropdownHint}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#c4cad8]">Kolor</label>
+              <label className="text-xs font-medium text-[#c4cad8]">{e.color}</label>
               <div className="flex items-center gap-2">
                 <label className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded-md border border-[#2f3341]">
                   <input
@@ -217,7 +226,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#c4cad8]">Thumbnail (obrazek w rogu embeda)</label>
+              <label className="text-xs font-medium text-[#c4cad8]">{dt.thumbnail}</label>
               <div className="flex items-center gap-2">
                 {draft.thumbnail ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -234,7 +243,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                 <Input
                   value={draft.thumbnail ?? ""}
                   onChange={(e) => setDraft((d) => ({ ...d, thumbnail: e.target.value }))}
-                  placeholder="https://... (puste = ikona serwera)"
+                  placeholder={dt.thumbnailPlaceholder}
                   maxLength={500}
                   className="border-transparent bg-dark-900 text-white/90"
                 />
@@ -242,7 +251,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                   <button
                     type="button"
                     onClick={() => setDraft((d) => ({ ...d, thumbnail: "" }))}
-                    title="Usuń thumbnail"
+                    title={dt.removeThumbnail}
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded text-[#8d94a8] transition-colors hover:bg-red-500/20 hover:text-red-400"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -250,27 +259,27 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                 ) : null}
               </div>
               <p className="text-[11px] text-[#8d94a8]">
-                Mały obrazek w prawym górnym rogu wiadomości powitalnej. Jeśli puste, pokaże się ikona serwera.
+                {dt.thumbnailHint}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#c4cad8]">Wiadomość powitalna</label>
+              <label className="text-xs font-medium text-[#c4cad8]">{dt.welcome}</label>
               <VariableInserter
                 value={draft.description}
                 onChange={(value) => setDraft((d) => ({ ...d, description: value }))}
                 variables={[
-                  { name: "Użytkownik", display: "Użytkownik", value: "{user}", description: "Wzmianka osoby otwierającej ticket" },
+                  { name: dt.userVariable, display: dt.userVariable, value: "{user}", description: dt.userVariableHint },
                 ]}
                 rows={4}
-                placeholder="Użyj {user}, aby wspomnieć osobę otwierającą ticket"
+                placeholder={dt.welcomePlaceholder}
                 unstyled
                 className="rounded-md border border-transparent bg-dark-900 text-sm leading-6 text-white/90 transition-colors focus:border-[#3b82f6]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#c4cad8]">Rola obsługująca</label>
+              <label className="text-xs font-medium text-[#c4cad8]">{dt.supportRole}</label>
               {draft.roleIds.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {draft.roleIds.map((id) => {
@@ -286,7 +295,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-[#8d94a8]">Brak przypisanych ról — dodaj przynajmniej jedną poniżej.</p>
+                <p className="text-xs text-[#8d94a8]">{dt.noRoles}</p>
               )}
               <RoleAddSelect
                 roles={roles}
@@ -296,7 +305,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#c4cad8]">Grafika w kanale ticketu</label>
+              <label className="text-xs font-medium text-[#c4cad8]">{dt.channelImage}</label>
               <Tabs
                 value={draft.banner.mode}
                 onValueChange={(mode) =>
@@ -314,18 +323,18 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                 <TabsList className="bg-dark-900">
                   <TabsTrigger value="none">
                     <ImageOff className="mr-1.5 h-3.5 w-3.5" />
-                    Brak
+                    {e.none}
                   </TabsTrigger>
-                  <TabsTrigger value="preset">Gotowe</TabsTrigger>
+                  <TabsTrigger value="preset">{e.presets}</TabsTrigger>
                   <TabsTrigger value="text">
                     <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                    Stwórz z tekstu
+                    {e.fromText}
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="none" className="pt-3">
                   <p className="rounded-md border border-dashed border-[#2f3341] px-3 py-4 text-center text-xs text-[#8d94a8]">
-                    Bez grafiki — wiadomość powitalna w kanale ticketu będzie samym tekstem.
+                    {dt.noChannelImage}
                   </p>
                 </TabsContent>
 
@@ -346,7 +355,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                         <div className="aspect-[3/1] overflow-hidden rounded">
                           <TicketBannerThumbnail banner={{ mode: "preset", presetId: preset.id }} className="h-full w-full" />
                         </div>
-                        <p className="truncate text-[11px] text-[#c4cad8]">{preset.label}</p>
+                        <p className="truncate text-[11px] text-[#c4cad8]">{e.presetNames[preset.labelKey]}</p>
                       </button>
                     ))}
                   </div>
@@ -358,7 +367,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
                     onChange={(e) =>
                       setDraft((d) => ({ ...d, banner: { mode: "text", text: e.target.value } }))
                     }
-                    placeholder="Tekst na grafice"
+                    placeholder={e.imageText}
                     maxLength={80}
                     className="border-transparent bg-dark-900 text-white/90"
                   />
@@ -377,14 +386,14 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
           <div className="space-y-3 rounded-md bg-dark-900/30 p-3">
             <div>
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#8d94a8]">
-                Wiersz w dropdownie
+                {dt.dropdownRow}
               </p>
               <DropdownOptionPreview type={draft} />
             </div>
             <div>
               <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#8d94a8]">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Wiadomość powitalna
+                {dt.welcome}
               </div>
               <TicketLivePreview type={draft} />
             </div>
@@ -398,7 +407,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
             onClick={() => onOpenChange(false)}
             className="border-[#3a3f4e] bg-transparent text-[#8d94a8] hover:bg-dark-900 hover:text-white"
           >
-            Anuluj
+            {m.cancel}
           </Button>
           <Button
             type="button"
@@ -407,7 +416,7 @@ export function TicketTypeDrawer({ open, onOpenChange, initialType, roles, savin
             className="bg-[#3b82f6] text-white hover:bg-[#2563eb]"
           >
             {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
-            Zapisz
+            {m.save}
           </Button>
         </DialogFooter>
       </DialogContent>

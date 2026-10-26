@@ -20,6 +20,9 @@ import {
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { Search, Lock, Plus, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { wordleMessages } from "@/i18n/messages/wordle";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface WordleCategory {
   length: number;
@@ -70,15 +73,8 @@ export default function WordlePage() {
   const { data: session, status } = useSession();
   const currentUserId = (session?.user as { id?: string })?.id;
 
-  if (status !== 'loading' && !OWNER_IDS.includes(currentUserId ?? '')) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
-        <p className="text-4xl">🔒</p>
-        <h2 className="text-xl font-semibold">Brak dostępu</h2>
-        <p className="text-muted-foreground text-sm">Ten moduł jest dostępny wyłącznie dla właściciela bota.</p>
-      </div>
-    );
-  }
+  const t = useMessages(wordleMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,15 +94,15 @@ export default function WordlePage() {
     try {
       if (!silent) setLoading(true);
       const res = await fetchWithAuth(`/api/guild/${guildId}/wordle`);
-      if (!res.ok) throw new Error("Nie udało się pobrać danych");
+      if (!res.ok) throw new Error(t.fetchError);
       const result = await res.json();
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udało się załadować danych");
+      setError(err instanceof Error ? err.message : m.loadErrorShort);
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, t, m]);
 
   useEffect(() => {
     fetchData();
@@ -163,11 +159,11 @@ export default function WordlePage() {
     if (!word) return;
 
     if (!POLISH_REGEX.test(word)) {
-      setWordError("Tylko polskie litery (bez q, v, x)");
+      setWordError(t.onlyPolish);
       return;
     }
     if (word.length !== selectedLength) {
-      setWordError(`Słowo musi mieć dokładnie ${selectedLength} liter`);
+      setWordError(t.exactLength(selectedLength));
       return;
     }
 
@@ -182,14 +178,14 @@ export default function WordlePage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setWordError(json.error || "Błąd");
+        setWordError(json.error || m.error);
         return;
       }
       setNewWord("");
       await fetchData(true);
       requestAnimationFrame(() => wordInputRef.current?.focus());
     } catch {
-      setWordError("Błąd połączenia");
+      setWordError(m.connectionError);
     } finally {
       setSavingWord(false);
     }
@@ -212,6 +208,17 @@ export default function WordlePage() {
       setDeleting(false);
     }
   };
+
+  // Po wszystkich hookach: wcześniejszy return zmieniał liczbę hooków między renderami.
+  if (status !== 'loading' && !OWNER_IDS.includes(currentUserId ?? '')) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
+        <p className="text-4xl">🔒</p>
+        <h2 className="text-xl font-semibold">{m.noAccess}</h2>
+        <p className="text-muted-foreground text-sm">{m.ownerOnlyText}</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -239,8 +246,8 @@ export default function WordlePage() {
       <div className="min-h-full">
         <div className="w-full">
           <ErrorState
-            title="Błąd ładowania"
-            message={error || "Nie udało się załadować danych Wordle"}
+            title={m.loadErrorGeneric}
+            message={error || t.loadError}
             onRetry={() => window.location.reload()}
           />
         </div>
@@ -256,12 +263,12 @@ export default function WordlePage() {
             <div className="min-w-0 space-y-2">
               <h1 className="text-2xl font-semibold text-white">Wordle</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Zarządzaj polskimi słowami do gry /wordle. Słowa podzielone według liczby liter (5–7).
+                {t.subtitle}
               </p>
             </div>
             <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-400">
               <Lock className="h-3.5 w-3.5" />
-              Tylko właściciel bota
+              {m.ownerOnlyBadge}
             </span>
           </header>
         </SlideIn>
@@ -289,12 +296,12 @@ export default function WordlePage() {
             <div className="relative grid flex-1 grid-cols-2 gap-3" style={{ minWidth: "260px" }}>
               <div>
                 <p className="text-2xl font-extrabold text-white">{data.totalWords}</p>
-                <p className="text-[11px] text-[#8d94a8]">wszystkich słów</p>
+                <p className="text-[11px] text-[#8d94a8]">{t.allWords}</p>
               </div>
               <div>
                 <p className="text-2xl font-extrabold" style={{ color: "#86efac" }}>{selectedLengthCount}</p>
                 <p className="text-[11px] text-[#8d94a8]">
-                  {selectedLength}-literowych{selectedLength === 5 ? " (standard)" : ""}
+                  {t.nLetter(selectedLength)}{selectedLength === 5 ? t.standardSuffix : ""}
                 </p>
               </div>
             </div>
@@ -321,12 +328,12 @@ export default function WordlePage() {
                     {len}
                   </span>
                   <div className={cn("mt-2 flex items-center justify-center gap-1.5 text-[13px] font-bold", isActive ? "text-white" : "text-[#c4cad8]")}>
-                    {len}-literowe
+                    {t.lengthCard(len)}
                     {len === 5 ? (
-                      <span className="rounded border border-[#2f3341] px-1.5 py-px text-[9px] font-semibold text-[#9aa2b8]">standard</span>
+                      <span className="rounded border border-[#2f3341] px-1.5 py-px text-[9px] font-semibold text-[#9aa2b8]">{t.standard}</span>
                     ) : null}
                   </div>
-                  <div className="mt-0.5 text-[11px] text-[#8d94a8]">{cat?.wordCount ?? 0} słów</div>
+                  <div className="mt-0.5 text-[11px] text-[#8d94a8]">{t.wordsCount(cat?.wordCount ?? 0)}</div>
                 </button>
               );
             })}
@@ -337,7 +344,7 @@ export default function WordlePage() {
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d94a8]" />
             <Input
-              placeholder="Szukaj słowa we wszystkich długościach..."
+              placeholder={t.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={cn(inputClass, "pl-9")}
@@ -345,9 +352,9 @@ export default function WordlePage() {
           </div>
           {normalizedSearch ? (
             <p className="mt-2 text-xs text-[#8d94a8]">
-              Znaleziono <span className="font-semibold text-white/90">{totalMatchingWords}</span> słów w{" "}
-              <span className="font-semibold text-white/90">{filteredCategories.length}</span>{" "}
-              {filteredCategories.length === 1 ? "długości" : "długościach"} dla „{search}"
+              {t.foundPrefix}<span className="font-semibold text-white/90">{totalMatchingWords}</span>{t.foundMiddle}
+              <span className="font-semibold text-white/90">{filteredCategories.length}</span>
+              {t.foundSuffix(filteredCategories.length, search)}
             </p>
           ) : null}
         </SlideIn>
@@ -355,20 +362,20 @@ export default function WordlePage() {
         {filteredCategories.length === 0 ? (
           <div className="rounded-md bg-dark-800 py-16 text-center">
             <Search className="mx-auto mb-3 h-10 w-10 text-[#8d94a8] opacity-50" />
-            <p className="text-sm text-[#8d94a8]">Nie znaleziono słów pasujących do „{search}"</p>
+            <p className="text-sm text-[#8d94a8]">{t.notFound(search)}</p>
           </div>
         ) : (
           <SlideIn delay={150}>
             <div className="rounded-md bg-dark-800 p-5">
               <h2 className="text-base font-semibold text-white">
-                Słowa {selectedLength}-literowe{" "}
-                <span className="ml-1 text-xs font-normal text-[#8d94a8]">{selectedCategoryData?.wordCount ?? 0} słów</span>
+                {t.wordsOfLength(selectedLength)}{" "}
+                <span className="ml-1 text-xs font-normal text-[#8d94a8]">{t.wordsCount(selectedCategoryData?.wordCount ?? 0)}</span>
               </h2>
 
               <div className="mt-4 flex gap-2">
                 <Input
                   ref={wordInputRef}
-                  placeholder="Dodaj nowe słowo... (Enter)"
+                  placeholder={t.addPlaceholder}
                   value={newWord}
                   onChange={(e) => setNewWord(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") handleAddWord(); }}
@@ -382,16 +389,16 @@ export default function WordlePage() {
                   className="shrink-0 bg-[#3b82f6] text-white hover:bg-[#2563eb]"
                 >
                   {savingWord ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                  Dodaj
+                  {m.add}
                 </Button>
               </div>
               {wordError ? <p className="mt-1.5 text-xs text-destructive">{wordError}</p> : null}
               <p className="mt-1.5 text-[11px] text-[#6f7690]">
-                Tylko polskie litery (a–ż), bez q, v, x, dokładnie {selectedLength} znaków.
+                {t.hint(selectedLength)}
               </p>
 
               {groupedWords.length === 0 ? (
-                <p className="mt-4 text-sm text-[#8d94a8]">Ta długość nie ma jeszcze żadnych słów.</p>
+                <p className="mt-4 text-sm text-[#8d94a8]">{t.emptyLength}</p>
               ) : (
                 <div className="mt-4 space-y-3">
                   {groupedWords.map((group) => (
@@ -413,7 +420,7 @@ export default function WordlePage() {
                                 type="button"
                                 onClick={() => setDeleteConfirm({ word, length: selectedLength })}
                                 className="text-[#8d94a8] opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
-                                aria-label={`Usuń słowo ${word}`}
+                                aria-label={t.removeWord(word)}
                               >
                                 <X className="h-3 w-3" />
                               </button>
@@ -433,19 +440,19 @@ export default function WordlePage() {
         <Dialog open={deleteConfirm !== null} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Usuń słowo</DialogTitle>
+              <DialogTitle>{t.deleteTitle}</DialogTitle>
               <DialogDescription>
-                Czy na pewno chcesz usunąć słowo{" "}
+                {t.deletePrefix}{" "}
                 <strong className="font-mono text-foreground">{deleteConfirm?.word}</strong>{" "}
-                z listy {deleteConfirm?.length}-literowych? Tej operacji nie można cofnąć.
+                {t.deleteSuffix(deleteConfirm?.length ?? 0)}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={deleting}>
-                Anuluj
+                {m.cancel}
               </Button>
               <Button variant="destructive" onClick={handleRemoveWord} disabled={deleting}>
-                {deleting ? "Usuwanie..." : "Usuń"}
+                {deleting ? m.deleting : m.delete}
               </Button>
             </DialogFooter>
           </DialogContent>

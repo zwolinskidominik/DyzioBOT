@@ -13,6 +13,9 @@ import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { toSortedDiscordRoles } from "@/lib/discordOrdering";
 import { cn } from "@/lib/utils";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { autorolesMessages } from "@/i18n/messages/autoroles";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Role {
   id: string;
@@ -60,6 +63,7 @@ function SettingRow({
   children?: React.ReactNode;
 }) {
   const isExpandable = Boolean(children && onToggle);
+  const m = useMessages(commonMessages).module;
 
   return (
     <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
@@ -79,7 +83,7 @@ function SettingRow({
         {typeof checked === "boolean" && onCheckedChange ? <DeezySwitch checked={checked} onCheckedChange={onCheckedChange} /> : null}
 
         {isExpandable ? (
-          <button type="button" onClick={onToggle} aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
+          <button type="button" onClick={onToggle} aria-label={isOpen ? m.collapse : m.expand} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
             <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
           </button>
         ) : null}
@@ -92,6 +96,7 @@ function SettingRow({
 
 function RoleBadge({ role, invalid, onRemove }: { role: Role; invalid?: boolean; onRemove: () => void }) {
   const color = getRoleColor(role.color);
+  const m = useMessages(commonMessages).module;
   return (
     <div className={cn(
       "flex items-center gap-2 rounded-md border px-3 py-2 transition-colors",
@@ -105,7 +110,7 @@ function RoleBadge({ role, invalid, onRemove }: { role: Role; invalid?: boolean;
         type="button"
         onClick={onRemove}
         className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-[#8d94a8] transition-colors hover:bg-red-500/20 hover:text-red-400"
-        aria-label={`Usuń rolę ${role.name}`}
+        aria-label={m.removeRole(role.name)}
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
@@ -123,18 +128,19 @@ function RoleAddSelect({
   onAdd: (id: string) => void;
 }) {
   const available = roles.filter((r) => !excludeIds.includes(r.id));
+  const m = useMessages(commonMessages).module;
   return (
     <div className="w-full max-w-xs">
       <Select value="" onValueChange={onAdd}>
         <SelectTrigger className="h-9 border-dashed border-[#596276] bg-dark-900 text-[#8d94a8] hover:border-[#3b82f6] hover:text-white focus:ring-[#3b82f6]/50">
           <div className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            <span>Dodaj rolę…</span>
+            <span>{m.addRole}</span>
           </div>
         </SelectTrigger>
         <SelectContent className="border-[#2f3341] bg-dark-900">
           {available.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-[#8d94a8]">Brak dostępnych ról</div>
+            <div className="px-3 py-2 text-xs text-[#8d94a8]">{m.noRoles}</div>
           ) : (
             available.map((role) => (
               <SelectItem key={role.id} value={role.id}>
@@ -161,6 +167,8 @@ export default function AutoRolePage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(autorolesMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -229,7 +237,7 @@ export default function AutoRolePage() {
           setBotRoleIds(nextBot);
         }
       } catch {
-        setError("Nie udało się załadować danych. Sprawdź połączenie i spróbuj ponownie.");
+        setError(m.loadError);
       } finally {
         setLoading(false);
       }
@@ -240,7 +248,7 @@ export default function AutoRolePage() {
 
   const handleSave = useCallback(async () => {
     if (hasInvalidRoles) {
-      toast.error("Usuń role wyższe niż rola bota, zanim zapiszesz.");
+      toast.error(t.removeHigher);
       return;
     }
     setSaving(true);
@@ -250,15 +258,15 @@ export default function AutoRolePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled, userRoleIds, botRoleIds }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Błąd zapisu");
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? m.saveFailed);
       savedRef.current = { enabled, userRoleIds: [...userRoleIds], botRoleIds: [...botRoleIds] };
-      toast.success("Konfiguracja została zapisana!");
+      toast.success(m.saved);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Nie udało się zapisać konfiguracji");
+      toast.error(err instanceof Error ? err.message : m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [botRoleIds, enabled, guildId, userRoleIds]);
+  }, [botRoleIds, enabled, guildId, userRoleIds, t, m]);
 
   const handleCancel = useCallback(() => {
     const s = savedRef.current;
@@ -271,15 +279,15 @@ export default function AutoRolePage() {
     id: `autoroles-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: "Auto Role",
-    onSave: hasInvalidRoles ? () => { toast.error("Usuń role wyższe niż rola bota, zanim zapiszesz."); } : handleSave,
+    label: t.title,
+    onSave: hasInvalidRoles ? () => { toast.error(t.removeHigher); } : handleSave,
     onCancel: handleCancel,
-  }), [guildId, isDirty, saving, hasInvalidRoles, handleSave, handleCancel, registerDirtyController]);
+  }), [guildId, isDirty, saving, hasInvalidRoles, handleSave, handleCancel, registerDirtyController, t]);
 
   if (error) {
     return (
       <div className="min-h-full">
-        <ErrorState title="Nie udało się załadować Auto Role" message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />
+        <ErrorState title={m.loadErrorTitle(t.title)} message={error} onRetry={() => { setError(null); setLoading(true); window.location.reload(); }} />
       </div>
     );
   }
@@ -304,14 +312,14 @@ export default function AutoRolePage() {
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Auto Role</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Automatycznie przypisuj role nowym członkom i botom zaraz po dołączeniu do serwera.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{enabled ? "Aktywne" : "Nieaktywne"}</span>
-              <DeezySwitch checked={enabled} onCheckedChange={setEnabled} aria-label="Włącz lub wyłącz auto role" />
+              <span>{enabled ? m.active : m.inactive}</span>
+              <DeezySwitch checked={enabled} onCheckedChange={setEnabled} aria-label={t.toggle} />
             </div>
           </header>
         </SlideIn>
@@ -321,7 +329,7 @@ export default function AutoRolePage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł auto ról jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację, ale bot nie przypisze ról nowym członkom, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -330,8 +338,8 @@ export default function AutoRolePage() {
         <SlideIn direction="up" delay={150}>
           <div className="space-y-3">
             <SettingRow
-              title="Role użytkowników"
-              description="Przypisywane automatycznie każdemu nowemu użytkownikowi"
+              title={t.users.title}
+              description={t.users.description}
               icon={<UserIcon className="h-5 w-5" />}
               isOpen={openSections.users}
               onToggle={() => toggleSection("users")}
@@ -348,7 +356,7 @@ export default function AutoRolePage() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-[#8d94a8]">Brak przypisanych ról użytkowników. Dodaj poniżej.</p>
+                  <p className="text-xs text-[#8d94a8]">{t.users.empty}</p>
                 )}
                 <RoleAddSelect
                   roles={roles}
@@ -359,8 +367,8 @@ export default function AutoRolePage() {
             </SettingRow>
 
             <SettingRow
-              title="Role botów"
-              description="Opcjonalnie — przypisywane tylko nowym botom"
+              title={t.bots.title}
+              description={t.bots.description}
               icon={<Bot className="h-5 w-5" />}
               isOpen={openSections.bots}
               onToggle={() => toggleSection("bots")}
@@ -377,7 +385,7 @@ export default function AutoRolePage() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-[#8d94a8]">Brak przypisanych ról botów. Zostaw puste, jeśli nie chcesz przypisywać roli botom.</p>
+                  <p className="text-xs text-[#8d94a8]">{t.bots.empty}</p>
                 )}
                 <RoleAddSelect
                   roles={roles}
@@ -394,8 +402,7 @@ export default function AutoRolePage() {
             <div className="flex items-start gap-3 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Nie mogę nadać jednej z wybranych ról — jest ona wyżej niż moja rola na serwerze.
-                Przesuń rolę Deezy wyżej niż zaznaczone role lub usuń je z listy.
+                {t.hierarchyWarning}
               </span>
             </div>
           </SlideIn>

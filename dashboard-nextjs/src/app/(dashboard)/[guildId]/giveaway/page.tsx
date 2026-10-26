@@ -14,6 +14,9 @@ import { SlideIn } from "@/components/ui/animated";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { fetchGuildData } from "@/lib/cache";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { giveawayMessages } from "@/i18n/messages/giveaway";
+import { commonMessages } from "@/i18n/messages/common";
 import { cn } from "@/lib/utils";
 
 interface Role {
@@ -54,10 +57,12 @@ function roleColorHex(color: number): string {
   return color ? `#${color.toString(16).padStart(6, "0")}` : "#99aab5";
 }
 
-/** "x3" dla liczb całkowitych, "x2,5" dla ułamkowych (średnia) — polska notacja z przecinkiem. */
-function formatMultiplier(value: number): string {
+/** "x3" dla liczb całkowitych, "x2,5" dla ułamkowych (średnia); po angielsku z kropką. */
+function formatMultiplier(value: number, decimalComma = true): string {
   const rounded = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded) ? `x${rounded}` : `x${rounded.toFixed(1).replace(".", ",")}`;
+  if (Number.isInteger(rounded)) return `x${rounded}`;
+  const fixed = rounded.toFixed(1);
+  return `x${decimalComma ? fixed.replace(".", ",") : fixed}`;
 }
 
 /** Kolejność roleId posortowana malejąco po mnożniku. */
@@ -69,6 +74,10 @@ export default function GiveawayPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(giveawayMessages);
+  const m = useMessages(commonMessages).module;
+  const { lang } = useLang();
+  const fmt = (value: number) => formatMultiplier(value, lang !== "en");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,8 +124,8 @@ export default function GiveawayPage() {
         }
       } catch (fetchError) {
         console.error("Error loading giveaway config:", fetchError);
-        setError("Nie udało się załadować konfiguracji giveawayów. Sprawdź połączenie i spróbuj ponownie.");
-        toast.error("Nie udało się załadować danych");
+        setError(t.loadError);
+        toast.error(m.loadErrorShort);
       } finally {
         setLoading(false);
       }
@@ -145,14 +154,14 @@ export default function GiveawayPage() {
       };
       setConfig(nextConfig);
       savedConfigRef.current = nextConfig;
-      toast.success("Konfiguracja giveawayów została zapisana!");
+      toast.success(t.saved);
     } catch (saveError) {
       console.error("Error saving giveaway config:", saveError);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [config, guildId]);
+  }, [config, guildId, t, m]);
 
   const handleCancel = useCallback(() => {
     setConfig(savedConfigRef.current);
@@ -239,7 +248,7 @@ export default function GiveawayPage() {
       <div className="min-h-full">
         <div className="w-full">
           <ErrorState
-            title="Nie udało się załadować konfiguracji giveawayów"
+            title={t.loadErrorTitle}
             message={error}
             onRetry={handleRetry}
           />
@@ -276,17 +285,17 @@ export default function GiveawayPage() {
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Giveaway</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Włącz moduł, aby moderatorzy mogli używać komendy /giveaway na tym serwerze. Dodatkowa notatka dołączana do każdego giveawaya oraz mnożniki wpisów dla wybranych ról.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{config.enabled ? "Aktywne" : "Nieaktywne"}</span>
+              <span>{config.enabled ? m.active : m.inactive}</span>
               <DeezySwitch
                 checked={config.enabled}
                 onCheckedChange={(checked) => setConfig((c) => ({ ...c, enabled: checked }))}
-                aria-label="Włącz lub wyłącz moduł Giveaway na tym serwerze"
+                aria-label={t.toggle}
               />
             </div>
           </header>
@@ -297,7 +306,7 @@ export default function GiveawayPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł Giveaway jest <span className="font-semibold text-white/80">wyłączony na tym serwerze</span> — komenda <span className="font-semibold text-white/80">/giveaway</span> nie zadziała, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">/giveaway</span>{t.disabledMiddle2}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -307,15 +316,15 @@ export default function GiveawayPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-md bg-dark-800 p-4">
               <p className="text-2xl font-bold text-white">{stats.count}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">role z bonusem</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.statRoles}</p>
             </div>
             <div className="rounded-md bg-dark-800 p-4">
-              <p className="text-2xl font-bold text-white">{stats.max !== null ? formatMultiplier(stats.max) : "—"}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">najwyższy mnożnik</p>
+              <p className="text-2xl font-bold text-white">{stats.max !== null ? fmt(stats.max) : "-"}</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.statMax}</p>
             </div>
             <div className="rounded-md bg-dark-800 p-4">
-              <p className="text-2xl font-bold text-pink-400">{stats.avg !== null ? formatMultiplier(stats.avg) : "—"}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">średni bonus</p>
+              <p className="text-2xl font-bold text-pink-400">{stats.avg !== null ? fmt(stats.avg) : "-"}</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.statAvg}</p>
             </div>
           </div>
         </SlideIn>
@@ -325,7 +334,7 @@ export default function GiveawayPage() {
             <div className="space-y-5">
               <div className="space-y-3 rounded-md bg-dark-800 p-5">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-white/90">Drabinka mnożników</p>
+                  <p className="text-sm font-semibold text-white/90">{t.ladder}</p>
                   <Popover open={addRoleOpen} onOpenChange={setAddRoleOpen}>
                     <PopoverTrigger asChild>
                       <button
@@ -334,12 +343,12 @@ export default function GiveawayPage() {
                         className="flex items-center gap-1.5 rounded-md bg-[#3b82f6] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        Dodaj rolę
+                        {t.addRole}
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-64 border-[#2f3341] bg-dark-900 p-1.5">
                       {availableRoles.length === 0 ? (
-                        <p className="px-2 py-3 text-center text-xs text-[#8d94a8]">Wszystkie role są już dodane.</p>
+                        <p className="px-2 py-3 text-center text-xs text-[#8d94a8]">{t.allAdded}</p>
                       ) : (
                         <div className="max-h-64 space-y-0.5 overflow-y-auto">
                           {availableRoles.map((role) => (
@@ -364,8 +373,8 @@ export default function GiveawayPage() {
 
                 {sortedMultipliers.length === 0 ? (
                   <div className="rounded-md border border-dashed border-[#3f4455] py-10 text-center">
-                    <p className="text-sm text-[#8d94a8]">Brak ról z bonusem.</p>
-                    <p className="mt-1 text-xs text-[#6f7690]">Dodaj rolę, aby dać jej graczom większą szansę na wygraną.</p>
+                    <p className="text-sm text-[#8d94a8]">{t.emptyTitle}</p>
+                    <p className="mt-1 text-xs text-[#6f7690]">{t.emptyText}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -378,16 +387,16 @@ export default function GiveawayPage() {
                             <span className="flex min-w-0 items-center gap-2">
                               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                               <span className="truncate text-sm font-medium text-white/90">
-                                {role?.name ?? "Nieznana rola"}
+                                {role?.name ?? t.unknownRole}
                               </span>
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
-                              <span className="text-lg font-bold leading-none" style={{ color }}>{formatMultiplier(m.multiplier)}</span>
+                              <span className="text-lg font-bold leading-none" style={{ color }}>{fmt(m.multiplier)}</span>
                               <button
                                 type="button"
                                 onClick={() => removeRole(m.roleId)}
                                 className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-red-500/10 hover:text-red-400"
-                                aria-label={`Usuń mnożnik dla roli ${role?.name ?? m.roleId}`}
+                                aria-label={t.removeMultiplier(role?.name ?? m.roleId)}
                               >
                                 <Trash2 className="h-[18px] w-[18px]" />
                               </button>
@@ -400,7 +409,7 @@ export default function GiveawayPage() {
                             min={1}
                             max={10}
                             step={1}
-                            ariaLabel={`Mnożnik wpisów dla roli ${role?.name ?? m.roleId}`}
+                            ariaLabel={t.multiplierFor(role?.name ?? m.roleId)}
                             ticks={[1, 10]}
                             formatTick={(v) => `x${v}`}
                           />
@@ -412,7 +421,7 @@ export default function GiveawayPage() {
               </div>
 
               <div className="space-y-2 rounded-md bg-dark-800 p-5">
-                <label className={labelClass}>Dodatkowa notatka</label>
+                <label className={labelClass}>{t.note}</label>
                 <VariableInserter
                   value={config.additionalNote}
                   onChange={(value) =>
@@ -420,14 +429,14 @@ export default function GiveawayPage() {
                   }
                   variables={[]}
                   toolbarClassName="hidden"
-                  placeholder="Opcjonalny tekst dodawany do każdego giveawaya..."
+                  placeholder={t.notePlaceholder}
                   rows={3}
                   emojiPicker
                   unstyled
                   className="rounded-md border border-[#3f4455] bg-dark-900 text-sm text-white/90 placeholder:text-[#9aa2b8] transition-colors focus:border-[#3b82f6]"
                 />
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] text-[#8d94a8]">Doklejane na końcu każdej wiadomości giveawaya</p>
+                  <p className="text-[11px] text-[#8d94a8]">{t.noteHint}</p>
                   <p className="text-[11px] text-[#6f7690]">{noteChars}/{NOTE_MAX_LENGTH}</p>
                 </div>
               </div>
@@ -437,7 +446,7 @@ export default function GiveawayPage() {
               <div className="space-y-2 rounded-md bg-dark-800 p-5">
                 <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  Podgląd na żywo
+                  {m.livePreview}
                 </p>
                 <div className="rounded-md border border-[#2f3341] bg-[#313338] p-4">
                   <div className="flex items-start gap-3">
@@ -491,7 +500,7 @@ export default function GiveawayPage() {
                   </div>
                 </div>
                 <p className="text-xs leading-5 text-[#8d94a8]">
-                  Uczestnicy z kilkoma rolami dostają największy mnożnik — nie sumują się.
+                  {t.highestWins}
                 </p>
               </div>
             </div>

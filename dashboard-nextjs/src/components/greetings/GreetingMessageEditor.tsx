@@ -8,9 +8,11 @@ import EmbedColorPicker from "@/components/EmbedColorPicker";
 import VariableInserter from "@/components/VariableInserter";
 import { InlineToolbarField } from "@/components/greetings/FieldToolbar";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { greetingsMessages } from "@/i18n/messages/greetings";
 import {
-  GREETING_VARIABLES,
   GreetingMessagePreview,
+  useGreetingVariables,
   SAMPLE_MEMBER_AVATAR,
   type GreetingAuthorIconMode,
   type GreetingImageMode,
@@ -104,6 +106,8 @@ export function GreetingMessageEditor({
     onValueChange("imageMode", "none");
   }
   const [editorMode, setEditorMode] = useState<"editor" | "preview">("editor");
+  const ed = useMessages(greetingsMessages).editor;
+  const GREETING_VARIABLES = useGreetingVariables();
   const [draftEmbedColor, setDraftEmbedColor] = useState<string | null>(null);
   const activeEmbedColor = draftEmbedColor || value.embedColor;
   const isEmbed = value.messageMode === "embed";
@@ -115,11 +119,7 @@ export function GreetingMessageEditor({
   const showHeaderRow = editorMode === "editor" || value.headerText.trim().length > 0;
   const showFooterRow = editorMode === "editor" || value.footerText.trim().length > 0;
   const showImageSlot = editorMode === "editor" || Boolean(embedImageUrl);
-  const moduleLabel = useMemo(() => {
-    if (moduleKey === "dm") return "Prywatna wiadomość";
-    if (moduleKey === "goodbye") return "Pożegnanie";
-    return "Powitanie";
-  }, [moduleKey]);
+  const moduleLabel = useMemo(() => ed.moduleLabels[moduleKey], [ed, moduleKey]);
 
   const handleImageInput = (event: ChangeEvent<HTMLInputElement>, slot: GreetingImageSlot) => {
     const input = event.currentTarget;
@@ -129,7 +129,7 @@ export function GreetingMessageEditor({
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Plik musi być obrazem");
+      toast.error(ed.imageOnly);
       return;
     }
 
@@ -150,8 +150,8 @@ export function GreetingMessageEditor({
           "absolute -right-1.5 -top-1.5 z-10 hidden items-center justify-center rounded-full bg-red-500 text-white shadow group-hover:flex focus-visible:flex",
           size === "md" ? "h-5 w-5" : "h-4 w-4"
         )}
-        aria-label={`Usuń ${label}`}
-        title={`Usuń ${label}`}
+        aria-label={ed.remove(label)}
+        title={ed.remove(label)}
       >
         <X className={size === "md" ? "h-3 w-3" : "h-2.5 w-2.5"} />
       </button>
@@ -193,7 +193,7 @@ export function GreetingMessageEditor({
       <button
         type="button"
         onClick={() => onValueChange("authorIconMode", isOn ? "none" : "avatar")}
-        title={isOn ? "Ukryj awatar przy nagłówku" : "Pokaż awatar użytkownika przy nagłówku"}
+        title={isOn ? ed.hideAvatar : ed.showAvatar}
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border text-[#8d94a8] transition-colors",
           isOn
@@ -202,7 +202,7 @@ export function GreetingMessageEditor({
         )}
       >
         {isOn ? (
-          <img src={SAMPLE_MEMBER_AVATAR} alt="Awatar autora" className="h-full w-full object-cover" />
+          <img src={SAMPLE_MEMBER_AVATAR} alt={ed.authorAvatar} className="h-full w-full object-cover" />
         ) : (
           <CircleUserRound className="h-4 w-4" />
         )}
@@ -213,7 +213,7 @@ export function GreetingMessageEditor({
   const renderThumbnailSlot = () => {
     if (value.thumbnailMode === "none") {
       return (
-        <div className="hidden h-[76px] w-[76px] shrink-0 items-center justify-center rounded-md border border-dashed border-[#596276] bg-dark-800 text-[#8d94a8] sm:flex" title="Brak miniatury">
+        <div className="hidden h-[76px] w-[76px] shrink-0 items-center justify-center rounded-md border border-dashed border-[#596276] bg-dark-800 text-[#8d94a8] sm:flex" title={ed.noThumbnail}>
           <ImageOff className="h-7 w-7" />
         </div>
       );
@@ -221,9 +221,9 @@ export function GreetingMessageEditor({
 
     if (value.thumbnailMode === "avatar") {
       return (
-        <div className="hidden h-[76px] w-[76px] shrink-0 overflow-hidden rounded-md sm:block" title="Awatar użytkownika">
+        <div className="hidden h-[76px] w-[76px] shrink-0 overflow-hidden rounded-md sm:block" title={ed.userAvatar}>
           {value.thumbnailUrl ? (
-            <img src={value.thumbnailUrl} alt="Awatar użytkownika" className="h-full w-full rounded-[3px] object-cover" />
+            <img src={value.thumbnailUrl} alt={ed.userAvatar} className="h-full w-full rounded-[3px] object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-dark-800 text-[#8d94a8]"><CircleUserRound className="h-7 w-7" /></div>
           )}
@@ -242,7 +242,7 @@ export function GreetingMessageEditor({
           )}
         >
           {value.customThumbnailUrl ? (
-            <img src={value.customThumbnailUrl} alt="Miniatura embeda" className="h-full w-full rounded-[3px] object-cover" />
+            <img src={value.customThumbnailUrl} alt={ed.embedThumbnail} className="h-full w-full rounded-[3px] object-cover" />
           ) : (
             <CircleUserRound className="h-7 w-7" />
           )}
@@ -253,7 +253,7 @@ export function GreetingMessageEditor({
             onChange={(event) => handleImageInput(event, "thumbnail")}
           />
         </label>
-        {value.customThumbnailUrl ? renderClearButton("thumbnail", "miniaturę", "md") : null}
+        {value.customThumbnailUrl ? renderClearButton("thumbnail", ed.thumbnailWord, "md") : null}
       </div>
     );
   };
@@ -269,7 +269,7 @@ export function GreetingMessageEditor({
             Embed
           </ModeButton>
           <ModeButton active={value.messageMode === "text"} onClick={() => onValueChange("messageMode", "text")}>
-            Tekst
+            {ed.text}
           </ModeButton>
         </div>
       </div>
@@ -283,8 +283,8 @@ export function GreetingMessageEditor({
                 type="button"
                 onClick={() => setEditorMode((mode) => (mode === "editor" ? "preview" : "editor"))}
                 className="flex h-8 w-8 items-center justify-center rounded-md bg-bot-primary text-white transition-colors hover:bg-bot-blue"
-                aria-label={editorMode === "editor" ? "Pokaż Discord preview message" : "Wróć do edytora"}
-                title={editorMode === "editor" ? "DISCORD PREVIEW MESSAGE" : "EDYTOR"}
+                aria-label={editorMode === "editor" ? ed.showPreview : ed.backToEditor}
+                title={editorMode === "editor" ? ed.previewTitle : ed.editorTitle}
               >
                 {editorMode === "editor" ? <Eye className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
               </button>
@@ -293,21 +293,21 @@ export function GreetingMessageEditor({
               <div className="flex min-h-10 flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold text-white">Deezy</span>
                 <span className="rounded bg-discord-blurple px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">BOT</span>
-                <span className="text-xs text-[#8d94a8]">dziś o 21:37</span>
+                <span className="text-xs text-[#8d94a8]">{ed.todayAt}</span>
               </div>
               <div className="mt-2">
                 {editorMode === "editor" ? (
                   <VariableInserter
                     value={value.message}
                     onChange={(nextValue) => onValueChange("message", nextValue)}
-                    placeholder={`Napisz treść: ${moduleLabel.toLowerCase()}...`}
+                    placeholder={ed.writeContent(moduleLabel)}
                     variables={GREETING_VARIABLES}
                     rows={6}
                     emojiPicker
                     unstyled
                     containerClassName="discord-embed-editor"
                     toolbarClassName="mt-2 gap-1.5"
-                    variableLabel="Zmienne:"
+                    variableLabel={ed.variables}
                     variableButtonClassName="border-[#2f3341] bg-dark-900 px-2 py-1 text-[11px] text-[#58a6ff] hover:border-[#3b82f6]/60 hover:bg-dark-700 hover:text-[#8ec5ff]"
                     className="discord-preview-editor rounded-md border border-dashed border-[#2f3341] bg-dark-900 px-3 py-2 text-sm leading-5 text-[#d8dbe6] transition-colors hover:border-[#3b82f6]/60 focus:border-solid focus:border-bot-primary focus:outline-none focus:ring-1 focus:ring-bot-primary/60"
                   />
@@ -347,8 +347,8 @@ export function GreetingMessageEditor({
                 type="button"
                 onClick={() => setEditorMode((mode) => (mode === "editor" ? "preview" : "editor"))}
                 className="flex h-8 w-8 items-center justify-center rounded-md bg-bot-primary text-white transition-colors hover:bg-bot-blue"
-                aria-label={editorMode === "editor" ? "Pokaż Discord preview message" : "Wróć do edytora"}
-                title={editorMode === "editor" ? "DISCORD PREVIEW MESSAGE" : "EDYTOR"}
+                aria-label={editorMode === "editor" ? ed.showPreview : ed.backToEditor}
+                title={editorMode === "editor" ? ed.previewTitle : ed.editorTitle}
               >
                 {editorMode === "editor" ? <Eye className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
               </button>
@@ -358,7 +358,7 @@ export function GreetingMessageEditor({
               <div className="flex min-h-10 flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold text-white">Deezy</span>
                 <span className="rounded bg-discord-blurple px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">BOT</span>
-                <span className="text-xs text-[#8d94a8]">dziś o 21:37</span>
+                <span className="text-xs text-[#8d94a8]">{ed.todayAt}</span>
               </div>
 
               <div className="relative mt-2 w-[432px] max-w-full">
@@ -386,7 +386,7 @@ export function GreetingMessageEditor({
                             <InlineToolbarField
                               value={value.headerText}
                               onChange={(next) => onValueChange("headerText", next)}
-                              placeholder="Header"
+                              placeholder={ed.header}
                               variables={GREETING_VARIABLES}
                               leading={renderAuthorIconToggle()}
                               containerClassName="text-xs text-[#8d94a8]"
@@ -397,7 +397,7 @@ export function GreetingMessageEditor({
                           <InlineToolbarField
                             value={value.titleText}
                             onChange={(next) => onValueChange("titleText", next)}
-                            placeholder="Tytuł embeda"
+                            placeholder={ed.embedTitle}
                             variables={GREETING_VARIABLES}
                             containerClassName={showHeaderRow ? "mt-2" : ""}
                             inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-sm font-semibold text-white outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-bot-primary focus:ring-2 focus:ring-bot-primary/30 focus:ring-offset-0"
@@ -407,14 +407,14 @@ export function GreetingMessageEditor({
                             <VariableInserter
                               value={value.message}
                               onChange={(nextValue) => onValueChange("message", nextValue)}
-                              placeholder={`Napisz treść: ${moduleLabel.toLowerCase()}...`}
+                              placeholder={ed.writeContent(moduleLabel)}
                               variables={GREETING_VARIABLES}
                               rows={5}
                               emojiPicker
                               unstyled
                               containerClassName="discord-embed-editor"
                               toolbarClassName="mt-2 gap-1.5"
-                              variableLabel="Zmienne:"
+                              variableLabel={ed.variables}
                               variableButtonClassName="border-[#2f3341] bg-dark-900 px-2 py-1 text-[11px] text-[#58a6ff] hover:border-[#3b82f6]/60 hover:bg-dark-700 hover:text-[#8ec5ff]"
                               className="discord-preview-editor rounded-md border border-[#3f4455] bg-dark-800 text-sm leading-5 text-[#d8dbe6] transition-colors hover:border-[#3b82f6]/70 focus:border-bot-primary focus:ring-2 focus:ring-bot-primary/30 focus:ring-offset-0"
                             />
@@ -425,12 +425,12 @@ export function GreetingMessageEditor({
                       </div>
 
                       <div className="mt-4">
-                        <p className="mb-2 text-xs font-semibold text-[#9aa2b8]">Miniatura (thumbnail)</p>
+                        <p className="mb-2 text-xs font-semibold text-[#9aa2b8]">{ed.thumbnail}</p>
                         <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
                           {([
-                            ["avatar", "Awatar"],
-                            ["custom", "Własny"],
-                            ["none", "Brak"],
+                            ["avatar", ed.thumbAvatar],
+                            ["custom", ed.thumbCustom],
+                            ["none", ed.thumbNone],
                           ] as const).map(([mode, label]) => (
                             <button
                               key={mode}
@@ -451,9 +451,9 @@ export function GreetingMessageEditor({
 
                       <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-semibold">
                         {([
-                          ["gifs", "GIF-y"],
-                          ["custom", "Własny obraz"],
-                          ["none", "Wyłączone"],
+                          ["gifs", ed.imageGifs],
+                          ["custom", ed.imageCustom],
+                          ["none", ed.imageNone],
                         ] as const).filter(([mode]) => !(hideGifs && mode === "gifs")).map(([mode, label]) => {
                           const isActive = value.imageMode === mode;
                           return (
@@ -475,7 +475,7 @@ export function GreetingMessageEditor({
                                     "rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none",
                                     isActive ? "bg-white/20 text-white" : "bg-bot-primary/15 text-[#9cc2ff]"
                                   )}
-                                  title={`Aktywne GIF-y: ${activeGifCount}`}
+                                  title={ed.activeGifs(activeGifCount)}
                                 >
                                   {activeGifCount}
                                 </span>
@@ -491,7 +491,7 @@ export function GreetingMessageEditor({
                           onClick={onManageGifs}
                           className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#58a6ff] transition-colors hover:text-[#8ec5ff]"
                         >
-                          Zarządzaj GIF-ami
+                          {ed.manageGifs}
                           <ArrowDown className="h-3 w-3" />
                         </button>
                       ) : null}
@@ -505,7 +505,7 @@ export function GreetingMessageEditor({
                           )}
                         >
                           {embedImageUrl ? (
-                            <img src={embedImageUrl} alt="Obraz embeda" className="h-full w-full rounded-[3px] object-cover" />
+                            <img src={embedImageUrl} alt={ed.embedImage} className="h-full w-full rounded-[3px] object-cover" />
                           ) : value.imageMode === "none" ? (
                             <ImageOff className="h-7 w-7" />
                           ) : (
@@ -524,9 +524,9 @@ export function GreetingMessageEditor({
                         <InlineToolbarField
                           value={value.footerText}
                           onChange={(next) => onValueChange("footerText", next)}
-                          placeholder="Footer"
+                          placeholder={ed.footer}
                           variables={GREETING_VARIABLES}
-                          leading={renderInlineImageUpload("footerIcon", value.footerIconUrl, "Ikona footera")}
+                          leading={renderInlineImageUpload("footerIcon", value.footerIconUrl, ed.footerIcon)}
                           containerClassName="mt-4 text-xs text-[#8d94a8]"
                           inputClassName="rounded-md border border-[#3f4455] bg-dark-800 pl-2.5 py-1.5 text-xs text-[#c4cad8] outline-none transition-colors placeholder:text-[#8d94a8] hover:border-[#3b82f6]/70 focus:border-bot-primary focus:ring-2 focus:ring-bot-primary/30 focus:ring-offset-0"
                         />

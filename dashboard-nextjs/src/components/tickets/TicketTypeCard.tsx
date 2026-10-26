@@ -4,6 +4,9 @@ import { GripVertical, Pencil, Trash2 } from "lucide-react";
 import { EmojiDisplay } from "@/components/EmojiDisplay";
 import { cn } from "@/lib/utils";
 import type { TicketTypeDraft } from "./TicketLivePreview";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { ticketsMessages } from "@/i18n/messages/tickets";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface Role {
   id: string;
@@ -44,6 +47,8 @@ export function TicketTypeCard({
   const assignedRoles = type.roleIds
     .map((id) => roles.find((r) => r.id === id))
     .filter((r): r is Role => Boolean(r));
+  const t = useMessages(ticketsMessages).card;
+  const m = useMessages(commonMessages).module;
 
   return (
     <div
@@ -62,7 +67,7 @@ export function TicketTypeCard({
         <div className="flex min-w-0 items-center gap-1.5">
           <span
             className="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center text-[#6f7690] active:cursor-grabbing"
-            title="Przeciągnij, by zmienić kolejność w Discordzie"
+            title={t.drag}
           >
             <GripVertical className="h-4 w-4" />
           </span>
@@ -71,14 +76,14 @@ export function TicketTypeCard({
               <EmojiDisplay emoji={type.emoji} size={16} />
             </span>
           ) : null}
-          <span className="truncate text-sm font-semibold text-white/90">{type.name || "Bez nazwy"}</span>
+          <span className="truncate text-sm font-semibold text-white/90">{type.name || t.unnamed}</span>
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={onEdit}
-            title="Edytuj"
+            title={m.edit}
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#8d94a8] transition-colors hover:bg-dark-800 hover:text-white"
           >
             <Pencil className="h-4 w-4" />
@@ -86,7 +91,7 @@ export function TicketTypeCard({
           <button
             type="button"
             onClick={onDelete}
-            title="Usuń"
+            title={m.delete}
             className="flex h-7 w-7 items-center justify-center rounded-md text-[#8d94a8] transition-colors hover:bg-dark-800 hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
@@ -96,7 +101,7 @@ export function TicketTypeCard({
 
       {type.description ? (
         <p className="truncate pl-[34px] text-xs text-[#8d94a8]">
-          {type.description.replace(/\{user\}/g, "@Użytkownik")}
+          {type.description.replace(/\{user\}/g, t.userMention)}
         </p>
       ) : null}
 
@@ -112,11 +117,11 @@ export function TicketTypeCard({
             </span>
           ))
         ) : (
-          <span className="text-[11px] text-[#6f7690]">Brak roli obsługi</span>
+          <span className="text-[11px] text-[#6f7690]">{t.noRole}</span>
         )}
 
         <span className="flex items-center gap-1.5 rounded bg-dark-800 px-1.5 py-0.5 text-[11px] font-medium text-[#c4cad8]">
-          Baner
+          {t.banner}
           <span
             className="h-3 w-3 shrink-0 rounded-sm"
             style={{ backgroundColor: type.color || "#5865F2" }}

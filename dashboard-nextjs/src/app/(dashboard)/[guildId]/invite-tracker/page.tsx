@@ -12,6 +12,19 @@ import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { fetchGuildData } from "@/lib/cache";
 import { toSortedDiscordChannels } from "@/lib/discordOrdering";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { inviteTrackerMessages } from "@/i18n/messages/inviteTracker";
+import { commonMessages } from "@/i18n/messages/common";
+import type { Widen } from "@/i18n/config";
+
+type InviteText = Widen<typeof inviteTrackerMessages.pl>;
+
+function situationText(t: InviteText, section: "join" | "leave", id: string): { label: string; hint: string } {
+  const map: Record<string, { label: string; hint: string }> = t.situations[section];
+  return map[id] ?? { label: id, hint: "" };
+}
+
+const VARIABLE_KEYS = ["memberMention", "memberName", "inviterName", "inviteCount", "inviteCode"] as const;
 import VariableInserter from "@/components/VariableInserter";
 import { DiscordMessagePreview } from "@/components/DiscordMessagePreview";
 import EmbedColorPicker from "@/components/EmbedColorPicker";
@@ -132,13 +145,6 @@ const LEAVE_SITUATIONS: SituationDef[] = [
   },
 ];
 
-const VARIABLES = [
-  { name: "Użytkownik", display: "Użytkownik", value: "{memberMention}", description: "Wzmianka użytkownika" },
-  { name: "Nazwa użytkownika", display: "Nazwa użytkownika", value: "{memberName}", description: "Nazwa użytkownika (bez wzmianki)" },
-  { name: "Zapraszający", display: "Zapraszający", value: "{inviterName}", description: "Unikalna nazwa użytkownika zapraszającego (np. natix08328), nie nick na serwerze" },
-  { name: "Liczba zaproszeń", display: "Liczba zaproszeń", value: "{inviteCount}", description: "Liczba zaproszeń zapraszającego" },
-  { name: "Kod zaproszenia", display: "Kod zaproszenia", value: "{inviteCode}", description: "Kod użytego zaproszenia" },
-];
 
 function prefillMessages(situations: SituationDef[]): Record<string, string> {
   const result: Record<string, string> = {};
@@ -261,6 +267,8 @@ export default function InviteTrackerPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(inviteTrackerMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -302,7 +310,7 @@ export default function InviteTrackerPage() {
           savedRef.current = next;
         }
       } catch (err) {
-        setError("Nie udało się załadować danych. Spróbuj ponownie.");
+        setError(t.loadError);
         console.error(err);
       } finally {
         setLoading(false);
@@ -319,7 +327,7 @@ export default function InviteTrackerPage() {
     };
     if (errs.join || errs.leave) {
       setChannelErrors(errs);
-      toast.error(errs.join ? "Wybierz kanał dla wiadomości o dołączeniu na serwer" : "Wybierz kanał dla wiadomości o opuszczeniu serwera");
+      toast.error(errs.join ? t.pickJoinChannel : t.pickLeaveChannel);
       return;
     }
 
@@ -336,16 +344,16 @@ export default function InviteTrackerPage() {
         const next = fromApi(data);
         setConfig(next);
         savedRef.current = next;
-        toast.success("Konfiguracja Invite Trackera została zapisana!");
+        toast.success(t.saved);
       } else {
-        toast.error("Nie udało się zapisać konfiguracji.");
+        toast.error(m.saveError);
       }
     } catch {
-      toast.error("Wystąpił błąd podczas zapisywania.");
+      toast.error(t.saveError);
     } finally {
       setSaving(false);
     }
-  }, [config, guildId]);
+  }, [config, guildId, t, m]);
 
   const handleCancel = useCallback(() => {
     setConfig(savedRef.current);
@@ -369,7 +377,7 @@ export default function InviteTrackerPage() {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Błąd ładowania" message={error} onRetry={() => window.location.reload()} />
+          <ErrorState title={m.loadErrorGeneric} message={error} onRetry={() => window.location.reload()} />
         </div>
       </div>
     );
@@ -400,12 +408,12 @@ export default function InviteTrackerPage() {
             <div className="min-w-0 space-y-2">
               <h1 className="text-2xl font-semibold text-white">Invite Tracker</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Dwie osobne sekcje — dołączenie i opuszczenie, każda z własnym kanałem, przełącznikiem i podglądem.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{config.enabled ? "Aktywne" : "Nieaktywne"}</span>
-              <DeezySwitch checked={config.enabled} onCheckedChange={(checked) => setConfig((c) => ({ ...c, enabled: checked }))} aria-label="Włącz lub wyłącz Invite Tracker" />
+              <span>{config.enabled ? m.active : m.inactive}</span>
+              <DeezySwitch checked={config.enabled} onCheckedChange={(checked) => setConfig((c) => ({ ...c, enabled: checked }))} aria-label={t.toggle} />
             </div>
           </header>
         </SlideIn>
@@ -415,7 +423,7 @@ export default function InviteTrackerPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Śledzenie zaproszeń jest <span className="font-semibold text-white/80">wyłączone</span>. Możesz edytować szablony i zapisać ustawienia, ale bot nie wyśle logów, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -425,8 +433,8 @@ export default function InviteTrackerPage() {
           <InviteSection
             sectionKey="join"
             icon={<LogIn className="h-[17px] w-[17px]" />}
-            title="Dołączenie na serwer"
-            offLoc="dołączeniu na serwer"
+            title={t.joinTitle}
+            offLoc={t.joinOff}
             situations={JOIN_SITUATIONS}
             channels={channels}
             state={config.join}
@@ -436,8 +444,8 @@ export default function InviteTrackerPage() {
             onToggleSection={(enabled) => setConfig((c) => ({ ...c, join: { ...c.join, enabled } }))}
             onChannelChange={(id) => { setConfig((c) => ({ ...c, join: { ...c.join, logChannelId: id } })); setChannelErrors((e) => ({ ...e, join: false })); }}
             onTextChange={(id, text) => setConfig((c) => ({ ...c, join: { ...c.join, messages: { ...c.join.messages, [id]: text } } }))}
-            onReset={(id, template) => { setConfig((c) => ({ ...c, join: { ...c.join, messages: { ...c.join.messages, [id]: template } } })); toast.success("Przywrócono domyślną treść"); }}
-            onClear={(id) => { setConfig((c) => ({ ...c, join: { ...c.join, messages: { ...c.join.messages, [id]: "" } } })); toast.success("Wyczyszczono — bot użyje treści domyślnej"); }}
+            onReset={(id, template) => { setConfig((c) => ({ ...c, join: { ...c.join, messages: { ...c.join.messages, [id]: template } } })); toast.success(t.restored); }}
+            onClear={(id) => { setConfig((c) => ({ ...c, join: { ...c.join, messages: { ...c.join.messages, [id]: "" } } })); toast.success(t.cleared); }}
             onToggleEmbed={(embed) => setConfig((c) => ({ ...c, join: { ...c.join, embed } }))}
             onEmbedColorChange={(color) => setConfig((c) => ({ ...c, join: { ...c.join, embedColor: color } }))}
           />
@@ -447,8 +455,8 @@ export default function InviteTrackerPage() {
           <InviteSection
             sectionKey="leave"
             icon={<LogOut className="h-[17px] w-[17px]" />}
-            title="Opuszczenie serwera"
-            offLoc="opuszczeniu serwera"
+            title={t.leaveTitle}
+            offLoc={t.leaveOff}
             situations={LEAVE_SITUATIONS}
             channels={channels}
             state={config.leave}
@@ -458,8 +466,8 @@ export default function InviteTrackerPage() {
             onToggleSection={(enabled) => setConfig((c) => ({ ...c, leave: { ...c.leave, enabled } }))}
             onChannelChange={(id) => { setConfig((c) => ({ ...c, leave: { ...c.leave, logChannelId: id } })); setChannelErrors((e) => ({ ...e, leave: false })); }}
             onTextChange={(id, text) => setConfig((c) => ({ ...c, leave: { ...c.leave, messages: { ...c.leave.messages, [id]: text } } }))}
-            onReset={(id, template) => { setConfig((c) => ({ ...c, leave: { ...c.leave, messages: { ...c.leave.messages, [id]: template } } })); toast.success("Przywrócono domyślną treść"); }}
-            onClear={(id) => { setConfig((c) => ({ ...c, leave: { ...c.leave, messages: { ...c.leave.messages, [id]: "" } } })); toast.success("Wyczyszczono — bot użyje treści domyślnej"); }}
+            onReset={(id, template) => { setConfig((c) => ({ ...c, leave: { ...c.leave, messages: { ...c.leave.messages, [id]: template } } })); toast.success(t.restored); }}
+            onClear={(id) => { setConfig((c) => ({ ...c, leave: { ...c.leave, messages: { ...c.leave.messages, [id]: "" } } })); toast.success(t.cleared); }}
             onToggleEmbed={(embed) => setConfig((c) => ({ ...c, leave: { ...c.leave, embed } }))}
             onEmbedColorChange={(color) => setConfig((c) => ({ ...c, leave: { ...c.leave, embedColor: color } }))}
           />
@@ -495,11 +503,15 @@ function InviteSection<M extends Record<string, string>>({
   sectionKey, icon, title, offLoc, situations, channels, state, activeSituationId, channelError,
   onSelectTab, onToggleSection, onChannelChange, onTextChange, onReset, onClear, onToggleEmbed, onEmbedColorChange,
 }: InviteSectionProps<M>) {
+  const t = useMessages(inviteTrackerMessages);
+  const m = useMessages(commonMessages).module;
   const live = state.enabled;
   const situation = situations.find((s) => s.id === activeSituationId) ?? situations[0];
+  const situationLabels = situationText(t, sectionKey, situation.id);
+  const variables = VARIABLE_KEYS.map((key) => ({ name: t.variables[key].name, display: t.variables[key].name, value: `{${key}}`, description: t.variables[key].description }));
   const customCount = situations.filter((s) => isCustomized(state.messages[s.id], s.defaultTemplate)).length;
   const channelName = channels.find((c) => c.id === state.logChannelId)?.name;
-  const channelText = channelName ? `# ${channelName}` : "brak kanału";
+  const channelText = channelName ? `# ${channelName}` : t.noChannel;
   const currentText = state.messages[situation.id] || "";
   const usingDefault = !currentText.trim();
   const shownText = usingDefault ? situation.defaultTemplate : currentText;
@@ -524,14 +536,14 @@ function InviteSection<M extends Record<string, string>>({
           <div className="min-w-0 flex-1">
             <div className="text-[15px] font-bold text-white">{title}</div>
             <div className="mt-0.5 text-xs" style={{ color: live ? "#8d94a8" : "#fcd34d" }}>
-              {live ? `${situations.length} sytuacji${customCount ? ` · ${customCount} zmienione` : ""}` : "wyłączone"}
+              {live ? t.situationsCount(situations.length, customCount) : t.off}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-3 lg:contents">
           <Select value={state.logChannelId || undefined} onValueChange={onChannelChange}>
             <SelectTrigger className={cn("h-[38px] w-full shrink-0 border bg-dark-900 text-xs text-white/90 lg:w-[200px]", channelError ? "border-red-500/60" : "border-[#2f3341]")}>
-              <SelectValue placeholder="Wybierz kanał..." />
+              <SelectValue placeholder={t.pickChannel} />
             </SelectTrigger>
             <SelectContent>
               {channels.map((c) => (
@@ -541,7 +553,7 @@ function InviteSection<M extends Record<string, string>>({
               ))}
             </SelectContent>
           </Select>
-          <SectionSwitch checked={live} onCheckedChange={onToggleSection} aria-label="Włącz lub wyłącz sekcję" />
+          <SectionSwitch checked={live} onCheckedChange={onToggleSection} aria-label={t.toggleSection} />
         </div>
       </div>
 
@@ -549,7 +561,7 @@ function InviteSection<M extends Record<string, string>>({
         <div className="mt-3.5 flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-3 py-2 text-xs leading-6 text-[#9aa2b8]">
           <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#fcd34d]" />
           <span>
-            Wiadomości o <span className="font-semibold text-white/80">{offLoc}</span> są wyłączone — możesz edytować szablony, ale bot ich nie wyśle.
+            {t.sectionOffPrefix}<span className="font-semibold text-white/80">{offLoc}</span>{t.sectionOffSuffix}
           </span>
         </div>
       ) : null}
@@ -572,7 +584,7 @@ function InviteSection<M extends Record<string, string>>({
                 }}
               >
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.accent }} />
-                {s.label}
+                {situationText(t, sectionKey, s.id).label}
                 {custom ? <span className="text-[10px] text-[#a5b4fc]">•</span> : null}
               </button>
             );
@@ -584,22 +596,22 @@ function InviteSection<M extends Record<string, string>>({
           {/* Edytor szablonu */}
           <div className="flex h-full min-w-0 flex-col rounded-md bg-dark-900 px-4 py-3.5">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-xs font-bold text-[#d8dbe6]">{situation.label}</span>
+              <span className="text-xs font-bold text-[#d8dbe6]">{situationLabels.label}</span>
               <span className="text-[11px]" style={{ color: currentText.length > 1800 ? "#fcd34d" : "#6b7280" }}>
                 {currentText.length}/2000
               </span>
             </div>
-            <p className="mt-1 text-xs text-[#8d94a8]">{situation.hint}</p>
+            <p className="mt-1 text-xs text-[#8d94a8]">{situationLabels.hint}</p>
 
             <VariableInserter
               value={currentText}
               onChange={(text) => onTextChange(situation.id, text)}
-              variables={VARIABLES}
+              variables={variables}
               rows={3}
               emojiPicker
               unstyled
               className="mt-2.5 rounded-md border border-[#2f3341] bg-dark-900 text-sm leading-6 text-[#d8dbe6] transition-colors focus:border-[#3b82f6]"
-              placeholder="Zostaw puste, aby użyć domyślnej treści..."
+              placeholder={t.placeholder}
             />
 
             <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
@@ -608,19 +620,19 @@ function InviteSection<M extends Record<string, string>>({
                 onClick={() => onReset(situation.id, situation.defaultTemplate)}
                 className="flex h-[30px] items-center gap-1.5 rounded-md border border-[#3a3f4e] bg-transparent px-3 text-[11px] font-semibold text-[#c4cad8] transition-colors hover:bg-dark-800 hover:text-white"
               >
-                <RotateCcw className="h-3 w-3" /> Zresetuj wiadomość
+                <RotateCcw className="h-3 w-3" /> {t.reset}
               </button>
               <button
                 type="button"
                 onClick={() => onClear(situation.id)}
                 className="flex h-[30px] items-center gap-1.5 rounded-md border border-[#3a3f4e] bg-transparent px-3 text-[11px] font-semibold text-[#c4cad8] transition-colors hover:bg-dark-800 hover:text-white"
               >
-                <Eraser className="h-3 w-3" /> Wyczyść
+                <Eraser className="h-3 w-3" /> {t.clear}
               </button>
               <span className="flex-1" />
               {state.embed ? (
                 <span className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-[#8d94a8]">Kolor embedu</span>
+                  <span className="text-[11px] text-[#8d94a8]">{t.embedColor}</span>
                   <EmbedColorPicker
                     value={state.embedColor || situation.accent}
                     onChange={onEmbedColorChange}
@@ -629,8 +641,8 @@ function InviteSection<M extends Record<string, string>>({
                 </span>
               ) : null}
               <span className="flex items-center gap-2">
-                <EmbedSwitch checked={state.embed} onCheckedChange={onToggleEmbed} aria-label="Wyślij jako embed" />
-                <span className="text-[11px] text-[#8d94a8]">Wyślij jako embed</span>
+                <EmbedSwitch checked={state.embed} onCheckedChange={onToggleEmbed} aria-label={t.sendAsEmbed} />
+                <span className="text-[11px] text-[#8d94a8]">{t.sendAsEmbed}</span>
               </span>
             </div>
           </div>
@@ -640,7 +652,7 @@ function InviteSection<M extends Record<string, string>>({
             <div className="mb-2 flex items-center gap-2.5">
               <span className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: live ? situation.accent : "#4b5563" }} />
-                Podgląd na żywo
+                {m.livePreview}
               </span>
               <span className="flex-1" />
               <span className="text-[11px] text-[#8d94a8]">{channelText}</span>
@@ -656,12 +668,12 @@ function InviteSection<M extends Record<string, string>>({
             {!live ? (
               <div className="mt-auto flex items-start gap-1.5 pt-2 text-[11px] leading-6" style={{ color: "#fcd34d" }}>
                 <span className="shrink-0">⚠️</span>
-                <span>Ta sekcja jest wyłączona — wiadomość nie zostanie wysłana.</span>
+                <span>{t.sectionDisabled}</span>
               </div>
             ) : usingDefault ? (
               <div className="mt-auto flex items-start gap-1.5 pt-2 text-[11px] leading-6 text-[#6b7280]">
                 <span className="shrink-0">ℹ️</span>
-                <span>Pole jest puste — bot użyje treści domyślnej pokazanej powyżej.</span>
+                <span>{t.usingDefault}</span>
               </div>
             ) : null}
           </div>

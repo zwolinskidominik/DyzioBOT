@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -33,14 +33,22 @@ import { EmojiList, hasExternalEmoji } from "@/components/EmojiDisplay";
 import { OWNER_IDS } from "@/lib/owner";
 import { cn } from "@/lib/utils";
 import { useDirtyState } from "@/components/DirtyStateProvider";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { qotdMessages } from "@/i18n/messages/qotd";
+import { commonMessages } from "@/i18n/messages/common";
+import type { Widen } from "@/i18n/config";
 
-const qotdSchema = z.object({
-  enabled: z.boolean().default(true),
-  questionChannelId: z.string().min(1, "Wybierz kanał"),
-  pingRoleId: z.string().optional(),
-});
+type QotdText = Widen<typeof qotdMessages.pl>;
 
-type QOTDFormData = z.infer<typeof qotdSchema>;
+function createQotdSchema(t: QotdText) {
+  return z.object({
+    enabled: z.boolean().default(true),
+    questionChannelId: z.string().min(1, t.pickChannelError),
+    pingRoleId: z.string().optional(),
+  });
+}
+
+type QOTDFormData = z.infer<ReturnType<typeof createQotdSchema>>;
 
 const DEFAULT_FORM_VALUES: QOTDFormData = {
   enabled: false,
@@ -76,13 +84,8 @@ interface TodayQuestion {
   usedAt: string;
 }
 
-const MONTHS_GENITIVE = [
-  "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
-  "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
-];
-
-function formatDateLabel(date: Date): string {
-  return `${date.getDate()} ${MONTHS_GENITIVE[date.getMonth()]}`;
+function formatDateLabel(t: QotdText, date: Date): string {
+  return t.dateLabel(date.getDate(), t.monthsGenitive[date.getMonth()] ?? "");
 }
 
 /** Rozkłada datę na komponenty czasu warszawskiego (odporne na DST). */
@@ -161,6 +164,7 @@ interface SettingRowProps {
 
 function SettingRow({ title, description, icon, isOpen = false, onToggle, children }: SettingRowProps) {
   const isExpandable = Boolean(children && onToggle);
+  const m = useMessages(commonMessages).module;
 
   return (
     <section className="overflow-hidden rounded-md bg-dark-800 shadow-[0_8px_18px_rgba(8,10,16,0.16)]">
@@ -180,7 +184,7 @@ function SettingRow({ title, description, icon, isOpen = false, onToggle, childr
         </button>
 
         {isExpandable ? (
-          <button type="button" onClick={onToggle} aria-label={isOpen ? "Zwiń sekcję" : "Rozwiń sekcję"} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
+          <button type="button" onClick={onToggle} aria-label={isOpen ? m.collapse : m.expand} className="flex h-8 w-8 items-center justify-center rounded-md text-[#9aa2b8] transition-colors hover:bg-dark-900 hover:text-white">
             <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
           </button>
         ) : null}
@@ -193,6 +197,7 @@ function SettingRow({ title, description, icon, isOpen = false, onToggle, childr
 
 /** Podgląd wiadomości bota w stylu Discorda dla nowo wpisywanego pytania. */
 function QOTDPreview({ content, reactions, roleName, channelName }: { content: string; reactions: string[]; roleName?: string; channelName?: string }) {
+  const t = useMessages(qotdMessages);
   return (
     <div className="flex items-start gap-3">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -211,7 +216,7 @@ function QOTDPreview({ content, reactions, roleName, channelName }: { content: s
         <p className="mt-1 break-words text-sm leading-6 text-[#dbdee1]">
           <strong className="font-bold">Pytanie dnia:</strong>
           <br />
-          {content.trim() ? content : <span className="italic text-[#80848e]">Wpisz pytanie, aby zobaczyć podgląd</span>}
+          {content.trim() ? content : <span className="italic text-[#80848e]">{t.previewPlaceholder}</span>}
         </p>
         {reactions.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -223,7 +228,7 @@ function QOTDPreview({ content, reactions, roleName, channelName }: { content: s
             ))}
           </div>
         )}
-        {channelName ? <p className="mt-1.5 text-[11px] text-[#6f7690]">na kanale #{channelName}</p> : null}
+        {channelName ? <p className="mt-1.5 text-[11px] text-[#6f7690]">{t.onChannel(channelName)}</p> : null}
       </div>
     </div>
   );
@@ -238,6 +243,9 @@ export default function QOTDPage() {
   const currentUserId = (session?.user as { id?: string })?.id;
   const isOwner = status !== 'loading' && OWNER_IDS.includes(currentUserId ?? '');
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(qotdMessages);
+  const m = useMessages(commonMessages).module;
+  const qotdSchema = useMemo(() => createQotdSchema(t), [t]);
 
   const [channels, setChannels] = useState<Channel[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -345,7 +353,7 @@ export default function QOTDPage() {
         }
       } catch (error) {
         console.error("Error loading QOTD data:", error);
-        setError("Nie udało się załadować danych QOTD. Sprawdź połączenie z internetem i spróbuj ponownie.");
+        setError(t.loadError);
       } finally {
         setLoading(false);
       }
@@ -366,12 +374,12 @@ export default function QOTDPage() {
         const restored = await response.json();
         setUsedQuestions((prev) => prev.filter((q) => q.questionId !== questionId));
         setQuestions((prev) => [...prev, { ...restored, disabled: false }]);
-        toast.success("Pytanie przywrócone do puli aktywnych!");
+        toast.success(t.restored);
       } else {
-        toast.error("Nie udało się przywrócić pytania");
+        toast.error(t.restoreError);
       }
     } catch {
-      toast.error("Nie udało się przywrócić pytania");
+      toast.error(t.restoreError);
     } finally {
       setRestoringId(null);
     }
@@ -389,12 +397,12 @@ export default function QOTDPage() {
         const used = await response.json();
         setQuestions((prev) => prev.filter((q) => q.questionId !== questionId));
         setUsedQuestions((prev) => [{ ...used, disabled: true }, ...prev]);
-        toast.success("Pytanie oznaczone jako użyte na tym serwerze!");
+        toast.success(t.markedUsed);
       } else {
-        toast.error("Nie udało się oznaczyć pytania jako użyte");
+        toast.error(t.markUsedError);
       }
     } catch {
-      toast.error("Nie udało się oznaczyć pytania jako użyte");
+      toast.error(t.markUsedError);
     } finally {
       setMarkingUsedId(null);
     }
@@ -412,13 +420,13 @@ export default function QOTDPage() {
       if (response.ok) {
         savedValuesRef.current = data;
         reset(data, { keepDirty: false });
-        toast.success("Konfiguracja została zapisana!");
+        toast.success(m.saved);
       } else {
-        toast.error("Nie udało się zapisać konfiguracji");
+        toast.error(m.saveError);
       }
     } catch (error) {
       console.error("Error saving config:", error);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
@@ -436,14 +444,14 @@ export default function QOTDPage() {
     id: `qotd-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: "Pytanie Dnia",
+    label: t.title,
     onSave: submitFromDirtyBar,
     onCancel: handleCancel,
   }), [guildId, handleCancel, isDirty, registerDirtyController, saving, submitFromDirtyBar]);
 
   const handleAddQuestion = async () => {
     if (!newQuestion.trim()) {
-      toast.error("Treść pytania jest wymagana");
+      toast.error(t.contentRequired);
       return;
     }
 
@@ -458,7 +466,7 @@ export default function QOTDPage() {
         return m && !botEmojiIds?.has(m[2]);
       });
       if (invalidCustom.length > 0) {
-        toast.error("Można używać tylko standardowych emoji lub emoji bota");
+        toast.error(t.emojiRestriction);
         return;
       }
 
@@ -476,19 +484,19 @@ export default function QOTDPage() {
         setQuestions([...questions, question]);
         setNewQuestion("");
         setNewReactions("");
-        toast.success("Pytanie zostało dodane!");
+        toast.success(t.added);
       } else {
-        toast.error("Nie udało się dodać pytania");
+        toast.error(t.addError);
       }
     } catch (error) {
       console.error("Error adding question:", error);
-      toast.error("Nie udało się dodać pytania");
+      toast.error(t.addError);
     }
   };
 
   const handleEditQuestion = async (questionId: string) => {
     if (!editContent.trim()) {
-      toast.error("Treść pytania jest wymagana");
+      toast.error(t.contentRequired);
       return;
     }
 
@@ -503,7 +511,7 @@ export default function QOTDPage() {
         return m && !botEmojiIds?.has(m[2]);
       });
       if (invalidCustom.length > 0) {
-        toast.error("Można używać tylko standardowych emoji lub emoji bota");
+        toast.error(t.emojiRestriction);
         return;
       }
 
@@ -525,18 +533,18 @@ export default function QOTDPage() {
         setEditingId(null);
         setEditContent("");
         setEditReactions("");
-        toast.success("Pytanie zostało zaktualizowane!");
+        toast.success(t.updated);
       } else {
-        toast.error("Nie udało się zaktualizować pytania");
+        toast.error(t.updateError);
       }
     } catch (error) {
       console.error("Error updating question:", error);
-      toast.error("Nie udało się zaktualizować pytania");
+      toast.error(t.updateError);
     }
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć to pytanie?")) return;
+    if (!confirm(t.confirmDelete)) return;
 
     try {
       const response = await fetchWithAuth(
@@ -546,19 +554,19 @@ export default function QOTDPage() {
 
       if (response.ok) {
         setQuestions(questions.filter((q) => q.questionId !== questionId));
-        toast.success("Pytanie zostało usunięte!");
+        toast.success(t.deleted);
       } else {
-        toast.error("Nie udało się usunąć pytania");
+        toast.error(t.deleteError);
       }
     } catch (error) {
       console.error("Error deleting question:", error);
-      toast.error("Nie udało się usunąć pytania");
+      toast.error(t.deleteError);
     }
   };
 
   const handleEditUsedQuestion = async (questionId: string) => {
     if (!editContent.trim()) {
-      toast.error("Treść pytania jest wymagana");
+      toast.error(t.contentRequired);
       return;
     }
     try {
@@ -572,7 +580,7 @@ export default function QOTDPage() {
         return m && !botEmojiIds?.has(m[2]);
       });
       if (invalidCustom.length > 0) {
-        toast.error("Można używać tylko standardowych emoji lub emoji bota");
+        toast.error(t.emojiRestriction);
         return;
       }
 
@@ -589,20 +597,20 @@ export default function QOTDPage() {
         setEditingId(null);
         setEditContent("");
         setEditReactions("");
-        toast.success("Pytanie zostało zaktualizowane!");
+        toast.success(t.updated);
       } else {
-        toast.error("Nie udało się zaktualizować pytania");
+        toast.error(t.updateError);
       }
     } catch (error) {
       console.error("Error updating used question:", error);
-      toast.error("Nie udało się zaktualizować pytania");
+      toast.error(t.updateError);
     }
   };
 
   const handleBulkDelete = async () => {
     if (selectedQuestions.size === 0) return;
 
-    if (!confirm("Czy na pewno chcesz usunąć " + selectedQuestions.size + " pytań?")) return;
+    if (!confirm(t.confirmBulk(selectedQuestions.size))) return;
 
     setIsDeleting(true);
     try {
@@ -619,15 +627,15 @@ export default function QOTDPage() {
       if (successCount > 0) {
         setQuestions(questions.filter((q) => !selectedQuestions.has(q.questionId)));
         setSelectedQuestions(new Set());
-        toast.success("Usunięto " + successCount + " pytań!");
+        toast.success(t.bulkDeleted(successCount));
       }
 
       if (successCount < selectedQuestions.size) {
-        toast.error("Nie udało się usunąć " + (selectedQuestions.size - successCount) + " pytań");
+        toast.error(t.bulkPartial(selectedQuestions.size - successCount));
       }
     } catch (error) {
       console.error("Error bulk deleting questions:", error);
-      toast.error("Nie udało się usunąć pytań");
+      toast.error(t.bulkError);
     } finally {
       setIsDeleting(false);
     }
@@ -671,7 +679,7 @@ export default function QOTDPage() {
       <div className="min-h-full">
         <div className="w-full">
           <ErrorState
-            title="Nie udało się załadować QOTD"
+            title={t.loadErrorTitle}
             message={error}
             onRetry={handleRetry}
           />
@@ -715,8 +723,8 @@ export default function QOTDPage() {
 
   const visibleActive = viewMode === "external" ? externalFiltered : activeFiltered;
   const configSummary = values.questionChannelId
-    ? `# ${selectedChannel?.name ?? "nieznany kanał"}${selectedRole ? ` • @${selectedRole.name}` : ""}`
-    : "Nie skonfigurowano jeszcze";
+    ? `# ${selectedChannel?.name ?? t.unknownChannel}${selectedRole ? ` • @${selectedRole.name}` : ""}`
+    : t.notConfigured;
 
   return (
     <div className="min-h-full pb-32">
@@ -724,17 +732,17 @@ export default function QOTDPage() {
         <SlideIn direction="up" delay={100}>
           <header className="flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-2xl font-semibold text-white">Pytanie Dnia</h1>
+              <h1 className="text-2xl font-semibold text-white">{t.title}</h1>
               <p className="max-w-2xl text-sm leading-6 text-[#969db0]">
-                Codzienne pytania wysyłane o 10:00 rano na wybrany kanał.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{values.enabled ? "Aktywne" : "Nieaktywne"}</span>
+              <span>{values.enabled ? m.active : m.inactive}</span>
               <DeezySwitch
                 checked={values.enabled || false}
                 onCheckedChange={(checked) => setValue("enabled", checked, { shouldDirty: true })}
-                aria-label="Włącz lub wyłącz pytanie dnia"
+                aria-label={t.toggle}
               />
             </div>
           </header>
@@ -745,7 +753,7 @@ export default function QOTDPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-dark-900 px-4 py-3 text-xs text-[#9aa2b8]">
               <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Moduł pytania dnia jest <span className="font-semibold text-white/80">globalnie wyłączony</span>. Możesz edytować konfigurację i pulę pytań, ale bot nie wyśle pytania, dopóki nie włączysz przełącznika <span className="font-semibold text-white/80">Aktywne</span> u góry i nie zapiszesz konfiguracji.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledMiddle}<span className="font-semibold text-white/80">{m.active}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -769,7 +777,7 @@ export default function QOTDPage() {
             <div className="relative flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-[#b3a6ff]">
-                  Dzisiejsze pytanie • {formatDateLabel(now)}
+                  {t.todayQuestion(formatDateLabel(t, now))}
                 </p>
                 {isTodaySent && todayQuestion ? (
                   <>
@@ -777,12 +785,12 @@ export default function QOTDPage() {
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#9aa2b8]">
                       {todayQuestion.reactions.length > 0 ? (
                         <span className="flex items-center gap-1.5">
-                          Reakcje: <EmojiList emojis={todayQuestion.reactions} size={16} />
+                          {t.reactions} <EmojiList emojis={todayQuestion.reactions} size={16} />
                         </span>
                       ) : null}
                       {selectedChannel ? (
                         <span className="rounded-full px-2.5 py-0.5 text-[10px] font-bold" style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}>
-                          wysłane na #{selectedChannel.name}
+                          {t.sentTo(selectedChannel.name)}
                         </span>
                       ) : null}
                     </div>
@@ -790,14 +798,14 @@ export default function QOTDPage() {
                 ) : (
                   <p className="mt-2.5 text-sm text-[#9aa2b8]">
                     {questions.length > 0
-                      ? "Pierwsze pytanie pojawi się dziś o 10:00."
-                      : "Pula pytań jest pusta — dodaj pytania poniżej."}
+                      ? t.firstToday
+                      : t.poolEmpty}
                   </p>
                 )}
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-[26px] font-extrabold leading-none" style={{ color: "#ec4899" }}>{countdown}</p>
-                <p className="mt-0.5 text-[11px] text-[#8d94a8]">do następnego pytania</p>
+                <p className="mt-0.5 text-[11px] text-[#8d94a8]">{t.toNext}</p>
               </div>
             </div>
 
@@ -805,9 +813,9 @@ export default function QOTDPage() {
               <div className="relative mt-4 pt-3" style={{ borderTop: "1px solid rgba(99,102,241,0.25)" }}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#6b7280]">
-                    Następne pytanie ({isTodaySent ? "jutro" : "dziś"})
+                    {t.nextQuestion(isTodaySent)}
                   </span>
-                  <span className="shrink-0 text-[11px] text-[#8d94a8]">{formatDateLabel(nextSendAt)}, 10:00</span>
+                  <span className="shrink-0 text-[11px] text-[#8d94a8]">{formatDateLabel(t, nextSendAt)}, 10:00</span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-[#d8dbe6]">
                   <span className="min-w-0 truncate">{nextInPool.content}</span>
@@ -822,22 +830,22 @@ export default function QOTDPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-md bg-dark-800 p-4">
               <p className="text-2xl font-bold text-white">{questions.length}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">aktywnych pytań</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.activeCount}</p>
             </div>
             <div className="rounded-md bg-dark-800 p-4">
               <p className="text-2xl font-bold text-[#818cf8]">{usedQuestions.length}</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">użytych pytań</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.usedCount}</p>
             </div>
             <div className="rounded-md bg-dark-800 p-4">
-              <p className="text-2xl font-bold text-pink-400">~{questions.length} dni</p>
-              <p className="mt-1 text-xs text-[#8d94a8]">zapasu w puli</p>
+              <p className="text-2xl font-bold text-pink-400">{t.daysLeft(questions.length)}</p>
+              <p className="mt-1 text-xs text-[#8d94a8]">{t.poolSupply}</p>
             </div>
           </div>
         </SlideIn>
 
         <SlideIn direction="up" delay={210}>
           <SettingRow
-            title="Konfiguracja — kanał, rola ping"
+            title={t.configTitle}
             description={configSummary}
             icon={<Settings className="h-4 w-4" />}
             isOpen={configOpen}
@@ -847,7 +855,7 @@ export default function QOTDPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className={labelClass}>
-                    Kanał pytań <span className="text-destructive">*</span>
+                    {t.channel} <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={values.questionChannelId || ""}
@@ -858,14 +866,14 @@ export default function QOTDPage() {
                         placeholder={
                           <div className="flex items-center gap-2 text-[#9aa2b8]">
                             <Hash className="h-4 w-4" />
-                            <span>Wybierz kanał...</span>
+                            <span>{t.pickChannel}</span>
                           </div>
                         }
                       >
                         {values.questionChannelId ? (
                           <div className="flex items-center gap-2">
                             <Hash className="h-4 w-4 text-[#8d94a8]" />
-                            {selectedChannel?.name ?? "Wybierz kanał..."}
+                            {selectedChannel?.name ?? t.pickChannel}
                           </div>
                         ) : null}
                       </SelectValue>
@@ -884,18 +892,18 @@ export default function QOTDPage() {
                   {errors.questionChannelId && (
                     <p className="text-xs text-destructive">{errors.questionChannelId.message}</p>
                   )}
-                  <p className="text-[11px] text-[#8d94a8]">Kanał, na którym będą wysyłane pytania dnia</p>
+                  <p className="text-[11px] text-[#8d94a8]">{t.channelHint}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className={labelClass}>Rola do oznaczenia (opcjonalna)</Label>
+                  <Label className={labelClass}>{t.role}</Label>
                   <div className="flex gap-2">
                     <Select
                       value={values.pingRoleId || undefined}
                       onValueChange={(value) => setValue("pingRoleId", value, { shouldDirty: true })}
                     >
                       <SelectTrigger className={inputClass}>
-                        <SelectValue placeholder="Brak roli" />
+                        <SelectValue placeholder={t.noRole} />
                       </SelectTrigger>
                       <SelectContent className="border-[#2f3341] bg-dark-900">
                         {roles.map((role) => (
@@ -916,13 +924,13 @@ export default function QOTDPage() {
                         type="button"
                         onClick={() => setValue("pingRoleId", "", { shouldDirty: true })}
                         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[#3f4455] text-[#9aa2b8] transition-colors hover:border-red-500/50 hover:text-red-400"
-                        aria-label="Usuń rolę ping"
+                        aria-label={t.removeRole}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     ) : null}
                   </div>
-                  <p className="text-[11px] text-[#8d94a8]">Rola, która zostanie oznaczona przy każdym pytaniu</p>
+                  <p className="text-[11px] text-[#8d94a8]">{t.roleHint}</p>
                 </div>
               </div>
             </div>
@@ -935,20 +943,20 @@ export default function QOTDPage() {
               <div className="grid grid-cols-1 gap-6 rounded-md bg-dark-800 p-4 lg:grid-cols-2">
                 <div className="space-y-3">
                   <Label className={labelClass}>
-                    Nowe pytanie <span className="text-destructive">*</span>
+                    {t.newQuestion} <span className="text-destructive">*</span>
                   </Label>
                   <Textarea
-                    placeholder="Jakie jest twoje ulubione hobby?"
+                    placeholder={t.questionPlaceholder}
                     value={newQuestion}
                     onChange={(e) => setNewQuestion(e.target.value)}
                     rows={3}
                     className={textareaClass}
                   />
 
-                  <Label className={labelClass}>Reakcje (emoji oddzielone przecinkami)</Label>
+                  <Label className={labelClass}>{t.reactionsLabel}</Label>
                   {newReactions.trim() && (
                     <div className="flex flex-wrap items-center gap-1 rounded-md bg-dark-900 p-2">
-                      <span className="text-xs text-[#8d94a8]">Podgląd:</span>
+                      <span className="text-xs text-[#8d94a8]">{t.preview}</span>
                       <EmojiList emojis={newReactions.split(",").map((r) => r.trim()).filter((r) => r)} size={20} />
                     </div>
                   )}
@@ -1011,14 +1019,14 @@ export default function QOTDPage() {
                       className="bg-[#3b82f6] text-white hover:bg-[#2563eb] sm:shrink-0"
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      Dodaj pytanie
+                      {t.addQuestion}
                     </Button>
                   </div>
-                  <p className="text-[11px] text-[#6f7690]">Te reakcje zostaną automatycznie dodane do pytania</p>
+                  <p className="text-[11px] text-[#6f7690]">{t.reactionsHint}</p>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">Podgląd na żywo</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#8d94a8]">{m.livePreview}</p>
                   <div className="rounded-md border border-[#2f3341] bg-[#313338] p-4">
                     <QOTDPreview
                       content={newQuestion}
@@ -1043,7 +1051,7 @@ export default function QOTDPage() {
                         viewMode === "active" ? "bg-[#3b82f6] text-white" : "bg-dark-800 text-[#9aa2b8] hover:text-white"
                       )}
                     >
-                      Aktywne {questions.length}
+                      {t.tabActive(questions.length)}
                     </button>
                     <button
                       type="button"
@@ -1053,7 +1061,7 @@ export default function QOTDPage() {
                         viewMode === "used" ? "bg-[#3b82f6] text-white" : "bg-dark-800 text-[#9aa2b8] hover:text-white"
                       )}
                     >
-                      Użyte {usedQuestions.length}
+                      {t.tabUsed(usedQuestions.length)}
                     </button>
                     <button
                       type="button"
@@ -1063,7 +1071,7 @@ export default function QOTDPage() {
                         viewMode === "external" ? "bg-[#3b82f6] text-white" : "bg-dark-800 text-orange-400 hover:text-orange-300"
                       )}
                     >
-                      ⚠️ Zewnętrzne {activeExternalCount}
+                      {t.tabExternal(activeExternalCount)}
                     </button>
                   </div>
 
@@ -1073,13 +1081,13 @@ export default function QOTDPage() {
                       <Input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Szukaj w pytaniach..."
+                        placeholder={t.searchPlaceholder}
                         className="h-9 border-transparent bg-dark-800 pl-9 text-sm text-white/90 placeholder:text-[#8d94a8] focus-visible:ring-[#3b82f6]/50 focus-visible:ring-offset-0"
                       />
                     </div>
                     {viewMode !== "used" && visibleActive.length > 0 ? (
                       <Button type="button" variant="outline" size="sm" onClick={() => toggleSelectAll(visibleActive)} className="shrink-0">
-                        {visibleActive.every((q) => selectedQuestions.has(q.questionId)) ? "Odznacz wszystkie" : "Zaznacz wszystkie"}
+                        {visibleActive.every((q) => selectedQuestions.has(q.questionId)) ? t.deselectAll : t.selectAll}
                       </Button>
                     ) : null}
                   </div>
@@ -1087,10 +1095,10 @@ export default function QOTDPage() {
 
                 {selectedQuestions.size > 0 && viewMode !== "used" ? (
                   <div className="flex items-center justify-between rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2.5">
-                    <p className="text-xs text-red-300">Zaznaczono {selectedQuestions.size} pytań</p>
+                    <p className="text-xs text-red-300">{t.selected(selectedQuestions.size)}</p>
                     <Button type="button" variant="destructive" size="sm" onClick={handleBulkDelete} disabled={isDeleting}>
                       {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                      Usuń zaznaczone
+                      {t.deleteSelected}
                     </Button>
                   </div>
                 ) : null}
@@ -1102,12 +1110,12 @@ export default function QOTDPage() {
                         <HelpCircle className="h-8 w-8 text-[#8d94a8]" />
                       </div>
                       <h3 className="text-sm font-semibold text-white/90">
-                        {usedQuestions.length === 0 ? "Brak użytych pytań" : "Nie znaleziono wyników"}
+                        {usedQuestions.length === 0 ? t.noUsed : t.noResults}
                       </h3>
                       <p className="mx-auto mt-1 max-w-sm text-xs text-[#8d94a8]">
                         {usedQuestions.length === 0
-                          ? "Pojawią się tutaj po tym jak bot je wywoła."
-                          : `Nie znaleziono pytań pasujących do „${searchQuery.trim()}".`}
+                          ? t.usedHint
+                          : t.noMatches(searchQuery.trim())}
                       </p>
                     </div>
                   ) : (
@@ -1137,7 +1145,7 @@ export default function QOTDPage() {
                                   type="button"
                                   onClick={() => { setEditingId(question.questionId); setEditContent(question.content); setEditReactions(question.reactions.join(", ")); }}
                                   className={iconButtonClass}
-                                  aria-label="Edytuj pytanie"
+                                  aria-label={t.editQuestion}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </button>
@@ -1146,7 +1154,7 @@ export default function QOTDPage() {
                                   onClick={() => handleRestoreQuestion(question.questionId)}
                                   disabled={restoringId === question.questionId}
                                   className={iconButtonClass}
-                                  aria-label="Przywróć pytanie do puli aktywnych"
+                                  aria-label={t.restoreQuestion}
                                 >
                                   {restoringId === question.questionId ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
                                 </button>
@@ -1163,14 +1171,14 @@ export default function QOTDPage() {
                       {viewMode === "external" ? <Sparkles className="h-8 w-8 text-[#8d94a8]" /> : <HelpCircle className="h-8 w-8 text-[#8d94a8]" />}
                     </div>
                     <h3 className="text-sm font-semibold text-white/90">
-                      {questions.length === 0 ? "Brak pytań w puli" : "Nie znaleziono wyników"}
+                      {questions.length === 0 ? t.emptyPool : t.noResults}
                     </h3>
                     <p className="mx-auto mt-1 max-w-sm text-xs text-[#8d94a8]">
                       {questions.length === 0
-                        ? "Dodaj pytania za pomocą formularza powyżej. Bot będzie wybierał jedno losowo każdego dnia."
+                        ? t.emptyPoolHint
                         : viewMode === "external"
-                          ? "Żadne aktywne pytanie nie używa emoji spoza zasobów bota."
-                          : `Nie znaleziono pytań pasujących do „${searchQuery.trim()}".`}
+                          ? t.noExternal
+                          : t.noMatches(searchQuery.trim())}
                     </p>
                   </div>
                 ) : (
@@ -1213,7 +1221,7 @@ export default function QOTDPage() {
                                     {question.content}
                                     {external ? (
                                       <span className="ml-2 rounded border border-red-500/40 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-medium text-red-400">
-                                        ⚠️ emoji z serwera
+                                        {t.serverEmoji}
                                       </span>
                                     ) : null}
                                   </p>
@@ -1227,7 +1235,7 @@ export default function QOTDPage() {
                                     onClick={() => handleMarkAsUsed(question.questionId)}
                                     disabled={markingUsedId === question.questionId}
                                     className={iconButtonClass}
-                                    aria-label="Oznacz jako użyte na tym serwerze"
+                                    aria-label={t.markUsed}
                                   >
                                     {markingUsedId === question.questionId ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                                   </button>
@@ -1235,7 +1243,7 @@ export default function QOTDPage() {
                                     type="button"
                                     onClick={() => { setEditingId(question.questionId); setEditContent(question.content); setEditReactions(question.reactions.join(", ")); }}
                                     className={iconButtonClass}
-                                    aria-label="Edytuj pytanie"
+                                    aria-label={t.editQuestion}
                                   >
                                     <Pencil className="h-4 w-4" />
                                   </button>
@@ -1243,7 +1251,7 @@ export default function QOTDPage() {
                                     type="button"
                                     onClick={() => handleDeleteQuestion(question.questionId)}
                                     className={iconButtonDangerClass}
-                                    aria-label="Usuń pytanie"
+                                    aria-label={t.deleteQuestion}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </button>
@@ -1282,17 +1290,19 @@ function QuestionEditForm({
   onCancel: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
+  const t = useMessages(qotdMessages);
+  const m = useMessages(commonMessages).module;
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label className={labelClass}>Treść pytania</Label>
+        <Label className={labelClass}>{t.questionContent}</Label>
         <Textarea value={content} onChange={(e) => onContentChange(e.target.value)} rows={3} className={textareaClass} />
       </div>
       <div className="space-y-1.5">
-        <Label className={labelClass}>Reakcje</Label>
+        <Label className={labelClass}>{t.reactionsShort}</Label>
         {reactions.trim() && (
           <div className="flex flex-wrap items-center gap-1 rounded-md bg-dark-900 p-2">
-            <span className="text-xs text-[#8d94a8]">Podgląd:</span>
+            <span className="text-xs text-[#8d94a8]">{t.preview}</span>
             <EmojiList emojis={reactions.split(",").map((r) => r.trim()).filter((r) => r)} size={18} />
           </div>
         )}
@@ -1343,10 +1353,10 @@ function QuestionEditForm({
       <div className="flex gap-2">
         <Button type="button" size="sm" onClick={onSave} className="bg-[#3b82f6] text-white hover:bg-[#2563eb]">
           <Save className="mr-2 h-4 w-4" />
-          Zapisz
+          {m.save}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={onCancel}>
-          Anuluj
+          {m.cancel}
         </Button>
       </div>
     </div>

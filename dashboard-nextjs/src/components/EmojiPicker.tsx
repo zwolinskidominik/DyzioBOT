@@ -9,17 +9,20 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Smile } from "lucide-react";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 // Cały właściwy panel (dataset ~250KB + rendering siatki) jest w osobnym pliku
 // i ładowany dopiero przy pierwszym otwarciu popovera — nie jako część
 // initial JS bundle każdej z ~6 stron dashboardu, które używają EmojiPickera.
+function EmojiPickerLoading() {
+  const ed = useMessages(commonMessages).editor;
+  return <div className="flex h-full items-center justify-center text-sm text-[#6d7079]">{ed.loadingEmoji}</div>;
+}
+
 const EmojiPickerPanel = dynamic(() => import("./EmojiPickerPanel"), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center text-sm text-[#6d7079]">
-      Ładowanie emoji…
-    </div>
-  ),
+  loading: () => <EmojiPickerLoading />,
 });
 
 interface EmojiPickerProps {
@@ -34,13 +37,14 @@ interface EmojiPickerProps {
 
 export default function EmojiPicker({
   onEmojiSelect,
-  buttonText = "Dodaj emoji",
+  buttonText,
   hideTabs = [],
   trigger,
   align = "start",
   side = "bottom",
 }: EmojiPickerProps) {
   const [open, setOpen] = useState(false);
+  const ed = useMessages(commonMessages).editor;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -48,7 +52,7 @@ export default function EmojiPicker({
         {trigger ?? (
           <Button type="button" variant="outline" size="sm">
             <Smile className="mr-2 h-4 w-4" />
-            {buttonText}
+            {buttonText ?? ed.addEmoji}
           </Button>
         )}
       </PopoverTrigger>

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Palette } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useMessages } from "@/i18n/LanguageProvider";
+import { commonMessages } from "@/i18n/messages/common";
 
 interface EmbedColorPickerProps {
   value: string;
@@ -127,6 +129,7 @@ function hsvToRgb({ h, s, v }: HsvColor): RgbColor {
 export default function EmbedColorPicker({ value, onChange, onPreviewChange, className }: EmbedColorPickerProps) {
   const normalizedValue = normalizeHex(value) ?? DEFAULT_COLOR;
   const [open, setOpen] = useState(false);
+  const ed = useMessages(commonMessages).editor;
   const [draftColor, setDraftColor] = useState(normalizedValue);
   const [hexInput, setHexInput] = useState(normalizedValue.slice(1));
   const [history, setHistory] = useState<string[]>([]);
@@ -258,8 +261,8 @@ export default function EmbedColorPicker({ value, onChange, onPreviewChange, cla
             "relative flex h-8 w-8 items-center justify-center rounded-md bg-dark-900 text-[#94a0b8] transition-colors hover:text-white",
             className
           )}
-          aria-label="Kolor embeda"
-          title="Kolor embeda"
+          aria-label={ed.embedColor}
+          title={ed.embedColor}
         >
           <Palette className="h-4 w-4" />
           <span

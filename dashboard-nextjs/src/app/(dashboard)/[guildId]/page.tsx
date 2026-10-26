@@ -12,6 +12,13 @@ import { avatarUrlFor, getMonthString, nextPublishDate, type RawMonth } from "@/
 import Link from "next/link";
 import Image from "next/image";
 import { User, ChevronRight } from "lucide-react";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { homeMessages } from "@/i18n/messages/home";
+import { commonMessages } from "@/i18n/messages/common";
+import type { Widen } from "@/i18n/config";
+
+type HomeText = Widen<(typeof homeMessages)["pl"]>;
+type ModuleNameKey = keyof Widen<(typeof commonMessages)["pl"]["sidebar"]["modules"]>;
 
 /* ── Paleta wg specyfikacji redesignu strony głównej ── */
 const COLOR = {
@@ -176,14 +183,6 @@ const getGuildIcon = (guild: GuildInfo | null) => {
   return `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`;
 };
 
-const MODERATION_LABELS: Record<ModerationLogEntry["kind"], string> = {
-  ban: "Zbanowano",
-  kick: "Wyrzucono",
-  mute: "Wyciszono",
-  warn: "Ostrzeżono",
-  clear: "Wyczyszczono wiadomości",
-};
-
 const MODERATION_EMOJI: Record<ModerationLogEntry["kind"], string> = {
   ban: "🔨",
   kick: "👢",
@@ -226,29 +225,29 @@ const MODULE_EMOJI: Record<string, string> = {
   tournament: "🎮",
 };
 
-/** Polskie etykiety modułów — 1:1 z nazwami w Sidebar.tsx (moduleGroups), żeby karta "Moduły" nie pokazywała surowych kluczy. */
-const MODULE_LABELS: Record<string, string> = {
-  commands: "Komendy",
-  greetings: "Powitania",
-  autoroles: "Auto role",
-  "reaction-roles": "Role za reakcje",
-  "temp-channels": "Tymczasowe Kanały",
-  tickets: "Tickety",
-  suggestions: "Sugestie",
-  levels: "Poziomy",
-  birthdays: "Urodziny",
-  qotd: "Pytanie Dnia",
-  tournament: "Turniej CS2",
-  giveaway: "Giveaway",
-  wrapped: "Server Wrapped",
-  "stream-config": "Powiadomienia Twitch",
-  "channel-stats": "Kanały z licznikami",
-  "monthly-stats": "Statystyki Miesięczne",
-  "invite-tracker": "Invite Tracker",
-  logs: "Logi",
-  "anti-spam": "Anti-Spam",
-  moderation: "Moderacja",
-  disboard: "Disboard",
+/** Klucz nazwy modułu w commonMessages.sidebar.modules - te same nazwy co w menu bocznym. */
+const MODULE_LABEL_KEYS: Record<string, ModuleNameKey> = {
+  commands: "commands",
+  greetings: "greetings",
+  autoroles: "autoroles",
+  "reaction-roles": "reactionRoles",
+  "temp-channels": "tempChannels",
+  tickets: "tickets",
+  suggestions: "suggestions",
+  levels: "levels",
+  birthdays: "birthdays",
+  qotd: "qotd",
+  tournament: "tournament",
+  giveaway: "giveaway",
+  wrapped: "wrapped",
+  "stream-config": "streamConfig",
+  "channel-stats": "channelStats",
+  "monthly-stats": "monthlyStats",
+  "invite-tracker": "inviteTracker",
+  logs: "logs",
+  "anti-spam": "antiSpam",
+  moderation: "moderation",
+  disboard: "disboard",
 };
 
 /** Ścieżka strony modułu — j.w., 1:1 z Sidebar.tsx. */
@@ -276,14 +275,6 @@ const MODULE_HREF: Record<string, string> = {
   disboard: "/disboard",
 };
 
-function moduleCountLabel(n: number): string {
-  if (n === 1) return "1 moduł wymaga konfiguracji";
-  const lastDigit = n % 10;
-  const lastTwo = n % 100;
-  if (lastDigit >= 2 && lastDigit <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return `${n} moduły wymagają konfiguracji`;
-  return `${n} modułów wymaga konfiguracji`;
-}
-
 /** Naprzemienny kolor "moduły" z palety (#6366f1 / #38bdf8), deterministyczny wg nazwy modułu. */
 function moduleColor(mod: string): string {
   let hash = 0;
@@ -298,15 +289,15 @@ function formatVoiceTime(minutes: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: HomeText["timeAgo"]): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "przed chwilą";
-  if (mins < 60) return `${mins} min temu`;
+  if (mins < 1) return t.justNow;
+  if (mins < 60) return t.minutes(mins);
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h temu`;
+  if (hours < 24) return t.hours(hours);
   const days = Math.floor(hours / 24);
-  return `${days}d temu`;
+  return t.days(days);
 }
 
 function daysUntil(target: Date): number {
@@ -327,6 +318,10 @@ function nextWrappedDate(): Date {
 export default function GuildDashboard() {
   const params = useParams();
   const guildId = params.guildId as string;
+  const t = useMessages(homeMessages);
+  const moduleNames = useMessages(commonMessages).sidebar.modules;
+  const { lang } = useLang();
+  const numberLocale = lang === "en" ? "en-US" : "pl-PL";
 
   const [loading, setLoading] = useState(true);
   const [guild, setGuild] = useState<GuildInfo | null>(null);
@@ -366,7 +361,7 @@ export default function GuildDashboard() {
           const data = await guildRes.json();
           setGuild({ id: guildId, name: data.name, icon: data.icon, botPresent: data.hasBot !== false });
         } else {
-          setGuild({ id: guildId, name: "Twój serwer", icon: null, botPresent: true });
+          setGuild({ id: guildId, name: t.yourServer, icon: null, botPresent: true });
         }
 
         if (modulesRes.ok) setModulesStatus(await modulesRes.json());
@@ -396,7 +391,7 @@ export default function GuildDashboard() {
         if (statusRes.ok) setBotStatus(await statusRes.json());
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
-        setGuild({ id: guildId, name: "Twój serwer", icon: null, botPresent: true });
+        setGuild({ id: guildId, name: t.yourServer, icon: null, botPresent: true });
       } finally {
         setLoading(false);
       }
@@ -459,8 +454,8 @@ export default function GuildDashboard() {
     const modItems: FeedItem[] = modLogs.map((log) => ({
       id: `mod-${log._id}`,
       kind: "moderacja",
-      title: `${MODERATION_LABELS[log.kind]}${log.kind !== "clear" ? ` ${log.targetUsername ?? log.targetTag}` : ""}`,
-      subtitle: `przez ${log.moderatorTag}${log.reason ? ` · ${log.reason}` : ""}`,
+      title: `${t.moderationActions[log.kind]}${log.kind !== "clear" ? ` ${log.targetUsername ?? log.targetTag}` : ""}`,
+      subtitle: `${t.by(log.moderatorTag)}${log.reason ? ` · ${log.reason}` : ""}`,
       emoji: MODERATION_EMOJI[log.kind],
       color: MODERATION_COLOR[log.kind],
       createdAt: log.createdAt,
@@ -469,13 +464,13 @@ export default function GuildDashboard() {
       id: `audit-${log._id}`,
       kind: "panel",
       title: log.description ?? `${log.action} (${log.module})`,
-      subtitle: `przez ${log.username}`,
+      subtitle: t.by(log.username),
       emoji: MODULE_EMOJI[log.module] ?? "⚙️",
       color: moduleColor(log.module),
       createdAt: log.createdAt,
     }));
     return [...modItems, ...panelItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [modLogs, auditLogs]);
+  }, [modLogs, auditLogs, t]);
 
   const filteredFeed = feedFilter === "all" ? feed : feed.filter((f) => f.kind === feedFilter);
 
@@ -487,7 +482,7 @@ export default function GuildDashboard() {
       items.push({
         key: "birthday",
         emoji: "🎂",
-        title: `Urodziny ${b.username ?? `użytkownika ${b.userId.slice(-4)}`}`,
+        title: t.birthdayOf(b.username ?? t.userFallback(b.userId.slice(-4))),
         daysUntil: b.daysUntil,
         href: `/${guildId}/birthdays`,
       });
@@ -498,7 +493,7 @@ export default function GuildDashboard() {
       items.push({
         key: "topka",
         emoji: "🏆",
-        title: "Topka miesiąca",
+        title: t.monthlyTop,
         daysUntil: daysUntil(nextPublishDate(currentId)),
         href: `/${guildId}/monthly-stats`,
       });
@@ -519,7 +514,7 @@ export default function GuildDashboard() {
       .filter((item) => item.daysUntil <= 60)
       .sort((a, b) => a.daysUntil - b.daysUntil)
       .slice(0, 4);
-  }, [birthdays, months, modulesStatus, guildId]);
+  }, [birthdays, months, modulesStatus, guildId, t]);
 
   if (loading) {
     return (
@@ -547,9 +542,9 @@ export default function GuildDashboard() {
       <div className="min-h-full flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Bot nie jest na serwerze</CardTitle>
+            <CardTitle className="text-2xl">{t.noBotTitle}</CardTitle>
             <CardDescription>
-              Aby zarządzać tym serwerem, musisz najpierw dodać Deezy
+              {t.noBotText}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -559,11 +554,11 @@ export default function GuildDashboard() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Dodaj bota na serwer
+                {t.addBot}
               </a>
             </Button>
             <Button asChild variant="outline" className="w-full mt-2">
-              <Link href="/guilds">Wróć do listy serwerów</Link>
+              <Link href="/guilds">{t.backToServers}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -591,7 +586,7 @@ export default function GuildDashboard() {
               )}
               <div>
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: COLOR.heading, marginBottom: 2 }}>{guild.name}</h1>
-                <p style={{ fontSize: 13, color: "#969db0" }}>Przegląd aktywności serwera</p>
+                <p style={{ fontSize: 13, color: "#969db0" }}>{t.subtitle}</p>
               </div>
             </div>
 
@@ -615,7 +610,7 @@ export default function GuildDashboard() {
                   background: botStatus.online ? "#22c55e" : "#ef4444",
                 }}
               />
-              {botStatus.online ? `Bot online · ping ${botStatus.ping}ms` : "Bot offline"}
+              {botStatus.online ? t.botOnline(botStatus.ping) : t.botOffline}
             </div>
           </div>
         </SlideIn>
@@ -626,25 +621,25 @@ export default function GuildDashboard() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div style={chartLabelStyle}>
-                  {metric === "voice" ? "Głos" : metric === "joins" ? "Dołączenia" : "Wiadomości"} · ostatnie 30 dni
+                  {t.metrics[metric]} · {t.last30Days}
                 </div>
                 {hasChartData && (
                   <div className="flex items-baseline gap-2" style={{ marginTop: 6 }}>
                     <span style={{ fontSize: 28, fontWeight: 800, color: "#fff" }}>
-                      {metric === "voice" ? formatVoiceTime(metricTotal30d) : metricTotal30d.toLocaleString("pl-PL")}
+                      {metric === "voice" ? formatVoiceTime(metricTotal30d) : metricTotal30d.toLocaleString(numberLocale)}
                     </span>
                     {trend !== null && (
                       <span style={trendChipStyle(trend)}>
-                        {`${trend > 0 ? "↑" : "↓"} ${Math.abs(trend)}% vs poprzednie 15 dni`}
+                        {t.trendVsPrev(trend > 0 ? "↑" : "↓", Math.abs(trend))}
                       </span>
                     )}
                   </div>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {([["messages", "Wiadomości"], ["voice", "Głos"], ["joins", "Dołączenia"]] as const).map(([key, label]) => (
+                {(["messages", "voice", "joins"] as const).map((key) => (
                   <button key={key} type="button" onClick={() => setMetric(key)} style={toggleBtnStyle(metric === key)}>
-                    {label}
+                    {t.metrics[key]}
                   </button>
                 ))}
               </div>
@@ -653,7 +648,7 @@ export default function GuildDashboard() {
             <div style={{ marginTop: 14 }}>
               {!hasChartData ? (
                 <div style={{ height: 96, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <p style={{ fontSize: 13, color: COLOR.secondary }}>Brak danych za ostatnie 30 dni</p>
+                  <p style={{ fontSize: 13, color: COLOR.secondary }}>{t.noChartData}</p>
                 </div>
               ) : (
                 <>
@@ -689,12 +684,12 @@ export default function GuildDashboard() {
                     <span style={{ fontSize: 10, color: COLOR.label }}>{chartData[0]?.label}</span>
                     <span style={{ fontSize: 11, color: "#c7d2fe" }}>
                       {activeBar
-                        ? `${activeBar.isToday ? "Dziś" : activeBar.label}: ${
+                        ? `${activeBar.isToday ? t.today : activeBar.label}: ${
                             metric === "voice"
                               ? formatVoiceTime(activeBar.voice)
                               : metric === "joins"
-                                ? `${activeBar.joins} dołączeń`
-                                : `${activeBar.messages.toLocaleString("pl-PL")} wiad.`
+                                ? t.joinsCount(activeBar.joins)
+                                : t.messagesShort(activeBar.messages.toLocaleString(numberLocale))
                           }`
                         : ""}
                     </span>
@@ -712,18 +707,18 @@ export default function GuildDashboard() {
           <SlideIn direction="up" delay={160} className="min-w-0">
             <div style={cardStyle}>
               <div className="flex flex-wrap items-center justify-between gap-3" style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: COLOR.body }}>Co się dzieje na serwerze</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLOR.body }}>{t.feedTitle}</div>
                 <div className="flex items-center gap-2">
-                  {([["all", "Wszystko"], ["moderacja", "Moderacja"], ["panel", "Panel"]] as const).map(([key, label]) => (
+                  {(["all", "moderacja", "panel"] as const).map((key) => (
                     <button key={key} type="button" onClick={() => setFeedFilter(key)} style={chipStyle(feedFilter === key)}>
-                      {label}
+                      {t.feedFilters[key]}
                     </button>
                   ))}
                 </div>
               </div>
 
               {filteredFeed.length === 0 ? (
-                <p style={{ padding: "20px 0", textAlign: "center", fontSize: 13, color: COLOR.secondary }}>Brak ostatnich zdarzeń</p>
+                <p style={{ padding: "20px 0", textAlign: "center", fontSize: 13, color: COLOR.secondary }}>{t.noFeed}</p>
               ) : (
                 <div className="flex flex-col" style={{ gap: 8 }}>
                   {filteredFeed.slice(0, 8).map((item) => (
@@ -743,7 +738,7 @@ export default function GuildDashboard() {
                         <strong style={{ color: "#fff" }}>{item.title}</strong> <span>{item.subtitle}</span>
                       </div>
                       <span style={{ fontSize: 10, color: COLOR.label, whiteSpace: "nowrap", flexShrink: 0 }}>
-                        {timeAgo(item.createdAt)}
+                        {timeAgo(item.createdAt, t.timeAgo)}
                       </span>
                     </div>
                   ))}
@@ -764,7 +759,7 @@ export default function GuildDashboard() {
                   fontWeight: 600,
                 }}
               >
-                Pokaż wszystkie ({feedFilter === "all" ? modLogsTotal + auditLogsTotal : feedFilter === "moderacja" ? modLogsTotal : auditLogsTotal})
+                {t.showAll(feedFilter === "all" ? modLogsTotal + auditLogsTotal : feedFilter === "moderacja" ? modLogsTotal : auditLogsTotal)}
               </Link>
             </div>
           </SlideIn>
@@ -774,9 +769,9 @@ export default function GuildDashboard() {
             {/* Nadchodzi */}
             <SlideIn direction="up" delay={240}>
               <div style={cardStyle}>
-                <div style={{ ...sectionLabelStyle, marginBottom: 10 }}>Nadchodzi</div>
+                <div style={{ ...sectionLabelStyle, marginBottom: 10 }}>{t.upcomingTitle}</div>
                 {upcoming.length === 0 ? (
-                  <p style={{ padding: "8px 0", textAlign: "center", fontSize: 12, color: COLOR.secondary }}>Brak nadchodzących wydarzeń</p>
+                  <p style={{ padding: "8px 0", textAlign: "center", fontSize: 12, color: COLOR.secondary }}>{t.noUpcoming}</p>
                 ) : (
                   <div className="flex flex-col" style={{ gap: 2 }}>
                     {upcoming.map((item) => (
@@ -796,7 +791,7 @@ export default function GuildDashboard() {
                             color: item.daysUntil <= 0 ? "#fca5a5" : item.daysUntil <= 7 ? "#facc15" : COLOR.label,
                           }}
                         >
-                          {item.daysUntil <= 0 ? "Dziś" : `za ${item.daysUntil}d`}
+                          {item.daysUntil <= 0 ? t.today : t.inDays(item.daysUntil)}
                         </span>
                       </Link>
                     ))}
@@ -808,12 +803,12 @@ export default function GuildDashboard() {
             {/* Moduły */}
             <SlideIn direction="up" delay={320}>
               <div style={cardStyle}>
-                <div style={{ ...sectionLabelStyle, marginBottom: 10 }}>Moduły</div>
+                <div style={{ ...sectionLabelStyle, marginBottom: 10 }}>{t.modulesTitle}</div>
                 <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
                   <span style={{ fontSize: 20, fontWeight: 800, color: "#fff", fontVariantNumeric: "tabular-nums" }}>
                     {enabledCount}/{totalModules}
                   </span>
-                  <span style={{ fontSize: 11, color: COLOR.secondary }}>włączonych</span>
+                  <span style={{ fontSize: 11, color: COLOR.secondary }}>{t.enabledSuffix}</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 3, background: COLOR.border, overflow: "hidden", marginBottom: 10 }}>
                   <div
@@ -834,7 +829,7 @@ export default function GuildDashboard() {
                       style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
                     >
                       <span style={{ fontSize: 11, fontWeight: 600, color: "#fcd34d" }}>
-                        ⚠️ {moduleCountLabel(moduleIssues.length)}
+                        ⚠️ {t.modulesNeedSetup(moduleIssues.length)}
                       </span>
                       <ChevronRight
                         className="w-3.5 h-3.5"
@@ -852,7 +847,7 @@ export default function GuildDashboard() {
                           >
                             <span style={{ fontSize: 14 }}>{MODULE_EMOJI[key] ?? "⚙️"}</span>
                             <div className="flex-1 min-w-0">
-                              <p style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>{MODULE_LABELS[key] ?? key}</p>
+                              <p style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>{MODULE_LABEL_KEYS[key] ? moduleNames[MODULE_LABEL_KEYS[key]] : key}</p>
                               {/* Bez truncate: opis problemu to właśnie to, co ma przeczytać admin —
                                   w wąskiej karcie ucinało go po kilku słowach. Zawija się do kolejnych linii. */}
                               <p className="break-words" style={{ fontSize: 11, lineHeight: 1.4, color: COLOR.secondary }}>{reason}</p>
@@ -870,7 +865,7 @@ export default function GuildDashboard() {
                                 flexShrink: 0,
                               }}
                             >
-                              Napraw
+                              {t.fix}
                             </Link>
                           </div>
                         ))}
@@ -884,12 +879,12 @@ export default function GuildDashboard() {
             {/* Ten miesiąc */}
             <SlideIn direction="up" delay={400}>
               <div style={cardStyle}>
-                <div style={{ ...sectionLabelStyle, marginBottom: 10 }}>Ten miesiąc</div>
+                <div style={{ ...sectionLabelStyle, marginBottom: 10 }}>{t.thisMonth}</div>
                 <div className="flex flex-col" style={{ gap: 8, marginBottom: mvp ? 12 : 0 }}>
                   {[
-                    ["Wiadomości", monthMessages.toLocaleString("pl-PL")],
-                    ["Na głosowych", formatVoiceTime(monthVoice)],
-                    ["Aktywnych osób", String(monthActiveUsers)],
+                    [t.monthStats.messages, monthMessages.toLocaleString(numberLocale)],
+                    [t.monthStats.voice, formatVoiceTime(monthVoice)],
+                    [t.monthStats.active, String(monthActiveUsers)],
                   ].map(([label, value]) => (
                     <div key={label} className="flex items-center justify-between">
                       <span style={{ fontSize: 12, color: COLOR.secondary }}>{label}</span>
@@ -915,9 +910,9 @@ export default function GuildDashboard() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p style={{ fontSize: 10, color: COLOR.label }}>MVP miesiąca</p>
+                      <p style={{ fontSize: 10, color: COLOR.label }}>{t.mvp}</p>
                       <p className="truncate" style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>
-                        {mvp.username ?? `Użytkownik ${mvp.userId.slice(-4)}`}
+                        {mvp.username ?? t.userNumbered(mvp.userId.slice(-4))}
                       </p>
                     </div>
                     <ChevronRight className="w-4 h-4" style={{ color: COLOR.label }} />

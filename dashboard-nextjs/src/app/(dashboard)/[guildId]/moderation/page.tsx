@@ -14,6 +14,12 @@ import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { SlideIn } from "@/components/ui/animated";
 import { useDirtyState } from "@/components/DirtyStateProvider";
 import { cn } from "@/lib/utils";
+import { useLang, useMessages } from "@/i18n/LanguageProvider";
+import { moderationMessages } from "@/i18n/messages/moderation";
+import { commonMessages } from "@/i18n/messages/common";
+import type { Widen } from "@/i18n/config";
+
+type ModerationText = Widen<typeof moderationMessages.pl>;
 
 function DeezySwitch({ className, ...props }: React.ComponentProps<typeof Switch>) {
   return (
@@ -125,33 +131,33 @@ const DEFAULT_CONFIG: Omit<ModerationConfig, "guildId"> = {
   warnExpiryDays: 90,
 };
 
-const COMMANDS: { key: CommandKey; label: string; icon: string; desc: string }[] = [
-  { key: "warn", label: "/warn", icon: "⚠️", desc: "Nadaje ostrzeżenie wg drabinki kar poniżej" },
-  { key: "warnRemove", label: "/warn-remove", icon: "🗑️", desc: "Usuwa ostrzeżenie użytkownika" },
-  { key: "mute", label: "/mute", icon: "🔇", desc: "Wycisza użytkownika na wskazany czas" },
-  { key: "kick", label: "/kick", icon: "👢", desc: "Wyrzuca użytkownika z serwera" },
-  { key: "ban", label: "/ban", icon: "🚫", desc: "Banuje użytkownika na serwerze" },
-  { key: "unban", label: "/unban", icon: "✅", desc: "Odbanowuje użytkownika" },
-  { key: "clear", label: "/clear", icon: "🧹", desc: "Usuwa wiadomości z kanału" },
+const COMMANDS: { key: CommandKey; label: string; icon: string }[] = [
+  { key: "warn", label: "/warn", icon: "⚠️" },
+  { key: "warnRemove", label: "/warn-remove", icon: "🗑️" },
+  { key: "mute", label: "/mute", icon: "🔇" },
+  { key: "kick", label: "/kick", icon: "👢" },
+  { key: "ban", label: "/ban", icon: "🚫" },
+  { key: "unban", label: "/unban", icon: "✅" },
+  { key: "clear", label: "/clear", icon: "🧹" },
 ];
 
-const WARN_ACTIONS: { id: WarnAction; label: string; chip: string; color: string }[] = [
-  { id: "none", label: "Brak dodatkowej kary — samo ostrzeżenie", chip: "Bez kary", color: "#6b7280" },
-  { id: "mute", label: "🔇 Wyciszenie", chip: "🔇 Wyciszenie", color: "#a970ff" },
-  { id: "kick", label: "👢 Wyrzucenie z serwera", chip: "👢 Wyrzucenie", color: "#ef4444" },
-  { id: "ban", label: "🔨 Permanentny ban", chip: "🔨 Ban", color: "#dc2626" },
-];
+const WARN_ACTION_COLORS: Record<WarnAction, string> = { none: "#6b7280", mute: "#a970ff", kick: "#ef4444", ban: "#dc2626" };
+const WARN_ACTION_IDS: WarnAction[] = ["none", "mute", "kick", "ban"];
 
-const MUTE_DURATIONS = [
-  { id: 15, label: "15 min" },
-  { id: 60, label: "1 godz." },
-  { id: 180, label: "3 godz." },
-  { id: 1440, label: "24 godz." },
-  { id: 10080, label: "7 dni" },
-];
+function buildWarnActions(t: ModerationText): { id: WarnAction; label: string; chip: string; color: string }[] {
+  return WARN_ACTION_IDS.map((id) => ({ id, ...t.actions[id], color: WARN_ACTION_COLORS[id] }));
+}
+
+const MUTE_DURATION_IDS = [15, 60, 180, 1440, 10080] as const;
+
+function muteDurationLabel(t: ModerationText, minutes: number): string {
+  const key = String(minutes);
+  const map: Record<string, string> = t.durations;
+  return map[key] ?? `${minutes} min`;
+}
 
 const LOG_KINDS: { id: LogKind | "all"; label: string; color: string }[] = [
-  { id: "all", label: "Wszystkie", color: "#8d94a8" },
+  { id: "all", label: "", color: "#8d94a8" },
   { id: "ban", label: "🚫 Ban", color: "#dc2626" },
   { id: "kick", label: "👢 Kick", color: "#ef4444" },
   { id: "mute", label: "🔇 Mute", color: "#a970ff" },
@@ -159,25 +165,12 @@ const LOG_KINDS: { id: LogKind | "all"; label: string; color: string }[] = [
   { id: "clear", label: "🧹 Clear", color: "#6366f1" },
 ];
 
-const DAY_RANGES = [
-  { id: "7", label: "7 dni" },
-  { id: "30", label: "30 dni" },
-  { id: "90", label: "90 dni" },
-  { id: "all", label: "Cały okres" },
-];
+const DAY_RANGE_IDS = ["7", "30", "90", "all"] as const;
 
 const PER_PAGE_OPTIONS = [6, 12, 25];
 
 // Realne zabezpieczenia — patrz src/utils/moderationHelpers.ts (canModerate + applyTimeoutSafely)
 // i src/services/moderationLogService.ts. Zawsze aktywne dla /ban, /kick, /mute i /warn.
-const GUARDS = [
-  "Nie można ukarać właściciela serwera",
-  "Nie można ukarać samego siebie",
-  "Nie można ukarać osoby z rolą wyższą lub równą swojej",
-  "Nie można ukarać osoby z rolą wyższą niż rola bota",
-  "Nie można wyciszyć osoby z uprawnieniem Administrator — to twarde ograniczenie Discorda",
-  "Każda kara (przy włączonym „Zapisz w historii kar”) trafia do zakładki „Otrzymane kary” z moderatorem i powodem",
-];
 
 /* ── Helpery ──────────────────────────────────────────────────────── */
 
@@ -193,36 +186,20 @@ function roleColor(color: number): string | undefined {
   return color ? `#${color.toString(16).padStart(6, "0")}` : undefined;
 }
 
-function pluralPl(n: number, one: string, few: string, many: string): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (n === 1) return one;
-  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return few;
-  return many;
-}
-
 function getAvatarUrl(userId: string, avatar?: string | null): string {
   if (avatar) return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.png?size=64`;
   const fallbackIndex = Number(BigInt(userId) % 6n);
   return `https://cdn.discordapp.com/embed/avatars/${fallbackIndex}.png`;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("pl-PL", {
+function formatDate(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function stepLabel(step: WarnStep): string {
-  if (step.action === "mute") {
-    const d = MUTE_DURATIONS.find((x) => x.id === step.durationMinutes);
-    return `🔇 Wyciszenie na ${d ? d.label : `${step.durationMinutes} min`}`;
-  }
-  return WARN_ACTIONS.find((a) => a.id === step.action)?.label ?? step.action;
 }
 
 /* ── Podkomponenty: picker ról ───────────────────────────────────── */
@@ -237,6 +214,8 @@ function RolePicker({
   onChange: (ids: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useMessages(moderationMessages);
+  const m = useMessages(commonMessages).module;
   const chosenRoles = chosen.map((id) => roles.find((r) => r.id === id)).filter((r): r is Role => !!r);
   const free = roles.filter((r) => !chosen.includes(r.id));
 
@@ -280,9 +259,9 @@ function RolePicker({
               {r.name}
             </button>
           ))}
-          {free.length === 0 ? <div className="p-2 text-center text-xs text-[#6b7280]">Wszystkie role są już dodane.</div> : null}
+          {free.length === 0 ? <div className="p-2 text-center text-xs text-[#6b7280]">{t.allRolesAdded}</div> : null}
           <button type="button" onClick={() => setOpen(false)} className="mt-[3px] rounded-md border py-[6px] text-[11px] font-semibold text-[#8d94a8] transition-colors hover:text-white" style={{ borderColor: "#2f3341" }}>
-            Anuluj
+            {m.cancel}
           </button>
         </div>
       ) : (
@@ -292,7 +271,7 @@ function RolePicker({
           className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-[11px] font-semibold text-[#8d94a8] transition-colors hover:border-bot-primary hover:text-white"
           style={{ borderColor: "#3a3f4e" }}
         >
-          + Dodaj rolę z dostępem mimo braku uprawnień Discorda
+          {t.addAccessRole}
         </button>
       )}
     </div>
@@ -311,7 +290,7 @@ function CommandCard({
   extra,
   defaultOpen,
 }: {
-  meta: { key: CommandKey; label: string; icon: string; desc: string };
+  meta: { key: CommandKey; label: string; icon: string };
   config: CommandConfig;
   roles: Role[];
   onUpdate: (patch: Partial<CommandConfig>) => void;
@@ -326,6 +305,7 @@ function CommandCard({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
+  const t = useMessages(moderationMessages);
 
   return (
     <div className="rounded-[10px] p-4" style={{ background: "#1F2129", border: `1px solid ${config.on ? "transparent" : "#2a2d38"}` }}>
@@ -341,14 +321,14 @@ function CommandCard({
           </span>
           <div className="min-w-0 flex-1" style={{ opacity: config.on ? 1 : 0.6 }}>
             <span className="block text-sm font-bold text-white">{meta.label}</span>
-            <span className="mt-0.5 block text-[11px] text-[#8d94a8]">{config.on ? meta.desc : "Wyłączona — nikt nie może jej użyć"}</span>
+            <span className="mt-0.5 block text-[11px] text-[#8d94a8]">{config.on ? t.commands[meta.key] : t.commandOff}</span>
           </div>
           {config.on ? (
             <>
               {badge}
               {config.extraRoleIds.length > 0 ? (
                 <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "rgba(99,102,241,0.15)", color: "#a5b4fc" }}>
-                  +{config.extraRoleIds.length} {config.extraRoleIds.length === 1 ? "rola" : "role"}
+                  {t.extraRoles(config.extraRoleIds.length)}
                 </span>
               ) : null}
               <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#9aa2b8] transition-transform" style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
@@ -365,16 +345,16 @@ function CommandCard({
             {!hideDm ? (
               <label className="flex items-center gap-2">
                 <Switch checked={config.dm} onCheckedChange={(v) => onUpdate({ dm: v })} className="shrink-0 data-[state=checked]:bg-[#3b82f6]" style={{ transform: "scale(0.85)" }} />
-                <span className="text-xs text-[#b9c0d0]">DM do użytkownika</span>
+                <span className="text-xs text-[#b9c0d0]">{t.dmUser}</span>
               </label>
             ) : null}
             <label className="flex items-center gap-2">
               <Switch checked={config.log} onCheckedChange={(v) => onUpdate({ log: v })} className="shrink-0 data-[state=checked]:bg-[#3b82f6]" style={{ transform: "scale(0.85)" }} />
-              <span className="text-xs text-[#b9c0d0]">Zapisz w historii kar</span>
+              <span className="text-xs text-[#b9c0d0]">{t.saveHistory}</span>
             </label>
           </div>
           <div>
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">Dodatkowy dostęp bez uprawnień Discorda</div>
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">{t.extraAccess}</div>
             <RolePicker roles={roles} chosen={config.extraRoleIds} onChange={(ids) => onUpdate({ extraRoleIds: ids })} />
           </div>
         </div>
@@ -386,6 +366,8 @@ function CommandCard({
 /* ── Podkomponenty: drabinka ostrzeżeń ───────────────────────────── */
 
 function WarnStepEditor({ step, onChange, allowNone = true }: { step: WarnStep; onChange: (step: WarnStep) => void; allowNone?: boolean }) {
+  const t = useMessages(moderationMessages);
+  const WARN_ACTIONS = buildWarnActions(t);
   return (
     <div className="flex flex-col gap-[3px]">
       {WARN_ACTIONS.filter((a) => allowNone || a.id !== "none").map((a) => {
@@ -402,8 +384,8 @@ function WarnStepEditor({ step, onChange, allowNone = true }: { step: WarnStep; 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {MUTE_DURATIONS.map((d) => (
-                    <SelectItem key={d.id} value={String(d.id)}>{d.label}</SelectItem>
+                  {MUTE_DURATION_IDS.map((id) => (
+                    <SelectItem key={id} value={String(id)}>{muteDurationLabel(t, id)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -416,6 +398,8 @@ function WarnStepEditor({ step, onChange, allowNone = true }: { step: WarnStep; 
 }
 
 function LadderEditor({ steps, onChange }: { steps: WarnStep[]; onChange: (steps: WarnStep[]) => void }) {
+  const t = useMessages(moderationMessages);
+  const WARN_ACTIONS = buildWarnActions(t);
   const setStep = (idx: number, step: WarnStep) => {
     const next = [...steps];
     next[idx] = step;
@@ -441,7 +425,7 @@ function LadderEditor({ steps, onChange }: { steps: WarnStep[]; onChange: (steps
               <span className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-md text-[11px] font-extrabold" style={{ background: rgba(meta.color, 0.16), color: meta.color }}>
                 {i + 1}
               </span>
-              <span className="min-w-0 flex-1 text-xs text-[#8d94a8]">{last ? `${i + 1}. i kolejne` : `${i + 1}. ostrzeżenie`}</span>
+              <span className="min-w-0 flex-1 text-xs text-[#8d94a8]">{last ? t.nthAndNext(i + 1) : t.nthWarning(i + 1)}</span>
             </div>
             <div className="flex items-center gap-2 lg:contents">
             <Select
@@ -458,13 +442,13 @@ function LadderEditor({ steps, onChange }: { steps: WarnStep[]; onChange: (steps
                 {WARN_ACTIONS.filter((a) => a.id !== "mute" && a.id !== "none").map((a) => (
                   <SelectItem key={a.id} value={a.id}>{a.chip}</SelectItem>
                 ))}
-                {MUTE_DURATIONS.map((d) => (
-                  <SelectItem key={d.id} value={`mute-${d.id}`}>🔇 {d.label}</SelectItem>
+                {MUTE_DURATION_IDS.map((id) => (
+                  <SelectItem key={id} value={`mute-${id}`}>🔇 {muteDurationLabel(t, id)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {steps.length > 1 ? (
-              <button type="button" onClick={() => removeStep(i)} title="Usuń stopień" className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded text-[#6b7280] transition-colors hover:bg-[rgba(239,68,68,0.15)] hover:text-[#ef4444]">
+              <button type="button" onClick={() => removeStep(i)} title={t.removeStep} className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded text-[#6b7280] transition-colors hover:bg-[rgba(239,68,68,0.15)] hover:text-[#ef4444]">
                 ✕
               </button>
             ) : null}
@@ -479,7 +463,7 @@ function LadderEditor({ steps, onChange }: { steps: WarnStep[]; onChange: (steps
           className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-[11px] font-semibold text-[#8d94a8] transition-colors hover:border-bot-primary hover:text-white"
           style={{ borderColor: "#3a3f4e" }}
         >
-          + Dodaj kolejny stopień
+          {t.addStep}
         </button>
       ) : null}
     </div>
@@ -498,6 +482,7 @@ function CommandsTab({
   roles: Role[];
 }) {
   const ladder = config.warnMode === "ladder";
+  const t = useMessages(moderationMessages);
 
   // Cała konfiguracja "co robi /warn" (tryb kary, drabinka/pojedyncza kara, DM, wygasanie) —
   // renderowana wewnątrz karty komendy /warn poniżej, żeby nie trzymać jej w osobnej karcie
@@ -505,14 +490,14 @@ function CommandsTab({
   const warnLadder = (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
-        <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">Kara przy ostrzeżeniu</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">{t.penaltyTitle}</span>
         <span className="flex-1" />
         <span className="flex gap-[3px] rounded-[7px] p-[3px]" style={{ background: "#1d202b" }}>
           <button type="button" onClick={() => setConfig((p) => ({ ...p, warnMode: "single" }))} className="rounded-[5px] px-[11px] py-[5px] text-[11px] font-semibold" style={{ background: !ladder ? "#6366f1" : "transparent", color: !ladder ? "#fff" : "#8d94a8" }}>
-            Jedna kara
+            {t.single}
           </button>
           <button type="button" onClick={() => setConfig((p) => ({ ...p, warnMode: "ladder" }))} className="rounded-[5px] px-[11px] py-[5px] text-[11px] font-semibold" style={{ background: ladder ? "#6366f1" : "transparent", color: ladder ? "#fff" : "#8d94a8" }}>
-            Eskalacja
+            {t.ladder}
           </button>
         </span>
       </div>
@@ -526,11 +511,11 @@ function CommandsTab({
       <div className="flex flex-wrap items-center gap-4 border-t pt-3" style={{ borderColor: "#2f3341" }}>
         <label className="flex items-center gap-2">
           <Switch checked={config.warnDm} onCheckedChange={(v) => setConfig((p) => ({ ...p, warnDm: v }))} className="shrink-0 data-[state=checked]:bg-[#3b82f6]" style={{ transform: "scale(0.85)" }} />
-          <span className="text-xs text-[#b9c0d0]">DM z informacją o karze</span>
+          <span className="text-xs text-[#b9c0d0]">{t.dmPenalty}</span>
         </label>
         <label className="flex items-center gap-2">
           <Switch checked={config.warnExpiryOn} onCheckedChange={(v) => setConfig((p) => ({ ...p, warnExpiryOn: v }))} className="shrink-0 data-[state=checked]:bg-[#3b82f6]" style={{ transform: "scale(0.85)" }} />
-          <span className="text-xs text-[#b9c0d0]">Ostrzeżenia wygasają po</span>
+          <span className="text-xs text-[#b9c0d0]">{t.expireAfter}</span>
         </label>
         {config.warnExpiryOn ? (
           <Select value={String(config.warnExpiryDays)} onValueChange={(v) => setConfig((p) => ({ ...p, warnExpiryDays: Number(v) }))}>
@@ -539,7 +524,7 @@ function CommandsTab({
             </SelectTrigger>
             <SelectContent>
               {[30, 60, 90, 180, 365].map((d) => (
-                <SelectItem key={d} value={String(d)}>{d} dni</SelectItem>
+                <SelectItem key={d} value={String(d)}>{t.days(d)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -563,7 +548,7 @@ function CommandsTab({
           badge={
             meta.key === "warn" ? (
               <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "rgba(99,102,241,0.15)", color: "#a5b4fc" }}>
-                {ladder ? "Eskalacja" : "Jedna kara"}
+                {ladder ? t.ladder : t.single}
               </span>
             ) : undefined
           }
@@ -576,12 +561,12 @@ function CommandsTab({
             <Shield className="h-4 w-4" style={{ color: "#93c5fd" }} />
           </span>
           <div className="min-w-0 flex-1">
-            <span className="block text-sm font-bold text-white">Ochrona hierarchii</span>
-            <span className="mt-0.5 block text-[11px] text-[#8d94a8]">Zawsze aktywna dla /ban, /kick, /mute i /warn — bot odmawia z konkretnym komunikatem</span>
+            <span className="block text-sm font-bold text-white">{t.hierarchyTitle}</span>
+            <span className="mt-0.5 block text-[11px] text-[#8d94a8]">{t.hierarchyText}</span>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-[7px] sm:grid-cols-2">
-          {GUARDS.map((g) => (
+          {t.guards.map((g) => (
             <div key={g} className="flex items-start gap-2 rounded-md p-2.5 text-[11px] leading-[1.5] text-[#b9c0d0]" style={{ background: "#17181E" }}>
               <Check className="mt-0.5 h-3 w-3 shrink-0" style={{ color: "#86efac" }} />
               <span>{g}</span>
@@ -614,25 +599,22 @@ function groupWarnings(items: ActiveWarning[]): GroupedWarnings[] {
 }
 
 /** Krok, który dostanie ten user przy KOLEJNYM /warn — z tej samej drabinki co bot realnie stosuje. */
-function nextPenalty(config: ModerationConfig, totalForUser: number): { label: string; color: string } {
+function nextPenalty(t: ModerationText, config: ModerationConfig, totalForUser: number): { label: string; color: string } {
   const ladder = config.warnMode === "ladder";
   const total = ladder ? config.warnSteps.length : 1;
   const nextStep = ladder ? config.warnSteps[Math.min(totalForUser, total - 1)] : config.warnSingle;
-  const meta = WARN_ACTIONS.find((a) => a.id === nextStep.action) ?? WARN_ACTIONS[0];
-  if (nextStep.action === "none") return { label: "samo ostrzeżenie", color: meta.color };
-  if (nextStep.action === "mute") {
-    const d = MUTE_DURATIONS.find((x) => x.id === nextStep.durationMinutes);
-    return { label: `wyciszenie na ${d ? d.label : `${nextStep.durationMinutes} min`}`, color: meta.color };
-  }
-  return { label: meta.chip.replace(/^\S+\s/, "").toLowerCase(), color: meta.color };
+  const color = WARN_ACTION_COLORS[nextStep.action] ?? WARN_ACTION_COLORS.none;
+  if (nextStep.action === "none") return { label: t.onlyWarning, color };
+  if (nextStep.action === "mute") return { label: t.muteFor(muteDurationLabel(t, nextStep.durationMinutes)), color };
+  return { label: nextStep.action === "kick" ? t.kickShort : t.banShort, color };
 }
 
-function warningExpiry(config: ModerationConfig, dateIso: string): { text: string; soon: boolean } | null {
+function warningExpiry(t: ModerationText, config: ModerationConfig, dateIso: string): { text: string; soon: boolean } | null {
   if (!config.warnExpiryOn) return null;
   const expiresAt = new Date(dateIso).getTime() + config.warnExpiryDays * 86_400_000;
   const daysLeft = Math.ceil((expiresAt - Date.now()) / 86_400_000);
-  if (daysLeft <= 0) return { text: "wygasa dziś", soon: true };
-  return { text: `wygasa za ${daysLeft} ${daysLeft === 1 ? "dzień" : "dni"}`, soon: daysLeft <= 7 };
+  if (daysLeft <= 0) return { text: t.expiresToday, soon: true };
+  return { text: t.expiresIn(daysLeft), soon: daysLeft <= 7 };
 }
 
 function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: ModerationConfig; onChanged?: () => void }) {
@@ -641,6 +623,9 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const t = useMessages(moderationMessages);
+  const { lang } = useLang();
+  const locale = lang === "en" ? "en-GB" : "pl-PL";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -656,15 +641,15 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
       }
     } catch (err) {
       console.error("Error loading active warnings:", err);
-      toast.error("Nie udało się załadować listy ostrzeżeń");
+      toast.error(t.warningsLoadError);
     } finally {
       setLoading(false);
     }
-  }, [guildId, q]);
+  }, [guildId, q, t]);
 
   useEffect(() => {
-    const t = setTimeout(load, 250);
-    return () => clearTimeout(t);
+    const timer = setTimeout(load, 250);
+    return () => clearTimeout(timer);
   }, [load]);
 
   const handleDelete = async (w: ActiveWarning) => {
@@ -688,12 +673,12 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
           .filter((x) => x.warnEntryId !== w.warnEntryId)
           .map((x) => (x.userId === w.userId ? { ...x, totalForUser: Math.max(0, x.totalForUser - 1) } : x))
       );
-      setTotal((t) => Math.max(0, t - 1));
-      toast.success("Ostrzeżenie zostało usunięte");
+      setTotal((prev) => Math.max(0, prev - 1));
+      toast.success(t.warningDeleted);
       onChanged?.();
     } catch (err) {
       console.error("Error removing warning:", err);
-      toast.error("Nie udało się usunąć ostrzeżenia");
+      toast.error(t.warningDeleteError);
     }
   };
 
@@ -709,11 +694,11 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Szukaj po ID użytkownika lub powodzie…"
+            placeholder={t.searchWarnings}
             className="pl-9"
           />
         </div>
-        <span className="shrink-0 text-[11px] text-[#8d94a8]">{total} {total === 1 ? "aktywne ostrzeżenie" : "aktywnych ostrzeżeń"}</span>
+        <span className="shrink-0 text-[11px] text-[#8d94a8]">{t.activeWarnings(total)}</span>
       </div>
 
       {loading ? (
@@ -722,12 +707,12 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
         </div>
       ) : grouped.length === 0 ? (
         <div className="rounded-[10px] p-8 text-center text-sm text-[#6b7280]" style={{ background: "#1F2129" }}>
-          Nikt nie ma aktywnych ostrzeżeń.
+          {t.noWarnings}
         </div>
       ) : (
         <div className="space-y-2">
           {grouped.map((g) => {
-            const next = nextPenalty(config, g.totalForUser);
+            const next = nextPenalty(t, config, g.totalForUser);
             const nearLimit = ladder && g.totalForUser >= stepsTotal - 1;
             return (
               <div key={g.userId} className="rounded-[8px] p-3.5" style={{ background: "#17181E" }}>
@@ -735,10 +720,10 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
                   <img src={getAvatarUrl(g.userId, g.avatar)} alt="" className="h-7 w-7 shrink-0 rounded-full" />
                   <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white">{g.username ?? g.userId}</span>
                   <span className="shrink-0 text-xs font-bold" style={{ color: nearLimit ? "#fca5a5" : "#b9c0d0" }}>
-                    {ladder ? `${g.totalForUser}/${stepsTotal}` : `${g.totalForUser} ${g.totalForUser === 1 ? "ostrzeżenie" : "ostrzeżeń"}`}
+                    {ladder ? `${g.totalForUser}/${stepsTotal}` : t.warningsCount(g.totalForUser)}
                   </span>
                   <span className="shrink-0 rounded-full px-2.5 py-[3px] text-[10px] font-bold" style={{ background: nearLimit ? "rgba(239,68,68,0.15)" : "rgba(250,204,21,0.15)", color: nearLimit ? "#fca5a5" : "#fcd34d" }}>
-                    {ladder ? "następne → " : "każde → "}{next.label}
+                    {ladder ? t.nextArrow : t.eachArrow}{next.label}
                   </span>
                 </div>
 
@@ -748,7 +733,7 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
                       <span
                         key={i}
                         className="h-[5px] flex-1 rounded-[3px]"
-                        style={{ background: i < g.totalForUser ? (WARN_ACTIONS.find((a) => a.id === config.warnSteps[i]?.action)?.color ?? "#facc15") : "#2f3341" }}
+                        style={{ background: i < g.totalForUser ? (WARN_ACTION_COLORS[config.warnSteps[i]?.action ?? "none"] ?? "#facc15") : "#2f3341" }}
                       />
                     ))}
                   </div>
@@ -756,10 +741,10 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
 
                 <div className="mt-2.5 flex flex-col gap-1">
                   {g.entries.map((en) => {
-                    const expiry = warningExpiry(config, en.date);
+                    const expiry = warningExpiry(t, config, en.date);
                     return (
                       <div key={en.warnEntryId} className="flex flex-wrap items-center gap-2.5 text-[11px] text-[#8d94a8]">
-                        <span className="shrink-0 truncate text-[#6b7280]">{formatDate(en.date)}</span>
+                        <span className="shrink-0 truncate text-[#6b7280]">{formatDate(en.date, locale)}</span>
                         <span className="min-w-0 flex-1 truncate">{en.reason}</span>
                         <span className="shrink-0 truncate text-[#6b7280] max-sm:max-w-[45%]">{en.moderatorTag ?? en.moderatorId}</span>
                         {expiry ? (
@@ -770,7 +755,7 @@ function WarningsTab({ guildId, config, onChanged }: { guildId: string; config: 
                         <button
                           type="button"
                           onClick={() => handleDelete(en)}
-                          title="Usuń ostrzeżenie"
+                          title={t.deleteWarning}
                           className="flex h-5 w-5 shrink-0 items-center justify-center rounded transition-colors"
                           style={
                             confirmId === en.warnEntryId
@@ -805,6 +790,9 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(6);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const t = useMessages(moderationMessages);
+  const { lang } = useLang();
+  const locale = lang === "en" ? "en-GB" : "pl-PL";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -823,15 +811,15 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
       }
     } catch (err) {
       console.error("Error loading moderation log:", err);
-      toast.error("Nie udało się załadować historii kar");
+      toast.error(t.logLoadError);
     } finally {
       setLoading(false);
     }
-  }, [guildId, q, kind, days, page, perPage]);
+  }, [guildId, q, kind, days, page, perPage, t]);
 
   useEffect(() => {
-    const t = setTimeout(load, 250);
-    return () => clearTimeout(t);
+    const timer = setTimeout(load, 250);
+    return () => clearTimeout(timer);
   }, [load]);
 
   const pageCount = Math.max(1, Math.ceil(total / perPage));
@@ -861,13 +849,13 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
         throw new Error(err?.error ?? "Failed to undo");
       }
       setItems((prev) => prev.map((x) => (x._id === l._id ? { ...x, undone: true } : x)));
-      toast.success("Kara została cofnięta");
+      toast.success(t.undone);
       // Cofnięcie /warn realnie usuwa wpis z aktywnych ostrzeżeń (Warn.$pull) — statystyki
       // u góry strony (aktywne ostrzeżenia, osoby blisko limitu) muszą się odświeżyć.
       onChanged?.();
     } catch (err) {
       console.error("Error undoing action:", err);
-      toast.error(err instanceof Error ? err.message : "Nie udało się cofnąć kary");
+      toast.error(err instanceof Error ? err.message : t.undoError);
     }
   };
 
@@ -881,7 +869,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
           <Input
             value={q}
             onChange={(e) => setFilterAndResetPage(setQ)(e.target.value)}
-            placeholder="Szukaj po użytkowniku, moderatorze lub powodzie…"
+            placeholder={t.searchLog}
             className="h-[34px] border pl-9 text-xs"
             style={{ borderColor: "#2f3341", background: "#17181E" }}
           />
@@ -892,7 +880,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
           </SelectTrigger>
           <SelectContent>
             {LOG_KINDS.map((k) => (
-              <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>
+              <SelectItem key={k.id} value={k.id}>{k.id === "all" ? t.logAll : k.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -901,8 +889,8 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {DAY_RANGES.map((d) => (
-              <SelectItem key={d.id} value={d.id}>{d.label}</SelectItem>
+            {DAY_RANGE_IDS.map((id) => (
+              <SelectItem key={id} value={id}>{t.ranges[id]}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -913,7 +901,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
           className="hidden gap-2.5 border-b px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-[0.06em] sm:grid"
           style={{ gridTemplateColumns: GRID_COLS, borderColor: "#2f3341", color: "#5f6b85" }}
         >
-          <span>Kara</span><span>Użytkownik</span><span>Moderator</span><span>Powód</span><span>Kiedy</span><span />
+          <span>{t.colPenalty}</span><span>{t.colUser}</span><span>{t.colModerator}</span><span>{t.colReason}</span><span>{t.colWhen}</span><span />
         </div>
 
         {loading ? (
@@ -921,7 +909,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
           </div>
         ) : items.length === 0 ? (
-          <div className="p-8 text-center text-sm text-[#6b7280]">Brak wpisów w historii kar dla wybranych filtrów.</div>
+          <div className="p-8 text-center text-sm text-[#6b7280]">{t.noLog}</div>
         ) : (
           items.map((l) => {
             const kindMeta = LOG_KINDS.find((k) => k.id === l.kind)!;
@@ -930,7 +918,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
                 <button
                   type="button"
                   onClick={() => handleUndo(l)}
-                  title={confirmId === l._id ? "Na pewno?" : "Cofnij"}
+                  title={confirmId === l._id ? t.sure : t.undo}
                   className={
                     mobile
                       ? "relative flex h-9 shrink-0 items-center justify-center gap-1.5 self-start rounded-[6px] px-3 text-xs font-semibold transition-colors"
@@ -945,7 +933,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
                   }
                 >
                   <Undo2 className="h-3.5 w-3.5" />
-                  {mobile ? <span>{confirmId === l._id ? "Na pewno?" : "Cofnij"}</span> : null}
+                  {mobile ? <span>{confirmId === l._id ? t.sure : t.undo}</span> : null}
                 </button>
               ) : null;
 
@@ -966,15 +954,15 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
                     <span className="min-w-0 truncate text-xs font-semibold text-white">
                       {l.kind === "clear" ? `#${l.targetTag.replace(/^#/, "")}` : (l.targetUsername ?? l.targetTag)}
                     </span>
-                    {l.undone ? <span className="shrink-0 text-[10px] text-[#6b7280]">cofn.</span> : null}
+                    {l.undone ? <span className="shrink-0 text-[10px] text-[#6b7280]">{t.undoneShort}</span> : null}
                   </span>
                   <span className="min-w-0 truncate text-xs" style={{ color: l.moderatorTag.startsWith("Anti-Spam") ? "#a5b4fc" : "#b9c0d0" }}>
                     {l.moderatorTag}
                   </span>
                   <span className="min-w-0 truncate text-xs text-[#8d94a8]">
-                    {l.reason || "—"}{l.extra ? ` · ${l.extra}` : ""}
+                    {l.reason || "-"}{l.extra ? ` · ${l.extra}` : ""}
                   </span>
-                  <span className="text-[11px] text-[#6b7280]">{formatDate(l.createdAt)}</span>
+                  <span className="text-[11px] text-[#6b7280]">{formatDate(l.createdAt, locale)}</span>
                   {undoBtn(false)}
                 </div>
 
@@ -987,8 +975,8 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
                     <span className="w-fit shrink-0 rounded-full px-2 py-[3px] text-[10px] font-bold" style={{ background: rgba(kindMeta.color, 0.15), color: kindMeta.color }}>
                       {kindMeta.label}
                     </span>
-                    {l.undone ? <span className="shrink-0 text-[10px] text-[#6b7280]">cofn.</span> : null}
-                    <span className="ml-auto shrink-0 text-[11px] text-[#6b7280]">{formatDate(l.createdAt)}</span>
+                    {l.undone ? <span className="shrink-0 text-[10px] text-[#6b7280]">{t.undoneShort}</span> : null}
+                    <span className="ml-auto shrink-0 text-[11px] text-[#6b7280]">{formatDate(l.createdAt, locale)}</span>
                   </div>
 
                   <div className="flex min-w-0 items-center gap-2">
@@ -1002,12 +990,12 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
 
                   <div className="space-y-1 text-xs leading-5 text-[#8d94a8]">
                     <p className="break-words">
-                      <span className="text-[#5f6b85]">Moderator: </span>
+                      <span className="text-[#5f6b85]">{t.moderatorLabel}</span>
                       <span style={{ color: l.moderatorTag.startsWith("Anti-Spam") ? "#a5b4fc" : "#b9c0d0" }}>{l.moderatorTag}</span>
                     </p>
                     <p className="break-words">
-                      <span className="text-[#5f6b85]">Powód: </span>
-                      {l.reason || "—"}{l.extra ? ` · ${l.extra}` : ""}
+                      <span className="text-[#5f6b85]">{t.reasonLabel}</span>
+                      {l.reason || "-"}{l.extra ? ` · ${l.extra}` : ""}
                     </p>
                   </div>
 
@@ -1020,7 +1008,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
 
         <div className="flex flex-wrap items-center gap-2.5 px-3.5 py-2.5">
           <span className="text-[11px] text-[#6b7280]">
-            {total > 0 ? `${(page - 1) * perPage + 1}–${Math.min(page * perPage, total)} z ${total}` : "brak wyników"}
+            {total > 0 ? t.range((page - 1) * perPage + 1, Math.min(page * perPage, total), total) : t.noResults}
           </span>
           <span className="flex-1" />
           <div className="flex items-center gap-1">
@@ -1028,7 +1016,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              aria-label="Poprzednia strona"
+              aria-label={t.prevPage}
               className="flex h-[26px] w-[26px] items-center justify-center rounded-md border transition-colors disabled:cursor-default"
               style={{ borderColor: "#2f3341", color: page > 1 ? "#c4cad8" : "#4b5563" }}
             >
@@ -1054,7 +1042,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
               type="button"
               onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
               disabled={page >= pageCount}
-              aria-label="Następna strona"
+              aria-label={t.nextPage}
               className="flex h-[26px] w-[26px] items-center justify-center rounded-md border transition-colors disabled:cursor-default"
               style={{ borderColor: "#2f3341", color: page < pageCount ? "#c4cad8" : "#4b5563" }}
             >
@@ -1067,7 +1055,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
             </SelectTrigger>
             <SelectContent>
               {PER_PAGE_OPTIONS.map((n) => (
-                <SelectItem key={n} value={String(n)}>{n} / stronę</SelectItem>
+                <SelectItem key={n} value={String(n)}>{t.perPage(n)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -1083,6 +1071,8 @@ export default function ModerationPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
+  const t = useMessages(moderationMessages);
+  const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1142,11 +1132,11 @@ export default function ModerationPage() {
       }
     } catch (err) {
       console.error("Error loading moderation data:", err);
-      setError("Nie udało się załadować konfiguracji moderacji. Sprawdź połączenie z internetem i spróbuj ponownie.");
+      setError(t.loadError);
     } finally {
       setLoading(false);
     }
-  }, [guildId]);
+  }, [guildId, t]);
 
   useEffect(() => {
     if (guildId) fetchData();
@@ -1167,14 +1157,14 @@ export default function ModerationPage() {
       const merged = { guildId, ...DEFAULT_CONFIG, ...saved };
       setConfig(merged);
       savedRef.current = merged;
-      toast.success("Konfiguracja moderacji została zapisana!");
+      toast.success(t.saved);
     } catch (err) {
       console.error("Error saving config:", err);
-      toast.error("Nie udało się zapisać konfiguracji");
+      toast.error(m.saveError);
     } finally {
       setSaving(false);
     }
-  }, [guildId, config]);
+  }, [guildId, config, t, m]);
 
   const handleCancel = useCallback(() => {
     setConfig(savedRef.current);
@@ -1184,7 +1174,7 @@ export default function ModerationPage() {
     id: `moderation-${guildId}`,
     isDirty,
     isSaving: saving,
-    label: "Moderacja",
+    label: t.title,
     onSave: handleSave,
     onCancel: handleCancel,
   }), [guildId, isDirty, saving, handleSave, handleCancel, registerDirtyController]);
@@ -1199,7 +1189,7 @@ export default function ModerationPage() {
     return (
       <div className="min-h-full">
         <div className="w-full">
-          <ErrorState title="Nie udało się załadować Moderacji" message={error} onRetry={handleRetry} />
+          <ErrorState title={t.loadErrorTitle} message={error} onRetry={handleRetry} />
         </div>
       </div>
     );
@@ -1231,22 +1221,22 @@ export default function ModerationPage() {
   const logTotal = statSummary?.logTotal ?? 0;
 
   const STATS = [
-    { value: `${onCount}/${COMMANDS.length}`, color: "#fff", label: pluralPl(onCount, "komenda aktywna", "komendy aktywne", "komend aktywnych") },
-    { value: String(punish30), color: "#fcd34d", label: pluralPl(punish30, "kara w 30 dni", "kary w 30 dni", "kar w 30 dni") },
-    { value: String(warnedTotal), color: "#c9aaff", label: pluralPl(warnedTotal, "aktywne ostrzeżenie", "aktywne ostrzeżenia", "aktywnych ostrzeżeń") },
+    { value: `${onCount}/${COMMANDS.length}`, color: "#fff", label: t.stats.commands(onCount) },
+    { value: String(punish30), color: "#fcd34d", label: t.stats.punish30(punish30) },
+    { value: String(warnedTotal), color: "#c9aaff", label: t.stats.warnings(warnedTotal) },
     {
       value: String(nearLimit),
       color: "#fca5a5",
       label: ladder
-        ? pluralPl(nearLimit, "osoba blisko limitu", "osoby blisko limitu", "osób blisko limitu")
-        : pluralPl(nearLimit, "osoba z ostrzeżeniami", "osoby z ostrzeżeniami", "osób z ostrzeżeniami"),
+        ? t.stats.nearLimit(nearLimit)
+        : t.stats.withWarnings(nearLimit),
     },
   ];
 
   const TABS: { id: "commands" | "warnings" | "log"; label: string; count: string }[] = [
-    { id: "commands", label: "Komendy", count: `${onCount}/${COMMANDS.length}` },
-    { id: "warnings", label: "Ostrzeżenia", count: String(warnedUserCount) },
-    { id: "log", label: "Otrzymane kary", count: String(logTotal) },
+    { id: "commands", label: t.tabs.commands, count: `${onCount}/${COMMANDS.length}` },
+    { id: "warnings", label: t.tabs.warnings, count: String(warnedUserCount) },
+    { id: "log", label: t.tabs.log, count: String(logTotal) },
   ];
 
   return (
@@ -1257,18 +1247,18 @@ export default function ModerationPage() {
             <div className="min-w-0">
               <h1 className="flex items-center gap-2 text-2xl font-bold text-white">
                 <Shield className="h-5 w-5 text-bot-primary" />
-                Moderacja
+                {t.title}
               </h1>
               <p className="mt-2 max-w-[640px] text-sm leading-6 text-[#969db0]">
-                Kto może używać komend moderacyjnych, jak działa drabinka ostrzeżeń i historia wydanych kar.
+                {t.subtitle}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-white/80">
-              <span>{config.enabled ? "Aktywne" : "Nieaktywne"}</span>
+              <span>{config.enabled ? m.active : m.inactive}</span>
               <DeezySwitch
                 checked={config.enabled}
                 onCheckedChange={(checked) => setConfig((prev) => ({ ...prev, enabled: checked }))}
-                aria-label="Włącz lub wyłącz moduł Moderacja"
+                aria-label={t.toggle}
               />
             </div>
           </div>
@@ -1279,7 +1269,7 @@ export default function ModerationPage() {
             <div className="flex items-start gap-2 rounded-md border border-[#3a3f4e] bg-[#17181E] px-3 py-2 text-xs leading-6 text-[#9aa2b8]">
               <ShieldOff className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
-                Komendy moderacyjne są <span className="font-semibold text-white/80">wyłączone</span> — żadna z nich nie zadziała, dopóki nie włączysz przełącznika u góry.
+                {t.disabledPrefix}<span className="font-semibold text-white/80">{t.disabledStrong}</span>{t.disabledSuffix}
               </span>
             </div>
           </SlideIn>
@@ -1298,18 +1288,18 @@ export default function ModerationPage() {
 
         <SlideIn direction="up" delay={160}>
           <div className="flex gap-1 rounded-[10px] p-[5px]" style={{ background: "#1F2129" }}>
-            {TABS.map((t) => {
-              const active = t.id === tab;
+            {TABS.map((tabItem) => {
+              const active = tabItem.id === tab;
               return (
                 <button
-                  key={t.id}
+                  key={tabItem.id}
                   type="button"
-                  onClick={() => setTab(t.id)}
+                  onClick={() => setTab(tabItem.id)}
                   className="flex flex-1 items-center justify-center gap-2 rounded-[7px] py-2.5 text-xs font-semibold transition-colors"
                   style={{ background: active ? "rgba(99,102,241,0.18)" : "transparent", color: active ? "#fff" : "#8d94a8" }}
                 >
-                  {t.label}
-                  <span className="text-[10px]" style={{ color: active ? "#a5b4fc" : "#5f6b85" }}>{t.count}</span>
+                  {tabItem.label}
+                  <span className="text-[10px]" style={{ color: active ? "#a5b4fc" : "#5f6b85" }}>{tabItem.count}</span>
                 </button>
               );
             })}
