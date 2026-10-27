@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
-import { createAuditLog, diffFields } from "@/lib/auditLog";
+import { createAuditLog, diffFields, rawAuditValue } from "@/lib/auditLog";
 import GuildSettings from "@/models/GuildSettings";
 import mongoose from "mongoose";
 import { z } from "zod";
+import { getApiMessages } from "@/i18n/apiServer";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,7 @@ export async function POST(
     const parsed = generalSettingsZod.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Nieprawidłowe dane", details: parsed.error.flatten() },
+        { error: (await getApiMessages()).t.errors.invalidData, details: parsed.error.flatten() },
         { status: 400 }
       );
     }
@@ -91,8 +92,8 @@ export async function POST(
     ).lean<IGuildSettings>();
 
     const changes = diffFields(oldSettings, result!, [
-      { field: "language", label: "Język bota" },
-      { field: "systemNotifyChannelId", label: "Kanał powiadomień systemowych" },
+      { field: "language", labelKey: 'botLanguage', formatValue: (v) => (v === "pl" || v === "en" ? { token: v } : rawAuditValue(v)) },
+      { field: "systemNotifyChannelId", labelKey: 'systemNotifyChannel' },
     ]);
 
     await createAuditLog({
@@ -101,7 +102,7 @@ export async function POST(
       username: session.user.name || session.user.email || "Unknown User",
       action: "settings.general.update",
       module: "settings",
-      description: "Zaktualizowano ustawienia ogólne serwera",
+      descriptionKey: 'settingsGeneralUpdated',
       changes,
     });
 

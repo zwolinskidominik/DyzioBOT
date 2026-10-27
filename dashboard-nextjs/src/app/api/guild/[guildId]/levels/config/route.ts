@@ -5,6 +5,7 @@ import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from 'mongoose';
 import { createAuditLog, diffFields } from "@/lib/auditLog";
 import { z } from "zod";
+import { getApiMessages } from '@/i18n/apiServer';
 
 // Whitelist pól POST-a — blokuje mass assignment.
 const levelConfigZod = z.object({
@@ -193,7 +194,7 @@ export async function POST(
     const parsedBody = levelConfigZod.safeParse(rawBody);
     if (!parsedBody.success) {
       return NextResponse.json(
-        { error: "Nieprawidłowe dane konfiguracji", details: parsedBody.error.flatten() },
+        { error: (await getApiMessages()).t.errors.invalidConfig, details: parsedBody.error.flatten() },
         { status: 400 }
       );
     }
@@ -234,23 +235,23 @@ export async function POST(
     );
 
     const changes = diffFields(oldConfig, sanitized, [
-      { field: 'enabled', label: 'Włączony' },
-      { field: 'xpPerMsg', label: 'XP za wiadomość' },
-      { field: 'xpPerMinVc', label: 'XP za minutę na kanale głosowym' },
-      { field: 'cooldownSec', label: 'Cooldown (s)' },
-      { field: 'notifyChannelId', label: 'Kanał powiadomień' },
-      { field: 'enableLevelUpMessages', label: 'Wiadomość o poziomie' },
-      { field: 'enableRewardMessages', label: 'Wiadomość o nagrodzie' },
-      { field: 'levelUpMessage', label: 'Treść wiadomości o poziomie' },
-      { field: 'rewardMessage', label: 'Treść wiadomości o nagrodzie' },
-      { field: 'roleRewards', label: 'Liczba nagród za poziom' },
-      { field: 'roleMultipliers', label: 'Liczba mnożników ról' },
-      { field: 'channelMultipliers', label: 'Liczba mnożników kanałów' },
-      { field: 'ignoredChannels', label: 'Ignorowane kanały' },
-      { field: 'ignoredRoles', label: 'Ignorowane role' },
-      { field: 'cardThemeColor', label: 'Kolor karty' },
-      { field: 'showRankBadge', label: 'Odznaka rangi' },
-      { field: 'removePreviousRewards', label: 'Usuwanie poprzednich nagród' },
+      { field: 'enabled', labelKey: 'enabled' },
+      { field: 'xpPerMsg', labelKey: 'xpPerMessage' },
+      { field: 'xpPerMinVc', labelKey: 'xpPerVoiceMinute' },
+      { field: 'cooldownSec', labelKey: 'cooldown' },
+      { field: 'notifyChannelId', labelKey: 'notifyChannel' },
+      { field: 'enableLevelUpMessages', labelKey: 'levelUpMessages' },
+      { field: 'enableRewardMessages', labelKey: 'rewardMessages' },
+      { field: 'levelUpMessage', labelKey: 'levelUpMessageText' },
+      { field: 'rewardMessage', labelKey: 'rewardMessageText' },
+      { field: 'roleRewards', labelKey: 'levelRewardCount' },
+      { field: 'roleMultipliers', labelKey: 'roleMultiplierCount' },
+      { field: 'channelMultipliers', labelKey: 'channelMultiplierCount' },
+      { field: 'ignoredChannels', labelKey: 'ignoredChannels' },
+      { field: 'ignoredRoles', labelKey: 'ignoredRoles' },
+      { field: 'cardThemeColor', labelKey: 'cardColor' },
+      { field: 'showRankBadge', labelKey: 'rankBadge' },
+      { field: 'removePreviousRewards', labelKey: 'removePreviousRewards' },
     ]);
 
     await createAuditLog({
@@ -259,7 +260,7 @@ export async function POST(
       username: session.user.name || session.user.email || 'Unknown User',
       action: 'levels.update',
       module: 'levels',
-      description: 'Zaktualizowano konfigurację systemu poziomów',
+      descriptionKey: 'levelsUpdated',
       metadata: {
         xpPerMsg: body.xpPerMsg,
         xpPerMinVc: body.xpPerMinVc,

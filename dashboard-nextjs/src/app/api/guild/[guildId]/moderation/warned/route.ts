@@ -5,6 +5,7 @@ import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import { resolveDiscordUsers } from '@/lib/discordUsers';
 import mongoose from 'mongoose';
 import { z } from 'zod';
+import { getApiMessages } from '@/i18n/apiServer';
 
 // Kształt musi odzwierciedlać bot/src/models/Warn.ts (osobny projekt npm — bez
 // cross-project importu, zgodnie z konwencją reszty dashboardu).
@@ -178,7 +179,7 @@ export async function DELETE(
     const parsed = deleteWarnZod.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Nieprawidłowe dane', details: parsed.error.flatten() },
+        { error: (await getApiMessages()).t.errors.invalidData, details: parsed.error.flatten() },
         { status: 400 }
       );
     }
@@ -192,10 +193,10 @@ export async function DELETE(
     );
 
     if (result.matchedCount === 0) {
-      return NextResponse.json({ error: 'Nie znaleziono użytkownika.' }, { status: 404 });
+      return NextResponse.json({ error: (await getApiMessages()).t.errors.warnedUserNotFound }, { status: 404 });
     }
     if (result.modifiedCount === 0) {
-      return NextResponse.json({ error: 'Nie znaleziono tego ostrzeżenia.' }, { status: 404 });
+      return NextResponse.json({ error: (await getApiMessages()).t.errors.warningNotFound }, { status: 404 });
     }
 
     await ModerationLog.updateMany(

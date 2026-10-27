@@ -13,16 +13,16 @@ import { SlideIn } from "@/components/ui/animated";
 import { useLang, useMessages } from "@/i18n/LanguageProvider";
 import { auditLogsMessages } from "@/i18n/messages/auditLogs";
 import type { Widen } from "@/i18n/config";
-import { useApiText } from "@/i18n/apiText";
 
 type AuditText = Widen<typeof auditLogsMessages.pl>;
 type ModuleKey = keyof AuditText["modules"];
 
+/** Zmiana pola: API zwraca etykietę i wartości już jako tekst w języku panelu. */
 interface AuditLogChange {
   field: string;
   label: string;
-  from?: unknown;
-  to: unknown;
+  from?: string;
+  to: string;
 }
 
 interface AuditLog {
@@ -125,12 +125,6 @@ function getAvatarUrl(userId: string, avatar?: string | null): string {
   return `https://cdn.discordapp.com/embed/avatars/${fallbackIndex}.png`;
 }
 
-function formatChangeValue(v: unknown, t: AuditText, api: (text: string) => string): string {
-  if (v === undefined || v === null || v === "") return t.valueNone;
-  if (typeof v === "boolean") return v ? t.valueOn : t.valueOff;
-  return api(String(v));
-}
-
 interface DayGroup {
   key: string;
   label: string;
@@ -160,7 +154,6 @@ export default function AuditLogsPage() {
   const params = useParams();
   const guildId = params.guildId as string;
   const t = useMessages(auditLogsMessages);
-  const api = useApiText();
   const { lang } = useLang();
   const locale = lang === "en" ? "en-GB" : "pl-PL";
 
@@ -431,7 +424,7 @@ export default function AuditLogsPage() {
                                   </div>
 
                                   {log.description && (
-                                    <p className="text-sm text-muted-foreground mt-1">{api(log.description)}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">{log.description}</p>
                                   )}
 
                                   {hasChanges && (
@@ -446,14 +439,14 @@ export default function AuditLogsPage() {
                                           className="inline-flex max-w-full flex-wrap items-center gap-1 text-[11px] px-2 py-1 rounded"
                                           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                                         >
-                                          <span className="text-muted-foreground">{api(change.label)}:</span>
+                                          <span className="text-muted-foreground">{change.label}:</span>
                                           {change.from !== undefined && (
                                             <>
-                                              <span className="break-all text-muted-foreground">{formatChangeValue(change.from, t, api)}</span>
+                                              <span className="break-all text-muted-foreground">{change.from}</span>
                                               <ArrowRight className="w-3 h-3 shrink-0 text-muted-foreground" />
                                             </>
                                           )}
-                                          <span className="break-all font-medium">{formatChangeValue(change.to, t, api)}</span>
+                                          <span className="break-all font-medium">{change.to}</span>
                                         </span>
                                       ))}
                                       {!isExpanded && log.changes!.length > 3 && (

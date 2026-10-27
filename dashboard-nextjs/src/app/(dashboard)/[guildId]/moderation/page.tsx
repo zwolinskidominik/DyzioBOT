@@ -18,7 +18,6 @@ import { useLang, useMessages } from "@/i18n/LanguageProvider";
 import { moderationMessages } from "@/i18n/messages/moderation";
 import { commonMessages } from "@/i18n/messages/common";
 import type { Widen } from "@/i18n/config";
-import { useApiText } from "@/i18n/apiText";
 
 type ModerationText = Widen<typeof moderationMessages.pl>;
 
@@ -792,7 +791,6 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
   const [perPage, setPerPage] = useState(6);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const t = useMessages(moderationMessages);
-  const api = useApiText();
   const { lang } = useLang();
   const locale = lang === "en" ? "en-GB" : "pl-PL";
 
@@ -848,7 +846,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.error ? api(err.error) : t.undoError);
+        throw new Error(err?.error ? err.error : t.undoError);
       }
       setItems((prev) => prev.map((x) => (x._id === l._id ? { ...x, undone: true } : x)));
       toast.success(t.undone);
@@ -962,7 +960,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
                     {l.moderatorTag}
                   </span>
                   <span className="min-w-0 truncate text-xs text-[#8d94a8]">
-                    {l.reason || "-"}{l.extra ? ` · ${api(l.extra)}` : ""}
+                    {l.reason || "-"}{l.extra ? ` · ${l.extra}` : ""}
                   </span>
                   <span className="text-[11px] text-[#6b7280]">{formatDate(l.createdAt, locale)}</span>
                   {undoBtn(false)}
@@ -997,7 +995,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
                     </p>
                     <p className="break-words">
                       <span className="text-[#5f6b85]">{t.reasonLabel}</span>
-                      {l.reason || "-"}{l.extra ? ` · ${api(l.extra)}` : ""}
+                      {l.reason || "-"}{l.extra ? ` · ${l.extra}` : ""}
                     </p>
                   </div>
 

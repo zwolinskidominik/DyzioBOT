@@ -1,8 +1,11 @@
+import type { Lang } from "@/i18n/config";
+import { apiMessages } from "@/i18n/messages/api";
+
 /**
  * Kopia mapowania emoji z `src/config/bot.ts` (bot Discord — osobny projekt Node.js, poza tym
  * repo Next.js, więc nie da się go bezpośrednio zaimportować). MUSI być ręcznie zsynchronizowana
  * z `src/config/bot.ts` / `src/interfaces/BotConfig.ts` przy każdej zmianie configu emoji bota —
- * ten sam wzorzec co `EVENT_LABELS` w `app/api/guild/[guildId]/logs/config/route.ts`.
+ * ten sam wzorzec co `LOG_EVENT_NAMES_PL` w `i18n/messages/auditEntries.ts`.
  *
  * Używane przez moduł „Emoji Bota", żeby dla każdego realnego emoji z Discord Application Emojis
  * pokazać, czy (i pod jakim kluczem) jest wpięte w config bota — i zablokować usunięcie takiego
@@ -123,22 +126,17 @@ const BOT_EMOJIS: Record<string, EmojiTree> = {
   },
 };
 
-/** Polskie etykiety grup dla kluczy najwyższego poziomu drzewa emoji configu. */
-export const EMOJI_GROUP_LABELS: Record<string, string> = {
-  next: "Nawigacja",
-  previous: "Nawigacja",
-  birthday: "Urodziny",
-  boost: "Boosty",
-  faceit: "FACEIT",
-  giveaway: "Giveaway",
-  greetings: "Powitania",
-  monthlyStats: "Statystyki miesięczne",
-  suggestion: "Sugestie",
-  suggestionPB: "Pasek postępu sugestii",
-  trophy: "Podium",
-  warnPB: "Pasek ostrzeżeń",
-  none: "Bez odwołania",
-};
+type EmojiGroupKey = keyof (typeof apiMessages)["pl"]["emojiGroups"];
+
+function isEmojiGroupKey(key: string): key is EmojiGroupKey {
+  return Object.prototype.hasOwnProperty.call(apiMessages.pl.emojiGroups, key);
+}
+
+/** Nazwa grupy dla klucza najwyższego poziomu drzewa emoji configu, w języku panelu. */
+function groupLabelFor(topLevelKey: string, lang: Lang): string {
+  if (!isEmojiGroupKey(topLevelKey)) return topLevelKey;
+  return (lang === "en" ? apiMessages.en : apiMessages.pl).emojiGroups[topLevelKey];
+}
 
 /** Klucze, które w filtrze grup mają być jedną pozycją (np. next/previous = Nawigacja). */
 const EMOJI_GROUP_ALIASES: Record<string, string> = { previous: "next" };
@@ -159,7 +157,8 @@ function flatten(
   tree: EmojiTree,
   topLevelKey: string,
   path: string[],
-  out: Map<string, EmojiConfigEntry>
+  out: Map<string, EmojiConfigEntry>,
+  lang: Lang
 ): void {
   for (const [k, v] of Object.entries(tree)) {
     const nextPath = [...path, k];
@@ -169,17 +168,17 @@ function flatten(
         out.set(parsed.id, {
           key: nextPath.join("."),
           group: EMOJI_GROUP_ALIASES[topLevelKey] ?? topLevelKey,
-          groupLabel: EMOJI_GROUP_LABELS[topLevelKey] ?? topLevelKey,
+          groupLabel: groupLabelFor(topLevelKey, lang),
         });
       }
     } else {
-      flatten(v, topLevelKey, nextPath, out);
+      flatten(v, topLevelKey, nextPath, out, lang);
     }
   }
 }
 
 /** Discord emoji ID -> {key, group, groupLabel} dla configu danego bota (fallback jak w bocie: test bot). */
-export function getEmojiConfigMap(botId: string | undefined): Map<string, EmojiConfigEntry> {
+export function getEmojiConfigMap(botId: string | undefined, lang: Lang = "pl"): Map<string, EmojiConfigEntry> {
   const tree = (botId && BOT_EMOJIS[botId]) || BOT_EMOJIS[TEST_BOT_ID];
   const out = new Map<string, EmojiConfigEntry>();
 
@@ -190,11 +189,11 @@ export function getEmojiConfigMap(botId: string | undefined): Map<string, EmojiC
         out.set(parsed.id, {
           key: topLevelKey,
           group: EMOJI_GROUP_ALIASES[topLevelKey] ?? topLevelKey,
-          groupLabel: EMOJI_GROUP_LABELS[topLevelKey] ?? topLevelKey,
+          groupLabel: groupLabelFor(topLevelKey, lang),
         });
       }
     } else {
-      flatten(subtree, topLevelKey, [topLevelKey], out);
+      flatten(subtree, topLevelKey, [topLevelKey], out, lang);
     }
   }
 

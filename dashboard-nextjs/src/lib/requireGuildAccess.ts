@@ -3,6 +3,7 @@ import type { Session } from "next-auth";
 import { OWNER_IDS } from "./owner";
 import { getCachedGuildList, setCachedGuildList, type CachedDiscordGuild } from "./discordGuildCache";
 import { fetchDiscordUserGuildsDeduped } from "./discordUserGuilds";
+import { getApiMessages } from "@/i18n/apiServer";
 
 /**
  * Sprawdza, czy zalogowany użytkownik ma prawo zarządzać DANYM serwerem
@@ -75,7 +76,7 @@ export async function requireGuildAccess(
         guilds = stale;
       } else {
         return NextResponse.json(
-          { error: "Nie udało się zweryfikować dostępu do serwera" },
+          { error: (await getApiMessages()).t.errors.guildAccessCheckFailed },
           { status: 502 }
         );
       }

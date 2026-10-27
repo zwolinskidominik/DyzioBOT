@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Session } from "next-auth";
 import { getCachedGuildList, setCachedGuildList, type CachedDiscordGuild } from "./discordGuildCache";
 import { fetchDiscordUserGuildsDeduped } from "./discordUserGuilds";
+import { getApiMessages } from "@/i18n/apiServer";
 
 /**
  * Sprawdza, czy zalogowany użytkownik jest REALNYM właścicielem danego serwera
@@ -47,7 +48,7 @@ export async function requireGuildOwner(
         guilds = stale;
       } else {
         return NextResponse.json(
-          { error: "Nie udało się zweryfikować własności serwera" },
+          { error: (await getApiMessages()).t.errors.guildOwnerCheckFailed },
           { status: 502 }
         );
       }
@@ -58,7 +59,7 @@ export async function requireGuildOwner(
 
   if (!guild || guild.owner !== true) {
     return NextResponse.json(
-      { error: "Ta akcja jest dostępna tylko dla właściciela tego serwera Discord." },
+      { error: (await getApiMessages()).t.errors.ownerOnlyAction },
       { status: 403 }
     );
   }

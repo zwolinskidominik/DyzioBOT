@@ -114,7 +114,8 @@ export async function POST(
       username: session.user.name || session.user.email || "Unknown User",
       action: "settings.danger.resetEconomy",
       module: "settings",
-      description: `Wyzerowano saldo WSZYSTKICH użytkowników na serwerze (${affected.length} kont)`,
+      descriptionKey: 'economyReset',
+      descriptionParams: { count: affected.length },
       metadata: { usersAffected: affected.length },
     });
 

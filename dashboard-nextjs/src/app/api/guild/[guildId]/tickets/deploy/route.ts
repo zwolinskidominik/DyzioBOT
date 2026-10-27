@@ -6,6 +6,7 @@ import TicketConfigModel from "@/models/TicketConfig";
 import { createAuditLog, diffFields } from "@/lib/auditLog";
 import { getPanelBannerAttachment } from "@/lib/ticketPanelBanner";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
+import { getApiMessages } from "@/i18n/apiServer";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -97,13 +98,13 @@ export async function POST(
 
     const config = await TicketConfigModel.findOne({ guildId });
     if (!config) {
-      return NextResponse.json({ error: "Brak zapisanej konfiguracji ticketów" }, { status: 400 });
+      return NextResponse.json({ error: (await getApiMessages()).t.errors.noTicketConfig }, { status: 400 });
     }
     if (!config.panelChannelId) {
-      return NextResponse.json({ error: "Wybierz najpierw kanał panelu" }, { status: 400 });
+      return NextResponse.json({ error: (await getApiMessages()).t.errors.pickPanelChannelFirst }, { status: 400 });
     }
     if (!config.types || config.types.length === 0) {
-      return NextResponse.json({ error: "Dodaj przynajmniej jeden typ ticketa" }, { status: 400 });
+      return NextResponse.json({ error: (await getApiMessages()).t.errors.addTicketTypeFirst }, { status: 400 });
     }
 
     // Remove the previous panel message, if any, before sending the new one.
@@ -251,7 +252,7 @@ export async function POST(
       } else {
         console.error("Failed to send panel message:", messageResponse.status, errorText);
         return NextResponse.json(
-          { error: `Discord odrzucił panel (${messageResponse.status}): ${formatDiscordError(errorText)}` },
+          { error: (await getApiMessages()).t.errors.discordRejectedPanel(messageResponse.status, formatDiscordError(errorText)) },
           { status: 502 }
         );
       }
@@ -261,7 +262,7 @@ export async function POST(
       const retryErrorText = await messageResponse.text();
       console.error("Failed to send panel message (after emoji retry):", messageResponse.status, retryErrorText);
       return NextResponse.json(
-        { error: `Discord odrzucił panel (${messageResponse.status}): ${formatDiscordError(retryErrorText)}` },
+        { error: (await getApiMessages()).t.errors.discordRejectedPanel(messageResponse.status, formatDiscordError(retryErrorText)) },
         { status: 502 }
       );
     }
@@ -278,8 +279,8 @@ export async function POST(
       config.toObject ? config.toObject() : config,
       { enabled: true, panelMessageId: messageData.id },
       [
-        { field: "enabled", label: "Włączony" },
-        { field: "panelMessageId", label: "ID wiadomości panelu" },
+        { field: "enabled", labelKey: 'enabled' },
+        { field: "panelMessageId", labelKey: 'panelMessageId' },
       ]
     );
 
@@ -289,14 +290,15 @@ export async function POST(
       username: session.user.name || session.user.email || "Unknown User",
       action: "tickets.deploy",
       module: "tickets",
-      description: `Wdrożono panel ticketów na Discord (${config.types.length} typów)`,
+      descriptionKey: 'ticketsDeployed',
+      descriptionParams: { count: config.types.length },
       metadata: { panelChannelId: config.panelChannelId, typeCount: config.types.length, strippedEmojiTypeNames },
       changes,
     });
 
     const warning =
       strippedEmojiTypeNames.length > 0
-        ? `Panel wdrożony, ale usunięto nieprawidłowe emoji (prawdopodobnie skasowane z serwera) z: ${strippedEmojiTypeNames.join(", ")}. Wybierz nowe emoji dla ${strippedEmojiTypeNames.length === 1 ? "tego typu" : "tych typów"} w edycji.`
+        ? (await getApiMessages()).t.errors.panelStrippedEmojis(strippedEmojiTypeNames.join(", "), strippedEmojiTypeNames.length)
         : undefined;
 
     const responseBody = result ? { ...result.toObject(), ...(warning ? { warning } : {}) } : { warning };

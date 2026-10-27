@@ -5,6 +5,7 @@ import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { mkdir, readdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import mongoose from "mongoose";
+import { getApiMessages } from "@/i18n/apiServer";
 
 const DEFAULT_EMBED_COLOR = "#3b82f6";
 const IMAGES_DIR = path.join(process.cwd(), "../assets/greetings/uploads");
@@ -412,7 +413,7 @@ async function applyGifState(guildId: string, userId: string | undefined, formDa
   const existingUploadFiles = await readGifFiles(uploadDir);
   const remainingUploadCount = existingUploadFiles.filter((fileName) => !gifState.deletedUploadNames.includes(fileName)).length;
   if (remainingUploadCount + uploadFiles.length > MAX_GREETING_GIFS) {
-    throw new Error(`Możesz dodać maksymalnie ${MAX_GREETING_GIFS} GIF-ów`);
+    throw new Error((await getApiMessages()).t.errors.gifLimit(MAX_GREETING_GIFS));
   }
 
   await Promise.all(gifState.deletedUploadNames.map((fileName) => safeUnlink(getGifUploadPath(guildId, fileName))));
@@ -420,11 +421,11 @@ async function applyGifState(guildId: string, userId: string | undefined, formDa
   await mkdir(uploadDir, { recursive: true });
   await Promise.all(uploadFiles.map(async (file) => {
     if (!file.type.includes("gif")) {
-      throw new Error("Plik musi być w formacie GIF");
+      throw new Error((await getApiMessages()).t.errors.gifOnly);
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      throw new Error("Maksymalny rozmiar GIF-a to 8MB");
+      throw new Error((await getApiMessages()).t.errors.gifTooBig);
     }
 
     const fileName = createGifFileName(file.name);
@@ -462,11 +463,11 @@ async function savePendingImages(guildId: string, formData: FormData, payload: R
       if (!isUploadedFile(file)) continue;
 
       if (!file.type.startsWith("image/")) {
-        throw new Error("Plik musi być obrazem");
+        throw new Error((await getApiMessages()).t.errors.imageOnly);
       }
 
       if (file.size > MAX_FILE_SIZE) {
-        throw new Error("Maksymalny rozmiar obrazka to 8MB");
+        throw new Error((await getApiMessages()).t.errors.imageTooBig);
       }
 
       const fileName = createImageFileName(moduleKey, slot, file.name, file.type);

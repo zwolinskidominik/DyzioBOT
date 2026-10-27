@@ -6,7 +6,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 vi.mock("@/lib/auth.config", () => ({ authOptions: {} }));
 vi.mock("@/lib/requireGuildAccess", () => ({ requireGuildAccess: vi.fn().mockResolvedValue(null) }));
-vi.mock("@/lib/auditLog", () => ({ createAuditLog: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/lib/auditLog", () => ({
+  createAuditLog: vi.fn().mockResolvedValue(undefined),
+  auditChange: (field: string, labelKey: string, to: unknown) => ({ field, labelKey, label: labelKey, to }),
+}));
 vi.mock("@/lib/owner", () => ({ OWNER_IDS: ["u1"], PROFILE_EDIT_GUILD_IDS: ["owner-guild"] }));
 
 import { getServerSession } from "next-auth";

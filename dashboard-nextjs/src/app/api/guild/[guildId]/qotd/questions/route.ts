@@ -5,16 +5,17 @@ import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import { randomUUID } from 'crypto';
 import mongoose from 'mongoose';
 import { getBotEmojiIds, findInvalidCustomEmojis } from '@/lib/botEmojis';
+import { getApiMessages } from '@/i18n/apiServer';
 
 async function validateReactions(reactions: unknown): Promise<string | null> {
   if (reactions === undefined) return null;
   if (!Array.isArray(reactions) || !reactions.every((r) => typeof r === 'string')) {
-    return 'Reactions musi być tablicą stringów';
+    return (await getApiMessages()).t.errors.reactionsMustBeArray;
   }
   const botEmojiIds = await getBotEmojiIds();
   const invalid = findInvalidCustomEmojis(reactions, botEmojiIds);
   if (invalid.length > 0) {
-    return 'Można używać tylko standardowych emoji lub emoji bota';
+    return (await getApiMessages()).t.errors.onlyBotEmojis;
   }
   return null;
 }

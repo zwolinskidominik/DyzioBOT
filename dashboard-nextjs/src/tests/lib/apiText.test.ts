@@ -1,33 +1,63 @@
 import { describe, it, expect } from "vitest";
-import { translateApiText, translateDayLabel } from "@/i18n/apiText";
+import { translateLegacyText } from "@/i18n/legacyApiText";
+import { formatAuditValue, renderAuditEntry } from "@/i18n/auditEntryText";
 
-describe("translateApiText", () => {
+describe("translateLegacyText (older Polish audit entries and bot-written extras)", () => {
   it("leaves Polish text untouched for the Polish dashboard", () => {
-    expect(translateApiText("Zaktualizowano profil bota na tym serwerze", "pl")).toBe("Zaktualizowano profil bota na tym serwerze");
+    expect(translateLegacyText("Zaktualizowano profil bota na tym serwerze", "pl")).toBe("Zaktualizowano profil bota na tym serwerze");
   });
 
   it("translates stored audit log descriptions, labels and values", () => {
-    expect(translateApiText("Zaktualizowano profil bota na tym serwerze", "en")).toBe("Updated the bot profile on this server");
-    expect(translateApiText("Zaktualizowano konfigurację logów (2 zmian)", "en")).toBe("Updated the log settings (2 changes)");
-    expect(translateApiText("Aktualizacja serwera: kanał", "en")).toBe("Server updated: channel");
-    expect(translateApiText("Banner bota", "en")).toBe("Bot banner");
-    expect(translateApiText("zmieniono", "en")).toBe("changed");
+    expect(translateLegacyText("Zaktualizowano profil bota na tym serwerze", "en")).toBe("Updated the bot profile on this server");
+    expect(translateLegacyText("Zaktualizowano konfigurację logów (2 zmian)", "en")).toBe("Updated the log settings (2 changes)");
+    expect(translateLegacyText("Aktualizacja serwera: kanał", "en")).toBe("Server updated: channel");
+    expect(translateLegacyText("Banner bota", "en")).toBe("Bot banner");
+    expect(translateLegacyText("zmieniono", "en")).toBe("changed");
   });
 
-  it("translates module issues, emoji groups and punishment extras", () => {
-    expect(translateApiText("Brak wybranego kanału powitań", "en")).toBe("No welcome channel picked");
-    expect(translateApiText("Pasek postępu sugestii", "en")).toBe("Suggestion progress bar");
-    expect(translateApiText("15 minut", "en")).toBe("15 min");
-    expect(translateApiText("3 godziny", "en")).toBe("3 hours");
+  it("translates punishment extras written by the bot", () => {
+    expect(translateLegacyText("15 minut", "en")).toBe("15 min");
+    expect(translateLegacyText("3 godziny", "en")).toBe("3 hours");
   });
 
   it("keeps unknown text such as channel names as is", () => {
-    expect(translateApiText("#ogólny", "en")).toBe("#ogólny");
-    expect(translateApiText(undefined, "en")).toBe("");
+    expect(translateLegacyText("#ogólny", "en")).toBe("#ogólny");
+    expect(translateLegacyText(undefined, "en")).toBe("");
+  });
+});
+
+describe("renderAuditEntry", () => {
+  const entry = {
+    descriptionKey: "logsUpdated",
+    descriptionParams: { count: 2 },
+    description: "Zaktualizowano konfigurację logów (2 zmiany)",
+    changes: [
+      { field: "enabledEvents.guildUpdate", labelKey: "logEventLogging" as const, labelParams: { event: "guildUpdate" }, label: "Aktualizacja serwera: logowanie", from: false, to: true },
+      { field: "colorOverrides.guildUpdate", labelKey: "logEventColor" as const, labelParams: { event: "guildUpdate" }, label: "Aktualizacja serwera: kolor", from: { token: "default" as const }, to: "#ff0000" },
+    ],
+  };
+
+  it("builds English text from stored keys", () => {
+    const r = renderAuditEntry(entry, "en");
+    expect(r.description).toBe("Updated the log settings (2 changes)");
+    expect(r.changes[0]).toEqual({ field: "enabledEvents.guildUpdate", label: "Server updated: logging", from: "off", to: "on" });
+    expect(r.changes[1]).toMatchObject({ label: "Server updated: color", from: "default", to: "#ff0000" });
   });
 
-  it("formats DD.MM day labels for English", () => {
-    expect(translateDayLabel("27.09", "en")).toBe("Sep 27");
-    expect(translateDayLabel("27.09", "pl")).toBe("27.09");
+  it("builds Polish text from stored keys", () => {
+    const r = renderAuditEntry(entry, "pl");
+    expect(r.description).toBe("Zaktualizowano konfigurację logów (2 zmiany)");
+    expect(r.changes[0]).toMatchObject({ label: "Aktualizacja serwera: logowanie", from: "wyłączone", to: "włączone" });
+  });
+
+  it("falls back to the stored Polish text for older entries", () => {
+    const r = renderAuditEntry({ description: "Zaktualizowano konfigurację turnieju", changes: [{ field: "enabled", label: "Włączony", from: "wyłączone", to: "włączone" }] }, "en");
+    expect(r.description).toBe("Updated the tournament settings");
+    expect(r.changes[0]).toMatchObject({ label: "Enabled", from: "off", to: "on" });
+  });
+
+  it("does not translate raw user values in new entries", () => {
+    expect(formatAuditValue("brak", "en", false)).toBe("brak");
+    expect(formatAuditValue(null, "en", false)).toBe("none");
   });
 });

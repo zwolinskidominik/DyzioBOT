@@ -43,7 +43,6 @@ import {
   getUsedChannelVariables,
   type ChannelVariableKey,
 } from "@/lib/greetingChannelVars";
-import { useApiText } from "@/i18n/apiText";
 
 const DEFAULT_WELCOME_MESSAGE = `### Witaj {user} na {server}
 
@@ -437,7 +436,6 @@ export default function GreetingsPage() {
   const t = useMessages(greetingsMessages);
   const m = useMessages(commonMessages).module;
   const greetingsSchema = useMemo(() => createGreetingsSchema(t), [t]);
-  const api = useApiText();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -749,7 +747,7 @@ export default function GreetingsPage() {
 
       if (!response.ok) {
         const result = await response.json().catch(() => null);
-        throw new Error(result?.error ? api(result.error) : m.saveError);
+        throw new Error(result?.error ? result.error : m.saveError);
       }
 
       const result = await response.json();
@@ -767,7 +765,7 @@ export default function GreetingsPage() {
     } finally {
       setSaving(false);
     }
-  }, [clearPendingAssets, deletedUploadGifNames, guildId, reset, m, api]);
+  }, [clearPendingAssets, deletedUploadGifNames, guildId, reset, m]);
 
   const submitFromDirtyBar = useCallback(() => {
     void handleSubmit(onSubmit, () => setOpenSections((sections) => ({ ...sections, welcome: true })))();

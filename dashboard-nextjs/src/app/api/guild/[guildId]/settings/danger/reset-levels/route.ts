@@ -59,7 +59,8 @@ export async function POST(
       username: session.user.name || session.user.email || "Unknown User",
       action: "settings.danger.resetLevels",
       module: "settings",
-      description: `Zresetowano poziomy WSZYSTKICH użytkowników na serwerze (usunięto ${result.deletedCount} rekordów)`,
+      descriptionKey: 'levelsReset',
+      descriptionParams: { count: result.deletedCount },
       metadata: { deletedCount: result.deletedCount },
     });
 

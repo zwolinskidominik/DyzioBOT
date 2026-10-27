@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { langFromAcceptLanguage, resolveLang, isLang } from "@/i18n/config";
 import { antiSpamMessages } from "@/i18n/messages/antiSpam";
+import { apiMessages } from "@/i18n/messages/api";
+import { auditEntryMessages } from "@/i18n/messages/auditEntries";
 import { auditLogsMessages } from "@/i18n/messages/auditLogs";
 import { autorolesMessages } from "@/i18n/messages/autoroles";
 import { botEmojisMessages } from "@/i18n/messages/botEmojis";
@@ -24,6 +26,8 @@ import { wordleMessages } from "@/i18n/messages/wordle";
 
 const DICTIONARIES = {
   antiSpamMessages,
+  apiMessages,
+  auditEntryMessages,
   auditLogsMessages,
   autorolesMessages,
   botEmojisMessages,

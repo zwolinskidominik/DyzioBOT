@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import GiveawayConfig from '@/models/GiveawayConfig';
 import { createAuditLog, diffFields } from '@/lib/auditLog';
 import { z } from 'zod';
+import { getApiMessages } from '@/i18n/apiServer';
 
 // Whitelist pól POST-a — blokuje mass assignment.
 const giveawayConfigZod = z.object({
@@ -87,7 +88,7 @@ export async function POST(
     const parsed = giveawayConfigZod.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Nieprawidłowe dane konfiguracji', details: parsed.error.flatten() },
+        { error: (await getApiMessages()).t.errors.invalidConfig, details: parsed.error.flatten() },
         { status: 400 }
       );
     }
@@ -105,9 +106,9 @@ export async function POST(
     );
 
     const changes = diffFields(oldConfig, { ...body, guildId }, [
-      { field: 'enabled', label: 'Włączony' },
-      { field: 'additionalNote', label: 'Dodatkowa notatka' },
-      { field: 'roleMultipliers', label: 'Liczba mnożników ról' },
+      { field: 'enabled', labelKey: 'enabled' },
+      { field: 'additionalNote', labelKey: 'additionalNote' },
+      { field: 'roleMultipliers', labelKey: 'roleMultiplierCount' },
     ]);
 
     await createAuditLog({
@@ -116,7 +117,7 @@ export async function POST(
       username: session.user.name || 'Unknown',
       action: 'update',
       module: 'giveaway',
-      description: 'Zaktualizowano konfigurację giveawayów',
+      descriptionKey: 'giveawayUpdated',
       metadata: {
         enabled: body.enabled,
         roleMultipliersCount: body.roleMultipliers?.length || 0,

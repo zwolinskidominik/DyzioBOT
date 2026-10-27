@@ -99,9 +99,9 @@ export async function POST(
       existing ? { enabled: existing.enabled, channelIds: existing.channelIds, creators: existing.creators } : null,
       { enabled, channelIds, creators },
       [
-        { field: 'enabled', label: 'Włączony' },
-        { field: 'channelIds', label: 'Liczba kanałów' },
-        { field: 'creators', label: 'Liczba kreatorów' },
+        { field: 'enabled', labelKey: 'enabled' },
+        { field: 'channelIds', labelKey: 'channelCount' },
+        { field: 'creators', labelKey: 'creatorCount' },
       ]
     );
 
@@ -111,7 +111,8 @@ export async function POST(
       username: session.user.name || session.user.email || 'Unknown User',
       action: 'temp_channels.update',
       module: 'temp_channels',
-      description: `Zaktualizowano kanały tymczasowe (${channelIds.length} kanałów)`,
+      descriptionKey: 'tempChannelsUpdated',
+      descriptionParams: { count: channelIds.length },
       metadata: {
         channelIds,
         creators,

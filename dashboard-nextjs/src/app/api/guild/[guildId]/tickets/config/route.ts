@@ -187,10 +187,10 @@ export async function POST(
     );
 
     const changes = diffFields(oldConfig, nextConfig, [
-      { field: "enabled", label: "Włączony" },
-      { field: "categoryId", label: "Kategoria" },
-      { field: "panelChannelId", label: "Kanał panelu" },
-      { field: "types", label: "Liczba typów ticketów" },
+      { field: "enabled", labelKey: 'enabled' },
+      { field: "categoryId", labelKey: 'category' },
+      { field: "panelChannelId", labelKey: 'panelChannel' },
+      { field: "types", labelKey: 'ticketTypeCount' },
     ]);
 
     await createAuditLog({
@@ -199,7 +199,8 @@ export async function POST(
       username: session.user.name || session.user.email || "Unknown User",
       action: "tickets.update",
       module: "tickets",
-      description: `Zaktualizowano konfigurację ticketów (${types.length} ${types.length === 1 ? "typ" : "typów"})`,
+      descriptionKey: 'ticketsUpdated',
+      descriptionParams: { count: types.length },
       metadata: { categoryId, panelChannelId, typeCount: types.length, automation },
       changes,
     });

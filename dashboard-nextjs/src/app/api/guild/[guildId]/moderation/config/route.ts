@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
 import { z } from 'zod';
+import { getApiMessages } from '@/i18n/apiServer';
 
 // Whitelist pól POST-a — blokuje mass assignment. Kształt musi odzwierciedlać
 // bot/src/models/ModerationConfig.ts (osobny projekt npm — bez cross-project importu,
@@ -169,7 +170,7 @@ export async function POST(
     const parsed = moderationConfigZod.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Nieprawidłowe dane konfiguracji', details: parsed.error.flatten() },
+        { error: (await getApiMessages()).t.errors.invalidConfig, details: parsed.error.flatten() },
         { status: 400 }
       );
     }

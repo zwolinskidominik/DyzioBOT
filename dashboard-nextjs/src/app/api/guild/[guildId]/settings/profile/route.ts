@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
-import { createAuditLog } from "@/lib/auditLog";
+import { auditChange, createAuditLog } from "@/lib/auditLog";
 import { z } from "zod";
 import { PROFILE_EDIT_GUILD_IDS } from "@/lib/owner";
+import { getApiMessages } from "@/i18n/apiServer";
 
 export const dynamic = "force-dynamic";
 
@@ -120,7 +121,7 @@ export async function GET(
 
   if (!discordRes.ok) {
     return NextResponse.json(
-      { error: `Nie udało się pobrać profilu bota z Discorda (${discordRes.status})` },
+      { error: (await getApiMessages()).t.errors.profileFetchFailed(discordRes.status) },
       { status: 502 }
     );
   }
@@ -166,7 +167,7 @@ export async function PATCH(
 
   if (!isProfileEditable(guildId)) {
     return NextResponse.json(
-      { error: "Zmiana profilu bota będzie dostępna wkrótce." },
+      { error: (await getApiMessages()).t.errors.profileEditSoon },
       { status: 403 }
     );
   }
@@ -180,7 +181,7 @@ export async function PATCH(
   const parsed = profilePatchZod.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Nieprawidłowe dane", details: parsed.error.flatten() },
+      { error: (await getApiMessages()).t.errors.invalidData, details: parsed.error.flatten() },
       { status: 400 }
     );
   }
@@ -192,10 +193,10 @@ export async function PATCH(
   ] as const) {
     if (typeof value === "string") {
       if (!value.startsWith("data:image/")) {
-        return NextResponse.json({ error: `Nieprawidłowy format obrazu (${label})` }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.profileImageFormat(label) }, { status: 400 });
       }
       if (approxBase64Bytes(value) > MAX_IMAGE_BYTES) {
-        return NextResponse.json({ error: `Obraz (${label}) jest za duży (max 8 MB)` }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.profileImageTooBig(label) }, { status: 400 });
       }
     }
   }
@@ -231,15 +232,15 @@ export async function PATCH(
     username: session.user.name || session.user.email || "Unknown User",
     action: "settings.profile.update",
     module: "settings",
-    description: "Zaktualizowano profil bota na tym serwerze",
+    descriptionKey: 'settingsProfileUpdated',
     changes: [
-      ...(nick !== undefined ? [{ field: "nick", label: "Nazwa bota", to: nick ?? "brak" }] : []),
-      ...(bio !== undefined ? [{ field: "bio", label: "Opis bota", to: bio ?? "brak" }] : []),
+      ...(nick !== undefined ? [auditChange("nick", "botName", nick)] : []),
+      ...(bio !== undefined ? [auditChange("bio", "botBio", bio)] : []),
       ...(avatar !== undefined
-        ? [{ field: "avatar", label: "Avatar bota", to: avatar ? "zmieniono" : "usunięto" }]
+        ? [auditChange("avatar", "botAvatar", { token: avatar ? "changed" : "removed" })]
         : []),
       ...(banner !== undefined
-        ? [{ field: "banner", label: "Banner bota", to: banner ? "zmieniono" : "usunięto" }]
+        ? [auditChange("banner", "botBanner", { token: banner ? "changed" : "removed" })]
         : []),
     ],
   });

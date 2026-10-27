@@ -134,13 +134,13 @@ export async function POST(
       leaveEmbed: s.leave.embed,
     });
     const changes = diffFields(flatten(oldSerialized), flatten(newSerialized), [
-      { field: 'enabled', label: 'Włączony' },
-      { field: 'joinEnabled', label: 'Powiadomienia o dołączeniu' },
-      { field: 'joinLogChannelId', label: 'Kanał logów dołączeń' },
-      { field: 'joinEmbed', label: 'Embed przy dołączeniu' },
-      { field: 'leaveEnabled', label: 'Powiadomienia o opuszczeniu' },
-      { field: 'leaveLogChannelId', label: 'Kanał logów opuszczeń' },
-      { field: 'leaveEmbed', label: 'Embed przy opuszczeniu' },
+      { field: 'enabled', labelKey: 'enabled' },
+      { field: 'joinEnabled', labelKey: 'joinNotifications' },
+      { field: 'joinLogChannelId', labelKey: 'joinLogChannel' },
+      { field: 'joinEmbed', labelKey: 'joinEmbed' },
+      { field: 'leaveEnabled', labelKey: 'leaveNotifications' },
+      { field: 'leaveLogChannelId', labelKey: 'leaveLogChannel' },
+      { field: 'leaveEmbed', labelKey: 'leaveEmbed' },
     ]);
 
     await createAuditLog({
@@ -149,7 +149,8 @@ export async function POST(
       username: session.user?.name ?? '',
       action: 'UPDATE',
       module: 'invite-tracker',
-      description: `Zaktualizowano konfigurację Invite Trackera (enabled: ${enabled ?? false})`,
+      descriptionKey: 'inviteTrackerUpdated',
+      descriptionParams: { enabled: enabled ?? false },
       changes,
     });
 

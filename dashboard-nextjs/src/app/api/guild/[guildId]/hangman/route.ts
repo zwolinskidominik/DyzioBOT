@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import dbConnect from "@/lib/mongodb";
 import HangmanCategory from "@/models/HangmanCategory";
+import { getApiMessages } from "@/i18n/apiServer";
 
 export async function GET(
   request: Request,
@@ -66,24 +67,24 @@ export async function POST(
     if (action === "addWord") {
       const { categoryName, word } = body;
       if (!categoryName || !word) {
-        return NextResponse.json({ error: "Wymagane: categoryName, word" }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanWordAndCategoryRequired }, { status: 400 });
       }
 
       const normalized = word.toLowerCase().trim();
       if (!/^[a-ząćęłńóśźż]+(\s[a-ząćęłńóśźż]+){0,3}$/.test(normalized)) {
         return NextResponse.json(
-          { error: "Hasło może zawierać tylko polskie litery i spacje (bez q, v, x)" },
+          { error: (await getApiMessages()).t.errors.hangmanOnlyPolish },
           { status: 400 }
         );
       }
 
       const cat = await HangmanCategory.findOne({ name: categoryName });
       if (!cat) {
-        return NextResponse.json({ error: "Nie znaleziono kategorii" }, { status: 404 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanCategoryNotFound }, { status: 404 });
       }
 
       if (cat.words.includes(normalized)) {
-        return NextResponse.json({ error: "Słowo już istnieje w tej kategorii" }, { status: 409 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanWordExists }, { status: 409 });
       }
 
       cat.words.push(normalized);
@@ -95,17 +96,17 @@ export async function POST(
     if (action === "removeWord") {
       const { categoryName, word } = body;
       if (!categoryName || !word) {
-        return NextResponse.json({ error: "Wymagane: categoryName, word" }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanWordAndCategoryRequired }, { status: 400 });
       }
 
       const cat = await HangmanCategory.findOne({ name: categoryName });
       if (!cat) {
-        return NextResponse.json({ error: "Nie znaleziono kategorii" }, { status: 404 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanCategoryNotFound }, { status: 404 });
       }
 
       const idx = cat.words.indexOf(word);
       if (idx === -1) {
-        return NextResponse.json({ error: "Nie znaleziono słowa w kategorii" }, { status: 404 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanWordNotFound }, { status: 404 });
       }
 
       cat.words.splice(idx, 1);
@@ -117,12 +118,12 @@ export async function POST(
     if (action === "addCategory") {
       const { name, emoji } = body;
       if (!name || !emoji) {
-        return NextResponse.json({ error: "Wymagane: name, emoji" }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanNameAndEmojiRequired }, { status: 400 });
       }
 
       const existing = await HangmanCategory.findOne({ name });
       if (existing) {
-        return NextResponse.json({ error: "Kategoria o tej nazwie już istnieje" }, { status: 409 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanCategoryExists }, { status: 409 });
       }
 
       // Nowa kategoria trafia na koniec listy, nie na początek (order domyślnie 0 zepchnąłby ją przed inne).
@@ -135,7 +136,7 @@ export async function POST(
       const { categoryName, newName, newEmoji } = body;
       if (!categoryName || !newName || !newEmoji) {
         return NextResponse.json(
-          { error: "Wymagane: categoryName, newName, newEmoji" },
+          { error: (await getApiMessages()).t.errors.hangmanRenameRequired },
           { status: 400 }
         );
       }
@@ -144,21 +145,21 @@ export async function POST(
       const trimmedEmoji = String(newEmoji).trim();
       if (!trimmedName || !trimmedEmoji) {
         return NextResponse.json(
-          { error: "Nazwa i emoji nie mogą być puste" },
+          { error: (await getApiMessages()).t.errors.hangmanNameAndEmojiEmpty },
           { status: 400 }
         );
       }
 
       const cat = await HangmanCategory.findOne({ name: categoryName });
       if (!cat) {
-        return NextResponse.json({ error: "Nie znaleziono kategorii" }, { status: 404 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanCategoryNotFound }, { status: 404 });
       }
 
       if (trimmedName !== categoryName) {
         const conflict = await HangmanCategory.findOne({ name: trimmedName });
         if (conflict) {
           return NextResponse.json(
-            { error: "Kategoria o tej nazwie już istnieje" },
+            { error: (await getApiMessages()).t.errors.hangmanCategoryExists },
             { status: 409 }
           );
         }
@@ -174,7 +175,7 @@ export async function POST(
     if (action === "reorderCategories") {
       const { names } = body;
       if (!Array.isArray(names) || names.some((n) => typeof n !== "string")) {
-        return NextResponse.json({ error: "Wymagane: names (tablica stringów)" }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanNamesRequired }, { status: 400 });
       }
 
       // Explicit whitelist — jedyne pole, które ta akcja modyfikuje, to `order`, po nazwie
@@ -189,18 +190,18 @@ export async function POST(
     if (action === "removeCategory") {
       const { categoryName } = body;
       if (!categoryName) {
-        return NextResponse.json({ error: "Wymagane: categoryName" }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanCategoryRequired }, { status: 400 });
       }
 
       const result = await HangmanCategory.deleteOne({ name: categoryName });
       if (result.deletedCount === 0) {
-        return NextResponse.json({ error: "Nie znaleziono kategorii" }, { status: 404 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanCategoryNotFound }, { status: 404 });
       }
 
       return NextResponse.json({ success: true });
     }
 
-    return NextResponse.json({ error: "Nieznana akcja" }, { status: 400 });
+    return NextResponse.json({ error: (await getApiMessages()).t.errors.unknownAction }, { status: 400 });
   } catch (error) {
     console.error("Error in hangman POST:", error);
     return NextResponse.json(

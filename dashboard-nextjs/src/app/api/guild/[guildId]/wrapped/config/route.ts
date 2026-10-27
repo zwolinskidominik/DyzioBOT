@@ -95,9 +95,9 @@ export async function POST(
       oldConfig,
       { channelId: config.channelId, enabled: config.enabled, colorTheme: config.colorTheme },
       [
-        { field: 'enabled', label: 'Włączony' },
-        { field: 'channelId', label: 'Kanał' },
-        { field: 'colorTheme', label: 'Motyw kolorystyczny' },
+        { field: 'enabled', labelKey: 'enabled' },
+        { field: 'channelId', labelKey: 'channel' },
+        { field: 'colorTheme', labelKey: 'colorTheme' },
       ]
     );
 
@@ -107,7 +107,7 @@ export async function POST(
       username: session.user.name || 'Unknown',
       action: 'update',
       module: 'wrapped',
-      description: 'Zaktualizowano konfigurację Server Wrapped',
+      descriptionKey: 'wrappedUpdated',
       metadata: { enabled, channelId, colorTheme: config.colorTheme },
       changes,
     });

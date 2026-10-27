@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
 import { validateTwitchUser } from '@/lib/twitchApi';
+import { getApiMessages } from '@/i18n/apiServer';
 
 const twitchStreamerSchema = new mongoose.Schema({
   guildId: { type: String, required: true },
@@ -88,7 +89,7 @@ export async function POST(
       const twitchUser = await validateTwitchUser(twitchChannel);
       if (!twitchUser) {
         return NextResponse.json(
-          { error: `Użytkownik Twitch „${twitchChannel}" nie istnieje.` },
+          { error: (await getApiMessages()).t.errors.twitchUserMissing(twitchChannel) },
           { status: 404 },
         );
       }
@@ -110,7 +111,7 @@ export async function POST(
     });
     if (duplicateChannel) {
       return NextResponse.json(
-        { error: `Kanał „${normalizedChannel}" jest już na liście.` },
+        { error: (await getApiMessages()).t.errors.twitchChannelListed(normalizedChannel) },
         { status: 409 },
       );
     }
@@ -167,7 +168,7 @@ export async function PATCH(
       const twitchUser = await validateTwitchUser(twitchChannel);
       if (!twitchUser) {
         return NextResponse.json(
-          { error: `Użytkownik Twitch „${twitchChannel}" nie istnieje.` },
+          { error: (await getApiMessages()).t.errors.twitchUserMissing(twitchChannel) },
           { status: 404 },
         );
       }
@@ -188,7 +189,7 @@ export async function PATCH(
     });
     if (duplicateChannel) {
       return NextResponse.json(
-        { error: `Kanał „${normalizedChannel}" jest już na liście.` },
+        { error: (await getApiMessages()).t.errors.twitchChannelListed(normalizedChannel) },
         { status: 409 },
       );
     }

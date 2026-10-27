@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 import { useMessages } from "@/i18n/LanguageProvider";
 import { hangmanMessages } from "@/i18n/messages/hangman";
 import { commonMessages } from "@/i18n/messages/common";
-import { useApiText } from "@/i18n/apiText";
 
 interface HangmanCategory {
   name: string;
@@ -71,7 +70,6 @@ export default function HangmanBrowserPage() {
   const currentUserId = (session?.user as { id?: string })?.id;
 
   const t = useMessages(hangmanMessages);
-  const api = useApiText();
   const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
@@ -200,7 +198,7 @@ export default function HangmanBrowserPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setWordError(json.error ? api(json.error) : m.error);
+        setWordError(json.error ? json.error : m.error);
         return;
       }
       setNewWord("");
@@ -254,7 +252,7 @@ export default function HangmanBrowserPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setCategoryError(json.error ? api(json.error) : m.error);
+        setCategoryError(json.error ? json.error : m.error);
         return;
       }
       setSelectedCategory(newCategoryName.trim());
@@ -300,7 +298,7 @@ export default function HangmanBrowserPage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setEditError(json.error ? api(json.error) : m.error);
+        setEditError(json.error ? json.error : m.error);
         return;
       }
       setSelectedCategory(trimmedName);

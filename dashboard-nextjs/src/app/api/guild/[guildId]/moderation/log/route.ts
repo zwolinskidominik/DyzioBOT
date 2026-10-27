@@ -5,6 +5,8 @@ import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import { resolveDiscordUsers } from '@/lib/discordUsers';
 import mongoose, { FilterQuery } from 'mongoose';
 import { z } from 'zod';
+import { getApiMessages, getRequestLang } from '@/i18n/apiServer';
+import { translateLegacyText } from '@/i18n/legacyApiText';
 
 // Kształt musi odzwierciedlać bot/src/models/ModerationLog.ts i Warn.ts (osobny
 // projekt npm — bez cross-project importu, zgodnie z konwencją reszty dashboardu).
@@ -127,12 +129,14 @@ export async function GET(
 
     // 'clear' ma targetId = nazwa kanału, nie user ID — nie ma sensu dociągać z Discorda.
     const userTargetIds = logs.filter((l) => l.kind !== 'clear').map((l) => l.targetId);
-    const users = await resolveDiscordUsers(guildId, userTargetIds);
+    const [users, lang] = await Promise.all([resolveDiscordUsers(guildId, userTargetIds), getRequestLang()]);
 
     const enriched = logs.map((log) => {
       const user = log.kind !== 'clear' ? users.get(log.targetId) ?? null : null;
       return {
         ...log,
+        // Dopiski (czas kary, liczba wiadomości) zapisuje bot po polsku - tłumaczymy je w języku panelu.
+        ...(log.extra ? { extra: translateLegacyText(log.extra, lang) } : {}),
         targetAvatar: user?.avatar ?? null,
         targetUsername: user ? (user.globalName ?? user.username) : null,
       };
@@ -167,7 +171,7 @@ export async function POST(
     const parsed = undoZod.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Nieprawidłowe dane', details: parsed.error.flatten() },
+        { error: (await getApiMessages()).t.errors.invalidData, details: parsed.error.flatten() },
         { status: 400 }
       );
     }
@@ -178,10 +182,10 @@ export async function POST(
     // user mógłby cofnąć karę na innym serwerze, znając samo ObjectId.
     const log = await ModerationLog.findOne({ _id: parsed.data.logId, guildId });
     if (!log) {
-      return NextResponse.json({ error: 'Nie znaleziono wpisu.' }, { status: 404 });
+      return NextResponse.json({ error: (await getApiMessages()).t.errors.logEntryNotFound }, { status: 404 });
     }
     if (log.undone) {
-      return NextResponse.json({ error: 'Ta kara została już cofnięta.' }, { status: 400 });
+      return NextResponse.json({ error: (await getApiMessages()).t.errors.punishmentAlreadyUndone }, { status: 400 });
     }
 
     switch (log.kind) {
@@ -196,7 +200,7 @@ export async function POST(
         if (!response.ok && response.status !== 404) {
           const errText = await response.text();
           console.error('Discord API error (unban):', errText);
-          return NextResponse.json({ error: 'Nie udało się odbanować użytkownika.' }, { status: 502 });
+          return NextResponse.json({ error: (await getApiMessages()).t.errors.unbanFailed }, { status: 502 });
         }
         // Tak jak /unban w bocie — oznacza WSZYSTKIE aktywne wpisy 'ban' tego usera jako cofnięte.
         await ModerationLog.updateMany(
@@ -221,7 +225,7 @@ export async function POST(
         if (!response.ok && response.status !== 404) {
           const errText = await response.text();
           console.error('Discord API error (unmute):', errText);
-          return NextResponse.json({ error: 'Nie udało się zdjąć wyciszenia.' }, { status: 502 });
+          return NextResponse.json({ error: (await getApiMessages()).t.errors.unmuteFailed }, { status: 502 });
         }
         log.undone = true;
         await log.save();
@@ -230,7 +234,7 @@ export async function POST(
 
       case 'warn': {
         if (!log.warnEntryId) {
-          return NextResponse.json({ error: 'Brak powiązanego wpisu ostrzeżenia.' }, { status: 400 });
+          return NextResponse.json({ error: (await getApiMessages()).t.errors.noLinkedWarning }, { status: 400 });
         }
         const result = await Warn.updateOne(
           { guildId, userId: log.targetId },
@@ -238,7 +242,7 @@ export async function POST(
         );
         if (result.modifiedCount === 0) {
           return NextResponse.json(
-            { error: 'Ostrzeżenie już nie istnieje (mogło wygasnąć lub zostać usunięte wcześniej).' },
+            { error: (await getApiMessages()).t.errors.warningGone },
             { status: 404 }
           );
         }
@@ -250,7 +254,7 @@ export async function POST(
       case 'kick':
       case 'clear':
       default:
-        return NextResponse.json({ error: 'Tej akcji nie da się cofnąć.' }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.cannotUndo }, { status: 400 });
     }
 
     return NextResponse.json({ success: true });

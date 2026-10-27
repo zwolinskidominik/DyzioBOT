@@ -5,6 +5,8 @@ import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { resolveDiscordUsers } from "@/lib/discordUsers";
 import mongoose, { FilterQuery } from "mongoose";
 import AuditLogModel, { IAuditLog } from "@/models/AuditLog";
+import { getRequestLang } from "@/i18n/apiServer";
+import { renderAuditEntry } from "@/i18n/auditEntryText";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -72,11 +74,21 @@ export async function GET(
       AuditLogModel.countDocuments(query),
     ]);
 
-    const users = await resolveDiscordUsers(guildId, logs.map((log) => log.userId));
-    const logsWithAvatars = logs.map((log) => ({
-      ...log,
-      avatar: users.get(log.userId)?.avatar ?? null,
-    }));
+    const [users, lang] = await Promise.all([
+      resolveDiscordUsers(guildId, logs.map((log) => log.userId)),
+      getRequestLang(),
+    ]);
+    // Opisy i etykiety zmian budujemy z kodów w języku panelu (starsze wpisy: z zapisanego polskiego tekstu).
+    const logsWithAvatars = logs.map((log) => {
+      const { descriptionKey: _key, descriptionParams: _params, ...rest } = log;
+      const rendered = renderAuditEntry(log, lang);
+      return {
+        ...rest,
+        description: rendered.description,
+        changes: rendered.changes,
+        avatar: users.get(log.userId)?.avatar ?? null,
+      };
+    });
 
     return NextResponse.json({ logs: logsWithAvatars, total });
   } catch (error) {

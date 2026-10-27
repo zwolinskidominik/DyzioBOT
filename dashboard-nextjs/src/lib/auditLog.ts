@@ -1,5 +1,12 @@
 import mongoose from "mongoose";
 import AuditLogModel, { IAuditLogChange } from "@/models/AuditLog";
+import {
+  auditEntryMessages,
+  type AuditDescriptionKey,
+  type AuditLabelKey,
+  type AuditParams,
+  type AuditValue,
+} from "@/i18n/messages/auditEntries";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -14,16 +21,32 @@ interface CreateAuditLogParams {
   username: string;
   action: string;
   module: string;
-  description?: string;
-  metadata?: Record<string, any>;
-  changes?: IAuditLogChange[];
+  /** Kod opisu z `auditEntryMessages.descriptions`; tekst powstaje przy odczycie w języku panelu. */
+  descriptionKey: AuditDescriptionKey;
+  descriptionParams?: AuditParams | undefined;
+  metadata?: Record<string, unknown> | undefined;
+  changes?: IAuditLogChange[] | undefined;
 }
 
+/**
+ * Zapisuje wpis logu panelu z kodem akcji (descriptionKey + parametry) zamiast gotowego zdania.
+ * Polski `description` zapisujemy dodatkowo tylko dla wyszukiwarki i starszych narzędzi.
+ */
 export async function createAuditLog(params: CreateAuditLogParams): Promise<void> {
   try {
     await connectDB();
+    const descriptionParams = params.descriptionParams ?? {};
     await AuditLogModel.create({
-      ...params,
+      guildId: params.guildId,
+      userId: params.userId,
+      username: params.username,
+      action: params.action,
+      module: params.module,
+      descriptionKey: params.descriptionKey,
+      descriptionParams,
+      description: auditEntryMessages.pl.descriptions[params.descriptionKey](descriptionParams),
+      ...(params.metadata ? { metadata: params.metadata } : {}),
+      ...(params.changes ? { changes: params.changes } : {}),
       createdAt: new Date(),
     });
   } catch (error) {
@@ -31,43 +54,57 @@ export async function createAuditLog(params: CreateAuditLogParams): Promise<void
   }
 }
 
+/** Jedna zmiana pola z kodem etykiety; `label` (PL) jest dopisywany automatycznie. */
+export function auditChange(
+  field: string,
+  labelKey: AuditLabelKey,
+  to: AuditValue,
+  from?: AuditValue | undefined,
+  labelParams?: AuditParams | undefined
+): IAuditLogChange {
+  const params = labelParams ?? {};
+  return {
+    field,
+    labelKey,
+    ...(labelParams ? { labelParams } : {}),
+    label: auditEntryMessages.pl.labels[labelKey](params),
+    ...(from !== undefined ? { from } : {}),
+    to,
+  };
+}
+
 /**
- * Buduje listę zmian (from/to) porównując stary i nowy dokument configu pole po polu, wg podanych
- * etykiet. Pomija pola, które się nie zmieniły. Wartości boolean/undefined są czytelnie formatowane
- * ("włączone"/"wyłączone"/"brak"), reszta idzie przez `formatValue` (domyślnie String()).
- *
- * Współdzielone przez wszystkie route'y configu, żeby każdy moduł budował `changes[]` tym samym,
- * spójnym sposobem zamiast duplikować logikę porównywania.
+ * Buduje listę zmian (from/to) porównując stary i nowy dokument configu pole po polu. Pomija pola,
+ * które się nie zmieniły. Wartości zapisujemy surowe (boolean/null/liczba/tekst, tablice jako liczba
+ * elementów), a formatuje je dopiero odczyt w języku panelu. `formatValue` może zwrócić token
+ * (`{ token: "default" }`) albo inną surową wartość.
  */
-export function diffFields<T extends Record<string, any>>(
+export function diffFields<T extends object>(
   oldDoc: T | null | undefined,
   newDoc: T,
-  fields: { field: keyof T & string; label: string; formatValue?: (v: any) => string }[]
+  fields: { field: keyof T & string; labelKey: AuditLabelKey; formatValue?: ((v: unknown) => AuditValue) | undefined }[]
 ): IAuditLogChange[] {
   const changes: IAuditLogChange[] = [];
+  const read = (doc: object | null | undefined, key: string): unknown => (doc ? Reflect.get(doc, key) : undefined);
 
-  for (const { field, label, formatValue } of fields) {
-    const oldVal = oldDoc?.[field];
-    const newVal = newDoc[field];
+  for (const { field, labelKey, formatValue } of fields) {
+    const oldVal: unknown = read(oldDoc, field);
+    const newVal: unknown = read(newDoc, field);
 
-    const normalized = (v: any) => (v === undefined || v === null ? null : JSON.stringify(v));
+    const normalized = (v: unknown) => (v === undefined || v === null ? null : JSON.stringify(v));
     if (normalized(oldVal) === normalized(newVal)) continue;
 
-    const fmt = formatValue ?? defaultFormatValue;
-    changes.push({
-      field,
-      label,
-      ...(oldDoc && oldVal !== undefined ? { from: fmt(oldVal) } : {}),
-      to: fmt(newVal),
-    });
+    const fmt = formatValue ?? rawAuditValue;
+    changes.push(auditChange(field, labelKey, fmt(newVal), oldDoc && oldVal !== undefined ? fmt(oldVal) : undefined));
   }
 
   return changes;
 }
 
-function defaultFormatValue(v: any): string {
-  if (v === undefined || v === null || v === "") return "brak";
-  if (typeof v === "boolean") return v ? "włączone" : "wyłączone";
-  if (Array.isArray(v)) return String(v.length);
-  return String(v);
+/** Surowa wartość do zapisu w zmianie: puste → null, tablica → liczba elementów, obiekt → „zmieniono”. */
+export function rawAuditValue(v: unknown): AuditValue {
+  if (v === undefined || v === null || v === "") return null;
+  if (typeof v === "boolean" || typeof v === "number" || typeof v === "string") return v;
+  if (Array.isArray(v)) return v.length;
+  return { token: "changed" };
 }

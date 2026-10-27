@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
+import { getApiMessages } from "@/i18n/apiServer";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
@@ -133,44 +134,45 @@ export async function GET(
         ReactionRole.countDocuments({ guildId }),
       ]);
 
+    const { t } = await getApiMessages();
     const issues: Issue[] = [];
 
     if (birthday?.enabled && !birthday.birthdayChannelId) {
-      issues.push({ key: "birthdays", reason: "Brak wybranego kanału na ogłoszenia urodzin" });
+      issues.push({ key: "birthdays", reason: t.moduleIssues.birthdays });
     }
     if (greetings?.enabled && !greetings.greetingsChannelId) {
-      issues.push({ key: "greetings", reason: "Brak wybranego kanału powitań" });
+      issues.push({ key: "greetings", reason: t.moduleIssues.greetings });
     }
     if (qotd?.enabled && !qotd.questionChannelId) {
-      issues.push({ key: "qotd", reason: "Brak wybranego kanału na pytanie dnia" });
+      issues.push({ key: "qotd", reason: t.moduleIssues.qotd });
     }
     if (monthlyStats?.enabled && !monthlyStats.channelId) {
-      issues.push({ key: "monthly-stats", reason: "Brak wybranego kanału na publikację rankingu" });
+      issues.push({ key: "monthly-stats", reason: t.moduleIssues.monthlyStats });
     }
     if (autoRole?.enabled && !(autoRole.userRoleIds?.length || autoRole.botRoleIds?.length)) {
-      issues.push({ key: "autoroles", reason: "Brak wybranych ról do nadawania" });
+      issues.push({ key: "autoroles", reason: t.moduleIssues.autoroles });
     }
     if (suggestion?.enabled && !suggestion.suggestionChannelId) {
-      issues.push({ key: "suggestions", reason: "Brak wybranego kanału na sugestie" });
+      issues.push({ key: "suggestions", reason: t.moduleIssues.suggestions });
     }
     if (ticket?.enabled && !ticket.categoryId) {
-      issues.push({ key: "tickets", reason: "Brak wybranej kategorii na tickety" });
+      issues.push({ key: "tickets", reason: t.moduleIssues.tickets });
     }
     if (wrapped?.enabled && !wrapped.channelId) {
-      issues.push({ key: "wrapped", reason: "Brak wybranego kanału na Server Wrapped" });
+      issues.push({ key: "wrapped", reason: t.moduleIssues.wrapped });
     }
     if (disboard?.enabled && !disboard.channelId) {
-      issues.push({ key: "disboard", reason: "Brak wybranego kanału na przypomnienia" });
+      issues.push({ key: "disboard", reason: t.moduleIssues.disboard });
     }
     if (stream?.enabled && !stream.channelId) {
-      issues.push({ key: "stream-config", reason: "Brak wybranego kanału powiadomień" });
+      issues.push({ key: "stream-config", reason: t.moduleIssues.streamConfig });
     }
     if (log?.enabled && !Object.values(log.logChannels || {}).some(Boolean)) {
-      issues.push({ key: "logs", reason: "Brak wybranego kanału dla jakiegokolwiek zdarzenia" });
+      issues.push({ key: "logs", reason: t.moduleIssues.logs });
     }
     // Opt-out semantics (default true) — brak configu traktujemy jako "enabled".
     if (rrConfig?.enabled !== false && rrCount === 0) {
-      issues.push({ key: "reaction-roles", reason: "Brak żadnego panelu ról za reakcje" });
+      issues.push({ key: "reaction-roles", reason: t.moduleIssues.reactionRoles });
     }
 
     return NextResponse.json({ issues });

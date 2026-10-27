@@ -3,56 +3,21 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
-import { createAuditLog } from '@/lib/auditLog';
+import { auditChange, createAuditLog } from '@/lib/auditLog';
+import { LOG_EVENT_NAMES_PL } from '@/i18n/messages/auditEntries';
 import type { IAuditLogChange } from '@/models/AuditLog';
 import { z } from 'zod';
+import { getApiMessages } from '@/i18n/apiServer';
 
-/**
- * Polskie etykiety zdarzeń logów — MUSI być zsynchronizowane z `LOG_EVENT_CONFIGS` w
- * `app/(dashboard)/[guildId]/logs/page.tsx` (nazwy `.name`). Zduplikowane celowo: strona
- * to komponent kliencki, a ten route działa po stronie serwera.
- */
-const EVENT_LABELS: Record<string, string> = {
-  memberBan: 'Zbanowanie członka',
-  memberUnban: 'Odbanowanie członka',
-  memberKick: 'Wyrzucenie członka',
-  memberTimeout: 'Wyciszenie',
-  moderationCommand: 'Komenda moderacyjna',
-  antiSpam: 'Anti-Spam',
-  messageDelete: 'Usunięcie wiadomości',
-  messageEdit: 'Edycja wiadomości',
-  memberJoin: 'Członek dołączył',
-  memberLeave: 'Członek opuścił',
-  memberNicknameChange: 'Zmiana pseudonimu',
-  memberRoleAdd: 'Nadanie roli',
-  memberRoleRemove: 'Usunięcie roli',
-  voiceJoin: 'Dołączył do VC',
-  voiceLeave: 'Opuścił VC',
-  voiceMove: 'Przełączył kanał VC',
-  voiceDisconnect: 'Odłączony od VC',
-  voiceMemberMove: 'Przeniesiony do VC',
-  voiceStateChange: 'Stan głosu',
-  channelCreate: 'Utworzenie kanału',
-  channelDelete: 'Usunięcie kanału',
-  channelUpdate: 'Aktualizacja kanału',
-  channelPermissionUpdate: 'Aktualizacja uprawnień',
-  threadCreate: 'Tworzenie wątku',
-  threadDelete: 'Usuwanie wątku',
-  threadUpdate: 'Aktualizacja wątku',
-  roleCreate: 'Utworzenie roli',
-  roleDelete: 'Usunięcie roli',
-  roleUpdate: 'Aktualizacja roli',
-  guildUpdate: 'Aktualizacja serwera',
-  inviteCreate: 'Wysłano zaproszenie',
-};
+/** Klucze zdarzeń logu (nazwy są w słowniku wpisów logu panelu, zsynchronizowane z LOG_EVENT_CONFIGS). */
+const EVENT_KEYS = Object.keys(LOG_EVENT_NAMES_PL);
 
 // Whitelist pól POST-a — blokuje mass assignment. Klucze w mapach eventowych
-// muszą być jednym z realnych zdarzeń logu (EVENT_LABELS), nie dowolnym stringiem.
-const EVENT_KEYS = Object.keys(EVENT_LABELS);
+// muszą być jednym z realnych zdarzeń logu (EVENT_KEYS), nie dowolnym stringiem.
 const eventKeyedRecord = <T extends z.ZodTypeAny>(valueSchema: T) =>
   z.record(z.string(), valueSchema).refine(
     (obj) => Object.keys(obj).every((k) => EVENT_KEYS.includes(k)),
-    { message: 'Nieznany klucz zdarzenia logu' }
+    { message: 'Unknown log event key' }
   );
 
 const logConfigZod = z.object({
@@ -74,28 +39,28 @@ function diffLogConfig(
 
   const oldEnabled = Boolean(oldConfig?.enabled);
   if (oldConfig !== null && oldEnabled !== next.enabled) {
-    changes.push({ field: 'enabled', label: 'Moduł logów włączony', from: oldEnabled ? 'włączony' : 'wyłączony', to: next.enabled ? 'włączony' : 'wyłączony' });
+    changes.push(auditChange('enabled', 'logsModuleEnabled', next.enabled, oldEnabled));
   }
 
-  for (const key of Object.keys(EVENT_LABELS)) {
-    const label = EVENT_LABELS[key];
+  for (const key of EVENT_KEYS) {
+    const event = { event: key };
 
     const oldOn = Boolean(oldConfig?.enabledEvents?.[key]);
     const newOn = Boolean(next.enabledEvents[key]);
     if (oldConfig !== null && oldOn !== newOn) {
-      changes.push({ field: `enabledEvents.${key}`, label: `${label}: logowanie`, from: oldOn ? 'włączone' : 'wyłączone', to: newOn ? 'włączone' : 'wyłączone' });
+      changes.push(auditChange(`enabledEvents.${key}`, 'logEventLogging', newOn, oldOn, event));
     }
 
     const oldChannel = oldConfig?.logChannels?.[key];
     const newChannel = next.logChannels[key];
     if (oldConfig !== null && oldChannel !== newChannel) {
-      changes.push({ field: `logChannels.${key}`, label: `${label}: kanał`, from: oldChannel ? `#${oldChannel}` : 'brak', to: newChannel ? `#${newChannel}` : 'brak' });
+      changes.push(auditChange(`logChannels.${key}`, 'logEventChannel', newChannel ? `#${newChannel}` : null, oldChannel ? `#${oldChannel}` : null, event));
     }
 
     const oldColor = oldConfig?.colorOverrides?.[key];
     const newColor = next.colorOverrides[key];
     if (oldConfig !== null && oldColor !== newColor) {
-      changes.push({ field: `colorOverrides.${key}`, label: `${label}: kolor`, from: oldColor || 'domyślny', to: newColor || 'domyślny' });
+      changes.push(auditChange(`colorOverrides.${key}`, 'logEventColor', newColor || { token: 'default' }, oldColor || { token: 'default' }, event));
     }
   }
 
@@ -181,7 +146,7 @@ export async function POST(
     const parsedBody = logConfigZod.safeParse(rawBody);
     if (!parsedBody.success) {
       return NextResponse.json(
-        { error: 'Nieprawidłowe dane konfiguracji', details: parsedBody.error.flatten() },
+        { error: (await getApiMessages()).t.errors.invalidConfig, details: parsedBody.error.flatten() },
         { status: 400 }
       );
     }
@@ -224,7 +189,8 @@ export async function POST(
         username: session.user.name || session.user.email || 'Unknown User',
         action: 'logs.update',
         module: 'logs',
-        description: `Zaktualizowano konfigurację logów (${changes.length} ${changes.length === 1 ? 'zmiana' : 'zmian'})`,
+        descriptionKey: 'logsUpdated',
+        descriptionParams: { count: changes.length },
         changes,
       });
     }

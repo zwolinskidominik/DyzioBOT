@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth.config";
 import { OWNER_IDS } from "@/lib/owner";
 import redis from "@/lib/redis";
 import { getEmojiConfigMap } from "@/lib/botEmojiConfig";
+import { getApiMessages } from "@/i18n/apiServer";
+import type { Lang } from "@/i18n/config";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +26,8 @@ interface EnrichedEmoji extends DiscordEmoji {
   groupLabel: string | null;
 }
 
-function enrichEmojis(emojis: DiscordEmoji[]): EnrichedEmoji[] {
-  const configMap = getEmojiConfigMap(process.env.DISCORD_CLIENT_ID);
+function enrichEmojis(emojis: DiscordEmoji[], lang: Lang): EnrichedEmoji[] {
+  const configMap = getEmojiConfigMap(process.env.DISCORD_CLIENT_ID, lang);
   return emojis.map((emoji) => {
     const entry = configMap.get(emoji.id);
     return {
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest) {
     const cached = await redis.get(APP_EMOJIS_CACHE_KEY);
     if (cached) {
       const cachedEmojis = JSON.parse(cached) as DiscordEmoji[];
-      return NextResponse.json(enrichEmojis(cachedEmojis));
+      return NextResponse.json(enrichEmojis(cachedEmojis, (await getApiMessages()).lang));
     }
   } catch {
     // Redis unavailable — proceed to Discord API
@@ -110,7 +112,7 @@ export async function GET(request: NextRequest) {
     // Redis unavailable — skip caching
   }
 
-  return NextResponse.json(enrichEmojis(emojis));
+  return NextResponse.json(enrichEmojis(emojis, (await getApiMessages()).lang));
 }
 
 export async function POST(request: NextRequest) {
@@ -143,21 +145,21 @@ export async function POST(request: NextRequest) {
   // Discord emoji name: 2–32 alphanumeric + underscores
   if (typeof name !== "string" || !/^[a-zA-Z0-9_]{2,32}$/.test(name)) {
     return NextResponse.json(
-      { error: "Nazwa musi mieć 2–32 znaki: litery, cyfry i podkreślenie (_)" },
+      { error: (await getApiMessages()).t.errors.emojiNameRules },
       { status: 400 }
     );
   }
 
   // Must be a valid data URI
   if (typeof image !== "string" || !image.startsWith("data:image/")) {
-    return NextResponse.json({ error: "Nieprawidłowy format obrazu" }, { status: 400 });
+    return NextResponse.json({ error: (await getApiMessages()).t.errors.invalidImageFormat }, { status: 400 });
   }
 
   // Approximate size check (~256 KB limit for Discord)
   const base64Part = image.split(",")[1] ?? "";
   const approxBytes = Math.ceil((base64Part.length * 3) / 4);
   if (approxBytes > 262144) {
-    return NextResponse.json({ error: "Obraz jest za duży (max 256 KB)" }, { status: 400 });
+    return NextResponse.json({ error: (await getApiMessages()).t.errors.emojiImageTooBig }, { status: 400 });
   }
 
   const discordRes = await fetch(
@@ -212,7 +214,7 @@ export async function DELETE(request: NextRequest) {
   const configEntry = configMap.get(emojiId);
   if (configEntry) {
     return NextResponse.json(
-      { error: `To emoji jest wpisane w config bota (${configEntry.key}) — usuń najpierw odwołanie w kodzie.` },
+      { error: (await getApiMessages()).t.errors.emojiInConfig(configEntry.key) },
       { status: 409 }
     );
   }

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
+import { getRequestLang } from "@/i18n/apiServer";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
@@ -82,9 +83,15 @@ export async function GET(
     }
 
     const todayKey = dayKey(now);
+    // Etykieta dnia w formacie języka panelu: PL "27.09", EN "Sep 27".
+    const lang = await getRequestLang();
+    const dayLabel = (date: string) =>
+      lang === "en"
+        ? new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10))).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        : `${date.slice(8, 10)}.${date.slice(5, 7)}`;
     const days = Array.from(perDay.entries()).map(([date, v]) => ({
       date,
-      label: `${date.slice(8, 10)}.${date.slice(5, 7)}`,
+      label: dayLabel(date),
       isToday: date === todayKey,
       ...v,
     }));

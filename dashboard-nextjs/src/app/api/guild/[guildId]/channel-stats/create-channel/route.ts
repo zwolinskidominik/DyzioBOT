@@ -4,15 +4,8 @@ import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 import ChannelStatsModel from "@/models/ChannelStats";
-import { createAuditLog } from "@/lib/auditLog";
+import { auditChange, createAuditLog } from "@/lib/auditLog";
 import type { IAuditLogChange } from "@/models/AuditLog";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  lastJoined: 'Ostatnio dołączył',
-  users: 'Liczba użytkowników',
-  bots: 'Liczba botów',
-  bans: 'Liczba banów',
-};
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -122,7 +115,7 @@ export async function POST(
     await config.save();
 
     const createChanges: IAuditLogChange[] = [
-      { field: 'channelId', label: CATEGORY_LABELS[category] || category, to: `#${channelData.name}` },
+      auditChange('channelId', 'counterChannel', `#${channelData.name}`, undefined, { category }),
     ];
 
     await createAuditLog({
@@ -131,7 +124,8 @@ export async function POST(
       username: session.user?.name || session.user?.email || 'Unknown User',
       action: 'channel_stats.create_channel',
       module: 'channel_stats',
-      description: `Utworzono kanał statystyk: ${category}`,
+      descriptionKey: 'channelStatsCreated',
+      descriptionParams: { category },
       metadata: {
         channelId: channelData.id,
         channelName: channelData.name,
@@ -213,7 +207,7 @@ export async function DELETE(
     await config.save();
 
     const deleteChanges: IAuditLogChange[] = [
-      { field: 'channelId', label: CATEGORY_LABELS[category] || category, from: `#${channelId}`, to: 'brak' },
+      auditChange('channelId', 'counterChannel', null, `#${channelId}`, { category }),
     ];
 
     await createAuditLog({
@@ -222,7 +216,8 @@ export async function DELETE(
       username: session.user?.name || session.user?.email || 'Unknown User',
       action: 'channel_stats.delete_channel',
       module: 'channel_stats',
-      description: `Usunięto kanał statystyk: ${category}`,
+      descriptionKey: 'channelStatsDeleted',
+      descriptionParams: { category },
       metadata: { channelId, category },
       changes: deleteChanges,
     });

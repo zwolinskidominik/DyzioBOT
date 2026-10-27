@@ -5,6 +5,7 @@ import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import dbConnect from '@/lib/mongodb';
 import WordleWord from '@/models/WordleWord';
 import mongoose from 'mongoose';
+import { getApiMessages } from '@/i18n/apiServer';
 
 // Polskie litery bez q, v, x — zgodnie z klawiaturą Wordle w bocie.
 const POLISH_REGEX = /^[a-pr-uwyząćęłńóśźż]+$/;
@@ -83,14 +84,14 @@ export async function POST(
     if (action === 'addWord') {
       const { word } = body;
       if (!word || typeof word !== 'string') {
-        return NextResponse.json({ error: 'Wymagane pole: word' }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.wordleWordRequired }, { status: 400 });
       }
 
       const normalized = word.trim().toLowerCase();
 
       if (!POLISH_REGEX.test(normalized)) {
         return NextResponse.json(
-          { error: 'Słowo może zawierać tylko polskie litery (bez q, v, x)' },
+          { error: (await getApiMessages()).t.errors.wordleOnlyPolish },
           { status: 400 },
         );
       }
@@ -98,14 +99,14 @@ export async function POST(
       const len = normalized.length;
       if (len < MIN_LEN || len > MAX_LEN) {
         return NextResponse.json(
-          { error: `Słowo musi mieć od ${MIN_LEN} do ${MAX_LEN} liter` },
+          { error: (await getApiMessages()).t.errors.wordleLength(MIN_LEN, MAX_LEN) },
           { status: 400 },
         );
       }
 
       const existing = await WordleWord.findOne({ word: normalized });
       if (existing) {
-        return NextResponse.json({ error: 'To słowo już istnieje w bazie' }, { status: 409 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.wordleWordExists }, { status: 409 });
       }
 
       await WordleWord.create({ word: normalized, length: len });
@@ -116,20 +117,20 @@ export async function POST(
     if (action === 'removeWord') {
       const { word } = body;
       if (!word || typeof word !== 'string') {
-        return NextResponse.json({ error: 'Wymagane pole: word' }, { status: 400 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.wordleWordRequired }, { status: 400 });
       }
 
       const normalized = word.trim().toLowerCase();
       const result = await WordleWord.deleteOne({ word: normalized });
 
       if (result.deletedCount === 0) {
-        return NextResponse.json({ error: 'Nie znaleziono słowa' }, { status: 404 });
+        return NextResponse.json({ error: (await getApiMessages()).t.errors.wordleWordNotFound }, { status: 404 });
       }
 
       return NextResponse.json({ success: true });
     }
 
-    return NextResponse.json({ error: 'Nieznana akcja' }, { status: 400 });
+    return NextResponse.json({ error: (await getApiMessages()).t.errors.unknownAction }, { status: 400 });
   } catch (error) {
     console.error('Wordle POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

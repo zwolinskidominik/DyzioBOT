@@ -69,7 +69,8 @@ export async function POST(
       username: session.user.name || session.user.email || "Unknown User",
       action: "settings.danger.resetWarnings",
       module: "settings",
-      description: `Zresetowano ostrzeżenia WSZYSTKICH użytkowników na serwerze (usunięto ${result.deletedCount} rekordów)`,
+      descriptionKey: 'warningsReset',
+      descriptionParams: { count: result.deletedCount },
       metadata: { deletedCount: result.deletedCount },
     });
 

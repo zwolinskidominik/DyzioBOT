@@ -95,16 +95,19 @@ export async function POST(
       { upsert: true, new: true }
     );
 
-    const channelCategoryLabel = (v: any) => v?.channelId ? `#${v.channelId}` : 'brak';
+    const channelCategoryLabel = (v: unknown): string | null => {
+      if (typeof v !== 'object' || v === null || !('channelId' in v)) return null;
+      return typeof v.channelId === 'string' && v.channelId ? `#${v.channelId}` : null;
+    };
     const changes = [
       ...diffFields({ enabled: oldConfig?.enabled }, { enabled: nextEnabled }, [
-        { field: 'enabled', label: 'Włączony' },
+        { field: 'enabled', labelKey: 'enabled' },
       ]),
       ...diffFields(oldConfig?.channels, nextChannels, [
-        { field: 'lastJoined', label: 'Kanał: ostatnio dołączył', formatValue: channelCategoryLabel },
-        { field: 'users', label: 'Kanał: liczba użytkowników', formatValue: channelCategoryLabel },
-        { field: 'bots', label: 'Kanał: liczba botów', formatValue: channelCategoryLabel },
-        { field: 'bans', label: 'Kanał: liczba banów', formatValue: channelCategoryLabel },
+        { field: 'lastJoined', labelKey: 'counterLastJoined', formatValue: channelCategoryLabel },
+        { field: 'users', labelKey: 'counterUsers', formatValue: channelCategoryLabel },
+        { field: 'bots', labelKey: 'counterBots', formatValue: channelCategoryLabel },
+        { field: 'bans', labelKey: 'counterBans', formatValue: channelCategoryLabel },
       ]),
     ];
 
@@ -114,7 +117,7 @@ export async function POST(
       username: session.user.name || session.user.email || 'Unknown User',
       action: 'channel_stats.update',
       module: 'channel_stats',
-      description: 'Zaktualizowano konfigurację kanałów ze statystykami',
+      descriptionKey: 'channelStatsUpdated',
       metadata: {
         channels: Object.keys(channels || {}),
         enabled: nextEnabled,

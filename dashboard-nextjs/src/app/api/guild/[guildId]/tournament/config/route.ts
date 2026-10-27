@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth.config';
 import mongoose from 'mongoose';
 import { OWNER_IDS, OWNER_GUILD_IDS } from '@/lib/owner';
 import TournamentConfig from '@/models/TournamentConfig';
-import { createAuditLog, diffFields } from '@/lib/auditLog';
+import { createAuditLog, diffFields, rawAuditValue } from '@/lib/auditLog';
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
@@ -115,22 +115,22 @@ export async function POST(
     ).lean() as Record<string, unknown> | null;
 
     const changes = diffFields(oldConfig, nextConfig, [
-      { field: 'enabled', label: 'Włączony' },
-      { field: 'channelId', label: 'Kanał ogłoszeń' },
-      { field: 'cronSchedule', label: 'Harmonogram (cron)' },
-      { field: 'reactionEmoji', label: 'Emoji reakcji' },
-      { field: 'messageMode', label: 'Tryb wiadomości' },
-      { field: 'embedColor', label: 'Kolor embeda' },
-      { field: 'titleText', label: 'Tytuł' },
-      { field: 'footerText', label: 'Stopka' },
-      { field: 'participantRoleId', label: 'Rola uczestnika' },
-      { field: 'organizerRoleId', label: 'Rola organizatora' },
-      { field: 'organizerUserIds', label: 'Liczba organizatorów' },
-      { field: 'voiceChannelId', label: 'Kanał głosowy' },
+      { field: 'enabled', labelKey: 'enabled' },
+      { field: 'channelId', labelKey: 'announcementChannel' },
+      { field: 'cronSchedule', labelKey: 'schedule' },
+      { field: 'reactionEmoji', labelKey: 'reactionEmoji' },
+      { field: 'messageMode', labelKey: 'messageMode' },
+      { field: 'embedColor', labelKey: 'embedColor' },
+      { field: 'titleText', labelKey: 'title' },
+      { field: 'footerText', labelKey: 'footer' },
+      { field: 'participantRoleId', labelKey: 'participantRole' },
+      { field: 'organizerRoleId', labelKey: 'organizerRole' },
+      { field: 'organizerUserIds', labelKey: 'organizerCount' },
+      { field: 'voiceChannelId', labelKey: 'voiceChannel' },
       {
         field: 'messageTemplate',
-        label: 'Szablon wiadomości',
-        formatValue: (v: string) => (typeof v === 'string' && v.length > 60 ? `${v.slice(0, 60)}…` : v ?? 'brak'),
+        labelKey: 'messageTemplate',
+        formatValue: (v: unknown) => (typeof v === 'string' && v.length > 60 ? `${v.slice(0, 60)}…` : rawAuditValue(v)),
       },
     ]);
 
@@ -140,7 +140,7 @@ export async function POST(
       username: session.user.name || 'Unknown',
       action: 'update',
       module: 'tournament',
-      description: 'Zaktualizowano konfigurację turnieju',
+      descriptionKey: 'tournamentUpdated',
       metadata: {
         enabled,
         cronSchedule,
