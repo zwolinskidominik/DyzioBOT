@@ -15,9 +15,6 @@ const SCANNED_DIRS = ["app/api", "lib"];
 
 /** Całe pliki z treścią bota albo danymi spoza panelu. */
 const ALLOWED_FILES = new Set([
-  "app/api/cs2/image/route.ts", // prywatna strona właściciela
-  "app/api/cs2/investments/route.ts",
-  "app/api/cs2/price/route.ts",
   "app/api/guild/[guildId]/disboard/config/route.ts", // domyślna wiadomość bota
   "app/api/guild/[guildId]/stream-config/route.ts", // domyślny szablon powiadomienia
   "app/api/guild/[guildId]/reaction-roles/route.ts", // embed panelu ról wysyłany przez bota

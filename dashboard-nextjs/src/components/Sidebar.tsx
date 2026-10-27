@@ -132,6 +132,9 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [guildOpen, setGuildOpen] = useState(false);
   const [currentGuild, setCurrentGuild] = useState<Guild | null>(null);
+  // Lista serwerów pobrana (albo pobieranie się nie udało): od tej chwili brak currentGuild
+  // znaczy „nie masz tego serwera na liście”, a nie „jeszcze ładuję”.
+  const [guildsLoaded, setGuildsLoaded] = useState(false);
   const [modulesStatus, setModulesStatus] = useState<ModulesStatus>({});
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const guildDropdownRef = useRef<HTMLDivElement>(null);
@@ -184,6 +187,8 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
       }
     } catch (error) {
       console.error("Failed to fetch guilds:", error);
+    } finally {
+      setGuildsLoaded(true);
     }
   };
 
@@ -297,7 +302,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) 
                 </span>
               </>
             ) : (
-              <span className="text-sm text-muted-foreground">{t.loading}</span>
+              <span className="text-sm text-muted-foreground flex-1 text-left">{guildsLoaded ? t.chooseServer : t.loading}</span>
             )}
             <ChevronDown className={`w-4 h-4 transition-transform flex-shrink-0 ${guildOpen ? "rotate-180" : ""}`} />
           </button>

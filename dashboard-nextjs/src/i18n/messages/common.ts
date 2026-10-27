@@ -12,6 +12,7 @@ export const commonMessages = defineMessages({
     },
     sidebar: {
       loading: "Ładowanie...",
+      chooseServer: "Wybierz serwer",
       addServer: "Dodaj nowy serwer",
       enabled: "Włączony",
       disabled: "Wyłączony",
@@ -165,6 +166,7 @@ export const commonMessages = defineMessages({
     },
     sidebar: {
       loading: "Loading...",
+      chooseServer: "Choose a server",
       addServer: "Add a new server",
       enabled: "Enabled",
       disabled: "Disabled",

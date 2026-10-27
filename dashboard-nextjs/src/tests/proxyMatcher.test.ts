@@ -34,7 +34,6 @@ describe("proxy matcher", () => {
     "/guilds",
     "/881293681783623680",
     "/881293681783623680/commands",
-    "/cs2-investments",
     "/api/guild/881293681783623680/wrapped/config",
     "/api/discord/guilds",
     // Wyjątki dla stron prawnych są dokładne — nie otwierają ścieżek o podobnym prefiksie.
