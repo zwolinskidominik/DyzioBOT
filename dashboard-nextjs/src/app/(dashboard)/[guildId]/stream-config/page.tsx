@@ -38,6 +38,7 @@ import { useDirtyState } from '@/components/DirtyStateProvider';
 import { useMessages } from "@/i18n/LanguageProvider";
 import { streamConfigMessages } from "@/i18n/messages/streamConfig";
 import { commonMessages } from "@/i18n/messages/common";
+import { useApiText } from "@/i18n/apiText";
 
 interface Channel {
   id: string;
@@ -135,6 +136,7 @@ export default function StreamConfigPage() {
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
   const t = useMessages(streamConfigMessages);
+  const api = useApiText();
   const m = useMessages(commonMessages).module;
   const STREAM_VARIABLES = (["streamer", "game", "title", "link"] as const).map((key) => ({
     name: t.variables[key].name,
@@ -313,7 +315,7 @@ export default function StreamConfigPage() {
 
       if (!response.ok) {
         const body = await response.json().catch(() => null);
-        throw new Error(body?.error || 'Failed to add streamer');
+        throw new Error(body?.error ? api(body.error) : t.addError);
       }
 
       const streamer = await response.json();
@@ -348,7 +350,7 @@ export default function StreamConfigPage() {
 
       if (!response.ok) {
         const body = await response.json().catch(() => null);
-        throw new Error(body?.error || 'Failed to update streamer');
+        throw new Error(body?.error ? api(body.error) : t.updateError);
       }
 
       const updatedStreamer = await response.json();

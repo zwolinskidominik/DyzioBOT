@@ -5,7 +5,7 @@ widoczne dla użytkowników. Na koniec dnia złóż z nich jeden wpis na `#chang
 
 Ostatni wysłany wpis: 25.10.2026.
 
-## Czeka na wdrożenie (etap 2 gotowy w kodzie, niezacommitowany)
+## Wdrożone 27.10.2026 (do zbiorczego wpisu)
 
 - Panel deezy.cc w całości po angielsku: przełącznik PL/EN, język dobierany do przeglądarki, przetłumaczone wszystkie moduły. / Fully English dashboard: PL/EN switcher, language follows the browser, every module translated.
 - Polityka prywatności 1.3: ciasteczko z wybranym językiem panelu. / Privacy Policy 1.3: dashboard language cookie.

@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { useMessages } from "@/i18n/LanguageProvider";
 import { wordleMessages } from "@/i18n/messages/wordle";
 import { commonMessages } from "@/i18n/messages/common";
+import { useApiText } from "@/i18n/apiText";
 
 interface WordleCategory {
   length: number;
@@ -74,6 +75,7 @@ export default function WordlePage() {
   const currentUserId = (session?.user as { id?: string })?.id;
 
   const t = useMessages(wordleMessages);
+  const api = useApiText();
   const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
@@ -178,7 +180,7 @@ export default function WordlePage() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setWordError(json.error || m.error);
+        setWordError(json.error ? api(json.error) : m.error);
         return;
       }
       setNewWord("");

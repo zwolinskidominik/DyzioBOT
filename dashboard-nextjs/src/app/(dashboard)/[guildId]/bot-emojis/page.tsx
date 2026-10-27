@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useMessages } from "@/i18n/LanguageProvider";
 import { botEmojisMessages } from "@/i18n/messages/botEmojis";
 import { commonMessages } from "@/i18n/messages/common";
+import { useApiText } from "@/i18n/apiText";
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -87,6 +88,7 @@ export default function BotEmojisPage() {
   const isOwner = status !== "loading" && OWNER_IDS.includes(currentUserId ?? "");
   const t = useMessages(botEmojisMessages);
   const m = useMessages(commonMessages).module;
+  const api = useApiText();
 
   const [emojis, setEmojis] = useState<DiscordEmoji[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,7 +194,7 @@ export default function BotEmojisPage() {
 
       if (!res.ok) {
         const err = (await res.json().catch(() => ({ error: t.apiError }))) as { error?: string };
-        toast.error(err.error ?? t.addError);
+        toast.error(err.error ? api(err.error) : t.addError);
         return;
       }
 
@@ -238,7 +240,7 @@ export default function BotEmojisPage() {
       const res = await fetchWithAuth(`/api/bot-emojis/manage?id=${emoji.id}`, { method: "DELETE" });
       if (!res.ok) {
         const err = (await res.json().catch(() => ({ error: t.apiError }))) as { error?: string };
-        toast.error(err.error ?? t.deleteError);
+        toast.error(err.error ? api(err.error) : t.deleteError);
         return;
       }
       toast.success(t.deleted(emoji.name));
@@ -268,13 +270,13 @@ export default function BotEmojisPage() {
     const counts = new Map<string, { label: string; count: number }>();
     for (const e of emojis) {
       const id = e.group ?? "none";
-      const label = e.groupLabel ?? t.noReference;
+      const label = e.groupLabel ? api(e.groupLabel) : t.noReference;
       const existing = counts.get(id);
       if (existing) existing.count += 1;
       else counts.set(id, { label, count: 1 });
     }
     return Array.from(counts.entries()).map(([id, v]) => ({ id, ...v }));
-  }, [emojis, t]);
+  }, [emojis, t, api]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -737,7 +739,7 @@ export default function BotEmojisPage() {
                           </div>
                           <div className="flex items-baseline justify-between gap-2 text-sm">
                             <span className="shrink-0 text-[#6b7280]">{t.group}</span>
-                            <span className="min-w-0 text-right text-[#b9c0d0]">{selected.groupLabel ?? t.noReference}</span>
+                            <span className="min-w-0 text-right text-[#b9c0d0]">{selected.groupLabel ? api(selected.groupLabel) : t.noReference}</span>
                           </div>
                           <div className="flex items-baseline justify-between gap-2 text-sm">
                             <span className="shrink-0 text-[#6b7280]">{t.key}</span>
@@ -761,7 +763,7 @@ export default function BotEmojisPage() {
                           <div className="mt-3 flex items-start gap-2 rounded-md bg-red-500/[0.08] px-3 py-2.5 text-xs leading-6 text-red-300">
                             <span className="shrink-0">⚠️</span>
                             <span>
-                              {t.inConfigPrefix}<span className="font-mono">config/bot.ts</span>{t.inConfigSuffix(selected.groupLabel ?? "")}
+                              {t.inConfigPrefix}<span className="font-mono">config/bot.ts</span>{t.inConfigSuffix(api(selected.groupLabel ?? ""))}
                             </span>
                           </div>
                         ) : (

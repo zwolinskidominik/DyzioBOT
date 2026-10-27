@@ -16,6 +16,7 @@ import { useDirtyState } from "@/components/DirtyStateProvider";
 import { useMessages } from "@/i18n/LanguageProvider";
 import { settingsMessages } from "@/i18n/messages/settings";
 import type { Widen } from "@/i18n/config";
+import { useApiText } from "@/i18n/apiText";
 
 type SettingsText = Widen<typeof settingsMessages.pl>;
 
@@ -115,6 +116,7 @@ export default function SettingsPage() {
   const guildId = params.guildId as string;
   const { registerDirtyController } = useDirtyState();
   const t = useMessages(settingsMessages);
+  const api = useApiText();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -233,7 +235,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language: "pl", systemNotifyChannelId: form.systemNotifyChannelId }),
       });
-      if (!generalRes.ok) throw new Error("Failed to save general settings");
+      if (!generalRes.ok) throw new Error(t.saveError);
 
       if (profileEditable) {
         const profilePatch: Record<string, unknown> = { nick: form.nick.trim(), bio: form.bio.trim() || null };
@@ -247,7 +249,7 @@ export default function SettingsPage() {
         });
         if (!profileRes.ok) {
           const err = await profileRes.json().catch(() => ({}));
-          throw new Error(err.error || "Failed to save profile");
+          throw new Error(err.error ? api(err.error) : t.saveError);
         }
         const updatedProfile = await profileRes.json();
 
@@ -268,7 +270,7 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
-  }, [form, guildId, nameTrim, profileEditable, t]);
+  }, [form, guildId, nameTrim, profileEditable, t, api]);
 
   const handleCancel = useCallback(() => {
     setForm(savedRef.current);
@@ -334,7 +336,7 @@ export default function SettingsPage() {
       const res = await fetch(`/api/guild/${guildId}/settings/danger/${d.endpoint}`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data.error || t.danger.failed);
+        toast.error(data.error ? api(data.error) : t.danger.failed);
         return;
       }
       const count = data.deletedCount ?? data.usersAffected ?? 0;

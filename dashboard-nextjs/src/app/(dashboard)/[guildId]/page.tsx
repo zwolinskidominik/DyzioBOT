@@ -16,6 +16,7 @@ import { useLang, useMessages } from "@/i18n/LanguageProvider";
 import { homeMessages } from "@/i18n/messages/home";
 import { commonMessages } from "@/i18n/messages/common";
 import type { Widen } from "@/i18n/config";
+import { useApiText, translateDayLabel } from "@/i18n/apiText";
 
 type HomeText = Widen<(typeof homeMessages)["pl"]>;
 type ModuleNameKey = keyof Widen<(typeof commonMessages)["pl"]["sidebar"]["modules"]>;
@@ -321,6 +322,7 @@ export default function GuildDashboard() {
   const t = useMessages(homeMessages);
   const moduleNames = useMessages(commonMessages).sidebar.modules;
   const { lang } = useLang();
+  const api = useApiText();
   const numberLocale = lang === "en" ? "en-US" : "pl-PL";
 
   const [loading, setLoading] = useState(true);
@@ -428,7 +430,7 @@ export default function GuildDashboard() {
   const enabledCount = Object.values(modulesStatus).filter(Boolean).length;
   const totalModules = Object.keys(modulesStatus).length;
 
-  const chartData = dailyData;
+  const chartData = useMemo(() => dailyData.map((d) => ({ ...d, label: translateDayLabel(d.label, lang) })), [dailyData, lang]);
 
   // Trend: suma ostatnich 15 dni vs suma poprzednich 15 dni (okno 30-dniowego wykresu).
   const trend = useMemo(() => {
@@ -463,14 +465,14 @@ export default function GuildDashboard() {
     const panelItems: FeedItem[] = auditLogs.map((log) => ({
       id: `audit-${log._id}`,
       kind: "panel",
-      title: log.description ?? `${log.action} (${log.module})`,
+      title: log.description ? api(log.description) : `${log.action} (${log.module})`,
       subtitle: t.by(log.username),
       emoji: MODULE_EMOJI[log.module] ?? "⚙️",
       color: moduleColor(log.module),
       createdAt: log.createdAt,
     }));
     return [...modItems, ...panelItems].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [modLogs, auditLogs, t]);
+  }, [modLogs, auditLogs, t, api]);
 
   const filteredFeed = feedFilter === "all" ? feed : feed.filter((f) => f.kind === feedFilter);
 
@@ -850,7 +852,7 @@ export default function GuildDashboard() {
                               <p style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>{MODULE_LABEL_KEYS[key] ? moduleNames[MODULE_LABEL_KEYS[key]] : key}</p>
                               {/* Bez truncate: opis problemu to właśnie to, co ma przeczytać admin —
                                   w wąskiej karcie ucinało go po kilku słowach. Zawija się do kolejnych linii. */}
-                              <p className="break-words" style={{ fontSize: 11, lineHeight: 1.4, color: COLOR.secondary }}>{reason}</p>
+                              <p className="break-words" style={{ fontSize: 11, lineHeight: 1.4, color: COLOR.secondary }}>{api(reason)}</p>
                             </div>
                             <Link
                               href={`/${guildId}${MODULE_HREF[key] ?? ""}`}

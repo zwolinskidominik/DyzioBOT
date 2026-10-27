@@ -32,6 +32,7 @@ function isDayKey(value: string): value is DayKey {
   return ["0", "1", "2", "3", "4", "5", "6"].includes(value);
 }
 import { cn } from "@/lib/utils";
+import { useApiText } from "@/i18n/apiText";
 
 interface Channel {
   id: string;
@@ -154,6 +155,7 @@ export default function TournamentPage() {
   const currentUserId = (session?.user as { id?: string })?.id;
   const { registerDirtyController } = useDirtyState();
   const t = useMessages(tournamentMessages);
+  const api = useApiText();
   const m = useMessages(commonMessages).module;
   const TOURNAMENT_VARIABLES = TOURNAMENT_VARIABLE_KEYS.map((key) => ({
     name: t.variables[key].name,
@@ -299,7 +301,7 @@ export default function TournamentPage() {
 
       if (!response.ok) {
         const err = await response.json().catch(() => null);
-        throw new Error(err?.error || 'Failed to save tournament config');
+        throw new Error(err?.error ? api(err.error) : t.saveError);
       }
 
       const savedConfig = await response.json();
@@ -328,7 +330,7 @@ export default function TournamentPage() {
     } finally {
       setSaving(false);
     }
-  }, [config, guildId, t]);
+  }, [config, guildId, t, api]);
 
   const handleCancel = useCallback(() => {
     setConfig(savedConfigRef.current);

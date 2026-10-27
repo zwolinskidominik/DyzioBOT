@@ -261,7 +261,12 @@ export default function MonthlyStatsPage() {
     [metric]
   );
 
-  const metricFormat = useCallback((m: (typeof monthsComputed)[number]) => (metric === "voice" ? formatHM(metricValue(m)) : nf(metricValue(m))), [metric, metricValue]);
+  // Wykres i nagłówek to część panelu (format liczb wg języka); karta podglądu niżej odwzorowuje grafikę bota (PL).
+  const metricFormat = useCallback(
+    (m: (typeof monthsComputed)[number]) =>
+      metric === "voice" ? formatHM(metricValue(m)) : en ? Math.round(metricValue(m)).toLocaleString("en-US") : nf(metricValue(m)),
+    [metric, metricValue, en]
+  );
 
   const maxVal = Math.max(1, ...monthsComputed.map(metricValue));
 

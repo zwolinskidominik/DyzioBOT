@@ -23,6 +23,7 @@ import type { TicketTypeDraft } from "@/components/tickets/TicketLivePreview";
 import { useMessages } from "@/i18n/LanguageProvider";
 import { ticketsMessages } from "@/i18n/messages/tickets";
 import { commonMessages } from "@/i18n/messages/common";
+import { useApiText } from "@/i18n/apiText";
 
 interface Channel {
   id: string;
@@ -163,6 +164,7 @@ export default function TicketsPage() {
   const guildId = params?.guildId as string;
   const { registerDirtyController } = useDirtyState();
   const t = useMessages(ticketsMessages);
+  const api = useApiText();
   const m = useMessages(commonMessages).module;
 
   const [loading, setLoading] = useState(true);
@@ -406,13 +408,13 @@ export default function TicketsPage() {
       const response = await fetchWithAuth(`/api/guild/${guildId}/tickets/deploy`, { method: "POST" });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        toast.error(data?.error ?? t.deployError);
+        toast.error(data?.error ? api(data.error) : t.deployError);
         return;
       }
       setPanelMessageId(data?.panelMessageId);
       deployedSnapshotRef.current = { enabled, panelChannelId, types, automation, panelMessage };
       if (data?.warning) {
-        toast.warning(data.warning);
+        toast.warning(api(data.warning));
       } else {
         toast.success(t.deployed);
       }
@@ -421,7 +423,7 @@ export default function TicketsPage() {
     } finally {
       setDeploying(false);
     }
-  }, [guildId, enabled, panelChannelId, types, automation, panelMessage, t]);
+  }, [guildId, enabled, panelChannelId, types, automation, panelMessage, t, api]);
 
   const handleDiscardChanges = useCallback(async () => {
     const snapshot = deployedSnapshotRef.current;
