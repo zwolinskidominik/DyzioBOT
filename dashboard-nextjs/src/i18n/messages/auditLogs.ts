@@ -16,6 +16,7 @@ export const auditLogsMessages = defineMessages({
     subtitle: "Historia wszystkich zmian dokonanych w panelu administracyjnym",
     loadError: "Nie udało się załadować logów panelu kontrolnego.",
     modules: {
+      settings: "Ustawienia",
       levels: "System poziomów",
       tickets: "Tickety",
       channel_stats: "Kanały z licznikami",
@@ -54,6 +55,7 @@ export const auditLogsMessages = defineMessages({
     subtitle: "History of every change made in the dashboard",
     loadError: "Couldn't load the dashboard audit log.",
     modules: {
+      settings: "Settings",
       levels: "Levels",
       tickets: "Tickets",
       channel_stats: "Counter channels",

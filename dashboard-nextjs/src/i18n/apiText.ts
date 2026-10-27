@@ -67,6 +67,8 @@ const EXACT_EN: Record<string, string> = {
   "Zaktualizowano konfigurację systemu poziomów": "Updated the level system settings",
   "Zaktualizowano konfigurację turnieju": "Updated the tournament settings",
   "Zaktualizowano konfigurację Server Wrapped": "Updated the Server Wrapped settings",
+  "Usunięto konfigurację kanałów tymczasowych": "Deleted the temporary channel settings",
+  "Wiadomości o awansie": "Level-up messages",
 
   // Etykiety zmian
   "Avatar bota": "Bot avatar",
@@ -138,6 +140,8 @@ const EXACT_EN: Record<string, string> = {
   zmieniono: "changed",
   "usunięto": "removed",
   "domyślny": "default",
+  pl: "Polish",
+  en: "English",
 
   // Powody problemów z modułami (modules-status/issues)
   "Brak wybranego kanału na ogłoszenia urodzin": "No channel picked for birthday announcements",

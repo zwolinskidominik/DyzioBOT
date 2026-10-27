@@ -45,6 +45,7 @@ interface AuditLog {
  * ta lista musi zostać zsynchronizowana ręcznie przy każdej zmianie.
  */
 const MODULE_COLORS: Record<ModuleKey, string> = {
+  settings: "#8B5CF6",
   levels: "#3498DB",
   tickets: "#5865F2",
   channel_stats: "#1ABC9C",

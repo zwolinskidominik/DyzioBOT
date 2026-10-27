@@ -140,6 +140,9 @@ export const EMOJI_GROUP_LABELS: Record<string, string> = {
   none: "Bez odwołania",
 };
 
+/** Klucze, które w filtrze grup mają być jedną pozycją (np. next/previous = Nawigacja). */
+const EMOJI_GROUP_ALIASES: Record<string, string> = { previous: "next" };
+
 function parseMention(mention: string): { animated: boolean; name: string; id: string } | null {
   const match = mention.match(/^<(a)?:([^:]+):(\d+)>$/);
   if (!match) return null;
@@ -165,7 +168,7 @@ function flatten(
       if (parsed) {
         out.set(parsed.id, {
           key: nextPath.join("."),
-          group: topLevelKey,
+          group: EMOJI_GROUP_ALIASES[topLevelKey] ?? topLevelKey,
           groupLabel: EMOJI_GROUP_LABELS[topLevelKey] ?? topLevelKey,
         });
       }
@@ -186,7 +189,7 @@ export function getEmojiConfigMap(botId: string | undefined): Map<string, EmojiC
       if (parsed) {
         out.set(parsed.id, {
           key: topLevelKey,
-          group: topLevelKey,
+          group: EMOJI_GROUP_ALIASES[topLevelKey] ?? topLevelKey,
           groupLabel: EMOJI_GROUP_LABELS[topLevelKey] ?? topLevelKey,
         });
       }
