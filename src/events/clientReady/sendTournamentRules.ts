@@ -139,6 +139,13 @@ async function sendTournamentMessage(client: Client, guildId: string): Promise<v
         .replace(/{voiceChannelLink}/g, voiceChannelLink);
 
     const message = applyVariables(config.messageTemplate);
+    // Pingujemy tylko to, co wstawiają zmienne (rola uczestników/organizatorów, organizatorzy),
+    // nigdy @everyone ani innych ról wpisanych w treść.
+    const allowedMentions = {
+      parse: [],
+      roles: [tournamentRoleId, organizerRoleId].filter((id): id is string => Boolean(id)),
+      users: [...organizerUserIds],
+    };
 
     const rulesMessage =
       config.messageMode === 'embed'
@@ -155,8 +162,9 @@ async function sendTournamentMessage(client: Client, guildId: string): Promise<v
                 return embed;
               })(),
             ],
+            allowedMentions,
           })
-        : await textChannel.send(message);
+        : await textChannel.send({ content: message, allowedMentions });
     await rulesMessage.react(config.reactionEmoji || '🎮');
     logger.info(`Turniej ${guildId}: wiadomość wysłana na kanale #${textChannel.name}.`);
   } catch (error) {

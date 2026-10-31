@@ -1,0 +1,8 @@
+# Kontekst buildu dashboardu (docker-compose: context ./dashboard-nextjs).
+# Sekrety i lokalne artefakty nie trafiają do demona Dockera ani do obrazu.
+.env
+.env.*
+!.env.local.example
+node_modules
+.next
+*.tsbuildinfo

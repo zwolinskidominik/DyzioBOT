@@ -74,7 +74,10 @@ export default async function run(client: Client): Promise<void> {
               continue;
             }
 
-            await (channel as TextChannel).send(config.message || DEFAULT_DISBOARD_MESSAGE);
+            await (channel as TextChannel).send({
+              content: config.message || DEFAULT_DISBOARD_MESSAGE,
+              allowedMentions: { parse: [] },
+            });
 
             const nextSendAt = computeNextSendAt(now);
             await DisboardConfigModel.updateOne(

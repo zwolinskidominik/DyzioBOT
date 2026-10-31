@@ -180,6 +180,9 @@ interface GifItem {
   url: string;
 }
 
+/** Błąd walidacji uploadu, którego treść można bezpiecznie pokazać użytkownikowi. */
+class GreetingsInputError extends Error {}
+
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
 
@@ -413,7 +416,7 @@ async function applyGifState(guildId: string, userId: string | undefined, formDa
   const existingUploadFiles = await readGifFiles(uploadDir);
   const remainingUploadCount = existingUploadFiles.filter((fileName) => !gifState.deletedUploadNames.includes(fileName)).length;
   if (remainingUploadCount + uploadFiles.length > MAX_GREETING_GIFS) {
-    throw new Error((await getApiMessages()).t.errors.gifLimit(MAX_GREETING_GIFS));
+    throw new GreetingsInputError((await getApiMessages()).t.errors.gifLimit(MAX_GREETING_GIFS));
   }
 
   await Promise.all(gifState.deletedUploadNames.map((fileName) => safeUnlink(getGifUploadPath(guildId, fileName))));
@@ -421,11 +424,11 @@ async function applyGifState(guildId: string, userId: string | undefined, formDa
   await mkdir(uploadDir, { recursive: true });
   await Promise.all(uploadFiles.map(async (file) => {
     if (!file.type.includes("gif")) {
-      throw new Error((await getApiMessages()).t.errors.gifOnly);
+      throw new GreetingsInputError((await getApiMessages()).t.errors.gifOnly);
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      throw new Error((await getApiMessages()).t.errors.gifTooBig);
+      throw new GreetingsInputError((await getApiMessages()).t.errors.gifTooBig);
     }
 
     const fileName = createGifFileName(file.name);
@@ -463,11 +466,11 @@ async function savePendingImages(guildId: string, formData: FormData, payload: R
       if (!isUploadedFile(file)) continue;
 
       if (!file.type.startsWith("image/")) {
-        throw new Error((await getApiMessages()).t.errors.imageOnly);
+        throw new GreetingsInputError((await getApiMessages()).t.errors.imageOnly);
       }
 
       if (file.size > MAX_FILE_SIZE) {
-        throw new Error((await getApiMessages()).t.errors.imageTooBig);
+        throw new GreetingsInputError((await getApiMessages()).t.errors.imageTooBig);
       }
 
       const fileName = createImageFileName(moduleKey, slot, file.name, file.type);
@@ -587,9 +590,12 @@ export async function POST(
     });
   } catch (error) {
     await Promise.all(writtenImagePaths.map(safeUnlink));
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
-    );
+    // Do klienta trafiają tylko nasze komunikaty walidacji; inne błędy (Mongo, system plików)
+    // mogłyby ujawnić ścieżki czy szczegóły serwera, więc lądują tylko w logach.
+    if (error instanceof GreetingsInputError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    console.error("Error saving greetings config:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { quickAuthCheck } from "@/lib/auth";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { getFromCache, setInCache } from "@/lib/serverCache";
 import { toSortedDiscordRoles } from "@/lib/discordOrdering";
 
@@ -14,13 +15,15 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    // Dane serwera pobierane tokenem bota: tylko dla osób z dostępem do TEGO serwera (IDOR).
+    const accessError = await requireGuildAccess(auth.session, guildId);
+    if (accessError) return accessError;
 
     const cached = await getFromCache<unknown>('roles', guildId);
     if (cached) {
       return NextResponse.json(toSortedDiscordRoles(cached), {
         headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-          'CDN-Cache-Control': 'public, s-maxage=300',
+          'Cache-Control': 'private, max-age=300',
         },
       });
     }
@@ -48,8 +51,7 @@ export async function GET(
       
       return NextResponse.json(roles, {
         headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-          'CDN-Cache-Control': 'public, s-maxage=300',
+          'Cache-Control': 'private, max-age=300',
         },
       });
     } catch (fetchError: any) {

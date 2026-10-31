@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { quickAuthCheck } from "@/lib/auth";
+import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { getFromCache, setInCache } from "@/lib/serverCache";
 
 export async function GET(
@@ -13,13 +14,15 @@ export async function GET(
     }
 
     const { guildId } = await params;
+    // Dane serwera pobierane tokenem bota: tylko dla osób z dostępem do TEGO serwera (IDOR).
+    const accessError = await requireGuildAccess(auth.session, guildId);
+    if (accessError) return accessError;
 
     const cached = await getFromCache<any>('members', guildId);
     if (cached) {
       return NextResponse.json(cached, {
         headers: {
-          'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=600',
-          'CDN-Cache-Control': 'public, s-maxage=120',
+          'Cache-Control': 'private, max-age=120',
         },
       });
     }
@@ -73,8 +76,7 @@ export async function GET(
 
       return NextResponse.json(simplifiedMembers, {
         headers: {
-          'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=600',
-          'CDN-Cache-Control': 'public, s-maxage=120',
+          'Cache-Control': 'private, max-age=120',
         },
       });
     } catch (fetchError: any) {

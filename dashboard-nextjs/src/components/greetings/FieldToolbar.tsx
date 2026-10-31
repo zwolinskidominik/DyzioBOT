@@ -167,8 +167,10 @@ export function renderInlineHtml(text: string, variables: ToolbarVariable[]): st
 }
 
 export function extractInlineText(root: HTMLElement): string {
-  const temp = document.createElement("div");
-  temp.innerHTML = root.innerHTML;
+  // <template> parsuje HTML bez wykonywania (np. <img onerror>), w przeciwieństwie do <div>.
+  const template = document.createElement("template");
+  template.innerHTML = root.innerHTML;
+  const temp = template.content;
 
   temp.querySelectorAll("br").forEach((br) => {
     br.parentNode?.replaceChild(document.createTextNode(" "), br);

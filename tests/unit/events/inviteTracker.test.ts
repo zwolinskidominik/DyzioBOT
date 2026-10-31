@@ -204,7 +204,7 @@ describe('guildMemberAdd/inviteTracker', () => {
     await inviteTrackerJoin(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **3 zaproszeń**!');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: '**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **3 zaproszeń**!', allowedMentions: { parse: [] } });
   });
 
   it('sends custom join message when configured', async () => {
@@ -217,7 +217,7 @@ describe('guildMemberAdd/inviteTracker', () => {
     await inviteTrackerJoin(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('Witaj <@member-1>! Zaproszony przez Inviter');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: 'Witaj <@member-1>! Zaproszony przez Inviter', allowedMentions: { parse: [] } });
   });
 
   it('replaces {inviteCount} (and legacy {activeCount}) with the number of active invites', async () => {
@@ -230,7 +230,7 @@ describe('guildMemberAdd/inviteTracker', () => {
     await inviteTrackerJoin(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('<@member-1> zaproszony przez Inviter, ma 334 zaproszeń!');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: '<@member-1> zaproszony przez Inviter, ma 334 zaproszeń!', allowedMentions: { parse: [] } });
   });
 
   it('uses the unique username for {inviterName} (escaped), even when the inviter already left the server', async () => {
@@ -246,7 +246,7 @@ describe('guildMemberAdd/inviteTracker', () => {
 
     const logChannel = member.guild.channels.cache.get('log-ch');
     expect(member.client.users.fetch).toHaveBeenCalledWith('inv-1');
-    expect(logChannel!.send).toHaveBeenCalledWith('przez **\\_\\_natix\\_08\\_\\_**');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: 'przez **\\_\\_natix\\_08\\_\\_**', allowedMentions: { parse: [] } });
   });
 
   it('counts invites from the persistent history (incl. expired invites), not only joins recorded by the bot', async () => {
@@ -261,7 +261,7 @@ describe('guildMemberAdd/inviteTracker', () => {
     expect(mockSyncGuildInvites).toHaveBeenCalledWith('guild-1', expect.anything());
     expect(mockGetInviterTotalUses).toHaveBeenCalledWith('guild-1', 'inv-1');
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **386 zaproszeń**!');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: '**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **386 zaproszeń**!', allowedMentions: { parse: [] } });
     expect(mockGetInviterStats).not.toHaveBeenCalled();
   });
 
@@ -275,7 +275,7 @@ describe('guildMemberAdd/inviteTracker', () => {
     await inviteTrackerJoin(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **3 zaproszeń**!');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: '**<@member-1>** został zaproszony przez **Inviter**, który/a ma teraz **3 zaproszeń**!', allowedMentions: { parse: [] } });
   });
 
   it('records the last count of an invite that was consumed (deleted by Discord) by this join', async () => {
@@ -319,7 +319,7 @@ describe('guildMemberAdd/inviteTracker', () => {
     await inviteTrackerJoin(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('TestUser dołączył, ale nie wiadomo kto zaprosił');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: 'TestUser dołączył, ale nie wiadomo kto zaprosił', allowedMentions: { parse: [] } });
   });
 
   it('uses the "vanity" situation template when vanity URL is used', async () => {
@@ -344,7 +344,7 @@ describe('guildMemberAdd/inviteTracker', () => {
     await inviteTrackerJoin(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('TestUser dołączył przez vanity myserver');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: 'TestUser dołączył przez vanity myserver', allowedMentions: { parse: [] } });
   });
 
   it('uses the "selfInvite" situation when the inviter is the joining member', async () => {
@@ -357,7 +357,7 @@ describe('guildMemberAdd/inviteTracker', () => {
     await inviteTrackerJoin(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('TestUser zaprosił się sam');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: 'TestUser zaprosił się sam', allowedMentions: { parse: [] } });
   });
 
   it('uses the "botAdd" situation and skips invite detection/recordJoin when a bot is added', async () => {
@@ -369,7 +369,7 @@ describe('guildMemberAdd/inviteTracker', () => {
     expect(mockRecordJoin).not.toHaveBeenCalled();
     expect(mockDetectUsedInvite).not.toHaveBeenCalled();
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('MusicBot to bot!');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: 'MusicBot to bot!', allowedMentions: { parse: [] } });
   });
 
   it('sends nothing when join section is disabled, even though the module is enabled', async () => {
@@ -419,7 +419,7 @@ describe('guildMemberRemove/inviteTracker', () => {
     expect(mockRecordLeave).toHaveBeenCalledWith('guild-1', 'member-1');
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('**TestUser** opuścił serwer. Zaprosił go **Inviter**.');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: '**TestUser** opuścił serwer. Zaprosił go **Inviter**.', allowedMentions: { parse: [] } });
   });
 
   it('sends custom leave message', async () => {
@@ -432,7 +432,7 @@ describe('guildMemberRemove/inviteTracker', () => {
     await inviteTrackerLeave(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('TestUser opuścił serwer!');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: 'TestUser opuścił serwer!', allowedMentions: { parse: [] } });
   });
 
   it('uses "unknown" template when inviter is unknown', async () => {
@@ -443,7 +443,7 @@ describe('guildMemberRemove/inviteTracker', () => {
     await inviteTrackerLeave(member as any, {} as any);
 
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('TestUser odszedł bez znanego zapraszającego');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: 'TestUser odszedł bez znanego zapraszającego', allowedMentions: { parse: [] } });
   });
 
   it('uses "botRemove" template and skips recordLeave when a bot leaves', async () => {
@@ -454,7 +454,7 @@ describe('guildMemberRemove/inviteTracker', () => {
 
     expect(mockRecordLeave).not.toHaveBeenCalled();
     const logChannel = member.guild.channels.cache.get('log-ch');
-    expect(logChannel!.send).toHaveBeenCalledWith('MusicBot to był bot');
+    expect(logChannel!.send).toHaveBeenCalledWith({ content: 'MusicBot to był bot', allowedMentions: { parse: [] } });
   });
 
   it('skips log when no log channel configured', async () => {

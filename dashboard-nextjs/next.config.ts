@@ -21,6 +21,8 @@ const contentSecurityPolicy = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
+  // Na produkcji (HTTPS za Nginxem) każde przypadkowe http:// podnosimy do https://.
+  ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
 const securityHeaders = [
@@ -29,10 +31,15 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   { key: "X-DNS-Prefetch-Control", value: "on" },
+  // Okno otwarte z innej strony nie dostaje referencji do panelu (window.opener) i odwrotnie.
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
 ];
 
 const nextConfig: NextConfig = {
+  // Bez nagłówka "X-Powered-By: Next.js" - nie podpowiadamy skanerom, na czym stoi panel.
+  poweredByHeader: false,
   async headers() {
     return [
       {

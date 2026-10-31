@@ -155,6 +155,7 @@ async function sendResolved(channel: TextChannel, resolved: ResolvedMessage): Pr
       .setTimestamp();
     await channel.send({ embeds: [embed] });
   } else {
-    await channel.send(resolved.text);
+    // Szablon ustawia admin: bez pingów (wzmianki nadal wyświetlą się jako nazwy).
+    await channel.send({ content: resolved.text, allowedMentions: { parse: [] } });
   }
 }

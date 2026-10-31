@@ -62,7 +62,9 @@ export default async function run(client: Client): Promise<void> {
                 
                 try {
                   await birthdayChannel.send({
-                    content: formattedMessage
+                    content: formattedMessage,
+                    // Treść ustawia admin: pingujemy tylko solenizanta, nigdy @everyone/ról z tekstu.
+                    allowedMentions: { parse: [], users: [member.id] },
                   });
                 } catch (sendError) {
                   logger.error('Błąd podczas wysyłania wiadomości urodzinowej', sendError);

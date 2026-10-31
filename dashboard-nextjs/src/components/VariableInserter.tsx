@@ -148,8 +148,10 @@ export default function VariableInserter({
   };
 
   const extractTextFromHtml = (html: string): string => {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
+    // <template> parsuje HTML bez wykonywania (np. <img onerror>), w przeciwieństwie do <div>.
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const temp = template.content;
     
     const brs = temp.querySelectorAll('br');
     brs.forEach((br) => {

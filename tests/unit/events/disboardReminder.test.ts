@@ -167,7 +167,7 @@ describe('disboardReminder scheduler', () => {
     const cb = (scheduleMock as any)._lastCb;
     await cb();
 
-    expect(channel.send).toHaveBeenCalledWith('Custom reminder');
+    expect(channel.send).toHaveBeenCalledWith({ content: 'Custom reminder', allowedMentions: { parse: [] } });
     expect(mockUpdateOne).toHaveBeenCalledWith(
       { guildId: 'g1' },
       {
@@ -197,7 +197,7 @@ describe('disboardReminder scheduler', () => {
     const cb = (scheduleMock as any)._lastCb;
     await cb();
 
-    expect(channel.send).toHaveBeenCalledWith('Default disboard message');
+    expect(channel.send).toHaveBeenCalledWith({ content: 'Default disboard message', allowedMentions: { parse: [] } });
   });
 
   it('skips when channelId is empty', async () => {
@@ -261,6 +261,6 @@ describe('disboardReminder scheduler', () => {
     await cb();
 
     // guild1 failed but guild2 still sent
-    expect(channel2.send).toHaveBeenCalledWith('Default disboard message');
+    expect(channel2.send).toHaveBeenCalledWith({ content: 'Default disboard message', allowedMentions: { parse: [] } });
   });
 });

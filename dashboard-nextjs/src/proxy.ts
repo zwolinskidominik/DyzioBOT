@@ -42,12 +42,17 @@ async function checkRateLimit(ip: string, isWrite: boolean): Promise<RateLimitRe
   }
 }
 
+/**
+ * IP klienta do limitu zapytań. Najpierw X-Real-IP: Nginx nadpisuje go adresem połączenia
+ * ($remote_addr), więc klient nie może go podrobić. Pierwszy wpis X-Forwarded-For przychodzi
+ * od klienta (Nginx tylko dopisuje na końcu), więc wysyłając losowy nagłówek dało się omijać
+ * limit. Bez X-Real-IP (lokalny dev) bierzemy OSTATNI wpis X-Forwarded-For, dopisany przez proxy.
+ */
 function getClientIP(req: NextRequest): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown"
-  );
+  const realIp = req.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",").map((part) => part.trim()).filter(Boolean);
+  return forwarded?.[forwarded.length - 1] ?? "unknown";
 }
 
 // ---------------------------------------------------------------------------

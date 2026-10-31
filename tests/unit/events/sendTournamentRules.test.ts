@@ -309,7 +309,10 @@ describe('sendTournamentMessage()', () => {
     await sendTournamentMessage(client, 'g1');
 
     expect(sendMock).toHaveBeenCalledTimes(1);
-    const sentMsg = sendMock.mock.calls[0][0];
+    const sent = sendMock.mock.calls[0][0];
+    // Pingi tylko z wstawionych zmiennych, nigdy @everyone/ról z samego tekstu.
+    expect(sent.allowedMentions).toEqual({ parse: [], roles: ['role-tp', 'role-org'], users: ['user-a', 'user-b'] });
+    const sentMsg = sent.content;
     expect(sentMsg).toContain('<@&role-tp>');
     expect(sentMsg).toContain('<@&role-org>');
     expect(sentMsg).toContain('<@user-a>');

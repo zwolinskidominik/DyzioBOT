@@ -77,6 +77,8 @@ export default function run(client: Client): void {
             content: `# 🎂 Wszystkiego najlepszego, **${guild.name}**!\nDzisiaj mija **${ageText}** od założenia serwera! Oto podsumowanie naszej wspólnej przygody:`,
             files: [attachment],
             components: [row],
+            // Nazwa serwera może zawierać np. "@everyone" - nie pingujemy nikogo.
+            allowedMentions: { parse: [] },
           });
 
           logger.info(`[WRAPPED] Server Wrapped wysłany na #${channel.name} (${guild.name}).`);

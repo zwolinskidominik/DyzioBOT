@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       const cached = await redis.get(CACHE_KEY);
       if (cached) {
         return NextResponse.json(JSON.parse(cached), {
-          headers: { "Cache-Control": "public, s-maxage=3600" },
+          headers: { "Cache-Control": "private, max-age=3600" },
         });
       }
     } catch {
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(result, {
-      headers: { "Cache-Control": "public, s-maxage=3600" },
+      headers: { "Cache-Control": "private, max-age=3600" },
     });
   } catch (error) {
     console.error("Error fetching bot emojis:", error);
