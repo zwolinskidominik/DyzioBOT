@@ -9,6 +9,15 @@ import logger from './utils/logger';
 import { env } from './config';
 import mongoose from 'mongoose';
 import 'reflect-metadata';
+import { setLogger as setCronLogger } from 'node-cron';
+
+// node-cron 4 domyślnie pisze na konsolę (np. o pominiętych wykonaniach) - kierujemy to do Winstona.
+setCronLogger({
+  info: (message) => logger.info(`[cron] ${message}`),
+  warn: (message) => logger.warn(`[cron] ${message}`),
+  error: (message, err) => logger.error(`[cron] ${message instanceof Error ? message.message : message}`, { err }),
+  debug: (message) => logger.debug(`[cron] ${message instanceof Error ? message.message : message}`),
+});
 
 const { TOKEN, MONGODB_URI, DEV_GUILD_IDS, DEV_USER_IDS, DEV_ROLE_IDS } = env();
 

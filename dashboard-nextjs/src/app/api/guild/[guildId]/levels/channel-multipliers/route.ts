@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
+import { z } from 'zod';
+import { parseJsonBody, snowflake } from '@/lib/apiValidation';
 
 const channelMultiplierSchema = new mongoose.Schema({
   channelId: { type: String, required: true },
@@ -52,6 +54,11 @@ export async function GET(
   }
 }
 
+const channelMultiplierBody = z.object({
+  channelId: snowflake,
+  multiplier: z.number().min(0.1).max(10),
+});
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -66,15 +73,11 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const { channelId, multiplier } = await request.json();
-
-    if (!channelId || typeof multiplier !== 'number') {
-      return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
-    }
-
-    if (multiplier < 0.1 || multiplier > 10) {
-      return NextResponse.json({ error: 'Multiplier must be between 0.1 and 10' }, { status: 400 });
-    }
+    // channelId trafia do $pull (dokument aktualizacji, którego sanitizeFilter nie sprawdza) -
+    // musi być prawdziwym ID kanału, nie obiektem z operatorami Mongo.
+    const body = await parseJsonBody(request, channelMultiplierBody);
+    if (!body.ok) return body.response;
+    const { channelId, multiplier } = body.data;
 
     await connectDB();
 
@@ -114,7 +117,7 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get('channelId');
 
-    if (!channelId) {
+    if (!channelId || !snowflake.safeParse(channelId).success) {
       return NextResponse.json({ error: 'Missing channelId' }, { status: 400 });
     }
 

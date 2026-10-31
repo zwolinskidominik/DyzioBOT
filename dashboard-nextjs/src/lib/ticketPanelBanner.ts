@@ -1,4 +1,4 @@
-import { createCanvas, loadImage, registerFont } from "canvas";
+import { createCanvas, GlobalFonts, loadImage } from "@napi-rs/canvas";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
@@ -26,7 +26,7 @@ function registerAgeerFont(): void {
   fontRegistered = true;
   try {
     if (existsSync(FONT_PATH)) {
-      registerFont(FONT_PATH, { family: "Ageer", weight: "normal", style: "normal" });
+      GlobalFonts.registerFromPath(FONT_PATH, "Ageer");
     }
   } catch (error) {
     console.warn("Nie udało się zarejestrować czcionki Ageer:", error);

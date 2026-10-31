@@ -5,6 +5,9 @@ import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import dbConnect from "@/lib/mongodb";
 import HangmanCategory from "@/models/HangmanCategory";
 import { getApiMessages } from "@/i18n/apiServer";
+import { requireBotOwner } from "@/lib/requireBotOwner";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/apiValidation";
 
 export async function GET(
   request: Request,
@@ -19,6 +22,9 @@ export async function GET(
     const { guildId } = await params;
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
+    // Pula słów jest wspólna dla wszystkich serwerów (i zawiera odpowiedzi) - tylko właściciel bota.
+    const ownerError = requireBotOwner(session);
+    if (ownerError) return ownerError;
 
     await dbConnect();
 
@@ -45,6 +51,19 @@ export async function GET(
   }
 }
 
+// Typy i długości sprawdzone z góry; puste pola dalej obsługują czytelne komunikaty niżej.
+const hangmanText = z.string().max(100).optional();
+const hangmanBody = z.object({
+  action: z.string().max(40),
+  categoryName: hangmanText,
+  word: hangmanText,
+  name: hangmanText,
+  emoji: hangmanText,
+  newName: hangmanText,
+  newEmoji: hangmanText,
+  names: z.array(z.string().max(100)).max(500).optional(),
+});
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ guildId: string }> }
@@ -58,10 +77,15 @@ export async function POST(
     const { guildId } = await params;
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
+    // Pula słów jest wspólna dla wszystkich serwerów (i zawiera odpowiedzi) - tylko właściciel bota.
+    const ownerError = requireBotOwner(session);
+    if (ownerError) return ownerError;
 
     await dbConnect();
 
-    const body = await request.json();
+    const parsed = await parseJsonBody(request, hangmanBody);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
     const { action } = body;
 
     if (action === "addWord") {
@@ -174,14 +198,14 @@ export async function POST(
 
     if (action === "reorderCategories") {
       const { names } = body;
-      if (!Array.isArray(names) || names.some((n) => typeof n !== "string")) {
+      if (!names) {
         return NextResponse.json({ error: (await getApiMessages()).t.errors.hangmanNamesRequired }, { status: 400 });
       }
 
       // Explicit whitelist — jedyne pole, które ta akcja modyfikuje, to `order`, po nazwie
       // z listy przysłanej przez klienta (bez mass assignment reszty dokumentu).
       await Promise.all(
-        names.map((name: string, index: number) => HangmanCategory.updateOne({ name }, { order: index }))
+        names.map((name, index) => HangmanCategory.updateOne({ name }, { order: index }))
       );
 
       return NextResponse.json({ success: true });

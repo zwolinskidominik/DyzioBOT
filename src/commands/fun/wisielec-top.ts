@@ -3,7 +3,7 @@ import {
   AttachmentBuilder,
   MessageFlags,
 } from 'discord.js';
-import { createCanvas, loadImage } from 'canvas';
+import { createCanvas, loadImage, type SKRSContext2D } from '@napi-rs/canvas';
 import mongoose from 'mongoose';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { HangmanStatsModel } from '../../models/HangmanStats';
@@ -11,7 +11,7 @@ import { COLORS } from '../../config/constants/colors';
 import logger from '../../utils/logger';
 
 // ─── Canvas layout ────────────────────────────────────────────────────────────
-type Ctx2D = any;
+type Ctx2D = SKRSContext2D;
 
 const IMG_W    = 820;
 const PAD      = 32;
@@ -90,7 +90,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   // ── Build canvas ──────────────────────────────────────────────────────────
   const IMG_H = HDR_H + stats.length * ROW_H + PAD / 2;
   const canvas = createCanvas(IMG_W, IMG_H);
-  const ctx    = canvas.getContext('2d') as Ctx2D;
+  const ctx    = canvas.getContext('2d');
 
   // Background
   ctx.fillStyle = C_BG;

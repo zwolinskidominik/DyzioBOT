@@ -5,6 +5,9 @@ import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 import ChannelStatsModel from "@/models/ChannelStats";
 import { createAuditLog, diffFields } from "@/lib/auditLog";
+import { z } from "zod";
+import { parseJsonBody, snowflake } from "@/lib/apiValidation";
+import { requireChannelsInGuild } from "@/lib/guildChannels";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -55,6 +58,23 @@ export async function GET(
   }
 }
 
+// Kanał licznika: ID kanału i szablon nazwy (limit nazwy kanału Discorda: 100 znaków).
+const counterChannel = z.object({
+  channelId: z.union([snowflake, z.literal("")]).optional(),
+  template: z.string().max(100).optional(),
+});
+const channelStatsConfigBody = z.object({
+  enabled: z.boolean().optional(),
+  channels: z
+    .object({
+      lastJoined: counterChannel.optional(),
+      users: counterChannel.optional(),
+      bots: counterChannel.optional(),
+      bans: counterChannel.optional(),
+    })
+    .optional(),
+});
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -69,9 +89,13 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await req.json();
+    const body = await parseJsonBody(req, channelStatsConfigBody);
+    if (!body.ok) return body.response;
+    const { channels, enabled } = body.data;
 
-    const { channels, enabled } = body;
+    // Kanały liczników bot później zmienia/usuwa - muszą należeć do tego serwera.
+    const channelError = await requireChannelsInGuild(guildId, Object.values(channels ?? {}).map((entry) => entry?.channelId));
+    if (channelError) return channelError;
 
     await connectDB();
 
@@ -92,7 +116,7 @@ export async function POST(
         enabled: nextEnabled,
         channels: nextChannels,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     const channelCategoryLabel = (v: unknown): string | null => {

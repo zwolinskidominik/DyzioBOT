@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testSession } from "@/tests/helpers/session";
 
 vi.mock("next-auth", () => ({
   getServerSession: vi.fn(),
@@ -20,10 +21,7 @@ function jsonResponse(body: unknown, status = 200) {
 describe("GET /api/discord/guild/[guildId]", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: "user123" },
-      accessToken: "user-token",
-    });
+    vi.mocked(getServerSession).mockResolvedValue(testSession("user123", "user-token"));
   });
 
   it("returns 401 when session is missing", async () => {

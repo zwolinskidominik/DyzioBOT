@@ -1,4 +1,4 @@
-import { getModelForClass, index, modelOptions, prop, DocumentType } from '@typegoose/typegoose';
+import { getModelForClass, index, modelOptions, prop, DocumentType, Severity } from '@typegoose/typegoose';
 
 export enum TransactionType {
   // Zarabianie
@@ -69,7 +69,8 @@ class EconomyTransaction {
   public targetUserId?: string;
 
   /** Dodatkowy kontekst: skinId, jobName, gameResult, etc. */
-  @prop({ type: () => Object })
+  // Celowo dowolny obiekt (różny per typ transakcji) - jawnie zezwalamy na Mixed, bez ostrzeżenia typegoose.
+  @prop({ type: () => Object, allowMixed: Severity.ALLOW })
   public meta?: Record<string, unknown>;
 
   /** Populowane przez timestamps: true w schemaOptions */

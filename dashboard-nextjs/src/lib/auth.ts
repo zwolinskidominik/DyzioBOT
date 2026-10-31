@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
+import { getDiscordAccessToken } from "@/lib/discordSessionToken";
 
 const sessionCache = new Map<string, { session: any; timestamp: number }>();
 const SESSION_CACHE_TTL = 30 * 1000;
@@ -21,7 +22,7 @@ export async function quickAuthCheck(request: Request): Promise<{
 
     const session = await getServerSession(authOptions);
 
-    if (!session?.accessToken) {
+    if (!getDiscordAccessToken(session)) {
       return {
         authorized: false,
         session: null,

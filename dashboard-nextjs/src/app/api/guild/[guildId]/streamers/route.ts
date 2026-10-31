@@ -5,6 +5,8 @@ import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
 import { validateTwitchUser } from '@/lib/twitchApi';
 import { getApiMessages } from '@/i18n/apiServer';
+import { z } from 'zod';
+import { parseJsonBody, snowflake } from '@/lib/apiValidation';
 
 const twitchStreamerSchema = new mongoose.Schema({
   guildId: { type: String, required: true },
@@ -63,6 +65,16 @@ export async function GET(
   }
 }
 
+// Nazwa kanału Twitch (login, ewentualnie z wielkimi literami - normalizujemy niżej) i ID osoby z Discorda.
+const twitchChannelName = z.string().trim().min(1).max(50);
+const addStreamerBody = z.object({ twitchChannel: twitchChannelName, userId: snowflake });
+const updateStreamerBody = z.object({
+  // _id dokumentu Mongo (24 znaki hex) - trafia do filtra z mongoose.trusted(), więc tylko taki format.
+  streamerId: z.string().regex(/^[0-9a-fA-F]{24}$/),
+  twitchChannel: twitchChannelName,
+  userId: snowflake,
+});
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -77,11 +89,9 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const { twitchChannel, userId } = await req.json();
-
-    if (!twitchChannel || !userId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    const body = await parseJsonBody(req, addStreamerBody);
+    if (!body.ok) return body.response;
+    const { twitchChannel, userId } = body.data;
 
     // Validate Twitch user exists before saving
     let avatarUrl: string | undefined;
@@ -156,11 +166,9 @@ export async function PATCH(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const { streamerId, twitchChannel, userId } = await req.json();
-
-    if (!streamerId || !twitchChannel || !userId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    const body = await parseJsonBody(req, updateStreamerBody);
+    if (!body.ok) return body.response;
+    const { streamerId, twitchChannel, userId } = body.data;
 
     // Validate Twitch user exists before saving
     let avatarUrl: string | undefined;
@@ -201,7 +209,7 @@ export async function PATCH(
         userId,
         ...(avatarUrl ? { avatarUrl } : {}),
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!streamer) {

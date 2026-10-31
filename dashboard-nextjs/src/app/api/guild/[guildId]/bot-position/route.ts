@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { fetchGuildRoles } from "@/lib/discordGuildData";
+import { getDiscordAccessToken } from "@/lib/discordSessionToken";
 
 /**
  * Returns the highest role position the bot holds in the guild.
@@ -14,7 +15,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!session || !getDiscordAccessToken(session)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
+import { z } from 'zod';
+import { parseJsonBody, snowflake } from '@/lib/apiValidation';
 
 /** Musi być identyczny z src/models/StreamConfiguration.ts (bot) — patrz komentarz tam. */
 const DEFAULT_STREAM_MESSAGE_TEMPLATE = '@everyone {streamer} właśnie zaczął streama! {link}';
@@ -84,6 +86,12 @@ export async function GET(
   }
 }
 
+const streamConfigBody = z.object({
+  enabled: z.boolean().optional(),
+  channelId: snowflake,
+  messageTemplate: z.string().max(2000).optional(),
+});
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -98,11 +106,9 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const { enabled, channelId, messageTemplate } = await req.json();
-
-    if (!channelId || typeof channelId !== 'string') {
-      return NextResponse.json({ error: 'Invalid channelId' }, { status: 400 });
-    }
+    const body = await parseJsonBody(req, streamConfigBody);
+    if (!body.ok) return body.response;
+    const { enabled, channelId, messageTemplate } = body.data;
 
     // Pusty string zapisujemy tak jak jest (świadomy wybór użytkownika — brak treści nad
     // embedem). Domyślny szablon wstawiamy tylko gdy pole w ogóle nie zostało przysłane.
@@ -118,7 +124,7 @@ export async function POST(
         channelId,
         messageTemplate: messageTemplateToSave,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     ).lean();
 
     return NextResponse.json(config);

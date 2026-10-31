@@ -88,7 +88,7 @@ export async function POST(
     const result = await GuildSettings.findOneAndUpdate(
       { guildId },
       { guildId, ...parsed.data },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     ).lean<IGuildSettings>();
 
     const changes = diffFields(oldSettings, result!, [

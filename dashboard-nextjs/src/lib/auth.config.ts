@@ -1,6 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 import { ensureFreshDiscordToken } from "@/lib/discordTokenRefresh";
+import { attachDiscordAccessToken } from "@/lib/discordSessionToken";
 
 function profileId(profile: unknown): string | undefined {
   if (profile && typeof profile === "object" && "id" in profile && typeof profile.id === "string") {
@@ -44,8 +45,9 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id ?? "";
-        session.accessToken = token.accessToken ?? "";
       }
+      // Token Discorda tylko po stronie serwera (patrz lib/discordSessionToken.ts), nie w JSON sesji.
+      attachDiscordAccessToken(session, token.accessToken);
       session.error = token.error;
       return session;
     },

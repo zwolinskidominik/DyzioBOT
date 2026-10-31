@@ -1,6 +1,6 @@
 import { Guild, GuildMember } from 'discord.js';
 import mongoose from 'mongoose';
-import { createCanvas, loadImage } from 'canvas';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { registerProjectFonts, roundRect, formatNumberDotSep, type Ctx2D } from '../utils/canvasHelpers';
 import { fillTextWithEmoji } from '../utils/canvasEmojiText';
 import { MonthlyStatsModel } from '../models/MonthlyStats';
@@ -282,7 +282,7 @@ export async function renderWrappedCanvas(data: WrappedData, theme: WrappedTheme
   const { bg, tile: STAT_BG, tileBorder: TILE_BORDER, accent: ACCENT, border: CARD_BORDER, glowA, glowB } = THEME_PALETTES[theme];
 
   const canvas = createCanvas(W, H);
-  const ctx = canvas.getContext('2d') as Ctx2D;
+  const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
   // ── Tło + dwie plamy światła (div 310×310 w prawym górnym rogu, 350×350 w lewym dolnym) ──
@@ -694,7 +694,7 @@ export async function renderPersonalWrappedCanvas(
   const PH = footerBaseline + 28;
 
   const canvas = createCanvas(PW, PH);
-  const ctx = canvas.getContext('2d') as Ctx2D;
+  const ctx = canvas.getContext('2d');
   ctx.textBaseline = 'alphabetic';
 
   // ── Tło + plamy światła (jak w Server Wrapped) ──

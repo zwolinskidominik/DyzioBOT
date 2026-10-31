@@ -1,7 +1,7 @@
-import { createCanvas, loadImage } from 'canvas';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { registerProjectFonts, Ctx2D } from './canvasHelpers';
+import { registerProjectFonts } from './canvasHelpers';
 import { ITicketType } from '../interfaces/Models';
 import logger from './logger';
 
@@ -40,7 +40,7 @@ export async function renderTextBanner(text: string): Promise<Buffer> {
   const width = base.width;
   const height = base.height;
   const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d') as unknown as Ctx2D;
+  const ctx = canvas.getContext('2d');
 
   ctx.drawImage(base, 0, 0, width, height);
 

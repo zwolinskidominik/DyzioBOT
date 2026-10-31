@@ -1,4 +1,4 @@
-import { loadImage, Image } from 'canvas';
+import { loadImage, Image } from '@napi-rs/canvas';
 import type { Ctx2D } from './canvasHelpers';
 import logger from './logger';
 

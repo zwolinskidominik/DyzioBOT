@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testSession } from "@/tests/helpers/session";
 
 const mocks = vi.hoisted(() => ({
   readdir: vi.fn(),
@@ -58,7 +59,7 @@ function mockDisabledGifStates(fileNames: string[]) {
 describe("GET /api/guild/[guildId]/greetings/gifs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getServerSession).mockResolvedValue({ user: { id: "owner" }, accessToken: "token" } as Awaited<ReturnType<typeof getServerSession>>);
+    vi.mocked(getServerSession).mockResolvedValue(testSession("owner"));
   });
 
   it("returns active GIFs first and disabled default GIFs at the end", async () => {

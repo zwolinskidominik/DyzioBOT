@@ -152,13 +152,13 @@ export async function takeTicket(
   await TicketStateModel.findOneAndUpdate(
     { channelId },
     { assignedTo: moderatorId },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: 'after' },
   );
 
   const stats = await TicketStatsModel.findOneAndUpdate(
     { guildId, userId: moderatorId },
     { $inc: { count: 1 } },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: 'after' },
   );
 
   return ok({ assignedTo: moderatorId, statsCount: stats.count });
@@ -178,7 +178,7 @@ export async function registerTicketChannel(
   await TicketStateModel.findOneAndUpdate(
     { channelId },
     { guildId, typeId, creatorId, lastActivityAt: new Date() },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: 'after' },
   );
   return ok(undefined);
 }

@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/apiValidation";
 
 const reactionRoleConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
@@ -53,6 +55,8 @@ export async function GET(
   }
 }
 
+const reactionRoleConfigBody = z.object({ enabled: z.boolean().optional() });
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ guildId: string }> }
@@ -67,7 +71,9 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await request.json();
+    const parsed = await parseJsonBody(request, reactionRoleConfigBody);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
 
     await connectDB();
 
@@ -77,7 +83,7 @@ export async function POST(
         enabled: body.enabled !== false,
         guildId: String(guildId),
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     return NextResponse.json(config.toObject());

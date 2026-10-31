@@ -11,6 +11,9 @@ import TicketConfigModel, {
 } from "@/models/TicketConfig";
 import { createAuditLog, diffFields } from "@/lib/auditLog";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
+import { z } from "zod";
+import { optionalSnowflake, parseJsonBody, snowflake } from "@/lib/apiValidation";
+import { requireChannelsInGuild } from "@/lib/guildChannels";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -28,7 +31,7 @@ function sanitizeBanner(input: unknown, defaultPresetId = "ticketBanner.png"): I
   return {
     mode,
     ...(typeof raw.presetId === "string" ? { presetId: raw.presetId } : mode === "preset" ? { presetId: defaultPresetId } : {}),
-    ...(typeof raw.text === "string" ? { text: raw.text } : {}),
+    ...(typeof raw.text === "string" ? { text: raw.text.slice(0, 100) } : {}),
   };
 }
 
@@ -58,11 +61,13 @@ function sanitizeTypes(input: unknown): ITicketType[] {
     .map((t) => {
       const thumbnail = sanitizeThumbnail(t.thumbnail);
       const type: ITicketType = {
-        id: String(t.id ?? ""),
-        emoji: String(t.emoji ?? ""),
-        name: String(t.name ?? ""),
-        description: String(t.description ?? ""),
-        roleIds: Array.isArray(t.roleIds) ? t.roleIds.map(String) : [],
+        id: String(t.id ?? "").slice(0, 50),
+        emoji: String(t.emoji ?? "").slice(0, 100),
+        name: String(t.name ?? "").slice(0, 100),
+        description: String(t.description ?? "").slice(0, 4000),
+        roleIds: Array.isArray(t.roleIds)
+          ? t.roleIds.map(String).filter((id) => snowflake.safeParse(id).success).slice(0, 25)
+          : [],
         color: sanitizeColor(t.color, "#5865F2"),
         banner: sanitizeBanner(t.banner),
         ...(thumbnail ? { thumbnail } : {}),
@@ -98,11 +103,21 @@ function sanitizeAutomation(input: unknown): ITicketAutomation {
   const transcriptEnabled = Boolean(raw.transcriptEnabled);
 
   const automation: ITicketAutomation = { maxOpenPerUser, autoCloseHours, transcriptEnabled };
-  if (typeof raw.transcriptChannelId === "string" && raw.transcriptChannelId) {
+  if (typeof raw.transcriptChannelId === "string" && snowflake.safeParse(raw.transcriptChannelId).success) {
     automation.transcriptChannelId = raw.transcriptChannelId;
   }
   return automation;
 }
+
+const ticketConfigBody = z.object({
+  enabled: z.boolean().optional(),
+  categoryId: optionalSnowflake,
+  panelChannelId: optionalSnowflake,
+  // Discord pozwala na maks. 25 opcji w menu wyboru panelu.
+  types: z.array(z.unknown()).max(25).optional(),
+  automation: z.unknown().optional(),
+  panelMessage: z.unknown().optional(),
+});
 
 export async function GET(
   request: NextRequest,
@@ -160,11 +175,18 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await request.json();
+    const parsed = await parseJsonBody(request, ticketConfigBody);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
     const { enabled, categoryId, panelChannelId } = body;
+    // Zagnieżdżone pola mają własne sanitizery (whitelist pól, limity długości) poniżej.
     const types = sanitizeTypes(body.types);
     const automation = sanitizeAutomation(body.automation);
     const panelMessage = sanitizePanelMessage(body.panelMessage);
+
+    // Panel i transkrypty wysyła bot (deploy) - kanały muszą należeć do tego serwera.
+    const channelError = await requireChannelsInGuild(guildId, [categoryId, panelChannelId, automation.transcriptChannelId]);
+    if (channelError) return channelError;
 
     await connectDB();
 
@@ -174,7 +196,7 @@ export async function POST(
       guildId,
       enabled: enabled !== undefined ? enabled : false,
       categoryId: categoryId ?? "",
-      panelChannelId,
+      panelChannelId: panelChannelId ?? "",
       types,
       automation,
       panelMessage,
@@ -183,7 +205,7 @@ export async function POST(
     const result = await TicketConfigModel.findOneAndUpdate(
       { guildId },
       nextConfig,
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     const changes = diffFields(oldConfig, nextConfig, [

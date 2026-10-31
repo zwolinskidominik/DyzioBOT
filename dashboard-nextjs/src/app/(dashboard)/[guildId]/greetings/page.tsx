@@ -161,6 +161,8 @@ function createGreetingsSchema(t: GreetingsText) {
 }
 
 type GreetingsFormData = z.infer<ReturnType<typeof createGreetingsSchema>>;
+// zod 4 + @hookform/resolvers 5: formularz trzyma dane wejściowe schematu, a submit dostaje dane po walidacji.
+type GreetingsFormInput = z.input<ReturnType<typeof createGreetingsSchema>>;
 type SettingsSection = "welcome" | "gifs" | "dm" | "goodbye";
 type PendingImageKey = `${GreetingModuleKey}.${GreetingImageSlot}`;
 
@@ -450,7 +452,7 @@ export default function GreetingsPage() {
   const gifsRef = useRef(gifs);
   const savedValuesRef = useRef(DEFAULT_FORM_VALUES);
 
-  const form = useForm<GreetingsFormData>({ resolver: zodResolver(greetingsSchema), defaultValues: DEFAULT_FORM_VALUES });
+  const form = useForm<GreetingsFormInput, unknown, GreetingsFormData>({ resolver: zodResolver(greetingsSchema), defaultValues: DEFAULT_FORM_VALUES });
   const { handleSubmit, reset, setValue, watch, formState: { errors, isDirty } } = form;
   const values = watch();
 

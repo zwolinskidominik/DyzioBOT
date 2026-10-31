@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 import ChannelStatsModel from "@/models/ChannelStats";
+import { getDiscordAccessToken } from "@/lib/discordSessionToken";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -22,7 +23,7 @@ export async function POST(
 ): Promise<NextResponse> {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!session || !getDiscordAccessToken(session)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

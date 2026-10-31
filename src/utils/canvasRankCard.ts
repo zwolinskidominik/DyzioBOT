@@ -1,5 +1,5 @@
-import { createCanvas, loadImage, Canvas, Image } from 'canvas';
-import { Ctx2D, registerProjectFonts, roundRect, formatNumberDotSep } from './canvasHelpers';
+import { createCanvas, Canvas } from '@napi-rs/canvas';
+import { Ctx2D, registerProjectFonts, loadImageWithTimeout, roundRect, formatNumberDotSep } from './canvasHelpers';
 import logger from './logger';
 
 interface RankCardOptions {
@@ -264,12 +264,7 @@ export class CanvasRankCard {
 
   private async drawAvatar() {
     try {
-      const avatarImagePromise = loadImage(this.options.avatarURL);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Avatar load timeout')), 5000)
-      );
-      
-      const avatarImage = await Promise.race([avatarImagePromise, timeoutPromise]) as Image;
+      const avatarImage = await loadImageWithTimeout(this.options.avatarURL, 5000, 'Avatar load timeout');
       const avatarSize = 150;
       const avatarX = 30;
       const avatarY = 50;
@@ -279,7 +274,7 @@ export class CanvasRankCard {
       
       const tempSize = avatarSize * 2;
       const tempCanvas = createCanvas(tempSize, tempSize);
-      const tempCtx = tempCanvas.getContext('2d') as Ctx2D;
+      const tempCtx = tempCanvas.getContext('2d');
       tempCtx.imageSmoothingEnabled = true;
       tempCtx.imageSmoothingQuality = 'high';
 

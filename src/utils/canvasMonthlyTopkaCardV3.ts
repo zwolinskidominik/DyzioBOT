@@ -1,5 +1,5 @@
-import { createCanvas, loadImage, Canvas, Image } from 'canvas';
-import { Ctx2D, registerProjectFonts, roundRect } from './canvasHelpers';
+import { createCanvas, loadImage, Canvas, Image } from '@napi-rs/canvas';
+import { Ctx2D, registerProjectFonts, loadImageWithTimeout, roundRect } from './canvasHelpers';
 import { fillTextWithEmojiTracked, isEmojiGrapheme, splitGraphemes } from './canvasEmojiText';
 import logger from './logger';
 
@@ -712,9 +712,7 @@ export class MonthlyTopkaCardV3 {
   ) {
     try {
       if (!url) throw new Error('no url');
-      const imagePromise = loadImage(url);
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
-      const image = (await Promise.race([imagePromise, timeoutPromise])) as Image;
+      const image = await loadImageWithTimeout(url, 5000, 'timeout');
 
       this.ctx.save();
       this.ctx.beginPath();

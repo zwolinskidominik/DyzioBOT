@@ -276,7 +276,7 @@ export async function updateConfig(
     await InviteTrackerConfigModel.findOneAndUpdate(
       { guildId },
       { guildId, ...data },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: 'after' },
     );
     return ok({ updated: true });
   } catch (error) {
@@ -325,7 +325,7 @@ export async function recordLeave(guildId: string, userId: string): Promise<Serv
     const entry = await InviteEntryModel.findOneAndUpdate(
       { guildId, joinedUserId: userId, active: true },
       { active: false, leftAt: new Date() },
-      { sort: { joinedAt: -1 }, new: true },
+      { sort: { joinedAt: -1 }, returnDocument: 'after' },
     );
 
     return ok({ inviterId: entry?.inviterId ?? null, inviteCode: entry?.inviteCode ?? null });

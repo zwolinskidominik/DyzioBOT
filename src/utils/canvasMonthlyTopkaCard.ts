@@ -1,6 +1,6 @@
-import { createCanvas, loadImage, Canvas, Image } from 'canvas';
+import { createCanvas, loadImage, Canvas } from '@napi-rs/canvas';
 import { getBotConfig } from '../config/bot';
-import { Ctx2D, registerProjectFonts, roundRect, formatNumberDotSep } from './canvasHelpers';
+import { Ctx2D, registerProjectFonts, loadImageWithTimeout, roundRect, formatNumberDotSep } from './canvasHelpers';
 import logger from './logger';
 
 /**
@@ -357,11 +357,7 @@ export class MonthlyTopkaCard {
 
   private async drawAvatar(entry: TopkaCardEntry, x: number, y: number, size: number) {
     try {
-      const avatarImagePromise = loadImage(entry.avatarURL);
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Avatar load timeout')), 5000),
-      );
-      const avatarImage = (await Promise.race([avatarImagePromise, timeoutPromise])) as Image;
+      const avatarImage = await loadImageWithTimeout(entry.avatarURL, 5000, 'Avatar load timeout');
 
       this.ctx.save();
       this.ctx.beginPath();

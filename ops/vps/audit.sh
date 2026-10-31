@@ -65,7 +65,13 @@ if have nginx; then
   nginx -v 2>&1
   nginx -t 2>&1 | tail -1
   ls /etc/nginx/sites-enabled/
-  nginx -T 2>/dev/null | grep -E '^\s*(server_name|listen|ssl_protocols|add_header|limit_req|client_max_body_size|server_tokens|proxy_pass)\b' | sed 's/^\s*//' | sort | uniq -c
+  nginx -T 2>/dev/null | grep -E '^\s*(server_name|listen|ssl_protocols|add_header|limit_req|client_max_body_size|server_tokens|proxy_pass|proxy_set_header)\b' | sed 's/^\s*//' | sort | uniq -c
+  # Limit zapytań panelu (src/proxy.ts) bierze IP klienta z X-Real-IP - Nginx musi go ustawiać.
+  if nginx -T 2>/dev/null | grep -Eq '^\s*proxy_set_header\s+X-Real-IP\s+\$remote_addr'; then
+    echo "X-Real-IP: OK"
+  else
+    echo "UWAGA: brak 'proxy_set_header X-Real-IP \$remote_addr;' - limit zapytań panelu nie rozróżni klientów"
+  fi
 else
   echo "nginx: nie zainstalowany"
 fi

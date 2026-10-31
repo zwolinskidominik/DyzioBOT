@@ -172,7 +172,7 @@ export async function POST(
         guildId,
         ...body,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     const changes = diffLogConfig(oldConfig, {

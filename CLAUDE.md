@@ -26,12 +26,12 @@ Jeśli dokumentacja (`docs/SECURITY.md` i inne) opisuje jakieś zabezpieczenie j
 
 | Warstwa | Technologia |
 |---|---|
-| Bot | Node.js 20 LTS · TypeScript strict · discord.js v14 · CommonJS |
+| Bot | Node.js 22 LTS · TypeScript strict · discord.js v14 · CommonJS |
 | ORM | Mongoose 9 + Typegoose 13 — modele w `src/models/` |
 | DB | MongoDB Atlas (multi-tenant — każda query **MUSI** mieć `guildId`) |
 | Serwisy | Plain functions → `ServiceResult<T>` (nigdy throw na zewnątrz) |
 | Logger | Winston — wyłącznie `logger.*`, zero `console.*` |
-| Testy | Jest 29 + ts-jest + `mongodb-memory-server` |
+| Testy | Jest 30 + ts-jest + `mongodb-memory-server` |
 | Dashboard | Next.js App Router + NextAuth Discord OAuth2 + Shadcn/ui + Redis |
 
 ---
@@ -159,7 +159,7 @@ class Thing {
 export const ThingModel = getModelForClass(Thing);
 ```
 
-- Atomowe update: `findOneAndUpdate` z `$inc`/`$set` + `{ new: true, upsert: true }`
+- Atomowe update: `findOneAndUpdate` z `$inc`/`$set` + `{ returnDocument: 'after', upsert: true }` (opcja `new` jest przestarzała w Mongoose)
 - **NIGDY nie aktualizuj salda bezpośrednio** — zawsze przez `EconomyTransaction` (ledger)
 
 ### Komendy Discord

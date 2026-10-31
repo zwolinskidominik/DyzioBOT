@@ -5,6 +5,9 @@ import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 import TempChannelConfigurationModel, { ITempChannelCreator } from "@/models/TempChannelConfiguration";
 import { createAuditLog, diffFields } from "@/lib/auditLog";
+import { z } from "zod";
+import { parseJsonBody, snowflake } from "@/lib/apiValidation";
+import { requireChannelsInGuild } from "@/lib/guildChannels";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -50,6 +53,12 @@ export async function GET(
   }
 }
 
+const tempChannelsBody = z.object({
+  enabled: z.boolean().optional(),
+  creators: z.array(z.object({ channelId: snowflake, type: z.enum(["panel", "standard"]) })).max(50).optional(),
+  channelIds: z.array(snowflake).max(50).optional(),
+});
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -65,13 +74,17 @@ export async function POST(
     if (accessError) return accessError;
 
     await connectDB();
-    const body = await req.json();
-    const creators: ITempChannelCreator[] = Array.isArray(body.creators)
-      ? body.creators
-      : (Array.isArray(body.channelIds) ? body.channelIds : []).map((channelId: string) => ({
-          channelId,
-          type: "panel" as const,
-        }));
+    const parsed = await parseJsonBody(req, tempChannelsBody);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
+    // Zapis idzie surowym insertOne (bez schematu Mongoose), więc budujemy dokument wyłącznie
+    // ze zwalidowanych pól - nigdy z obiektów przysłanych przez klienta.
+    const creators: ITempChannelCreator[] = body.creators
+      ? body.creators.map((creator) => ({ channelId: creator.channelId, type: creator.type }))
+      : (body.channelIds ?? []).map((channelId) => ({ channelId, type: "panel" as const }));
+
+    const channelError = await requireChannelsInGuild(guildId, creators.map((creator) => creator.channelId));
+    if (channelError) return channelError;
     const channelIds = creators.map((c) => c.channelId);
 
     const existing = await TempChannelConfigurationModel.findOne({ guildId });

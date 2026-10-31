@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
+import { z } from 'zod';
+import { optionalSnowflake, parseJsonBody } from '@/lib/apiValidation';
 
 const VOTING_FORMATS = ['counts', 'percent', 'bar'] as const;
 type VotingFormat = (typeof VOTING_FORMATS)[number];
@@ -68,6 +70,18 @@ export async function GET(
   }
 }
 
+function isVotingFormat(value: string): value is VotingFormat {
+  return VOTING_FORMATS.some((format) => format === value);
+}
+
+const suggestionsConfigBody = z.object({
+  enabled: z.boolean().optional(),
+  suggestionChannelId: optionalSnowflake,
+  votingFormat: z.string().max(20).optional(),
+  anonymous: z.boolean().optional(),
+  embedColor: z.string().max(7).optional(),
+});
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -82,12 +96,12 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await request.json();
-    const { enabled, suggestionChannelId, votingFormat, anonymous, embedColor } = body;
+    const body = await parseJsonBody(request, suggestionsConfigBody);
+    if (!body.ok) return body.response;
+    const { enabled, suggestionChannelId, votingFormat, anonymous, embedColor } = body.data;
 
-    const sanitizedVotingFormat: VotingFormat = VOTING_FORMATS.includes(votingFormat)
-      ? votingFormat
-      : 'bar';
+    const sanitizedVotingFormat: VotingFormat =
+      votingFormat && isVotingFormat(votingFormat) ? votingFormat : 'bar';
     const sanitizedEmbedColor =
       typeof embedColor === 'string' && HEX_COLOR_PATTERN.test(embedColor) ? embedColor : '#4C4C54';
 
@@ -103,7 +117,7 @@ export async function POST(
         anonymous: anonymous === true,
         embedColor: sanitizedEmbedColor,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     return NextResponse.json(result ? result.toObject() : null);

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import mongoose from 'mongoose';
 import { OWNER_IDS, OWNER_GUILD_IDS } from '@/lib/owner';
+import { z } from 'zod';
+import { messageText, optionalSnowflake, parseJsonBody } from '@/lib/apiValidation';
 
 const DEFAULT_MESSAGE =
   '### Cześć i czołem! <a:pepo_howody:1351311201614827583>  \n' +
@@ -66,6 +68,12 @@ export async function GET(
   }
 }
 
+const disboardConfigBody = z.object({
+  enabled: z.boolean().optional(),
+  channelId: optionalSnowflake,
+  message: messageText.optional(),
+});
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> },
@@ -82,8 +90,9 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { enabled, channelId, message } = body;
+    const body = await parseJsonBody(request, disboardConfigBody);
+    if (!body.ok) return body.response;
+    const { enabled, channelId, message } = body.data;
 
     await connectDB();
 
@@ -95,7 +104,7 @@ export async function POST(
         channelId: channelId ?? '',
         message: message ?? DEFAULT_MESSAGE,
       },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: 'after' },
     );
 
     return NextResponse.json(result ? result.toObject() : null);

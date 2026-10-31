@@ -6,6 +6,9 @@ import mongoose from "mongoose";
 import ChannelStatsModel from "@/models/ChannelStats";
 import { auditChange, createAuditLog } from "@/lib/auditLog";
 import type { IAuditLogChange } from "@/models/AuditLog";
+import { getDiscordAccessToken } from "@/lib/discordSessionToken";
+import { z } from "zod";
+import { parseJsonBody } from "@/lib/apiValidation";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -18,13 +21,21 @@ interface RouteContext {
   params: Promise<{ guildId: string }>;
 }
 
+const counterCategory = z.enum(["lastJoined", "users", "bots", "bans"]);
+const createCounterBody = z.object({
+  category: counterCategory,
+  // Szablon nazwy kanału (limit nazwy kanału Discorda: 100 znaków).
+  template: z.string().min(1).max(100),
+});
+const deleteCounterBody = z.object({ category: counterCategory });
+
 export async function POST(
   req: NextRequest,
   context: RouteContext
 ): Promise<NextResponse> {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!session || !getDiscordAccessToken(session)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -32,38 +43,24 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const { category, template } = await req.json();
-
-    console.log('[Create Channel] Request:', { guildId, category, template });
-
-    if (!category || !['lastJoined', 'users', 'bots', 'bans'].includes(category)) {
-      console.log('[Create Channel] Invalid category:', category);
-      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
-    }
-    
-    if (!template) {
-      console.log('[Create Channel] Template is required');
-      return NextResponse.json({ error: "Template is required" }, { status: 400 });
-    }
+    const body = await parseJsonBody(req, createCounterBody);
+    if (!body.ok) return body.response;
+    const { category, template } = body.data;
 
     await connectDB();
 
     let config = await ChannelStatsModel.findOne({ guildId });
     if (!config) {
-      console.log('[Create Channel] Creating new config for guild:', guildId);
       config = new ChannelStatsModel({
         guildId,
         channels: {}
       });
     }
 
-    console.log('[Create Channel] Config channels:', config.channels);
 
     const categoryData = config.channels[category as keyof typeof config.channels] || {};
-    console.log('[Create Channel] Category data:', categoryData);
     
     if (categoryData.channelId) {
-      console.log('[Create Channel] Channel already exists:', categoryData.channelId);
       return NextResponse.json({ error: "Channel already exists" }, { status: 400 });
     }
 
@@ -135,7 +132,6 @@ export async function POST(
       changes: createChanges,
     });
 
-    console.log('[Create Channel] Success:', { channelId: channelData.id, channelName: channelData.name });
 
     return NextResponse.json({
       channelId: channelData.id,
@@ -156,7 +152,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
+    if (!session || !getDiscordAccessToken(session)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -164,11 +160,9 @@ export async function DELETE(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const { category } = await req.json();
-
-    if (!category || !['lastJoined', 'users', 'bots', 'bans'].includes(category)) {
-      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
-    }
+    const body = await parseJsonBody(req, deleteCounterBody);
+    if (!body.ok) return body.response;
+    const { category } = body.data;
 
     await connectDB();
 

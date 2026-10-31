@@ -24,7 +24,7 @@ export async function getOrCreateModerationConfig(
   return ModerationConfigModel.findOneAndUpdate(
     { guildId },
     { $setOnInsert: { guildId } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
 }
 

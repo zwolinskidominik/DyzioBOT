@@ -6,6 +6,8 @@ import { OWNER_IDS, OWNER_GUILD_IDS } from '@/lib/owner';
 import WrappedConfigModel, { IWrappedConfig } from '@/models/WrappedConfig';
 import { createAuditLog, diffFields } from '@/lib/auditLog';
 import { DEFAULT_WRAPPED_THEME, resolveWrappedTheme } from '@/lib/wrappedThemes';
+import { z } from 'zod';
+import { optionalSnowflake, parseJsonBody } from '@/lib/apiValidation';
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
@@ -57,6 +59,12 @@ export async function GET(
   }
 }
 
+const wrappedConfigBody = z.object({
+  enabled: z.boolean().optional(),
+  channelId: optionalSnowflake,
+  colorTheme: z.string().max(30).optional(),
+});
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -74,9 +82,9 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json();
-
-    const { enabled, channelId, colorTheme } = body;
+    const body = await parseJsonBody(req, wrappedConfigBody);
+    if (!body.ok) return body.response;
+    const { enabled, channelId, colorTheme } = body.data;
 
     const oldConfig = await WrappedConfigModel.findOne({ guildId }).lean<IWrappedConfig>();
 
@@ -88,7 +96,7 @@ export async function POST(
         enabled: enabled !== undefined ? enabled : false,
         colorTheme: resolveWrappedTheme(colorTheme),
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     const changes = diffFields<Pick<IWrappedConfig, 'channelId' | 'enabled' | 'colorTheme'>>(

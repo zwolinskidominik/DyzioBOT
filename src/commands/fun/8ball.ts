@@ -1,9 +1,9 @@
 import { SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
-import { createCanvas } from 'canvas';
+import { createCanvas, type SKRSContext2D } from '@napi-rs/canvas';
 import type { ICommandOptions } from '../../interfaces/Command';
 
 // ─── Canvas types ─────────────────────────────────────────────────────────────
-type Ctx2D = any;
+type Ctx2D = SKRSContext2D;
 
 // ─── Odpowiedzi Magic 8-Ball (20 oryginalnych) ───────────────────────────────
 
@@ -298,7 +298,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   // ── Build canvas ────────────────────────────────────────────────────────────
   const canvas = createCanvas(IMG_W, IMG_H);
-  const ctx    = canvas.getContext('2d') as Ctx2D;
+  const ctx    = canvas.getContext('2d');
 
   drawBackground(ctx);
   drawBall(ctx, CATEGORY_GLOW[category]);

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { testSession } from "@/tests/helpers/session";
 import { NextRequest } from "next/server";
 
 // Lista serwerów użytkownika na /guilds: po dodaniu bota kafelek ma od razu przestać
@@ -34,7 +35,7 @@ let userCounter = 0;
 beforeEach(() => {
   userCounter += 1;
   // Osobny użytkownik na test — cache w pamięci jest per użytkownik i żyje między testami.
-  vi.mocked(getServerSession).mockResolvedValue({ user: { id: `user-${userCounter}` }, accessToken: "tok" } as never);
+  vi.mocked(getServerSession).mockResolvedValue(testSession(`user-${userCounter}`, "tok"));
   mocks.redisGet.mockResolvedValue(null);
   mocks.fetchUserGuilds.mockResolvedValue({
     ok: true,

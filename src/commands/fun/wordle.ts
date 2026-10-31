@@ -11,7 +11,7 @@ import {
   AttachmentBuilder,
   MessageFlags,
 } from 'discord.js';
-import { createCanvas } from 'canvas';
+import { createCanvas, type SKRSContext2D } from '@napi-rs/canvas';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { WordleWordModel } from '../../models/WordleWord';
 import { WordleStatModel } from '../../models/WordleStat';
@@ -171,8 +171,7 @@ function evaluate(guess: string, word: string): GuessRow {
 
 /* ── Canvas helpers ─────────────────────────────────────────── */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Ctx2D = any;
+type Ctx2D = SKRSContext2D;
 
 function rrect(ctx: Ctx2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();

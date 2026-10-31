@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import redis from "@/lib/redis";
 import { getCachedGuildList, setCachedGuildList, type CachedDiscordGuild } from "@/lib/discordGuildCache";
 import { fetchDiscordUserGuildsDeduped } from "@/lib/discordUserGuilds";
+import { getDiscordAccessToken } from "@/lib/discordSessionToken";
 
 const CACHE_TTL_SECONDS = 60;
 const STALE_CACHE_TTL_SECONDS = CACHE_TTL_SECONDS * 30;
@@ -49,7 +50,8 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.accessToken) {
+    const accessToken = getDiscordAccessToken(session);
+    if (!session || !accessToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     if (session.error) {
@@ -96,7 +98,7 @@ export async function GET(request: NextRequest) {
       // Redis unavailable — proceed without cache
     }
 
-    const userGuildsResult = await fetchDiscordUserGuildsDeduped(userId, session.accessToken);
+    const userGuildsResult = await fetchDiscordUserGuildsDeduped(userId, accessToken);
 
     if (!userGuildsResult.ok) {
       if (userGuildsResult.status === 429 && staleData) {

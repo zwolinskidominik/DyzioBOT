@@ -51,6 +51,8 @@ function createBirthdaySchema(t: BirthdaysText) {
 }
 
 type BirthdayFormData = z.infer<ReturnType<typeof createBirthdaySchema>>;
+// zod 4 + @hookform/resolvers 5: formularz trzyma dane wejściowe schematu, a submit dostaje dane po walidacji.
+type BirthdayFormInput = z.input<ReturnType<typeof createBirthdaySchema>>;
 
 const DEFAULT_FORM_VALUES: BirthdayFormData = {
   birthdayChannelId: "",
@@ -209,7 +211,7 @@ export default function BirthdaysPage() {
     watch,
     reset,
     formState: { errors, isDirty },
-  } = useForm<BirthdayFormData>({
+  } = useForm<BirthdayFormInput, unknown, BirthdayFormData>({
     resolver: zodResolver(birthdaySchema),
     defaultValues: DEFAULT_FORM_VALUES,
   });

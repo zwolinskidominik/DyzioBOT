@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
 import MonthlyStatsConfigModel, { IMonthlyStatsConfig } from "@/models/MonthlyStatsConfig";
+import { z } from "zod";
+import { optionalSnowflake, parseJsonBody } from "@/lib/apiValidation";
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) {
@@ -66,6 +68,14 @@ export async function GET(
   }
 }
 
+const monthlyStatsBody = z.object({
+  channelId: optionalSnowflake,
+  enabled: z.boolean().optional(),
+  topCount: z.number().int().min(1).max(15).optional(),
+  msgRate: z.number().min(1).max(5).optional(),
+  voiceRate: z.number().min(1).max(5).optional(),
+});
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -80,28 +90,9 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await req.json();
-
-    const { channelId, enabled, topCount, msgRate, voiceRate } = body;
-
-    if (topCount !== undefined && (topCount < 1 || topCount > 15)) {
-      return NextResponse.json(
-        { error: "topCount must be between 1 and 15" },
-        { status: 400 }
-      );
-    }
-    if (msgRate !== undefined && (msgRate < 1 || msgRate > 5)) {
-      return NextResponse.json(
-        { error: "msgRate must be between 1 and 5" },
-        { status: 400 }
-      );
-    }
-    if (voiceRate !== undefined && (voiceRate < 1 || voiceRate > 5)) {
-      return NextResponse.json(
-        { error: "voiceRate must be between 1 and 5" },
-        { status: 400 }
-      );
-    }
+    const body = await parseJsonBody(req, monthlyStatsBody);
+    if (!body.ok) return body.response;
+    const { channelId, enabled, topCount, msgRate, voiceRate } = body.data;
 
     await connectDB();
 
@@ -115,7 +106,7 @@ export async function POST(
         msgRate: msgRate ?? 1,
         voiceRate: voiceRate ?? 2,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     return NextResponse.json(serialize(config));

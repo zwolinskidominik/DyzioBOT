@@ -40,6 +40,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Bez nagłówka "X-Powered-By: Next.js" - nie podpowiadamy skanerom, na czym stoi panel.
   poweredByHeader: false,
+  // Natywna paczka (Skia) - ładowana z node_modules w runtime, nie pakowana przez bundler.
+  serverExternalPackages: ["@napi-rs/canvas"],
   async headers() {
     return [
       {

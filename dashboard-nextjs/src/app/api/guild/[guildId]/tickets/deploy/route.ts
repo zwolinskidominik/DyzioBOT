@@ -272,7 +272,7 @@ export async function POST(
     const result = await TicketConfigModel.findOneAndUpdate(
       { guildId },
       { enabled: true, panelMessageId: messageData.id },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     const changes = diffFields<{ enabled: boolean; panelMessageId?: string }>(

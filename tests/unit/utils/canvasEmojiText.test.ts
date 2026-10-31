@@ -8,7 +8,7 @@ jest.mock('../../../src/utils/logger', () => ({
 }));
 
 const mockLoadImage = jest.fn();
-jest.mock('canvas', () => ({ loadImage: (...args: unknown[]) => mockLoadImage(...args) }));
+jest.mock('@napi-rs/canvas', () => ({ loadImage: (...args: unknown[]) => mockLoadImage(...args) }));
 
 import {
   fillTextWithEmoji,

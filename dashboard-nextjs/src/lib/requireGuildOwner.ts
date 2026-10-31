@@ -3,6 +3,7 @@ import type { Session } from "next-auth";
 import { getCachedGuildList, setCachedGuildList, type CachedDiscordGuild } from "./discordGuildCache";
 import { fetchDiscordUserGuildsDeduped } from "./discordUserGuilds";
 import { getApiMessages } from "@/i18n/apiServer";
+import { getDiscordAccessToken } from "@/lib/discordSessionToken";
 
 /**
  * Sprawdza, czy zalogowany użytkownik jest REALNYM właścicielem danego serwera
@@ -28,7 +29,7 @@ export async function requireGuildOwner(
   guildId: string
 ): Promise<NextResponse | null> {
   const userId = session?.user?.id;
-  const accessToken = session?.accessToken;
+  const accessToken = getDiscordAccessToken(session);
 
   if (!userId || !accessToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

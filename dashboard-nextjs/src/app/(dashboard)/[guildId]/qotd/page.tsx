@@ -49,6 +49,8 @@ function createQotdSchema(t: QotdText) {
 }
 
 type QOTDFormData = z.infer<ReturnType<typeof createQotdSchema>>;
+// zod 4 + @hookform/resolvers 5: formularz trzyma dane wejściowe schematu, a submit dostaje dane po walidacji.
+type QOTDFormInput = z.input<ReturnType<typeof createQotdSchema>>;
 
 const DEFAULT_FORM_VALUES: QOTDFormData = {
   enabled: false,
@@ -290,7 +292,7 @@ export default function QOTDPage() {
     watch,
     reset,
     formState: { errors, isDirty },
-  } = useForm<QOTDFormData>({
+  } = useForm<QOTDFormInput, unknown, QOTDFormData>({
     resolver: zodResolver(qotdSchema),
     defaultValues: DEFAULT_FORM_VALUES,
   });

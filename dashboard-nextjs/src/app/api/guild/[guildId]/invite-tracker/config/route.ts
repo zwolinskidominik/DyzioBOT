@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 import InviteTrackerConfig from '@/models/InviteTrackerConfig';
 import { createAuditLog, diffFields } from '@/lib/auditLog';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
+import { z } from 'zod';
+import { messageText, optionalHexColor, optionalSnowflake, parseJsonBody } from '@/lib/apiValidation';
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
@@ -53,6 +55,34 @@ function serialize(guildId: string, config: any) {
   };
 }
 
+// Szablony wiadomości: tylko znane sytuacje (bez dowolnych kluczy), limit treści Discorda.
+const inviteMessage = messageText.optional();
+const inviteTrackerBody = z.object({
+  enabled: z.boolean().optional(),
+  join: z
+    .object({
+      enabled: z.boolean().optional(),
+      logChannelId: optionalSnowflake,
+      embed: z.boolean().optional(),
+      embedColor: optionalHexColor,
+      messages: z
+        .object({ normal: inviteMessage, selfInvite: inviteMessage, unknown: inviteMessage, vanity: inviteMessage, botAdd: inviteMessage })
+        .optional(),
+    })
+    .optional(),
+  leave: z
+    .object({
+      enabled: z.boolean().optional(),
+      logChannelId: optionalSnowflake,
+      embed: z.boolean().optional(),
+      embedColor: optionalHexColor,
+      messages: z
+        .object({ normal: inviteMessage, unknown: inviteMessage, vanity: inviteMessage, botRemove: inviteMessage })
+        .optional(),
+    })
+    .optional(),
+});
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -93,9 +123,9 @@ export async function POST(
     if (accessError) return accessError;
 
     await connectDB();
-    const body = await req.json();
-
-    const { enabled, join, leave } = body;
+    const body = await parseJsonBody(req, inviteTrackerBody);
+    if (!body.ok) return body.response;
+    const { enabled, join, leave } = body.data;
 
     const oldConfig = await InviteTrackerConfig.findOne({ guildId }).lean();
     const oldSerialized = serialize(guildId, oldConfig);
@@ -120,7 +150,7 @@ export async function POST(
           messages: { ...EMPTY_LEAVE_MESSAGES, ...(leave?.messages ?? {}) },
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true, overwrite: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true, overwrite: true },
     ).lean();
 
     const newSerialized = serialize(guildId, updatedConfig);

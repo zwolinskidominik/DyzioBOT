@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
+import { z } from 'zod';
+import { parseJsonBody, snowflake } from '@/lib/apiValidation';
+import { requireChannelsInGuild } from '@/lib/guildChannels';
 
 const reactionRoleMappingSchema = new mongoose.Schema({
   emoji: { type: String, required: true },
@@ -106,6 +109,28 @@ export async function GET(
   }
 }
 
+// Panel ról: maks. 20 reakcji (limit reakcji na wiadomości Discorda), tytuł embeda maks. 256 znaków.
+const reactionMapping = z.object({
+  emoji: z.string().min(1).max(100),
+  roleId: snowflake,
+  description: z.string().max(100).nullish(),
+});
+type ReactionMapping = z.infer<typeof reactionMapping>;
+const panelTitle = z.string().max(256).optional();
+const createPanelBody = z.object({
+  channelId: snowflake,
+  title: panelTitle,
+  reactions: z.array(reactionMapping).min(1).max(20),
+  embedColor: z.string().max(7).optional(),
+});
+const updatePanelBody = z.object({
+  messageId: snowflake,
+  channelId: snowflake.optional(),
+  title: panelTitle,
+  reactions: z.array(reactionMapping).min(1).max(20).optional(),
+  embedColor: z.string().max(7).optional(),
+});
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -120,18 +145,18 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await request.json();
-    const { channelId, title, reactions, embedColor } = body;
+    const body = await parseJsonBody(request, createPanelBody);
+    if (!body.ok) return body.response;
+    const { channelId, title, reactions, embedColor } = body.data;
 
-    if (!channelId || !reactions || reactions.length === 0) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    const channelError = await requireChannelsInGuild(guildId, [channelId]);
+    if (channelError) return channelError;
 
     await connectDB();
 
     const embed = {
       title: title || 'Wybierz swoją rolę',
-      description: reactions.map((r: any) =>
+      description: reactions.map((r) =>
         `${r.emoji} - <@&${r.roleId}>${r.description ? ` • ${r.description}` : ''}`
       ).join('\n'),
       color: toEmbedColorInt(embedColor),
@@ -196,12 +221,12 @@ export async function PATCH(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await request.json();
-    const { messageId, channelId, title, reactions, embedColor } = body;
+    const body = await parseJsonBody(request, updatePanelBody);
+    if (!body.ok) return body.response;
+    const { messageId, channelId, title, reactions, embedColor } = body.data;
 
-    if (!messageId) {
-      return NextResponse.json({ error: 'Missing messageId' }, { status: 400 });
-    }
+    const channelError = await requireChannelsInGuild(guildId, [channelId]);
+    if (channelError) return channelError;
 
     await connectDB();
 
@@ -212,7 +237,9 @@ export async function PATCH(
 
     const targetChannelId = channelId || existing.channelId;
     const finalTitle = title !== undefined ? title : existing.title;
-    const finalReactions = reactions || existing.reactions;
+    const finalReactions: ReactionMapping[] =
+      reactions ??
+      existing.reactions.map((r) => ({ emoji: r.emoji, roleId: r.roleId, ...(r.description ? { description: r.description } : {}) }));
     const finalEmbedColor = (typeof embedColor === 'string' && HEX_COLOR_PATTERN.test(embedColor))
       ? embedColor
       : existing.embedColor || DEFAULT_EMBED_COLOR;
@@ -231,7 +258,7 @@ export async function PATCH(
     // Send new message
     const embed = {
       title: finalTitle || 'Wybierz swoją rolę',
-      description: finalReactions.map((r: any) =>
+      description: finalReactions.map((r) =>
         `${r.emoji} - <@&${r.roleId}>${r.description ? ` • ${r.description}` : ''}`
       ).join('\n'),
       color: toEmbedColorInt(finalEmbedColor),
@@ -267,7 +294,7 @@ export async function PATCH(
     existing.channelId = targetChannelId;
     existing.messageId = newMessageId;
     if (title !== undefined) existing.title = finalTitle || undefined;
-    if (reactions) existing.reactions = finalReactions;
+    if (reactions) existing.set('reactions', reactions);
     existing.embedColor = finalEmbedColor;
     await existing.save();
 

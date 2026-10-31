@@ -325,7 +325,7 @@ export async function updateConfig(
     await AntiSpamConfigModel.findOneAndUpdate(
       { guildId },
       { $set: { ...updates, guildId } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     ).lean();
 
     // Invalidate cache

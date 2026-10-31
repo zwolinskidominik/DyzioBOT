@@ -273,7 +273,8 @@ function buildConfigPayload(input: unknown) {
 
   stringConfigFields.forEach((field) => {
     const value = source[field];
-    if (typeof value === "string") payload[field] = value;
+    // Limit treści/opisu embeda Discorda (4000) - nic dłuższego i tak nie da się wysłać.
+    if (typeof value === "string") payload[field] = value.slice(0, 4000);
   });
 
   booleanConfigFields.forEach((field) => {
@@ -450,7 +451,7 @@ async function applyGifState(guildId: string, userId: string | undefined, formDa
       disabledBy: userId,
       disabledAt: new Date(),
     },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: "after" }
   )));
 }
 
@@ -574,7 +575,7 @@ export async function POST(
         guildId: String(guildId),
         updatedAt: new Date(),
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     if (formData) {

@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 import { OWNER_IDS, OWNER_GUILD_IDS } from '@/lib/owner';
 import TournamentConfig from '@/models/TournamentConfig';
 import { createAuditLog, diffFields, rawAuditValue } from '@/lib/auditLog';
+import { z } from 'zod';
+import { messageText, optionalHexColor, optionalSnowflake, parseJsonBody, snowflake } from '@/lib/apiValidation';
 
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
@@ -64,6 +66,22 @@ export async function GET(
   }
 }
 
+const tournamentConfigBody = z.object({
+  enabled: z.boolean().optional(),
+  channelId: optionalSnowflake,
+  messageTemplate: messageText.optional(),
+  cronSchedule: z.string().max(100).optional(),
+  reactionEmoji: z.string().max(100).optional(),
+  messageMode: z.string().max(10).optional(),
+  embedColor: optionalHexColor,
+  titleText: z.string().max(256).optional(),
+  footerText: z.string().max(2048).optional(),
+  participantRoleId: optionalSnowflake,
+  organizerRoleId: optionalSnowflake,
+  organizerUserIds: z.array(snowflake).max(25).optional(),
+  voiceChannelId: optionalSnowflake,
+});
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -81,7 +99,9 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json();
+    const parsed = await parseJsonBody(req, tournamentConfigBody);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
 
     // Only allow known fields — strip _id, __v, guildId, etc.
     const {
@@ -104,14 +124,14 @@ export async function POST(
       footerText: footerText ?? '',
       participantRoleId: participantRoleId || null,
       organizerRoleId: organizerRoleId || null,
-      organizerUserIds: Array.isArray(organizerUserIds) ? organizerUserIds : [],
+      organizerUserIds: organizerUserIds ?? [],
       voiceChannelId: voiceChannelId || null,
     };
 
     const updatedConfig = await TournamentConfig.findOneAndUpdate(
       { guildId },
       nextConfig,
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     ).lean() as Record<string, unknown> | null;
 
     const changes = diffFields(oldConfig, nextConfig, [

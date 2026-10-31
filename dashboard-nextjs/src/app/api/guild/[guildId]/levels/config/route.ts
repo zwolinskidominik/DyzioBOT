@@ -231,7 +231,7 @@ export async function POST(
     const result = await LevelConfig.findOneAndUpdate(
       { guildId },
       sanitized,
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     const changes = diffFields(oldConfig, sanitized, [

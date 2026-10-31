@@ -12,7 +12,9 @@ module.exports = {
     '^.+\\.m?js$': ['ts-jest', { diagnostics: false, tsconfig: 'tsconfig.tests.json' }],
   },
   // Domyślnie Jest pomija całe node_modules w transformacji — te dwie paczki musimy przepuścić.
-  transformIgnorePatterns: ['/node_modules/(?!(pretty-ms|parse-ms)/)'],
+  // encoding-sniffer (zależność cheerio, podmieniona w overrides na wersję bez przestarzałego
+  // whatwg-encoding) i jego @exodus/bytes też są tylko ESM.
+  transformIgnorePatterns: ['/node_modules/(?!(pretty-ms|parse-ms|encoding-sniffer|@exodus/bytes)/)'],
   collectCoverageFrom: ['src/**/*.{ts,js}', '!src/index.ts', '!src/scripts/**'],
   coverageDirectory: 'coverage',
   coverageThreshold: {

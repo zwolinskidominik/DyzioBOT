@@ -134,7 +134,7 @@ export async function setControlMessageId(
   const doc = await TempChannelModel.findOneAndUpdate(
     { channelId },
     { controlMessageId: messageId },
-    { new: true },
+    { returnDocument: 'after' },
   );
   if (!doc) return fail('NOT_FOUND', 'Nie znaleziono kanału tymczasowego.');
   return ok(undefined);

@@ -289,6 +289,7 @@ describe('sendTournamentMessage()', () => {
     const channel = {
       type: ChannelType.GuildText,
       guild: { id: 'g1' },
+      guildId: 'g1',
       name: 'turniej',
       send: sendMock,
     };
@@ -318,5 +319,18 @@ describe('sendTournamentMessage()', () => {
     expect(sentMsg).toContain('<@user-a>');
     expect(sentMsg).toContain('<@user-b>');
     expect(sentMsg).toContain('https://discord.com/channels/g1/vc-123');
+  });
+
+  it('does not send to a channel that belongs to another server', async () => {
+    const sendMock = jest.fn();
+    const channels = new Collection<string, any>();
+    channels.set('ch-1', { type: ChannelType.GuildText, guild: { id: 'other' }, guildId: 'other', name: 'obcy', send: sendMock });
+    const client = mockClient({ channels: { cache: channels } });
+
+    mockFindOne.mockResolvedValue({ guildId: 'g1', enabled: true, channelId: 'ch-1', messageTemplate: 'x', reactionEmoji: '🎮' });
+
+    await sendTournamentMessage(client, 'g1');
+
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });

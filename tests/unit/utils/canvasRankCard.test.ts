@@ -32,7 +32,7 @@ const mockCanvas = {
   toBuffer: jest.fn().mockReturnValue(Buffer.from('mock-png')),
 };
 
-jest.mock('canvas', () => ({
+jest.mock('@napi-rs/canvas', () => ({
   createCanvas: jest.fn().mockReturnValue(mockCanvas),
   loadImage: jest.fn().mockResolvedValue({ width: 100, height: 100 }),
 }));
@@ -41,6 +41,7 @@ jest.mock('../../../src/utils/canvasHelpers', () => ({
   registerProjectFonts: jest.fn(),
   roundRect: jest.fn(),
   formatNumberDotSep: jest.fn((n: number) => n.toLocaleString('pl-PL')),
+  loadImageWithTimeout: jest.fn().mockResolvedValue({ width: 100, height: 100 }),
 }));
 
 jest.mock('../../../src/utils/logger', () => ({
@@ -105,8 +106,8 @@ describe('CanvasRankCard', () => {
   });
 
   it('handles avatar load failure gracefully', async () => {
-    const { loadImage } = require('canvas');
-    (loadImage as jest.Mock).mockRejectedValueOnce(new Error('timeout'));
+    const { loadImageWithTimeout } = require('../../../src/utils/canvasHelpers');
+    (loadImageWithTimeout as jest.Mock).mockRejectedValueOnce(new Error('timeout'));
 
     const card = new CanvasRankCard(baseOptions);
     await card.build();

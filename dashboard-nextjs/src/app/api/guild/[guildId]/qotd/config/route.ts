@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth.config';
 import { requireGuildAccess } from '@/lib/requireGuildAccess';
 import mongoose from 'mongoose';
+import { z } from 'zod';
+import { optionalSnowflake, parseJsonBody } from '@/lib/apiValidation';
+import { requireChannelsInGuild } from '@/lib/guildChannels';
 
 const questionConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
@@ -51,6 +54,12 @@ export async function GET(
   }
 }
 
+const qotdConfigBody = z.object({
+  enabled: z.boolean().optional(),
+  questionChannelId: optionalSnowflake,
+  pingRoleId: optionalSnowflake,
+});
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -65,8 +74,12 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await request.json();
-    const { enabled, questionChannelId, pingRoleId } = body;
+    const body = await parseJsonBody(request, qotdConfigBody);
+    if (!body.ok) return body.response;
+    const { enabled, questionChannelId, pingRoleId } = body.data;
+
+    const channelError = await requireChannelsInGuild(guildId, [questionChannelId]);
+    if (channelError) return channelError;
 
     await connectDB();
     
@@ -78,7 +91,7 @@ export async function POST(
         questionChannelId,
         pingRoleId: pingRoleId || undefined
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     return NextResponse.json(result ? result.toObject() : null);

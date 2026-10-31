@@ -9,7 +9,6 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
     };
-    accessToken: string;
     /** Ustawiane, gdy nie udało się odświeżyć tokenu Discorda — trzeba zalogować się ponownie. */
     error?: string | undefined;
   }

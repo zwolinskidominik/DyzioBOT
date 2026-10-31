@@ -4,6 +4,7 @@ import { OWNER_IDS } from "./owner";
 import { getCachedGuildList, setCachedGuildList, type CachedDiscordGuild } from "./discordGuildCache";
 import { fetchDiscordUserGuildsDeduped } from "./discordUserGuilds";
 import { getApiMessages } from "@/i18n/apiServer";
+import { getDiscordAccessToken } from "@/lib/discordSessionToken";
 
 /**
  * Sprawdza, czy zalogowany użytkownik ma prawo zarządzać DANYM serwerem
@@ -47,7 +48,7 @@ export async function requireGuildAccess(
   guildId: string
 ): Promise<NextResponse | null> {
   const userId = session?.user?.id;
-  const accessToken = session?.accessToken;
+  const accessToken = getDiscordAccessToken(session);
 
   if (!userId || !accessToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

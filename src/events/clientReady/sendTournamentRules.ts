@@ -107,7 +107,9 @@ async function sendTournamentMessage(client: Client, guildId: string): Promise<v
     if (
       !tournamentChannel ||
       (tournamentChannel.type !== ChannelType.GuildText &&
-        tournamentChannel.type !== ChannelType.GuildAnnouncement)
+        tournamentChannel.type !== ChannelType.GuildAnnouncement) ||
+      // Kanał musi należeć do tego serwera (config nie może wskazać kanału innego serwera).
+      tournamentChannel.guildId !== guildId
     ) {
       logger.warn(`Turniej ${guildId}: kanał ${channelId} nie istnieje lub nie jest tekstowy.`);
       return;

@@ -572,6 +572,7 @@ describe('questionScheduler', () => {
     const client = makeClient();
     (client.channels.cache as Map<string, any>).set('qCh1', {
       id: 'qCh1',
+      guildId: 'g1',
       send: sendFn,
       threads: { create: createThreadFn },
     });
@@ -599,11 +600,12 @@ describe('questionScheduler', () => {
     const client = makeClient();
     (client.channels.cache as Map<string, any>).set('qCh1', {
       id: 'qCh1',
+      guildId: 'g1',
       send: sendFn,
       threads: { create: jest.fn() },
     });
     (QuestionConfigurationModel.find as jest.Mock).mockResolvedValue([
-      { questionChannelId: 'qCh1' },
+      { guildId: 'g1', questionChannelId: 'qCh1' },
     ]);
     mockGetRandomQuestion.mockResolvedValue({ ok: false, message: 'No questions' });
     await questionScheduler(client as any);
@@ -646,6 +648,7 @@ describe('sendTournamentRules', () => {
       id: 'tCh1',
       type: 0,
       guild: { id: 'g1' },
+      guildId: 'g1',
       send: sendFn,
     });
 

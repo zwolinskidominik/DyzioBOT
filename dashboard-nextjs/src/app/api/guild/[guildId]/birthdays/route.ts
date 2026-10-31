@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import mongoose from "mongoose";
+import { z } from "zod";
+import { messageText, optionalSnowflake, parseJsonBody } from "@/lib/apiValidation";
 
 const birthdayConfigSchema = new mongoose.Schema({
   guildId: { type: String, required: true, unique: true },
@@ -67,6 +69,13 @@ export async function GET(
   }
 }
 
+const birthdayConfigBody = z.object({
+  birthdayChannelId: optionalSnowflake,
+  roleId: optionalSnowflake,
+  message: messageText.optional(),
+  enabled: z.boolean().optional(),
+});
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ guildId: string }> }
@@ -81,7 +90,9 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const data = await request.json();
+    const body = await parseJsonBody(request, birthdayConfigBody);
+    if (!body.ok) return body.response;
+    const data = body.data;
 
     await connectDB();
 
@@ -95,7 +106,7 @@ export async function POST(
         enabled: data.enabled !== undefined ? data.enabled : false,
         updatedAt: new Date(),
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     return NextResponse.json(config);

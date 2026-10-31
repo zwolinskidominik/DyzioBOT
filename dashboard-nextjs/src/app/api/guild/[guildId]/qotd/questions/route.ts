@@ -6,6 +6,9 @@ import { randomUUID } from 'crypto';
 import mongoose from 'mongoose';
 import { getBotEmojiIds, findInvalidCustomEmojis } from '@/lib/botEmojis';
 import { getApiMessages } from '@/i18n/apiServer';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/apiValidation';
+import { requireBotOwner } from '@/lib/requireBotOwner';
 
 async function validateReactions(reactions: unknown): Promise<string | null> {
   if (reactions === undefined) return null;
@@ -120,6 +123,19 @@ export async function GET(
   }
 }
 
+const questionContent = z.string().max(2000);
+const questionReactions = z.array(z.string().max(100)).max(20).optional();
+const createQuestionBody = z.object({
+  content: questionContent,
+  reactions: questionReactions,
+});
+const updateQuestionBody = z.object({
+  questionId: z.string().min(1).max(100),
+  content: questionContent.optional(),
+  reactions: questionReactions,
+  disabled: z.boolean().optional(),
+});
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ guildId: string }> }
@@ -134,10 +150,15 @@ export async function POST(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await request.json();
-    const { content, reactions } = body;
+    // Pula pytań jest wspólna dla wszystkich serwerów - dodaje do niej tylko właściciel bota.
+    const ownerError = requireBotOwner(session);
+    if (ownerError) return ownerError;
 
-    if (!content || content.trim() === '') {
+    const body = await parseJsonBody(request, createQuestionBody);
+    if (!body.ok) return body.response;
+    const { content, reactions } = body.data;
+
+    if (content.trim() === '') {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
     }
 
@@ -178,12 +199,9 @@ export async function PATCH(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const body = await request.json();
-    const { questionId, content, reactions, disabled } = body;
-
-    if (!questionId) {
-      return NextResponse.json({ error: 'Question ID is required' }, { status: 400 });
-    }
+    const body = await parseJsonBody(request, updateQuestionBody);
+    if (!body.ok) return body.response;
+    const { questionId, content, reactions, disabled } = body.data;
 
     await connectDB();
 
@@ -216,7 +234,10 @@ export async function PATCH(
       return NextResponse.json({ ...question, disabled: true });
     }
 
-    // Regular update: content + reactions
+    // Regular update: content + reactions. Zmienia pytanie we wspólnej puli - tylko właściciel bota.
+    const ownerError = requireBotOwner(session);
+    if (ownerError) return ownerError;
+
     if (!content || content.trim() === '') {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
     }
@@ -232,7 +253,7 @@ export async function PATCH(
         content: content.trim(),
         reactions: reactions || []
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!question) {
@@ -259,6 +280,8 @@ export async function DELETE(
     const { guildId } = await params;
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
+    const ownerError = requireBotOwner(session);
+    if (ownerError) return ownerError;
 
     const { searchParams } = new URL(request.url);
     const questionId = searchParams.get('questionId');

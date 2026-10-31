@@ -1,14 +1,16 @@
-jest.mock('canvas', () => ({
-  registerFont: jest.fn(),
-  CanvasRenderingContext2D: class {},
+const mockLoadImage = jest.fn();
+jest.mock('@napi-rs/canvas', () => ({
+  GlobalFonts: { registerFromPath: jest.fn() },
+  loadImage: (...args: unknown[]) => mockLoadImage(...args),
 }));
 jest.mock('../../../src/utils/logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-import { registerProjectFonts, roundRect } from '../../../src/utils/canvasHelpers';
-import { registerFont } from 'canvas';
+import { registerProjectFonts, roundRect, loadImageWithTimeout } from '../../../src/utils/canvasHelpers';
+import { GlobalFonts } from '@napi-rs/canvas';
+const registerFont = GlobalFonts.registerFromPath;
 import fs from 'fs';
 
 describe('registerProjectFonts', () => {
@@ -81,5 +83,25 @@ describe('roundRect', () => {
     const ctx = mockCtx();
     roundRect(ctx, 10, 20, 200, 100, 15);
     expect(ctx.lineTo).toHaveBeenNthCalledWith(1, 195, 20); // x+w-r, y
+  });
+});
+
+describe('loadImageWithTimeout', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('returns the image and clears its timeout timer', async () => {
+    jest.useFakeTimers();
+    mockLoadImage.mockResolvedValueOnce({ width: 10, height: 10 });
+    await expect(loadImageWithTimeout('a.png', 5000)).resolves.toEqual({ width: 10, height: 10 });
+    // Bez wiszącego timera proces (i worker Jesta) może się zakończyć.
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('rejects after the timeout when the image never loads', async () => {
+    jest.useFakeTimers();
+    mockLoadImage.mockReturnValueOnce(new Promise(() => undefined));
+    const pending = loadImageWithTimeout('slow.png', 5000, 'Avatar load timeout');
+    jest.advanceTimersByTime(5000);
+    await expect(pending).rejects.toThrow('Avatar load timeout');
   });
 });

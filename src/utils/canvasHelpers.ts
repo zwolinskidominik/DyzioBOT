@@ -1,9 +1,9 @@
-import { registerFont, CanvasRenderingContext2D } from 'canvas';
+import { GlobalFonts, loadImage, type Image, type SKRSContext2D } from '@napi-rs/canvas';
 import path from 'path';
 import fs from 'fs';
 import logger from './logger';
 
-export type Ctx2D = CanvasRenderingContext2D & { imageSmoothingQuality?: string };
+export type Ctx2D = SKRSContext2D;
 
 /* ── Font loading ─────────────────────────────────────────────── */
 
@@ -47,10 +47,29 @@ export function registerProjectFonts(): void {
     const fp = path.resolve(FONT_DIR, def.file);
     if (!fs.existsSync(fp)) continue;
     try {
-      registerFont(fp, { family: def.family, weight: def.weight, style: def.style });
+      // Skia (@napi-rs/canvas) odczytuje grubość i styl z samego pliku czcionki - podajemy tylko rodzinę.
+      GlobalFonts.registerFromPath(fp, def.family);
     } catch (err) {
       logger.warn(`[CANVAS] Could not register font ${def.file}: ${err}`);
     }
+  }
+}
+
+/* ── Images ───────────────────────────────────────────────────── */
+
+/**
+ * loadImage z limitem czasu. Timer jest zawsze czyszczony po rozstrzygnięciu - wcześniej
+ * Promise.race zostawiał 5-sekundowy setTimeout, który trzymał proces (i workery Jesta) przy życiu.
+ */
+export async function loadImageWithTimeout(src: string, timeoutMs: number, message = 'Image load timeout'): Promise<Image> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  try {
+    return await Promise.race([loadImage(src), timeout]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 

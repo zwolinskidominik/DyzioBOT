@@ -140,7 +140,7 @@ export async function setLiveStatus(
   const doc = await TwitchStreamerModel.findOneAndUpdate(
     { guildId, twitchChannel: twitchChannel.toLowerCase() },
     update,
-    { new: true },
+    { returnDocument: 'after' },
   );
   if (!doc) return fail('NOT_FOUND', 'Nie znaleziono streamera.');
   return ok(undefined);

@@ -6,6 +6,9 @@ import dbConnect from '@/lib/mongodb';
 import WordleWord from '@/models/WordleWord';
 import mongoose from 'mongoose';
 import { getApiMessages } from '@/i18n/apiServer';
+import { requireBotOwner } from '@/lib/requireBotOwner';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/apiValidation';
 
 // Polskie litery bez q, v, x — zgodnie z klawiaturą Wordle w bocie.
 const POLISH_REGEX = /^[a-pr-uwyząćęłńóśźż]+$/;
@@ -26,6 +29,9 @@ export async function GET(
     const { guildId } = await params;
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
+    // Pula słów jest wspólna dla wszystkich serwerów (i zawiera odpowiedzi) - tylko właściciel bota.
+    const ownerError = requireBotOwner(session);
+    if (ownerError) return ownerError;
 
     await dbConnect();
 
@@ -61,6 +67,12 @@ export async function GET(
 }
 
 /* ── POST — add / remove word ─────────────────────────────── */
+// Typy i długości sprawdzone z góry; puste słowo dalej obsługuje czytelny komunikat niżej.
+const wordleBody = z.object({
+  action: z.string().max(40),
+  word: z.string().max(50).optional(),
+});
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ guildId: string }> },
@@ -74,10 +86,15 @@ export async function POST(
     const { guildId } = await params;
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
+    // Pula słów jest wspólna dla wszystkich serwerów (i zawiera odpowiedzi) - tylko właściciel bota.
+    const ownerError = requireBotOwner(session);
+    if (ownerError) return ownerError;
 
     await dbConnect();
 
-    const body = await request.json();
+    const parsed = await parseJsonBody(request, wordleBody);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
     const { action } = body;
 
     /* ── addWord ─────────────────────────────────────────────── */

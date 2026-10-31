@@ -1,7 +1,7 @@
-import { createCanvas, loadImage, Canvas, Image } from 'canvas';
+import { createCanvas, loadImage, Canvas } from '@napi-rs/canvas';
 import { xpForLevel, deltaXp } from './levelMath';
 import { getBotConfig } from '../config/bot';
-import { Ctx2D, registerProjectFonts, roundRect, formatNumberCompact } from './canvasHelpers';
+import { Ctx2D, registerProjectFonts, loadImageWithTimeout, roundRect, formatNumberCompact } from './canvasHelpers';
 import logger from './logger';
 
 interface LeaderboardEntry {
@@ -172,12 +172,7 @@ export class CanvasLeaderboardCard {
     }
 
     try {
-      const avatarImagePromise = loadImage(entry.avatarURL);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Avatar load timeout')), 5000)
-      );
-      
-      const avatarImage = await Promise.race([avatarImagePromise, timeoutPromise]) as Image;
+      const avatarImage = await loadImageWithTimeout(entry.avatarURL, 5000, 'Avatar load timeout');
       const avatarSize = 45;
       const avatarX = x + 70;
       const avatarY_pos = y + (height - avatarSize) / 2;

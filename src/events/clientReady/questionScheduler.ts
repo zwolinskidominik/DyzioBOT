@@ -19,7 +19,9 @@ export default async function run(client: Client): Promise<void> {
         for (const questionConfig of questionConfigs) {
           try {
             const channel = client.channels.cache.get(questionConfig.questionChannelId);
-            if (!channel || !('send' in channel)) {
+            // Kanał musi należeć do TEGO serwera - inaczej config jednego serwera mógłby kazać
+            // botowi pisać na kanale innego serwera.
+            if (!channel || !('send' in channel) || !('guildId' in channel) || channel.guildId !== questionConfig.guildId) {
               logger.warn(`[${questionConfig.guildId}] Kanał pytań nie istnieje lub nie jest tekstowy!`);
               continue;
             }

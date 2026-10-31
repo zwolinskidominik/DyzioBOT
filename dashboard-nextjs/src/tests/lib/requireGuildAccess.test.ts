@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testSession } from "@/tests/helpers/session";
 
 vi.mock("@/lib/owner", () => ({ OWNER_IDS: ["owner-1"] }));
 
@@ -11,7 +12,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 function session(userId: string, accessToken = "token"): Session {
-  return { user: { id: userId }, accessToken } as Session;
+  return testSession(userId, accessToken);
 }
 
 describe("requireGuildAccess", () => {
@@ -25,7 +26,7 @@ describe("requireGuildAccess", () => {
   });
 
   it("blocks with 401 when session has no accessToken", async () => {
-    const res = await requireGuildAccess({ user: { id: "u1" } } as Session, "guild-1");
+    const res = await requireGuildAccess(testSession("u1", null), "guild-1");
     expect(res?.status).toBe(401);
   });
 

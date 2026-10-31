@@ -40,7 +40,7 @@ export async function addTempRole(
     const doc = await TempRoleModel.findOneAndUpdate(
       { guildId, userId, roleId },
       { guildId, userId, roleId, expiresAt, assignedBy, reason },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     ).lean();
 
     return ok({

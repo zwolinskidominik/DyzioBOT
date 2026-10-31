@@ -87,7 +87,7 @@ export async function setBirthday(params: {
 
   const filter = { userId, guildId };
   const update = { date: parsed.date, yearSpecified: parsed.yearSpecified, active: true };
-  const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+  const options = { upsert: true, returnDocument: 'after' as const, setDefaultsOnInsert: true };
 
   const doc = (await BirthdayModel.findOneAndUpdate(
     filter,

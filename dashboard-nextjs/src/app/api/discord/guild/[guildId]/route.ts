@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
 import { getCachedGuildFromList, type CachedDiscordGuild } from "@/lib/discordGuildCache";
 import { fetchDiscordUserGuildsDeduped, type DiscordGuildSummary } from "@/lib/discordUserGuilds";
+import { getDiscordAccessToken } from "@/lib/discordSessionToken";
 
 export const dynamic = 'force-dynamic';
 
@@ -68,7 +69,8 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.accessToken) {
+    const accessToken = getDiscordAccessToken(session);
+    if (!session || !accessToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -89,7 +91,7 @@ export async function GET(
       return noStoreResponse(result, { headers: { "X-Deezy-Cache": "guild-list" } });
     }
 
-    const userGuildsResult = await fetchDiscordUserGuildsDeduped(userId, session.accessToken);
+    const userGuildsResult = await fetchDiscordUserGuildsDeduped(userId, accessToken);
 
     if (!userGuildsResult.ok) {
       const stale = getCachedAvailability(cacheKey, STALE_CACHE_MS);

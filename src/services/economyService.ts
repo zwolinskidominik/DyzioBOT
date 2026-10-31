@@ -106,7 +106,7 @@ async function atomicUpdate(params: AtomicUpdateParams): Promise<EconomyDocument
   const updated = await EconomyModel.findOneAndUpdate(
     { guildId: params.guildId, userId: params.userId },
     { $inc: inc, $set: { lastActivityAt: new Date() } },
-    { new: true, upsert: true },
+    { returnDocument: 'after', upsert: true },
   );
 
   await EconomyTransactionModel.create({
@@ -136,7 +136,7 @@ export async function getOrCreateWallet(guildId: string, userId: string): Promis
   return EconomyModel.findOneAndUpdate(
     { guildId, userId },
     { $setOnInsert: { guildId, userId, wallet: startingBalance, bank: 0, lastActivityAt: new Date() } },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: 'after' },
   );
 }
 
@@ -322,7 +322,7 @@ export async function send(
         $inc: { wallet: -amount, netWorth: -amount, totalSpent: amount },
         $set: { lastActivityAt: new Date() },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (!updatedSender) return fail('INTERNAL_ERROR', 'Błąd aktualizacji nadawcy.');
 
@@ -333,7 +333,7 @@ export async function send(
         $inc: { wallet: amount, netWorth: amount, totalEarned: amount },
         $set: { lastActivityAt: new Date() },
       },
-      { new: true, upsert: true },
+      { returnDocument: 'after', upsert: true },
     );
     if (!updatedReceiver) return fail('INTERNAL_ERROR', 'Błąd aktualizacji odbiorcy.');
 

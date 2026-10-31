@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth.config";
 import { requireGuildAccess } from "@/lib/requireGuildAccess";
 import { resolveDiscordUsers, displayNameOf } from "@/lib/discordUsers";
 import mongoose from "mongoose";
+import { z } from "zod";
+import { parseJsonBody, snowflake } from "@/lib/apiValidation";
 
 const birthdaySchema = new mongoose.Schema({
   userId: { type: String, required: true },
@@ -95,6 +97,14 @@ export async function DELETE(
   }
 }
 
+const currentYear = () => new Date().getFullYear();
+const birthdayUserBody = z.object({
+  userId: snowflake,
+  day: z.number().int().min(1).max(31),
+  month: z.number().int().min(1).max(12),
+  year: z.number().int().min(1900).refine((y) => y <= currentYear()).optional(),
+});
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ guildId: string }> }
@@ -109,7 +119,9 @@ export async function PUT(
     const accessError = await requireGuildAccess(session, guildId);
     if (accessError) return accessError;
 
-    const data = await request.json();
+    const body = await parseJsonBody(request, birthdayUserBody);
+    if (!body.ok) return body.response;
+    const data = body.data;
 
     await connectDB();
 
@@ -122,7 +134,7 @@ export async function PUT(
         month: data.month,
         year: data.year,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     return NextResponse.json(birthday);

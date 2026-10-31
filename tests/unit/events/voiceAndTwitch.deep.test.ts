@@ -117,15 +117,17 @@ const mockFsReaddir = jest.fn();
 const mockFsStat = jest.fn();
 const mockFsUnlink = jest.fn();
 const mockFsWriteFile = jest.fn();
+// Jest 30 może załadować `fs` zanim powyższe stałe zostaną zainicjalizowane - odwołujemy się
+// do nich leniwie, dopiero przy wywołaniu.
 jest.mock('fs', () => ({
   ...jest.requireActual('fs'),
   promises: {
-    access: mockFsAccess,
-    mkdir: mockFsMkdir,
-    readdir: mockFsReaddir,
-    stat: mockFsStat,
-    unlink: mockFsUnlink,
-    writeFile: mockFsWriteFile,
+    access: (...args: unknown[]) => mockFsAccess(...args),
+    mkdir: (...args: unknown[]) => mockFsMkdir(...args),
+    readdir: (...args: unknown[]) => mockFsReaddir(...args),
+    stat: (...args: unknown[]) => mockFsStat(...args),
+    unlink: (...args: unknown[]) => mockFsUnlink(...args),
+    writeFile: (...args: unknown[]) => mockFsWriteFile(...args),
   },
 }));
 

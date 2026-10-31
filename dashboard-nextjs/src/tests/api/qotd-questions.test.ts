@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { testSession } from "@/tests/helpers/session";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -67,7 +68,7 @@ function mockUsedForGuild(rows: { questionId: string; usedAt: Date }[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(getServerSession).mockResolvedValue({ user: { id: "u1" }, accessToken: "token" } as never);
+  vi.mocked(getServerSession).mockResolvedValue(testSession("u1"));
 });
 
 // ---------------------------------------------------------------------------
