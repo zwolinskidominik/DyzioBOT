@@ -10,6 +10,7 @@ import {
 import type { ICommandOptions } from '../../interfaces/Command';
 import { COLORS } from '../../config/constants/colors';
 import { OWNER_GUILD_IDS } from '../../config/constants/owner';
+import { getMinecraftConfig } from '../../config/minecraft';
 import { CONTACT_EMAIL, PRIVACY_URL, SITE_URL, STATUS_URL, SUPPORT_SERVER_URL, TERMS_URL } from '../../config/constants/links';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { getBotConfig } from '../../config/bot';
@@ -110,10 +111,21 @@ const ALL_COMMANDS: CommandInfo[] = [
   },
 ];
 
+const MINECRAFT_HELP: CommandInfo = {
+  name: '/minecraft',
+  description: 'Panel serwera Minecraft: stan, gracze, uruchamianie serwera i whitelista.',
+  usage: '/minecraft',
+};
+
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
     const isOwnerGuild = (OWNER_GUILD_IDS as readonly string[]).includes(interaction.guildId ?? '');
-    const commands = ALL_COMMANDS.filter((cmd) => !cmd.ownerGuildsOnly || isOwnerGuild);
+    // /minecraft istnieje tylko na serwerze GameZone (MC_GUILD_ID).
+    const isMinecraftGuild = getMinecraftConfig()?.guildId === interaction.guildId;
+    const commands = [
+      ...ALL_COMMANDS.filter((cmd) => !cmd.ownerGuildsOnly || isOwnerGuild),
+      ...(isMinecraftGuild ? [MINECRAFT_HELP] : []),
+    ].sort((a, b) => a.name.localeCompare(b.name));
     const totalPages = Math.ceil(commands.length / 5);
     let currentPage = 0;
 

@@ -28,7 +28,7 @@ Jeśli dokumentacja (`docs/SECURITY.md` i inne) opisuje jakieś zabezpieczenie j
 |---|---|
 | Bot | Node.js 22 LTS · TypeScript strict · discord.js v14 · CommonJS |
 | ORM | Mongoose 9 + Typegoose 13 — modele w `src/models/` |
-| DB | MongoDB Atlas (multi-tenant — każda query **MUSI** mieć `guildId`) |
+| DB | Własne MongoDB w Dockerze na VPS (`mongo` w `docker-compose.yml`; multi-tenant — każda query **MUSI** mieć `guildId`) |
 | Serwisy | Plain functions → `ServiceResult<T>` (nigdy throw na zewnątrz) |
 | Logger | Winston — wyłącznie `logger.*`, zero `console.*` |
 | Testy | Jest 30 + ts-jest + `mongodb-memory-server` |

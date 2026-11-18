@@ -38,6 +38,9 @@ export const CRON = {
   /** Every 5 minutes - flush XP cache to DB */
   XP_FLUSH: '*/5 * * * *',
 
+  /** Every minute - Minecraft server state (counter, panel, whitelist sync) */
+  MINECRAFT_CHECK: '* * * * *',
+
   /** Every 10 minutes - update channel statistics */
   CHANNEL_STATS_UPDATE: '*/10 * * * *',
 
