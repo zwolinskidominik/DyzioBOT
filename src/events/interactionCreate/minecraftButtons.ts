@@ -32,6 +32,7 @@ import {
 } from '../../services/minecraft/whitelistService';
 import { MinecraftLinkModel } from '../../models/MinecraftLink';
 import { MINECRAFT_NICK } from '../../services/minecraft/rconClient';
+import { roleSyncNote, syncStarterRole } from '../../services/minecraft/playerRole';
 
 /**
  * Przyciski, menu wyboru osoby i okienko z nickiem panelu /minecraft. Wszystkie customId mają
@@ -178,7 +179,13 @@ async function handleUserSelected(interaction: UserSelectMenuInteraction, rt: Mi
       return;
     }
     const when = result.data.status === 'removing' ? ' Z serwera zniknie przy najbliższym włączeniu.' : '';
-    await interaction.update({ content: `🗑️ Usunięto <@${userId.data}> (**${result.data.nick}**) z whitelisty.${when}`, components: [], allowedMentions: { parse: [] } });
+    const role = await syncStarterRole(interaction.guild!, userId.data, rt.config.starterRoleId, false);
+    const roleText = role === 'done' ? ` Ranga <@&${rt.config.starterRoleId}> zabrana.` : roleSyncNote(role, false);
+    await interaction.update({
+      content: `🗑️ Usunięto <@${userId.data}> (**${result.data.nick}**) z whitelisty.${when}${roleText}`,
+      components: [],
+      allowedMentions: { parse: [] },
+    });
     syncWhitelistSoon(rt, rt.config.guildId);
     return;
   }
@@ -213,6 +220,8 @@ async function handleNickSubmitted(interaction: ModalSubmitInteraction, rt: Mine
     await interaction.reply({ embeds: [createErrorEmbed(result.message)], flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
     return;
   }
+  // Nadanie rangi to dodatkowe zapytania do Discorda - nie ryzykujemy limitu 3 s na odpowiedź.
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const { entry, changed } = result.data;
   const online = rt.monitor.snapshot?.view.kind === 'online';
   const status = !changed
@@ -220,9 +229,11 @@ async function handleNickSubmitted(interaction: ModalSubmitInteraction, rt: Mine
     : online
       ? 'Dopisuję go na serwer.'
       : 'Zostanie dopisany przy najbliższym włączeniu serwera.';
-  await interaction.reply({
-    content: `➕ <@${entry.userId}> → **${entry.nick}**. ${status}`,
-    flags: MessageFlags.Ephemeral,
+  // Ranga do włączania serwera idzie razem z whitelistą (nadawana też przy samej zmianie nicka - nic nie szkodzi).
+  const role = await syncStarterRole(interaction.guild!, entry.userId, rt.config.starterRoleId, true);
+  const roleText = role === 'done' ? ` Ma rangę <@&${rt.config.starterRoleId}>.` : roleSyncNote(role, true);
+  await interaction.editReply({
+    content: `➕ <@${entry.userId}> → **${entry.nick}**. ${status}${roleText}`,
     allowedMentions: { parse: [] },
   });
   if (changed) syncWhitelistSoon(rt, rt.config.guildId);
