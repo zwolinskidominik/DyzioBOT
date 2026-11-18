@@ -40,3 +40,8 @@ dashboard-nextjs/next-env.d.ts
 # IDE
 .vscode
 .idea
+
+# Runtime data (bind mount ./assets, written by bot and dashboard)
+assets/thumbnails/
+assets/greetings/uploads/
+assets/lobby/uploads/
