@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
 import { createCanvas, type SKRSContext2D } from '@napi-rs/canvas';
+import { registerProjectFonts } from '../../utils/canvasHelpers';
 import type { ICommandOptions } from '../../interfaces/Command';
 
 // ─── Canvas types ─────────────────────────────────────────────────────────────
@@ -224,7 +225,7 @@ function drawAnswerText(ctx: Ctx2D, answer: string, _category: Category) {
 
   const lines = answer.split('\n');
   const fontSize = lines.some(l => l.length > 18) ? 18 : 21;
-  ctx.font = `bold ${fontSize}px sans-serif`;
+  ctx.font = `bold ${fontSize}px Inter, sans-serif`;
 
   const lineHeight = fontSize + 6;
   const totalH = lines.length * lineHeight;
@@ -248,7 +249,7 @@ function drawBigEight(ctx: Ctx2D) {
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = 'bold 72px sans-serif';
+  ctx.font = 'bold 72px Inter, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.05)';
   ctx.fillText('8', CX, CY - WINDOW_R - 55);
   ctx.restore();
@@ -263,12 +264,12 @@ function drawQuestionFooter(ctx: Ctx2D, question: string, username: string) {
   ctx.textBaseline = 'middle';
 
   // Username
-  ctx.font = '16px sans-serif';
+  ctx.font = '16px Inter, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.fillText(`Zapytał(a): ${username}`, CX, footerY + 30);
 
   // Question - truncate if too long
-  ctx.font = 'bold 20px sans-serif';
+  ctx.font = 'bold 20px Inter, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   let q = question;
   while (ctx.measureText(q).width > maxW && q.length > 3) {
@@ -297,6 +298,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const category = getCategory(answer);
 
   // ── Build canvas ────────────────────────────────────────────────────────────
+  registerProjectFonts(); // node:22-slim nie ma czcionek systemowych - bez tego tekst się nie rysuje
   const canvas = createCanvas(IMG_W, IMG_H);
   const ctx    = canvas.getContext('2d');
 

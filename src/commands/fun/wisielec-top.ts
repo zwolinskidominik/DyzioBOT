@@ -4,6 +4,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { createCanvas, loadImage, type SKRSContext2D } from '@napi-rs/canvas';
+import { registerProjectFonts } from '../../utils/canvasHelpers';
 import mongoose from 'mongoose';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { HangmanStatsModel } from '../../models/HangmanStats';
@@ -89,6 +90,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   // ── Build canvas ──────────────────────────────────────────────────────────
   const IMG_H = HDR_H + stats.length * ROW_H + PAD / 2;
+  registerProjectFonts(); // node:22-slim nie ma czcionek systemowych - bez tego tekst się nie rysuje
   const canvas = createCanvas(IMG_W, IMG_H);
   const ctx    = canvas.getContext('2d');
 
@@ -100,7 +102,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle    = C_ORANGE;
-  ctx.font         = 'bold 32px sans-serif';
+  ctx.font         = 'bold 32px Inter, sans-serif';
   ctx.fillText('Wisielec - Ranking', IMG_W / 2, HDR_H / 2);
 
   // Header underline
@@ -129,7 +131,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle    = rankCol;
-    ctx.font         = 'bold 26px sans-serif';
+    ctx.font         = 'bold 26px Inter, sans-serif';
     ctx.fillText(`${i + 1}`, RANK_CX, midY);
 
     // ── Avatar ───────────────────────────────────────────────────────────────
@@ -166,7 +168,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     ctx.textBaseline = 'middle';
 
     ctx.fillStyle = C_WHITE;
-    ctx.font      = 'bold 24px sans-serif';
+    ctx.font      = 'bold 24px Inter, sans-serif';
     ctx.fillText(u.name, TEXT_X, midY - 14);
 
     const gamesPlayed = s.gamesPlayed || s.wins + (s.losses || 0);
@@ -174,7 +176,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       ? Math.round(((s.wins || 0) / gamesPlayed) * 100)
       : 0;
     ctx.fillStyle = C_MUTED;
-    ctx.font      = '17px sans-serif';
+    ctx.font      = '17px Inter, sans-serif';
     ctx.fillText(`${s.wins || 0} wyg. · ${winRate}% winrate`, TEXT_X, midY + 14);
 
     // ── Best streak (right-aligned) ───────────────────────────────────────────
@@ -182,11 +184,11 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
     ctx.textAlign = 'right';
     ctx.fillStyle = C_ORANGE;
-    ctx.font      = 'bold 30px sans-serif';
+    ctx.font      = 'bold 30px Inter, sans-serif';
     ctx.fillText(`${bestStreak}🔥`, RIGHT_X, midY - 10);
 
     ctx.fillStyle = C_MUTED;
-    ctx.font      = '14px sans-serif';
+    ctx.font      = '14px Inter, sans-serif';
     ctx.fillText('najlepsza seria', RIGHT_X, midY + 16);
 
     // Row separator

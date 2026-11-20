@@ -12,6 +12,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { createCanvas, type SKRSContext2D } from '@napi-rs/canvas';
+import { registerProjectFonts } from '../../utils/canvasHelpers';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { WordleWordModel } from '../../models/WordleWord';
 import { WordleStatModel } from '../../models/WordleStat';
@@ -216,6 +217,7 @@ function renderImage(
   const keysH     = KB.length * (KEY_H + KGAP) - KGAP;
   const IMG_H     = HDR_H + gridH + SGAP + keysH + PAD;
 
+  registerProjectFonts(); // node:22-slim nie ma czcionek systemowych - bez tego tekst się nie rysuje
   const canvas = createCanvas(IMG_W, IMG_H);
   const ctx    = canvas.getContext('2d');
 
@@ -225,13 +227,13 @@ function renderImage(
 
   /* Header */
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = C_WHITE; ctx.font = 'bold 42px sans-serif';
+  ctx.fillStyle = C_WHITE; ctx.font = 'bold 42px Inter, sans-serif';
   ctx.fillText(`Game played by ${username}`, IMG_W / 2, 64);
   const sub =
     state === 'won'  ? `Wygrałeś w ${guesses.length}/${MAX_ATTEMPTS} prób · ${length} liter` :
     state === 'lost' ? `Koniec gry · ${length} liter` :
                        `Próba ${guesses.length + 1}/${MAX_ATTEMPTS} · ${length} liter`;
-  ctx.fillStyle = C_MUTED; ctx.font = '30px sans-serif';
+  ctx.fillStyle = C_MUTED; ctx.font = '30px Inter, sans-serif';
   ctx.fillText(sub, IMG_W / 2, 112);
   ctx.strokeStyle = C_BORDER; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(PAD, HDR_H - 20); ctx.lineTo(IMG_W - PAD, HDR_H - 20); ctx.stroke();
@@ -247,7 +249,7 @@ function renderImage(
       if (g) {
         ctx.fillStyle = tileColor(g.letters[col].result); ctx.fill();
         ctx.fillStyle = C_WHITE;
-        ctx.font = `bold ${Math.round(TILE * 0.44)}px sans-serif`;
+        ctx.font = `bold ${Math.round(TILE * 0.44)}px Inter, sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(g.letters[col].letter.toUpperCase(), tx + TILE / 2, gy + TILE / 2);
       } else {
@@ -287,7 +289,7 @@ function renderImage(
     for (let col = 0; col < length; col++) {
       const tx = overX + col * (OTILE + OGAP);
       ctx.fillStyle    = C_WHITE;
-      ctx.font         = `bold ${Math.round(OTILE * 0.48)}px sans-serif`;
+      ctx.font         = `bold ${Math.round(OTILE * 0.48)}px Inter, sans-serif`;
       ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(word[col].toUpperCase(), tx + OTILE / 2, overY + OTILE / 2);
@@ -307,7 +309,7 @@ function renderImage(
       rrect(ctx, kx, ky, KEY_W, KEY_H, R);
       ctx.fillStyle = keyBg(st); ctx.fill();
       ctx.fillStyle = C_WHITE;
-      ctx.font = `bold ${Math.round(KEY_H * 0.38)}px sans-serif`;
+      ctx.font = `bold ${Math.round(KEY_H * 0.38)}px Inter, sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(k, kx + KEY_W / 2, ky + KEY_H / 2);
       kx += KEY_W + KGAP;
