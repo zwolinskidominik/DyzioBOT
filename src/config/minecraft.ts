@@ -81,6 +81,7 @@ export function getMinecraftConfig(): MinecraftConfig | null {
   const result = parseMinecraftConfig(process.env);
   if (result.ok) {
     cached = result.config;
+    logger.info(`[MC] Funkcja Minecraft włączona (serwer ${result.config.guildId}).`);
   } else {
     cached = null;
     const anySet = Object.keys(MinecraftEnvSchema.shape).some((key) => process.env[key]);

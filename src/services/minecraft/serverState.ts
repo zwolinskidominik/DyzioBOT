@@ -55,14 +55,14 @@ export function deriveServerView({ ping, machine, now }: StateInput): ServerView
 export function channelNameFor(view: ServerView): string | null {
   switch (view.kind) {
     case 'online':
-      return `🟢 Online: ${view.online}/${view.max}`;
+      return `🟢┃ᴏɴʟɪɴᴇ: ${view.online}/${view.max}`;
     case 'starting':
-      return '🟡 Startuje…';
+      return '🟡┃ꜱᴛᴀʀᴛᴜᴊᴇ...';
     case 'unresponsive':
-      return '⚠️ Nie odpowiada';
+      return '⚠️┃ɴɪᴇ ᴏᴅᴘᴏᴡɪᴀᴅᴀ';
     case 'stopping':
     case 'offline':
-      return '🔴 Offline';
+      return '🔴┃ᴏꜰꜰʟɪɴᴇ';
     case 'unknown':
       return null;
   }

@@ -68,7 +68,7 @@ describe('deriveServerView / channel names', () => {
   it('online when our server answers the ping', () => {
     const view = deriveServerView({ ping, machine: undefined, now: NOW });
     expect(view).toEqual({ kind: 'online', online: 3, max: 20, players: ['Kuba'] });
-    expect(channelNameFor(view)).toBe('🟢 Online: 3/20');
+    expect(channelNameFor(view)).toBe('🟢┃ᴏɴʟɪɴᴇ: 3/20');
   });
 
   it.each([
@@ -88,7 +88,7 @@ describe('deriveServerView / channel names', () => {
     expect(fresh).toEqual({ kind: 'starting', phase: 'minecraft' });
     const stuck = deriveServerView({ ping: null, machine: machine('RUNNING', { lastStart: new Date(NOW - UNRESPONSIVE_AFTER_MS - 1) }), now: NOW });
     expect(stuck).toEqual({ kind: 'unresponsive' });
-    expect(channelNameFor(stuck)).toBe('⚠️ Nie odpowiada');
+    expect(channelNameFor(stuck)).toBe('⚠️┃ɴɪᴇ ᴏᴅᴘᴏᴡɪᴀᴅᴀ');
   });
 
   it('TERMINATED right after POST /start (started=true) is still "starting"', () => {
@@ -102,9 +102,9 @@ describe('deriveServerView / channel names', () => {
   });
 
   it('channel names for the remaining states and the start button rule', () => {
-    expect(channelNameFor({ kind: 'starting', phase: 'machine' })).toBe('🟡 Startuje…');
-    expect(channelNameFor({ kind: 'offline' })).toBe('🔴 Offline');
-    expect(channelNameFor({ kind: 'stopping' })).toBe('🔴 Offline');
+    expect(channelNameFor({ kind: 'starting', phase: 'machine' })).toBe('🟡┃ꜱᴛᴀʀᴛᴜᴊᴇ...');
+    expect(channelNameFor({ kind: 'offline' })).toBe('🔴┃ᴏꜰꜰʟɪɴᴇ');
+    expect(channelNameFor({ kind: 'stopping' })).toBe('🔴┃ᴏꜰꜰʟɪɴᴇ');
     expect(isMachineUp({ kind: 'offline' })).toBe(false);
     expect(isMachineUp({ kind: 'unknown' })).toBe(false);
     expect(isMachineUp({ kind: 'starting', phase: 'minecraft' })).toBe(true);

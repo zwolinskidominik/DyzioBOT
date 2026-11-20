@@ -10,7 +10,7 @@ import { safeSetChannelName } from '../../utils/channelHelpers';
 import logger from '../../utils/logger';
 
 /**
- * Kanał głosowy-licznik stanu serwera (np. „🟢 Online: 3/20”) w kategorii „⛏️ Minecraft”
+ * Kanał głosowy-licznik stanu serwera (np. „🟢┃ᴏɴʟɪɴᴇ: 3/20”) w kategorii „⛏️ Minecraft”
  * zakładanej przez bota przy pierwszym uruchomieniu (ID zapisane w bazie). Widoczny dla wszystkich,
  * nikt nie może na niego wejść.
  *
@@ -19,7 +19,7 @@ import logger from '../../utils/logger';
  */
 
 export const CATEGORY_NAME = '⛏️ Minecraft';
-export const INITIAL_CHANNEL_NAME = '🔴 Offline';
+export const INITIAL_CHANNEL_NAME = '🔴┃ᴏꜰꜰʟɪɴᴇ';
 export const RENAME_MIN_INTERVAL_MS = 5 * 60_000;
 
 export class RenameLimiter {

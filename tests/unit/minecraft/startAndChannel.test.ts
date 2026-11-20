@@ -23,25 +23,25 @@ describe('RenameLimiter', () => {
     let now = 0;
     const limiter = new RenameLimiter(RENAME_MIN_INTERVAL_MS, () => now);
 
-    limiter.request('🔴 Offline');
-    expect(limiter.takeDue('🔴 Offline')).toBeNull(); // brak różnicy
+    limiter.request('🔴┃ᴏꜰꜰʟɪɴᴇ');
+    expect(limiter.takeDue('🔴┃ᴏꜰꜰʟɪɴᴇ')).toBeNull(); // brak różnicy
 
-    limiter.request('🟡 Startuje…');
-    expect(limiter.takeDue('🔴 Offline')).toBe('🟡 Startuje…');
+    limiter.request('🟡┃ꜱᴛᴀʀᴛᴜᴊᴇ...');
+    expect(limiter.takeDue('🔴┃ᴏꜰꜰʟɪɴᴇ')).toBe('🟡┃ꜱᴛᴀʀᴛᴜᴊᴇ...');
 
     now += 60_000;
-    limiter.request('🟢 Online: 1/20');
-    limiter.request('🟢 Online: 2/20');
-    expect(limiter.takeDue('🟡 Startuje…')).toBeNull(); // limit 5 min
+    limiter.request('🟢┃ᴏɴʟɪɴᴇ: 1/20');
+    limiter.request('🟢┃ᴏɴʟɪɴᴇ: 2/20');
+    expect(limiter.takeDue('🟡┃ꜱᴛᴀʀᴛᴜᴊᴇ...')).toBeNull(); // limit 5 min
 
     now += RENAME_MIN_INTERVAL_MS;
-    expect(limiter.takeDue('🟡 Startuje…')).toBe('🟢 Online: 2/20'); // tylko najnowszy stan
+    expect(limiter.takeDue('🟡┃ꜱᴛᴀʀᴛᴜᴊᴇ...')).toBe('🟢┃ᴏɴʟɪɴᴇ: 2/20'); // tylko najnowszy stan
   });
 
   it('ignores "unknown" (null) requests', () => {
     const limiter = new RenameLimiter(RENAME_MIN_INTERVAL_MS, () => 0);
     limiter.request(null);
-    expect(limiter.takeDue('🔴 Offline')).toBeNull();
+    expect(limiter.takeDue('🔴┃ᴏꜰꜰʟɪɴᴇ')).toBeNull();
   });
 });
 
