@@ -15,7 +15,7 @@ import type { MonitorSnapshot } from '../../../src/services/minecraft/monitor';
 import type { ControlResult } from '../../../src/services/minecraft/controlClient';
 import type { ServerView } from '../../../src/services/minecraft/serverState';
 import { canManageWhitelist, canStartServer, memberRoleIds } from '../../../src/services/minecraft/permissions';
-import { MC_IDS, buildPanelButtons, parseMcCustomId } from '../../../src/utils/minecraftEmbeds';
+import { MC_IDS, buildPanelButtons, buildPanelEmbed, parseMcCustomId } from '../../../src/utils/minecraftEmbeds';
 import { planWhitelistSteps, NickSchema } from '../../../src/services/minecraft/whitelistService';
 
 describe('RenameLimiter', () => {
@@ -134,6 +134,14 @@ describe('customId', () => {
     const startButton = (view: ServerView) => buildPanelButtons(view)[0]!.components[1]!.toJSON();
     expect(startButton({ kind: 'offline' })).toMatchObject({ disabled: false });
     expect(startButton({ kind: 'online', online: 0, max: 20, players: [] })).toMatchObject({ disabled: true });
+  });
+
+  it('shows who started the server only while the machine is up', () => {
+    const startedBy = { userId: '123456789012345678', at: new Date('2026-11-22T20:00:00Z') };
+    const field = (view: ServerView) => buildPanelEmbed(view, 'mc.deezy.cc', { startedBy }).toJSON().fields?.find((f) => f.name === 'Włączył');
+    expect(field({ kind: 'online', online: 1, max: 20, players: [] })?.value).toBe(`<@${startedBy.userId}> <t:1795377600:R>`);
+    expect(field({ kind: 'starting', phase: 'machine' })).toBeDefined();
+    expect(field({ kind: 'offline' })).toBeUndefined();
   });
 });
 

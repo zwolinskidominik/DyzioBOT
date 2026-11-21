@@ -19,6 +19,7 @@ import {
   getMinecraftRuntime,
   panelPayload,
   refreshPanel,
+  setStartedBy,
   updateStatsChannel,
   visibleView,
   type MinecraftRuntime,
@@ -105,6 +106,9 @@ async function handleStart(interaction: ButtonInteraction, rt: MinecraftRuntime)
   const messageId = interaction.message.id;
   // Licznik od razu na „startuje” (jeśli pozwala limit zmian nazwy).
   void updateStatsChannel(guild, rt, { kind: 'starting', phase: 'machine' }).catch(() => undefined);
+  // Panel pokazuje od razu, kto włącza serwer; przy nieudanym starcie wracamy do poprzedniej osoby.
+  const previousStarter = rt.startedBy ?? null;
+  await setStartedBy(rt, { userId: interaction.user.id, at: new Date() });
 
   const outcome = await rt.starter.start(async (snapshot) => {
     const extras = { progress: progressText(snapshot.view), startInProgress: true };
@@ -112,6 +116,7 @@ async function handleStart(interaction: ButtonInteraction, rt: MinecraftRuntime)
     await refreshPanel(guild, rt, snapshot.view, extras, messageId).catch(() => undefined);
   });
 
+  if (outcome.kind !== 'ready' && outcome.kind !== 'timeout') await setStartedBy(rt, previousStarter);
   if (outcome.kind === 'unavailable') {
     await replyEphemeral(interaction, 'Nie udało się uruchomić serwera, spróbuj za chwilę.');
     return;

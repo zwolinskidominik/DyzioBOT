@@ -64,6 +64,13 @@ export interface PanelExtras {
   /** Etap uruchamiania („Maszyna startuje…”) albo komunikat końcowy. */
   progress?: string | undefined;
   startInProgress?: boolean | undefined;
+  /** Kto włączył serwer przyciskiem ▶️ - pokazywane, dopóki maszyna działa. */
+  startedBy?: StartedBy | null | undefined;
+}
+
+export interface StartedBy {
+  userId: string;
+  at: Date;
 }
 
 function stateLine(view: ServerView): { text: string; color: number } {
@@ -109,6 +116,11 @@ export function buildPanelEmbed(view: ServerView, host: string, extras: PanelExt
     { name: 'Adres', value: `\`${host}\``, inline: true },
     { name: 'Wersja', value: MC_VERSION_LABEL, inline: true },
   ];
+  if (extras.startedBy && isMachineUp(view)) {
+    // Wzmianka w embedzie nikogo nie pinguje; <t:…:R> Discord pokazuje jako „5 minut temu”.
+    const unix = Math.floor(extras.startedBy.at.getTime() / 1000);
+    fields.push({ name: 'Włączył', value: `<@${extras.startedBy.userId}> <t:${unix}:R>`, inline: false });
+  }
   const embed = new EmbedBuilder()
     .setColor(state.color)
     .setTitle('⛏️ Serwer Minecraft GameZone')

@@ -24,6 +24,13 @@ class MinecraftState {
 
   @prop({ type: () => String })
   public panelMessageId?: string | undefined;
+
+  /** Kto ostatnio włączył serwer przyciskiem ▶️ (czyszczone, gdy maszyna jest wyłączona). */
+  @prop({ type: () => String })
+  public startedBy?: string | undefined;
+
+  @prop({ type: () => Date })
+  public startedAt?: Date | undefined;
 }
 
 export const MinecraftStateModel = getModelForClass(MinecraftState);

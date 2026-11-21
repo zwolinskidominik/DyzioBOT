@@ -1,7 +1,7 @@
 import type { Client, Guild, Message } from 'discord.js';
 import { getMinecraftConfig, type MinecraftConfig } from '../../config/minecraft';
 import { MinecraftStateModel } from '../../models/MinecraftState';
-import { buildPanel, type PanelExtras } from '../../utils/minecraftEmbeds';
+import { buildPanel, type PanelExtras, type StartedBy } from '../../utils/minecraftEmbeds';
 import logger from '../../utils/logger';
 import { ControlClient } from './controlClient';
 import { MinecraftMonitor, type MonitorSnapshot } from './monitor';
@@ -19,6 +19,8 @@ export interface MinecraftRuntime {
   monitor: MinecraftMonitor;
   starter: StartController;
   limiter: RenameLimiter;
+  /** Kto włączył serwer (kopia z bazy; `undefined` = jeszcze nie wczytano po restarcie bota). */
+  startedBy: StartedBy | null | undefined;
 }
 
 let runtime: MinecraftRuntime | null | undefined;
@@ -31,8 +33,26 @@ export function getMinecraftRuntime(): MinecraftRuntime | null {
     return runtime;
   }
   const monitor = new MinecraftMonitor(config, new ControlClient(config));
-  runtime = { config, monitor, starter: new StartController(monitor), limiter: new RenameLimiter() };
+  runtime = { config, monitor, starter: new StartController(monitor), limiter: new RenameLimiter(), startedBy: undefined };
   return runtime;
+}
+
+/* ── Kto włączył serwer ──────────────────────────────────────── */
+
+async function loadStartedBy(rt: MinecraftRuntime): Promise<void> {
+  if (rt.startedBy !== undefined) return;
+  const state = await MinecraftStateModel.findOne({ guildId: rt.config.guildId }).lean();
+  rt.startedBy = state?.startedBy && state.startedAt ? { userId: state.startedBy, at: state.startedAt } : null;
+}
+
+/** Zapamiętuje (albo czyści - `null`) osobę, która włączyła serwer. */
+export async function setStartedBy(rt: MinecraftRuntime, value: StartedBy | null): Promise<void> {
+  rt.startedBy = value;
+  await MinecraftStateModel.updateOne(
+    { guildId: rt.config.guildId },
+    value ? { $set: { startedBy: value.userId, startedAt: value.at } } : { $unset: { startedBy: 1, startedAt: 1 } },
+    { upsert: true }
+  ).catch((err: unknown) => logger.warn(`[MC] Nie udało się zapisać, kto włączył serwer: ${err}`));
 }
 
 /** Stan do pokazania: w trakcie startu „wyłączona” maszyna to po prostu „startuje”. */
@@ -41,7 +61,7 @@ export function visibleView(rt: MinecraftRuntime, snapshot: MonitorSnapshot): Se
 }
 
 export function panelPayload(rt: MinecraftRuntime, view: ServerView, extras: PanelExtras = {}) {
-  return buildPanel(view, rt.config.displayHost, { startInProgress: rt.starter.inProgress, ...extras });
+  return buildPanel(view, rt.config.displayHost, { startInProgress: rt.starter.inProgress, startedBy: rt.startedBy, ...extras });
 }
 
 /* ── Stały panel ─────────────────────────────────────────────── */
@@ -103,8 +123,13 @@ export async function runMinecraftCycle(client: Client): Promise<void> {
   const guild = client.guilds.cache.get(rt.config.guildId);
   if (!guild) return;
 
+  await loadStartedBy(rt);
   const snapshot = await rt.monitor.refresh();
   const view = visibleView(rt, snapshot);
+  // Maszyna wyłączona - następne włączenie (może spoza Discorda) nie powinno pokazywać starej osoby.
+  if (rt.startedBy && !rt.starter.inProgress && (view.kind === 'offline' || view.kind === 'stopping')) {
+    await setStartedBy(rt, null);
+  }
 
   await updateStatsChannel(guild, rt, view);
   // W trakcie startu panel odświeża StartController (z opisem etapu) - tu by go nadpisał.
