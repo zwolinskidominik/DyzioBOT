@@ -227,7 +227,19 @@ GAMBLING, DAILY, SHOP, ROB_SUCCESS, ROB_FAIL
 
 ---
 
-## Aktualny cel: System Ekonomii
+## Wdrożenie (automatyczne)
+
+Push na `main` → GitHub Actions (`.github/workflows/ci-deploy.yml`): typecheck + testy bota i/lub dashboardu (tylko części, których dotyczą zmiany) → po zielonych testach SSH na VPS, gdzie klucz ma wymuszoną komendę `ops/deploy/deploy.sh` (`git merge --ff-only` + `docker compose up -d --build` tylko zmienionych usług + sprawdzenie, czy kontenery działają). Nie każ Dominikowi ręcznie robić `git pull`/`docker compose` na VPS — wystarczy push. Lokalne zmiany/commity na VPS blokują wdrożenie (celowo).
+
+---
+
+## Aktualny cel: angielska wersja bota
+
+Zapowiedziana na `#announcements`. Przed kodowaniem uzgodnij z Dominikiem plan (wybór języka, kolejność tłumaczeń, etapy).
+
+---
+
+## Odłożone: System Ekonomii (po angielskiej wersji bota)
 
 Szczegółowy plan: `docs/ECONOMY_PLAN.md`
 

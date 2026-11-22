@@ -1,0 +1,132 @@
+# Testy przy każdym pushu i PR; po zielonych testach na main - wdrożenie na VPS przez SSH.
+# Klucz SSH ma po stronie VPS wymuszoną komendę (ops/deploy/deploy.sh), więc niczego innego nim nie uruchomisz.
+#
+# Sekrety repo (Settings → Secrets and variables → Actions):
+#   DEPLOY_HOST         - adres VPS (np. deezy.cc)
+#   DEPLOY_PORT         - port SSH (2222)
+#   DEPLOY_USER         - użytkownik (ubuntu)
+#   DEPLOY_SSH_KEY      - prywatny klucz ed25519 tylko do wdrożeń
+#   DEPLOY_KNOWN_HOSTS  - linia known_hosts VPS (chroni przed podszyciem się pod serwer)
+name: CI & deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    name: Co się zmieniło
+    runs-on: ubuntu-latest
+    outputs:
+      bot: ${{ steps.diff.outputs.bot }}
+      dashboard: ${{ steps.diff.outputs.dashboard }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BEFORE: ${{ github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            files="$(git diff --name-only "origin/$BASE_REF...HEAD")"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
+            files="$(git diff --name-only "$BEFORE" HEAD)"
+          else
+            files="ALL"
+          fi
+          echo "$files"
+          if [ "$files" = "ALL" ] || grep -qE '^(src/|tests/|assets/|package(-lock)?\.json$|tsconfig[^/]*\.json$|jest\.config\.js$|Dockerfile\.bot$|docker-compose\.yml$|\.github/)' <<<"$files"; then
+            echo "bot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bot=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ "$files" = "ALL" ] || grep -qE '^(dashboard-nextjs/|Dockerfile\.dashboard$|docker-compose\.yml$|\.github/)' <<<"$files"; then
+            echo "dashboard=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dashboard=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  bot:
+    name: Bot - typecheck i testy
+    needs: changes
+    if: needs.changes.outputs.bot == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:types
+      - run: npm test
+
+  dashboard:
+    name: Dashboard - typecheck i testy
+    needs: changes
+    if: needs.changes.outputs.dashboard == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: dashboard-nextjs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard-nextjs/package-lock.json
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm test
+
+  deploy:
+    name: Wdrożenie na VPS
+    needs: [changes, bot, dashboard]
+    # Tylko main; pominięty job testów (bez zmian w danej części) nie blokuje wdrożenia, czerwony - blokuje.
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      needs.changes.result == 'success' &&
+      (needs.bot.result == 'success' || needs.bot.result == 'skipped') &&
+      (needs.dashboard.result == 'success' || needs.dashboard.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wdrożenie przez SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_SSH_KEY" ]; then
+            echo "::error::Brak sekretów DEPLOY_* w ustawieniach repo - wdrożenie pominięte."
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # Komenda po stronie VPS jest wymuszona przez authorized_keys - tu nic nie podajemy.
+          ssh -T -i ~/.ssh/deploy_key -p "${DEPLOY_PORT:-22}" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+            "$DEPLOY_USER@$DEPLOY_HOST"
+      - name: Sprzątanie klucza
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
