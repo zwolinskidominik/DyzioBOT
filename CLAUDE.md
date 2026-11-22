@@ -235,7 +235,13 @@ Push na `main` → GitHub Actions (`.github/workflows/ci-deploy.yml`): typecheck
 
 ## Aktualny cel: angielska wersja bota
 
-Zapowiedziana na `#announcements`. Przed kodowaniem uzgodnij z Dominikiem plan (wybór języka, kolejność tłumaczeń, etapy).
+Zapowiedziana na `#announcements`. Ustalenia z Dominikiem:
+- **Język = ustawienie serwera** (`GuildSettings.language`, dashboard → Ustawienia) dla wszystkich odpowiedzi bota, także ephemeral. Nowe serwery: z `guild.preferredLocale` (`initGuildLanguage`), istniejące bez ustawienia = `pl`. Odczyt: `getGuildLanguage(guildId)` z `src/i18n/guildLanguage.ts` (cache 60 s).
+- **Teksty**: słowniki per moduł w `src/i18n/messages/*.ts` przez `defineMessages({ pl, en })` (PL wzorem, EN musi mieć te same klucze - pilnuje typecheck), każdy nowy słownik dopisz do `src/i18n/catalogs.ts` (test kompletności i braku polskich znaków w EN). Odmiana: `plural()` / `pluralEn()`. Logi (`logger.*`) zostają po polsku.
+- **Nazwy komend: angielskie wszędzie, bez wyjątków** (także na GameZone) - bez polskich `setNameLocalizations`; opisy komend i opcji z tłumaczeniem PL (`setDescriptionLocalizations`). Zmiana nazwy komendy = migracja nazw w `CommandConfig` (wyłączone komendy w dashboardzie) i aktualizacja `/help` oraz list komend w dashboardzie.
+- **Gry słowne (Wordle, wisielec, QOTD, ciekawostki, 8ball) na serwerach EN na razie ukryte** (`commonMessages.notAvailableInLanguage`), angielskie bazy później.
+- Etapy: 0 fundament ✅ → 1 wspólne komunikaty + nazwy/opisy komend + EN w dashboardzie → 2 moduły admina (moderacja i logi razem z podglądami w dashboardzie, tickety, powitania, poziomy, giveaway, sugestie, urodziny, invite tracker, kanały tymczasowe, statystyki, Wrapped) → 3 gry → 4 szablony domyślne, daty/liczby, ogłoszenie i FAQ.
+- Minecraft (tylko GameZone) zostaje po polsku. Treści wpisane przez adminów nie są tłumaczone.
 
 ---
 

@@ -13,6 +13,7 @@ import { TournamentConfigModel } from '../../models/TournamentConfig';
 import { GiveawayConfigModel } from '../../models/GiveawayConfig';
 import { AutoRoleModel } from '../../models/AutoRole';
 import logger from '../../utils/logger';
+import { initGuildLanguage } from '../../i18n/guildLanguage';
 
 // Kolejność argumentów jak w każdym evencie: EventHandler woła handler(...argsEventu, client),
 // więc dla guildCreate najpierw przychodzi Guild, a Client na końcu. Wcześniej parametry były
@@ -24,6 +25,9 @@ export default async (guild: Guild, _client: Client) => {
     logger.info(`Bot joined new guild: ${guild.name} (${guildId}). Initializing module configurations...`);
 
     await Promise.allSettled([
+      // Język bota na nowym serwerze: z ustawień Discorda serwera (polski → pl, inny → en).
+      initGuildLanguage(guild),
+
       BirthdayConfigurationModel.findOneAndUpdate(
         { guildId },
         { guildId, enabled: false },
