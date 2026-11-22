@@ -8,7 +8,7 @@ import logger from '../../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('birthdays-next')
-  .setDescription('Sprawdź, czyje urodziny zbliżają się na serwerze 🎈')
+  .setDescription('See whose birthdays are coming up in the server 🎈').setDescriptionLocalizations({ pl: 'Sprawdź, czyje urodziny zbliżają się na serwerze 🎈' })
   .setDMPermission(false);
 
 export const options = {};

@@ -38,7 +38,8 @@ export const settingsMessages = defineMessages({
       title: "Język",
       text: "Język odpowiedzi bota na tym serwerze.",
       polish: "Polski",
-      englishSoon: "English (wkrótce)",
+      english: "English",
+      partialNote: "Tłumaczenie na angielski trwa: wspólne komunikaty i komendy są już po angielsku, część modułów jeszcze odpowiada po polsku.",
     },
     notify: {
       title: "Powiadomienia systemowe",
@@ -121,7 +122,8 @@ export const settingsMessages = defineMessages({
       title: "Language",
       text: "The language the bot replies in on this server.",
       polish: "Polski",
-      englishSoon: "English (coming soon)",
+      english: "English",
+      partialNote: "The English translation is in progress: shared messages and commands are already in English, some modules still reply in Polish.",
     },
     notify: {
       title: "System notifications",

@@ -14,46 +14,46 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('role')
-  .setDescription('Nadaj, odbierz lub ustaw czasową rolę użytkownika')
+  .setDescription('Give, remove or set a temporary role for a user').setDescriptionLocalizations({ pl: 'Nadaj, odbierz lub ustaw czasową rolę użytkownika' })
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
   .setDMPermission(false)
   .addSubcommand((sub) =>
     sub
       .setName('temp')
-      .setDescription('Nadaje rolę na określony czas')
+      .setDescription('Gives a role for a set time').setDescriptionLocalizations({ pl: 'Nadaje rolę na określony czas' })
       .addUserOption((opt) =>
-        opt.setName('uzytkownik').setDescription('Użytkownik, któremu nadajesz rolę').setRequired(true)
+        opt.setName('user').setDescription('User you are giving the role to').setDescriptionLocalizations({ pl: 'Użytkownik, któremu nadajesz rolę' }).setRequired(true)
       )
       .addRoleOption((opt) =>
-        opt.setName('rola').setDescription('Rola do nadania').setRequired(true)
+        opt.setName('role').setDescription('Role to give').setDescriptionLocalizations({ pl: 'Rola do nadania' }).setRequired(true)
       )
       .addStringOption((opt) =>
         opt
-          .setName('czas')
-          .setDescription("Czas trwania (np. '1d 2h 30m', '5h', '30m')")
+          .setName('duration')
+          .setDescription('Duration (e.g. \'1d 2h 30m\', \'5h\', \'30m\')').setDescriptionLocalizations({ pl: 'Czas trwania (np. \'1d 2h 30m\', \'5h\', \'30m\')' })
           .setRequired(true)
       )
       .addStringOption((opt) =>
-        opt.setName('powod').setDescription('Powód nadania roli (opcjonalnie)').setRequired(false)
+        opt.setName('reason').setDescription('Reason for giving the role (optional)').setDescriptionLocalizations({ pl: 'Powód nadania roli (opcjonalnie)' }).setRequired(false)
       )
   )
   .addSubcommand((sub) =>
     sub
       .setName('remove')
-      .setDescription('Usuwa tymczasową rolę przed czasem')
+      .setDescription('Removes a temporary role early').setDescriptionLocalizations({ pl: 'Usuwa tymczasową rolę przed czasem' })
       .addUserOption((opt) =>
-        opt.setName('uzytkownik').setDescription('Użytkownik').setRequired(true)
+        opt.setName('user').setDescription('User').setDescriptionLocalizations({ pl: 'Użytkownik' }).setRequired(true)
       )
       .addRoleOption((opt) =>
-        opt.setName('rola').setDescription('Rola do usunięcia').setRequired(true)
+        opt.setName('role').setDescription('Role to remove').setDescriptionLocalizations({ pl: 'Rola do usunięcia' }).setRequired(true)
       )
   )
   .addSubcommand((sub) =>
     sub
       .setName('list')
-      .setDescription('Wyświetla aktywne tymczasowe role')
+      .setDescription('Shows active temporary roles').setDescriptionLocalizations({ pl: 'Wyświetla aktywne tymczasowe role' })
       .addUserOption((opt) =>
-        opt.setName('uzytkownik').setDescription('Filtruj po użytkowniku (opcjonalnie)').setRequired(false)
+        opt.setName('user').setDescription('Filter by user (optional)').setDescriptionLocalizations({ pl: 'Filtruj po użytkowniku (opcjonalnie)' }).setRequired(false)
       )
   );
 
@@ -82,10 +82,10 @@ async function handleTemp(interaction: ICommandOptions['interaction']): Promise<
   await interaction.deferReply();
 
   const guild = interaction.guild!;
-  const targetUser = interaction.options.getUser('uzytkownik', true);
-  const role = interaction.options.getRole('rola', true) as Role;
-  const durationStr = interaction.options.getString('czas', true);
-  const reason = interaction.options.getString('powod') ?? undefined;
+  const targetUser = interaction.options.getUser('user', true);
+  const role = interaction.options.getRole('role', true) as Role;
+  const durationStr = interaction.options.getString('duration', true);
+  const reason = interaction.options.getString('reason') ?? undefined;
 
   // Parse duration
   const durationMs = parseDuration(durationStr);
@@ -187,8 +187,8 @@ async function handleRemove(interaction: ICommandOptions['interaction']): Promis
   await interaction.deferReply();
 
   const guild = interaction.guild!;
-  const targetUser = interaction.options.getUser('uzytkownik', true);
-  const role = interaction.options.getRole('rola', true) as Role;
+  const targetUser = interaction.options.getUser('user', true);
+  const role = interaction.options.getRole('role', true) as Role;
 
   // Remove from DB
   const result = await removeTempRole(guild.id, targetUser.id, role.id);
@@ -232,7 +232,7 @@ async function handleList(interaction: ICommandOptions['interaction']): Promise<
   await interaction.deferReply();
 
   const guild = interaction.guild!;
-  const filterUser = interaction.options.getUser('uzytkownik') ?? undefined;
+  const filterUser = interaction.options.getUser('user') ?? undefined;
 
   const result = await listTempRoles(guild.id, filterUser?.id);
   if (!result.ok) {

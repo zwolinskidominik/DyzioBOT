@@ -11,17 +11,17 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('warn')
-  .setDescription('Ostrzeż użytkownika zgodnie z drabinką kar serwera')
+  .setDescription('Warn a user according to the server\'s punishment ladder').setDescriptionLocalizations({ pl: 'Ostrzeż użytkownika zgodnie z drabinką kar serwera' })
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('uzytkownik')
-      .setDescription('Użytkownik, któremu chcesz nadać upomnienie.')
+      .setName('user')
+      .setDescription('User you want to warn.').setDescriptionLocalizations({ pl: 'Użytkownik, któremu chcesz nadać upomnienie.' })
       .setRequired(true)
   )
   .addStringOption((option) =>
-    option.setName('powod').setDescription('Powód upomnienia.').setRequired(true)
+    option.setName('reason').setDescription('Reason for the warning.').setDescriptionLocalizations({ pl: 'Powód upomnienia.' }).setRequired(true)
   );
 
 export const options = {
@@ -38,13 +38,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 
   try {
     const targetUser =
-      interaction.options.getUser('użytkownik') || interaction.options.getUser('uzytkownik');
+      interaction.options.getUser('user');
     if (!targetUser) {
       await interaction.editReply({ embeds: [createErrorEmbed('Nie podano użytkownika.')] });
       return;
     }
 
-    const reason = interaction.options.getString('powod');
+    const reason = interaction.options.getString('reason');
     if (!reason) {
       await interaction.editReply({ embeds: [createErrorEmbed('Nie podano powodu.')] });
       return;

@@ -95,7 +95,7 @@ describe('Misc commands - data exports', () => {
 
   it('kalendarzAdwentowy has correct command data', () => {
     const { data } = require('../../../src/commands/misc/kalendarzAdwentowy');
-    expect(data.name).toBe('kalendarz-adwentowy');
+    expect(data.name).toBe('advent-calendar');
   });
 
   it('ping has correct command data', () => {
@@ -120,7 +120,7 @@ describe('Misc commands - data exports', () => {
 
   it('wrozba has correct command data', () => {
     const { data } = require('../../../src/commands/misc/wrozba');
-    expect(data.name).toBe('wrozba');
+    expect(data.name).toBe('fortune');
   });
 });
 

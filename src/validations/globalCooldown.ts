@@ -1,5 +1,7 @@
 import { ChatInputCommandInteraction } from 'discord.js';
 import type { ICommand } from '../interfaces/Command';
+import { commonMessages } from '../i18n/messages/common';
+import { getGuildLanguage } from '../i18n/guildLanguage';
 
 const userCooldownUntil = new Map<string, number>();
 let checks = 0;
@@ -16,7 +18,7 @@ export default async function globalCooldown(
   const until = userCooldownUntil.get(userId) || 0;
   if (until > now) {
     const remainingSeconds = Math.ceil((until - now) / 1000);
-    return `Odczekaj jeszcze ${remainingSeconds} sekund przed ponownym użyciem tej komendy.`;
+    return commonMessages[await getGuildLanguage(interaction.guildId)].cooldown(remainingSeconds);
   }
 
   userCooldownUntil.set(userId, now + cooldownMs);

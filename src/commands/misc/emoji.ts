@@ -24,7 +24,7 @@ const CONFIG = {
 
 export const data = new SlashCommandBuilder()
   .setName('emoji')
-  .setDescription('Wyświetl wszystkie emoji dostępne na serwerze')
+  .setDescription('Show all emojis available in the server').setDescriptionLocalizations({ pl: 'Wyświetl wszystkie emoji dostępne na serwerze' })
   .setDMPermission(false);
 
 export const options = {};

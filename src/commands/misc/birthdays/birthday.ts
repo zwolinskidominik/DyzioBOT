@@ -17,12 +17,12 @@ const SET_USER_BIRTHDAY_COMMAND_ID = '1244599618747109506';
 
 export const data = new SlashCommandBuilder()
   .setName('birthday')
-  .setDescription('Sprawdź swoje urodziny lub urodziny innego użytkownika 🎂')
+  .setDescription('Check your birthday or another user\'s 🎂').setDescriptionLocalizations({ pl: 'Sprawdź swoje urodziny lub urodziny innego użytkownika 🎂' })
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('uzytkownik')
-      .setDescription('Użytkownik, którego datę urodzin chcesz sprawdzić.')
+      .setName('user')
+      .setDescription('User whose birthday you want to check.').setDescriptionLocalizations({ pl: 'Użytkownik, którego datę urodzin chcesz sprawdzić.' })
       .setRequired(false)
   );
 
@@ -31,7 +31,7 @@ export const options = {};
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   const errorEmbed = createBaseEmbed({ isError: true });
   const successEmbed = createBaseEmbed({ color: COLORS.BIRTHDAY });
-  const targetUser = interaction.options.getUser('uzytkownik') || interaction.user;
+  const targetUser = interaction.options.getUser('user') || interaction.user;
   const userId = targetUser.id;
   const guildId = interaction.guild?.id;
   const botId = interaction.client.application!.id;

@@ -27,120 +27,120 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('giveaway')
-  .setDescription('Twórz i zarządzaj konkursami z nagrodami 🎁')
+  .setDescription('Create and manage giveaways with prizes 🎁').setDescriptionLocalizations({ pl: 'Twórz i zarządzaj konkursami z nagrodami 🎁' })
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addSubcommand((subcommand) =>
     subcommand
       .setName('create')
-      .setDescription('Tworzy nowy giveaway')
+      .setDescription('Creates a new giveaway').setDescriptionLocalizations({ pl: 'Tworzy nowy giveaway' })
       .addStringOption((option) =>
-        option.setName('nagroda').setDescription('Nagroda giveawayu').setRequired(true)
+        option.setName('prize').setDescription('Giveaway prize').setDescriptionLocalizations({ pl: 'Nagroda giveawayu' }).setRequired(true)
       )
       .addStringOption((option) =>
-        option.setName('opis').setDescription('Treść giveawayu').setRequired(true)
+        option.setName('description').setDescription('Giveaway text').setDescriptionLocalizations({ pl: 'Treść giveawayu' }).setRequired(true)
       )
       .addIntegerOption((option) =>
-        option.setName('liczba_wygranych').setDescription('Liczba wygranych').setRequired(true)
+        option.setName('winners').setDescription('Number of winners').setDescriptionLocalizations({ pl: 'Liczba wygranych' }).setRequired(true)
       )
       .addStringOption((option) =>
         option
-          .setName('data_zakonczenia')
-          .setDescription("Data zakończenia giveawayu (format: DD.MM.YYYY HH:mm)")
+          .setName('end_date')
+          .setDescription('Giveaway end date (format: DD.MM.YYYY HH:mm)').setDescriptionLocalizations({ pl: 'Data zakończenia giveawayu (format: DD.MM.YYYY HH:mm)' })
           .setRequired(true)
       )
       .addRoleOption((option) =>
-        option.setName('ping').setDescription('Rola do pingowania (opcjonalnie)').setRequired(false)
+        option.setName('ping').setDescription('Role to ping (optional)').setDescriptionLocalizations({ pl: 'Rola do pingowania (opcjonalnie)' }).setRequired(false)
       )
       .addRoleOption((option) =>
         option
-          .setName('mnoznik_roli')
-          .setDescription('Rola z mnożnikiem TYLKO dla tego giveawaya (opcjonalnie)')
+          .setName('multiplier_role')
+          .setDescription('Role with a multiplier ONLY for this giveaway (optional)').setDescriptionLocalizations({ pl: 'Rola z mnożnikiem TYLKO dla tego giveawaya (opcjonalnie)' })
           .setRequired(false)
       )
       .addIntegerOption((option) =>
         option
-          .setName('mnoznik')
-          .setDescription('Mnożnik dla powyższej roli (domyślnie 2)')
+          .setName('multiplier')
+          .setDescription('Multiplier for the role above (default 2)').setDescriptionLocalizations({ pl: 'Mnożnik dla powyższej roli (domyślnie 2)' })
           .setMinValue(2)
           .setMaxValue(10)
           .setRequired(false)
       )
       .addAttachmentOption((option) =>
         option
-          .setName('zdjecie')
-          .setDescription('Zdjęcie do embeda (opcjonalnie)')
+          .setName('image')
+          .setDescription('Embed image (optional)').setDescriptionLocalizations({ pl: 'Zdjęcie do embeda (opcjonalnie)' })
           .setRequired(false)
       )
   )
   .addSubcommand((subcommand) =>
     subcommand
       .setName('edit')
-      .setDescription('Edytuje istniejący giveaway')
+      .setDescription('Edits an existing giveaway').setDescriptionLocalizations({ pl: 'Edytuje istniejący giveaway' })
       .addStringOption((option) =>
-        option.setName('id').setDescription('ID giveawayu do edycji').setRequired(true)
+        option.setName('id').setDescription('ID of the giveaway to edit').setDescriptionLocalizations({ pl: 'ID giveawayu do edycji' }).setRequired(true)
       )
       .addStringOption((option) =>
-        option.setName('nagroda').setDescription('Nowa nagroda giveawayu').setRequired(false)
+        option.setName('prize').setDescription('New giveaway prize').setDescriptionLocalizations({ pl: 'Nowa nagroda giveawayu' }).setRequired(false)
       )
       .addStringOption((option) =>
-        option.setName('opis').setDescription('Nowa treść giveawayu').setRequired(false)
+        option.setName('description').setDescription('New giveaway text').setDescriptionLocalizations({ pl: 'Nowa treść giveawayu' }).setRequired(false)
       )
       .addIntegerOption((option) =>
         option
-          .setName('liczba_wygranych')
-          .setDescription('Nowa liczba wygranych')
+          .setName('winners')
+          .setDescription('New number of winners').setDescriptionLocalizations({ pl: 'Nowa liczba wygranych' })
           .setRequired(false)
       )
       .addStringOption((option) =>
         option
-          .setName('data_zakonczenia')
-          .setDescription("Nowa data zakończenia giveawayu (format: DD.MM.YYYY HH:mm)")
+          .setName('end_date')
+          .setDescription('New giveaway end date (format: DD.MM.YYYY HH:mm)').setDescriptionLocalizations({ pl: 'Nowa data zakończenia giveawayu (format: DD.MM.YYYY HH:mm)' })
           .setRequired(false)
       )
       .addRoleOption((option) =>
         option
           .setName('ping')
-          .setDescription('Nowa rola do pingowania (opcjonalnie)')
+          .setDescription('New role to ping (optional)').setDescriptionLocalizations({ pl: 'Nowa rola do pingowania (opcjonalnie)' })
           .setRequired(false)
       )
       .addAttachmentOption((option) =>
         option
-          .setName('zdjecie')
-          .setDescription('Nowe zdjęcie do embeda (opcjonalnie)')
+          .setName('image')
+          .setDescription('New embed image (optional)').setDescriptionLocalizations({ pl: 'Nowe zdjęcie do embeda (opcjonalnie)' })
           .setRequired(false)
       )
       .addBooleanOption((option) =>
         option
-          .setName('usun_zdjecie')
-          .setDescription('Usuń zdjęcie z embeda')
+          .setName('remove_image')
+          .setDescription('Remove the image from the embed').setDescriptionLocalizations({ pl: 'Usuń zdjęcie z embeda' })
           .setRequired(false)
       )
   )
   .addSubcommand((subcommand) =>
     subcommand
       .setName('remove')
-      .setDescription('Usuwa istniejący giveaway')
+      .setDescription('Deletes an existing giveaway').setDescriptionLocalizations({ pl: 'Usuwa istniejący giveaway' })
       .addStringOption((option) =>
-        option.setName('id').setDescription('ID giveawayu do usunięcia').setRequired(true)
+        option.setName('id').setDescription('ID of the giveaway to delete').setDescriptionLocalizations({ pl: 'ID giveawayu do usunięcia' }).setRequired(true)
       )
   )
   .addSubcommand((subcommand) =>
     subcommand
       .setName('end')
-      .setDescription('Kończy działający giveaway i losuje zwycięzców')
+      .setDescription('Ends a running giveaway and draws the winners').setDescriptionLocalizations({ pl: 'Kończy działający giveaway i losuje zwycięzców' })
       .addStringOption((option) =>
-        option.setName('id').setDescription('ID giveawayu do zakończenia').setRequired(true)
+        option.setName('id').setDescription('ID of the giveaway to end').setDescriptionLocalizations({ pl: 'ID giveawayu do zakończenia' }).setRequired(true)
       )
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName('list').setDescription('Wyświetla listę aktywnych giveawayów')
+    subcommand.setName('list').setDescription('Shows the list of active giveaways').setDescriptionLocalizations({ pl: 'Wyświetla listę aktywnych giveawayów' })
   )
   .addSubcommand((subcommand) =>
     subcommand
       .setName('reroll')
-      .setDescription('Losuje nowych zwycięzców dla zakończonego giveawayu')
+      .setDescription('Draws new winners for an ended giveaway').setDescriptionLocalizations({ pl: 'Losuje nowych zwycięzców dla zakończonego giveawayu' })
       .addStringOption((option) =>
-        option.setName('id').setDescription('ID giveawayu do rerollu').setRequired(true)
+        option.setName('id').setDescription('ID of the giveaway to reroll').setDescriptionLocalizations({ pl: 'ID giveawayu do rerollu' }).setRequired(true)
       )
   );
 
@@ -225,14 +225,14 @@ function parseEndDate(input: string): Date | undefined {
 async function handleCreateGiveaway(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const prize = interaction.options.getString('nagroda', true);
-  const description = interaction.options.getString('opis', true);
-  const winnersCount = interaction.options.getInteger('liczba_wygranych', true);
-  const endDateStr = interaction.options.getString('data_zakonczenia', true);
+  const prize = interaction.options.getString('prize', true);
+  const description = interaction.options.getString('description', true);
+  const winnersCount = interaction.options.getInteger('winners', true);
+  const endDateStr = interaction.options.getString('end_date', true);
   const pingRole = interaction.options.getRole('ping');
-  const multiplierRole = interaction.options.getRole('mnoznik_roli');
-  const multiplier = interaction.options.getInteger('mnoznik') || 2;
-  const imageAttachment = interaction.options.getAttachment('zdjecie');
+  const multiplierRole = interaction.options.getRole('multiplier_role');
+  const multiplier = interaction.options.getInteger('multiplier') || 2;
+  const imageAttachment = interaction.options.getAttachment('image');
   const imageUrl = imageAttachment?.url || undefined;
 
   const endTime = parseEndDate(endDateStr);
@@ -354,13 +354,13 @@ async function handleEditGiveaway(interaction: ChatInputCommandInteraction): Pro
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const giveawayId = interaction.options.getString('id', true);
-  const newPrize = interaction.options.getString('nagroda');
-  const newDescription = interaction.options.getString('opis');
-  const newWinners = interaction.options.getInteger('liczba_wygranych');
-  const newEndDateStr = interaction.options.getString('data_zakonczenia');
+  const newPrize = interaction.options.getString('prize');
+  const newDescription = interaction.options.getString('description');
+  const newWinners = interaction.options.getInteger('winners');
+  const newEndDateStr = interaction.options.getString('end_date');
   const newPingRole = interaction.options.getRole('ping');
-  const newImageAttachment = interaction.options.getAttachment('zdjecie');
-  const removeImage = interaction.options.getBoolean('usun_zdjecie') ?? false;
+  const newImageAttachment = interaction.options.getAttachment('image');
+  const removeImage = interaction.options.getBoolean('remove_image') ?? false;
   const newImageUrl = newImageAttachment ? newImageAttachment.url : removeImage ? '' : undefined;
 
   let newEndTime: Date | undefined;

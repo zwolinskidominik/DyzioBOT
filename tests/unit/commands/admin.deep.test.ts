@@ -386,13 +386,13 @@ describe('giveaway command', () => {
     const interaction = mockInteraction({ guild, channel });
     interaction.options.getSubcommand = jest.fn().mockReturnValue('create');
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'nagroda') return 'Nitro';
-      if (name === 'data_zakonczenia') return '25.12.2026 20:00';
-      if (name === 'opis') return 'Win nitro!';
+      if (name === 'prize') return 'Nitro';
+      if (name === 'end_date') return '25.12.2026 20:00';
+      if (name === 'description') return 'Win nitro!';
       return null;
     });
     interaction.options.getInteger = jest.fn().mockImplementation((name: string) => {
-      if (name === 'liczba_wygranych') return 1;
+      if (name === 'winners') return 1;
       return null;
     });
     interaction.options.getRole = jest.fn().mockReturnValue(null);
@@ -519,9 +519,9 @@ describe('giveaway command', () => {
     interaction.options.getSubcommand = jest.fn().mockReturnValue('edit');
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
       if (name === 'id') return 'g1';
-      if (name === 'nagroda') return 'New Prize';
-      if (name === 'data_zakonczenia') return '25.12.2026 20:00';
-      if (name === 'opis') return 'Updated';
+      if (name === 'prize') return 'New Prize';
+      if (name === 'end_date') return '25.12.2026 20:00';
+      if (name === 'description') return 'Updated';
       return null;
     });
     interaction.options.getInteger = jest.fn().mockReturnValue(2);
@@ -550,13 +550,13 @@ describe('giveaway command', () => {
     const interaction = mockInteraction({ channel });
     interaction.options.getSubcommand = jest.fn().mockReturnValue('create');
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'nagroda') return 'Nitro';
-      if (name === 'opis') return 'Win!';
-      if (name === 'data_zakonczenia') return '25.12.2026 20:00';
+      if (name === 'prize') return 'Nitro';
+      if (name === 'description') return 'Win!';
+      if (name === 'end_date') return '25.12.2026 20:00';
       return null;
     });
     interaction.options.getInteger = jest.fn().mockImplementation((name: string) => {
-      if (name === 'liczba_wygranych') return 1;
+      if (name === 'winners') return 1;
       return null;
     });
     interaction.options.getRole = jest.fn().mockReturnValue(null);

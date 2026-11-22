@@ -5,9 +5,9 @@ import { createErrorEmbed } from '../../utils/embedHelpers';
 
 export const data = new SlashCommandBuilder()
   .setName('balance')
-  .setDescription('Sprawdź swój majątek lub stan konta innego użytkownika')
+  .setDescription('Check your balance or another user\'s').setDescriptionLocalizations({ pl: 'Sprawdź swój majątek lub stan konta innego użytkownika' })
   .addUserOption((o) =>
-    o.setName('uzytkownik').setDescription('Domyślnie Ty').setRequired(false),
+    o.setName('user').setDescription('Defaults to you').setDescriptionLocalizations({ pl: 'Domyślnie Ty' }).setRequired(false),
   );
 
 export const options = { guildOnly: true, deleted: true };
@@ -16,7 +16,7 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
   await interaction.deferReply();
 
   const guildId = interaction.guildId!;
-  const target = interaction.options.getUser('uzytkownik') ?? interaction.user;
+  const target = interaction.options.getUser('user') ?? interaction.user;
 
   if (target.bot) {
     await interaction.editReply({

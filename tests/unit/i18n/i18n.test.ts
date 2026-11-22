@@ -14,7 +14,7 @@ jest.mock('../../../src/models/GuildSettings', () => ({
 
 import { Locale } from 'discord.js';
 import { isLang, langFromDiscordLocale, plural, pluralEn, intlLocale } from '../../../src/i18n';
-import { CACHE_TTL_MS, clearGuildLanguageCache, getGuildLanguage, initGuildLanguage } from '../../../src/i18n/guildLanguage';
+import { CACHE_TTL_MS, clearGuildLanguageCache, getGuildLanguage, initGuildLanguage, languageDeps } from '../../../src/i18n/guildLanguage';
 import { ALL_CATALOGS } from '../../../src/i18n/catalogs';
 import { commonMessages } from '../../../src/i18n/messages/common';
 
@@ -59,6 +59,10 @@ describe('language helpers', () => {
 });
 
 describe('getGuildLanguage / initGuildLanguage', () => {
+  beforeAll(() => {
+    languageDeps.dbReady = () => true;
+  });
+
   beforeEach(() => {
     clearGuildLanguageCache();
     findOne.mockReset();
@@ -97,6 +101,17 @@ describe('getGuildLanguage / initGuildLanguage', () => {
     // Wynik trafia do pamięci podręcznej - bez dodatkowego zapytania.
     await expect(getGuildLanguage('g5')).resolves.toBe('en');
     expect(findOne).not.toHaveBeenCalled();
+  });
+});
+
+describe('getGuildLanguage without a database connection', () => {
+  it('answers immediately with the default language instead of waiting for Mongoose', async () => {
+    clearGuildLanguageCache();
+    findOne.mockReset();
+    languageDeps.dbReady = () => false;
+    await expect(getGuildLanguage('g9')).resolves.toBe('pl');
+    expect(findOne).not.toHaveBeenCalled();
+    languageDeps.dbReady = () => true;
   });
 });
 

@@ -5,8 +5,8 @@ import { CanvasRankCard } from '../../utils/canvasRankCard';
 
 export const data = new SlashCommandBuilder()
   .setName('level')
-  .setDescription('Sprawdź swój poziom i postęp do kolejnego')
-  .addUserOption((o) => o.setName('uzytkownik').setDescription('Domyślnie Ty').setRequired(false));
+  .setDescription('Check your level and progress to the next one').setDescriptionLocalizations({ pl: 'Sprawdź swój poziom i postęp do kolejnego' })
+  .addUserOption((o) => o.setName('user').setDescription('Defaults to you').setDescriptionLocalizations({ pl: 'Domyślnie Ty' }).setRequired(false));
 
 export const options = {
   guildOnly: true,
@@ -15,7 +15,7 @@ export const options = {
 export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
   await interaction.deferReply();
 
-  const target = interaction.options.getUser('uzytkownik') ?? interaction.user;
+  const target = interaction.options.getUser('user') ?? interaction.user;
   const gid = interaction.guildId!;
   const cachedData = await getCurrentXp(gid, target.id);
   const level = cachedData.level;

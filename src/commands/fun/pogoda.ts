@@ -22,27 +22,27 @@ function addLocationOptions(sub: any) {
   return sub
     .addStringOption((opt: any) =>
       opt
-        .setName('miasto')
-        .setDescription('Nazwa miasta (np. Warszawa, London, Tokyo)')
+        .setName('city')
+        .setDescription('City name (e.g. Warsaw, London, Tokyo)').setDescriptionLocalizations({ pl: 'Nazwa miasta (np. Warszawa, London, Tokyo)' })
         .setRequired(true),
     );
 }
 
 export const data = new SlashCommandBuilder()
-  .setName('pogoda')
-  .setDescription('Sprawdź aktualną pogodę w dowolnym mieście ☁️')
+  .setName('weather')
+  .setDescription('Check the current weather in any city ☁️').setDescriptionLocalizations({ pl: 'Sprawdź aktualną pogodę w dowolnym mieście ☁️' })
   .addSubcommand((sub) =>
     addLocationOptions(
       sub
-        .setName('teraz')
-        .setDescription('Aktualna pogoda w danej lokalizacji'),
+        .setName('now')
+        .setDescription('Current weather in a location').setDescriptionLocalizations({ pl: 'Aktualna pogoda w danej lokalizacji' }),
     ),
   )
   .addSubcommand((sub) =>
     addLocationOptions(
       sub
-        .setName('prognoza')
-        .setDescription('Prognoza pogody na najbliższe 7 dni'),
+        .setName('forecast')
+        .setDescription('Weather forecast for the next 7 days').setDescriptionLocalizations({ pl: 'Prognoza pogody na najbliższe 7 dni' }),
     ),
   );
 
@@ -126,13 +126,13 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   await interaction.deferReply();
 
   const subcommand = interaction.options.getSubcommand();
-  const city = interaction.options.getString('miasto', true).trim();
+  const city = interaction.options.getString('city', true).trim();
 
   try {
     const location = await resolveLocation(interaction, city);
     if (!location) return;
 
-    if (subcommand === 'teraz') {
+    if (subcommand === 'now') {
       const weather = await fetchWeather(location.latitude, location.longitude);
       if (!weather) {
         await interaction.editReply({
@@ -145,7 +145,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       const embed = formatWeatherEmbed(location, weather);
       await interaction.editReply({ embeds: [embed], components: [] });
     } else {
-      /* subcommand === 'prognoza' */
+      /* subcommand === 'forecast' */
       const days = await fetchForecast(location.latitude, location.longitude);
       if (days.length === 0) {
         await interaction.editReply({

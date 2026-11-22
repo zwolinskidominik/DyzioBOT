@@ -44,10 +44,10 @@ function clipCircle(ctx: Ctx2D, cx: number, cy: number, r: number) {
 
 // ─── Command definition ────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
-  .setName('wisielec-top')
-  .setDescription('Sprawdź, kto najlepiej radzi sobie z Wisielcem 🏆');
+  .setName('hangman-top')
+  .setDescription('See who is best at Hangman 🏆').setDescriptionLocalizations({ pl: 'Sprawdź, kto najlepiej radzi sobie z Wisielcem 🏆' });
 
-export const options = { guildOnly: true, cooldown: 5 };
+export const options = { guildOnly: true, cooldown: 5, languages: ['pl'] as const };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   const guildId = interaction.guildId;
@@ -69,7 +69,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     .lean();
 
   if (!stats.length) {
-    await interaction.editReply({ content: '📊 Nikt jeszcze nie zagrał w Wisielca na tym serwerze. Użyj `/wisielec`!' });
+    await interaction.editReply({ content: '📊 Nikt jeszcze nie zagrał w Wisielca na tym serwerze. Użyj `/hangman`!' });
     return;
   }
 

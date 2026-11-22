@@ -194,9 +194,9 @@ describe('embed command', () => {
   it('creates embed with basic options', async () => {
     const interaction = makeInteraction();
     interaction.options.getString.mockImplementation((name: string) => {
-      if (name === 'tytul') return 'Test Title';
-      if (name === 'opis') return 'Test Description';
-      if (name === 'kolor') return '#ff0000';
+      if (name === 'title') return 'Test Title';
+      if (name === 'description') return 'Test Description';
+      if (name === 'color') return '#ff0000';
       return null;
     });
     await embedCmd.run({ interaction, client: {} });
@@ -208,8 +208,8 @@ describe('embed command', () => {
     const interaction = makeInteraction();
     interaction.guild = null;
     interaction.options.getString.mockImplementation((name: string) => {
-      if (name === 'tytul') return 'Title';
-      if (name === 'opis') return 'Desc';
+      if (name === 'title') return 'Title';
+      if (name === 'description') return 'Desc';
       return null;
     });
     await embedCmd.run({ interaction, client: {} });

@@ -4,6 +4,7 @@ import {
   AutocompleteInteraction,
   Client,
 } from 'discord.js';
+import type { Lang } from '../i18n';
 
 export interface ICommand {
   data: SlashCommandBuilder;
@@ -37,6 +38,12 @@ export interface ICommandConfig {
    * Przeznaczone dla publicznych, ale prywatnych dla jednego serwera funkcji (np. OWNER_GUILD_IDS).
    */
   restrictedGuildIds?: string[];
+  /**
+   * Języki serwera (dashboard), w których komenda działa - np. gry z polskimi słowami: ['pl'].
+   * Na serwerze w innym języku bot odpowiada `commonMessages.notAvailableInLanguage`.
+   * Sprawdzane centralnie w CommandHandler. Brak = wszystkie języki.
+   */
+  languages?: readonly Lang[];
 }
 
 export interface ICommandHandlerConfig {

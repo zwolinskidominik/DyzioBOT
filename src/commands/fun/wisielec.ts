@@ -45,17 +45,19 @@ const ASSETS_DIR = path.resolve(__dirname, '../../../assets/hangman');
 /* ── Command definition ───────────────────────────────────── */
 
 export const data = new SlashCommandBuilder()
-  .setName('wisielec')
-  .setDescription('Odgadnij ukryte słowo, zanim będzie za późno 💀')
+  .setName('hangman')
+  .setDescription('Guess the hidden word before it\'s too late 💀').setDescriptionLocalizations({ pl: 'Odgadnij ukryte słowo, zanim będzie za późno 💀' })
   .addUserOption((option) =>
     option
-      .setName('gracz')
-      .setDescription('Wyzwij gracza na duel! ⚔️')
+      .setName('opponent')
+      .setDescription('Challenge a player to a duel! ⚔️').setDescriptionLocalizations({ pl: 'Wyzwij gracza na duel! ⚔️' })
       .setRequired(false),
   );
 
 export const options = {
   cooldown: 5,
+  // Polskie hasła - na serwerach EN na razie niedostępna.
+  languages: ['pl'] as const,
 };
 
 /* ── Types ────────────────────────────────────────────────── */
@@ -187,7 +189,7 @@ function buildReplayRow(disabled = false): ActionRowBuilder<ButtonBuilder> {
 /* ── Run ──────────────────────────────────────────────────── */
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  const opponent = interaction.options.getUser('gracz');
+  const opponent = interaction.options.getUser('opponent');
 
   if (opponent) {
     await runDuel(interaction, opponent.id, opponent.tag);
@@ -385,7 +387,7 @@ function startReplayCollector(
   replayCollector.on('collect', async (i: ButtonInteraction) => {
     if (i.user.id !== authorId) {
       await i.reply({
-        content: '❌ To nie Twoja gra! Użyj `/wisielec` żeby zagrać.',
+        content: '❌ To nie Twoja gra! Użyj `/hangman` żeby zagrać.',
         ephemeral: true,
       });
       startReplayCollector(message, authorId, authorTag);

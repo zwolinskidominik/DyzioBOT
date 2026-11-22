@@ -20,23 +20,23 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('mute')
-  .setDescription('Wycisz użytkownika na określony czas')
+  .setDescription('Mute a user for a set time').setDescriptionLocalizations({ pl: 'Wycisz użytkownika na określony czas' })
   .setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('uzytkownik')
-      .setDescription('Użytkownik, którego chcesz wyciszyć.')
+      .setName('user')
+      .setDescription('User you want to mute.').setDescriptionLocalizations({ pl: 'Użytkownik, którego chcesz wyciszyć.' })
       .setRequired(true)
   )
   .addStringOption((option) =>
     option
-      .setName('czas_trwania')
-      .setDescription('Czas trwania wyciszenia (np. 30min, 1h, 1 dzień, 2h 30min).')
+      .setName('duration')
+      .setDescription('Mute duration (e.g. 30min, 1h, 1d, 2h 30min).').setDescriptionLocalizations({ pl: 'Czas trwania wyciszenia (np. 30min, 1h, 1 dzień, 2h 30min).' })
       .setRequired(true)
   )
   .addStringOption((option) =>
-    option.setName('powod').setDescription('Powód wyciszenia.').setRequired(true)
+    option.setName('reason').setDescription('Reason for the mute.').setDescriptionLocalizations({ pl: 'Powód wyciszenia.' }).setRequired(true)
   );
 
 export const options = {
@@ -64,7 +64,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
     const { config } = access;
 
-    const targetUser = interaction.options.getUser('uzytkownik');
+    const targetUser = interaction.options.getUser('user');
     if (!targetUser) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription('**Nie znaleziono użytkownika.**')],
@@ -72,7 +72,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const duration = interaction.options.getString('czas_trwania');
+    const duration = interaction.options.getString('duration');
     if (!duration) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription('**Nie podano czasu wyciszenia.**')],
@@ -80,7 +80,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       return;
     }
 
-    const reason = interaction.options.getString('powod');
+    const reason = interaction.options.getString('reason');
     if (!reason) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription('**Nie podano powodu.**')],

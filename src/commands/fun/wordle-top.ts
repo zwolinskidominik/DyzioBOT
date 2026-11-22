@@ -44,9 +44,9 @@ function clipCircle(ctx: Ctx2D, cx: number, cy: number, r: number) {
 // ─── Command definition ────────────────────────────────────────────────────────
 export const data = new SlashCommandBuilder()
   .setName('wordle-top')
-  .setDescription('Sprawdź najlepszych graczy Wordle na serwerze 🏆');
+  .setDescription('See the best Wordle players in the server 🏆').setDescriptionLocalizations({ pl: 'Sprawdź najlepszych graczy Wordle na serwerze 🏆' });
 
-export const options = { cooldown: 5 };
+export const options = { cooldown: 5, languages: ['pl'] as const };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   const guildId = interaction.guildId;

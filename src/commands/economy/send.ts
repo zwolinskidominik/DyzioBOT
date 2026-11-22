@@ -5,14 +5,14 @@ import { createErrorEmbed } from '../../utils/embedHelpers';
 
 export const data = new SlashCommandBuilder()
   .setName('send')
-  .setDescription('Przelej monety innemu użytkownikowi')
+  .setDescription('Send coins to another user').setDescriptionLocalizations({ pl: 'Przelej monety innemu użytkownikowi' })
   .addUserOption((o) =>
-    o.setName('uzytkownik').setDescription('Odbiorca przelewu').setRequired(true),
+    o.setName('user').setDescription('Transfer recipient').setDescriptionLocalizations({ pl: 'Odbiorca przelewu' }).setRequired(true),
   )
   .addIntegerOption((o) =>
     o
-      .setName('kwota')
-      .setDescription('Kwota do wysłania (całkowita liczba > 0)')
+      .setName('amount')
+      .setDescription('Amount to send (whole number > 0)').setDescriptionLocalizations({ pl: 'Kwota do wysłania (całkowita liczba > 0)' })
       .setRequired(true)
       .setMinValue(1),
   );
@@ -24,8 +24,8 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
 
   const guildId = interaction.guildId!;
   const sender = interaction.user;
-  const receiver = interaction.options.getUser('uzytkownik', true);
-  const amount = interaction.options.getInteger('kwota', true);
+  const receiver = interaction.options.getUser('user', true);
+  const amount = interaction.options.getInteger('amount', true);
 
   if (receiver.bot) {
     await interaction.editReply({

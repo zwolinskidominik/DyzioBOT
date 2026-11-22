@@ -14,8 +14,8 @@ export const dynamic = "force-dynamic";
 // bot/src/models/GuildSettings.ts (osobny projekt npm — bez cross-project importu).
 const generalSettingsZod = z
   .object({
-    // Tylko 'pl' jest obecnie realnie obsługiwane — 'en' zarezerwowane na przyszłość.
-    language: z.literal("pl"),
+    // Język odpowiedzi bota na serwerze (bot: src/i18n/guildLanguage.ts, odświeża po ≤60 s).
+    language: z.enum(["pl", "en"]),
     systemNotifyChannelId: z.string().optional(),
   })
   .partial();

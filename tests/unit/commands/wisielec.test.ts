@@ -155,7 +155,7 @@ describe('MAX_WRONG_GUESSES', () => {
 describe('/wisielec command - data export', () => {
   it('exports correct command name', () => {
     const { data } = require('../../../src/commands/fun/wisielec');
-    expect(data.name).toBe('wisielec');
+    expect(data.name).toBe('hangman');
   });
 
   it('has a description', () => {
@@ -228,9 +228,9 @@ describe('/wisielec run', () => {
 
 /* ── Duel: command option ─────────────────────────────────── */
 describe('/wisielec duel - command option', () => {
-  it('has an optional "gracz" user option', () => {
+  it('has an optional "opponent" user option', () => {
     const { data } = require('../../../src/commands/fun/wisielec');
-    const option = data.options?.find((o: any) => o.name === 'gracz');
+    const option = data.options?.find((o: any) => o.name === 'opponent');
     expect(option).toBeDefined();
     expect(option.required).toBeFalsy();
   });
@@ -258,7 +258,7 @@ describe('/wisielec duel - challenge flow', () => {
     };
 
     const interaction = mockInteraction({
-      _options: { gracz: opponentOpt },
+      _options: { opponent: opponentOpt },
       guild,
     });
     interaction.fetchReply = jest.fn().mockResolvedValue(mockMessage);
@@ -269,7 +269,7 @@ describe('/wisielec duel - challenge flow', () => {
   it('replies with an ephemeral error when challenging yourself', async () => {
     const { run } = require('../../../src/commands/fun/wisielec');
     const selfUser = { id: 'user-1', tag: 'User_user-1#0001', bot: false };
-    const interaction = mockInteraction({ _options: { gracz: selfUser } });
+    const interaction = mockInteraction({ _options: { opponent: selfUser } });
 
     await run({ interaction, client: interaction.client });
 
@@ -289,7 +289,7 @@ describe('/wisielec duel - challenge flow', () => {
     };
 
     const interaction = mockInteraction({
-      _options: { gracz: botUser },
+      _options: { opponent: botUser },
       guild,
     });
 

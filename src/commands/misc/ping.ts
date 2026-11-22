@@ -5,7 +5,7 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('ping')
-  .setDescription('Sprawdź, czy Deezy żyje i jak szybko odpowiada 🏓');
+  .setDescription('Check if Deezy is alive and how fast it responds 🏓').setDescriptionLocalizations({ pl: 'Sprawdź, czy Deezy żyje i jak szybko odpowiada 🏓' });
 
 export const options = {
   cooldown: 1,

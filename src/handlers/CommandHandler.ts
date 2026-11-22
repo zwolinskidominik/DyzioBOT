@@ -18,6 +18,8 @@ import type { ICommand, ICommandHandlerConfig } from '../interfaces/Command';
 import { readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import logger from '../utils/logger';
+import { commonMessages } from '../i18n/messages/common';
+import { getGuildLanguage } from '../i18n/guildLanguage';
 import { OWNER_IDS } from '../config/constants/owner';
 
 type CommandInteraction =
@@ -243,6 +245,8 @@ export class CommandHandler {
   private async executeCommand(interaction: CommandInteraction): Promise<void> {
     const command = this.commands.get(interaction.commandName);
     if (!command) return;
+    // Teksty odmów w języku serwera (dashboard); język czytany tylko wtedy, gdy trzeba odmówić.
+    const text = async () => commonMessages[await getGuildLanguage(interaction.guildId)];
 
     for (const validate of this.validations) {
       const errorMessage = await validate(interaction, command);
@@ -254,21 +258,21 @@ export class CommandHandler {
 
     if (command.options?.guildOnly && !interaction.guild) {
       await this.respond(interaction, {
-        content: 'Ta komenda działa tylko na serwerze.',
+        content: (await text()).guildOnly,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
     if (command.options?.devOnly && !this.isDeveloper(interaction)) {
       await this.respond(interaction, {
-        content: '⛔ Ta komenda jest dostępna tylko dla deweloperów.',
+        content: (await text()).devOnly,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
     if (command.options?.ownerOnly && !OWNER_IDS.includes(interaction.user.id as (typeof OWNER_IDS)[number])) {
       await this.respond(interaction, {
-        content: '⛔ Ta komenda jest dostępna tylko dla właściciela bota.',
+        content: (await text()).ownerOnly,
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -278,9 +282,13 @@ export class CommandHandler {
       (!interaction.guildId || !command.options.restrictedGuildIds.includes(interaction.guildId))
     ) {
       await this.respond(interaction, {
-        content: '⛔ Ta komenda jest dostępna tylko na wybranych serwerach.',
+        content: (await text()).restrictedGuild,
         flags: MessageFlags.Ephemeral,
       });
+      return;
+    }
+    if (command.options?.languages && !command.options.languages.includes(await getGuildLanguage(interaction.guildId))) {
+      await this.respond(interaction, { content: (await text()).notAvailableInLanguage, flags: MessageFlags.Ephemeral });
       return;
     }
     if (command.options?.userPermissions && interaction.memberPermissions) {
@@ -290,7 +298,7 @@ export class CommandHandler {
       const missing = perms.filter((perm) => !interaction.memberPermissions?.has(perm));
       if (missing.length > 0) {
         await this.respond(interaction, {
-          content: `⛔ Potrzebujesz uprawnień do wykonania tej komendy.`,
+          content: (await text()).userMissingPermissions,
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -304,7 +312,7 @@ export class CommandHandler {
       const missing = perms.filter((perm) => !botPerms.permissions.has(perm));
       if (missing.length > 0) {
         await this.respond(interaction, {
-          content: `⛔ Bot potrzebuje uprawnień do wykonania tej komendy.`,
+          content: (await text()).botMissingPermissions,
           flags: MessageFlags.Ephemeral,
         });
         return;
@@ -321,7 +329,7 @@ export class CommandHandler {
       
       try {
         await this.respond(interaction, {
-          content: 'Wystąpił błąd podczas wykonywania komendy.',
+          content: (await text()).commandError,
           flags: MessageFlags.Ephemeral,
         });
       } catch (replyError) {

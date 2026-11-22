@@ -13,13 +13,13 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('unban')
-  .setDescription('Odbanuj użytkownika z serwera')
+  .setDescription('Unban a user from the server').setDescriptionLocalizations({ pl: 'Odbanuj użytkownika z serwera' })
   .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
   .setDMPermission(false)
   .addStringOption((option) =>
     option
-      .setName('id_uzytkownika')
-      .setDescription('ID użytkownika, którego chcesz odbanować.')
+      .setName('user_id')
+      .setDescription('ID of the user you want to unban.').setDescriptionLocalizations({ pl: 'ID użytkownika, którego chcesz odbanować.' })
       .setRequired(true)
   );
 
@@ -49,7 +49,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
     const { config } = access;
 
-    const targetUserId = interaction.options.getString('id_uzytkownika', true);
+    const targetUserId = interaction.options.getString('user_id', true);
 
     const bannedUser = await findBannedUser(guild, targetUserId);
     if (!bannedUser) {

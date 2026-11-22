@@ -7,7 +7,7 @@ const VERIFICATION_LEVELS = ['Żaden', 'Niski', 'Średni', 'Wysoki', 'Bardzo wys
 
 export const data = new SlashCommandBuilder()
   .setName('serverinfo')
-  .setDescription('Wyświetl najważniejsze informacje o serwerze')
+  .setDescription('Show the key information about the server').setDescriptionLocalizations({ pl: 'Wyświetl najważniejsze informacje o serwerze' })
   .setDMPermission(false);
 
 export const options = {

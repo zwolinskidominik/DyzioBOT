@@ -28,8 +28,8 @@ async function fetchFromPerelki(): Promise<string> {
 // ─── Command ──────────────────────────────────────────────────────────────────
 
 export const data = new SlashCommandBuilder()
-  .setName('dowcip')
-  .setDescription('Deezy ma dla Ciebie losowy dowcip. Oby był dobry. 🤡');
+  .setName('joke')
+  .setDescription('Deezy has a random joke for you. Hopefully a good one. 🤡').setDescriptionLocalizations({ pl: 'Deezy ma dla Ciebie losowy dowcip. Oby był dobry. 🤡' });
 
 /**
  * Tylko na serwerach właściciela: treści pochodzą ze stron trzecich bez filtra 18+ i bez

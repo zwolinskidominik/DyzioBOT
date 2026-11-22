@@ -21,7 +21,7 @@ const MODAL_TIMEOUT = 300_000;
 
 export const data = new SlashCommandBuilder()
   .setName('say')
-  .setDescription('Wyślij wiadomość na wybranym kanale jako Deezy')
+  .setDescription('Send a message in this channel as Deezy').setDescriptionLocalizations({ pl: 'Wyślij wiadomość na wybranym kanale jako Deezy' })
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false);
 

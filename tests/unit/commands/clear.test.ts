@@ -84,7 +84,7 @@ describe('/clear - data & options', () => {
   it('requires ilosc integer option (1-500)', () => {
     const { data } = require('../../../src/commands/moderation/clear');
     const json = data.toJSON();
-    const iloscOpt = json.options.find((o: any) => o.name === 'ilosc');
+    const iloscOpt = json.options.find((o: any) => o.name === 'amount');
     expect(iloscOpt).toBeDefined();
     expect(iloscOpt.required).toBe(true);
     expect(iloscOpt.min_value).toBe(1);
@@ -94,7 +94,7 @@ describe('/clear - data & options', () => {
   it('has optional uzytkownik option', () => {
     const { data } = require('../../../src/commands/moderation/clear');
     const json = data.toJSON();
-    const userOpt = json.options.find((o: any) => o.name === 'uzytkownik');
+    const userOpt = json.options.find((o: any) => o.name === 'user');
     expect(userOpt).toBeDefined();
     expect(userOpt.required).toBeFalsy();
   });

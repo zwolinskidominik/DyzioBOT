@@ -32,21 +32,21 @@ const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
 export const data = new SlashCommandBuilder()
   .setName('clear')
-  .setDescription('Usuń określoną liczbę wiadomości z kanału')
+  .setDescription('Delete a number of messages from the channel').setDescriptionLocalizations({ pl: 'Usuń określoną liczbę wiadomości z kanału' })
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
   .setDMPermission(false)
   .addIntegerOption((option) =>
     option
-      .setName('ilosc')
-      .setDescription('Liczba wiadomości do usunięcia (1-500).')
+      .setName('amount')
+      .setDescription('Number of messages to delete (1-500).').setDescriptionLocalizations({ pl: 'Liczba wiadomości do usunięcia (1-500).' })
       .setRequired(true)
       .setMinValue(1)
       .setMaxValue(MAX_PURGE)
   )
   .addUserOption((option) =>
     option
-      .setName('uzytkownik')
-      .setDescription('Usuń tylko wiadomości tego użytkownika.')
+      .setName('user')
+      .setDescription('Delete only this user\'s messages.').setDescriptionLocalizations({ pl: 'Usuń tylko wiadomości tego użytkownika.' })
       .setRequired(false)
   );
 
@@ -79,8 +79,8 @@ export async function run({ interaction, client }: ICommandOptions): Promise<voi
   }
   const { config } = access;
 
-  const amount = interaction.options.getInteger('ilosc', true);
-  const targetUser = interaction.options.getUser('uzytkownik');
+  const amount = interaction.options.getInteger('amount', true);
+  const targetUser = interaction.options.getUser('user');
   const channel = interaction.channel as TextChannel;
 
   if (!channel || !('bulkDelete' in channel)) {

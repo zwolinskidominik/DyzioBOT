@@ -13,7 +13,7 @@ type MemeResponse =
 
 export const data = new SlashCommandBuilder()
   .setName('meme')
-  .setDescription('Wylosuj mema z różnych zakątków internetu 🗿');
+  .setDescription('Get a random meme from around the internet 🗿').setDescriptionLocalizations({ pl: 'Wylosuj mema z różnych zakątków internetu 🗿' });
 
 /**
  * Tylko na serwerach właściciela: treści pochodzą ze stron trzecich bez filtra 18+ i bez

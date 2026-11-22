@@ -15,109 +15,49 @@ import { CONTACT_EMAIL, PRIVACY_URL, SITE_URL, STATUS_URL, SUPPORT_SERVER_URL, T
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
+import { helpMessages } from '../../i18n/messages/help';
+import { getGuildLanguage } from '../../i18n/guildLanguage';
 
 const COLLECTION_TIMEOUT = 120_000;
 
 export const data = new SlashCommandBuilder()
   .setName('help')
-  .setDescription('Sprawdź dostępne komendy i dowiedz się, jak ich używać');
+  .setDescription('See the available commands and how to use them').setDescriptionLocalizations({ pl: 'Sprawdź dostępne komendy i dowiedz się, jak ich używać' });
 
 export const options = {};
 
+type HelpCommand = keyof (typeof helpMessages)['pl']['descriptions'];
+
 interface CommandInfo {
-  name: string;
-  description: string;
-  usage?: string;
+  name: HelpCommand;
+  /** Sposób użycia; `u` = zapis wzmianki użytkownika w języku serwera. Nazwy opcji są angielskie. */
+  usage: (u: string) => string;
   /** Komenda dostępna tylko na serwerach właściciela - nie pokazuj jej nigdzie indziej. */
   ownerGuildsOnly?: boolean;
 }
 
 const ALL_COMMANDS: CommandInfo[] = [
-  {
-    name: '/avatar',
-    description: 'Wyświetla avatar użytkownika w pełnej rozdzielczości.',
-    usage: '/avatar [@użytkownik]',
-  },
-  {
-    name: '/birthday',
-    description: 'Pokazuje twoją zapisaną datę urodzin lub innego użytkownika.',
-    usage: '/birthday [@użytkownik]',
-  },
-  {
-    name: '/birthday-remember',
-    description: 'Zapisuje twoją datę urodzin lub innego użytkownika do systemu (format: DD-MM-RRRR lub DD-MM).',
-    usage: '/birthday-remember <data>',
-  },
-  {
-    name: '/birthdays-next',
-    description: 'Wyświetla listę 10 najbliższych urodzin użytkowników na serwerze.',
-    usage: '/birthdays-next',
-  },
-  {
-    name: '/cat',
-    description: 'Wysyła losowe zdjęcie kota. 🐱',
-    usage: '/cat',
-  },
-  {
-    name: '/dog',
-    description: 'Wysyła losowe zdjęcie psa. 🐶',
-    usage: '/dog',
-  },
-  {
-    name: '/emoji',
-    description: 'Pokazuje listę wszystkich dostępnych emoji na serwerze.',
-    usage: '/emoji',
-  },
-  {
-    name: '/faceit',
-    description: 'Wyświetla statystyki gracza CS2 z platformy FACEIT.',
-    usage: '/faceit <nick>',
-  },
-  {
-    name: '/level',
-    description: 'Pokazuje twój poziom (XP) lub innego użytkownika.',
-    usage: '/level [@użytkownik]',
-  },
-  {
-    name: '/meme',
-    description: 'Wysyła losowego mema z polskich stron (kwejk, demotywatory, mistrzowie, ivall).',
-    usage: '/meme',
-    ownerGuildsOnly: true,
-  },
-  {
-    name: '/ping',
-    description: 'Sprawdza opóźnienie bota (ping).',
-    usage: '/ping',
-  },
-  {
-    name: '/roll',
-    description: 'Rzuć kostką - losuje liczbę z zakresu od 1 do N (domyślnie: 1-6).',
-    usage: '/roll [max_liczba]',
-  },
-  {
-    name: '/serverinfo',
-    description: 'Wyświetla szczegółowe informacje o serwerze.',
-    usage: '/serverinfo',
-  },
-  {
-    name: '/toplvl',
-    description: 'Pokazuje ranking użytkowników według poziomu (top 10 na stronę).',
-    usage: '/toplvl [strona]',
-  },
-  {
-    name: '/warnings',
-    description: 'Wyświetla twoje ostrzeżenia lub ostrzeżenia innego użytkownika.',
-    usage: '/warnings [@użytkownik]',
-  },
+  { name: 'avatar', usage: (u) => `/avatar [${u}]` },
+  { name: 'birthday', usage: (u) => `/birthday [${u}]` },
+  { name: 'birthday-remember', usage: () => '/birthday-remember <date>' },
+  { name: 'birthdays-next', usage: () => '/birthdays-next' },
+  { name: 'cat', usage: () => '/cat' },
+  { name: 'dog', usage: () => '/dog' },
+  { name: 'emoji', usage: () => '/emoji' },
+  { name: 'faceit', usage: () => '/faceit <nick>' },
+  { name: 'level', usage: (u) => `/level [${u}]` },
+  { name: 'meme', usage: () => '/meme', ownerGuildsOnly: true },
+  { name: 'ping', usage: () => '/ping' },
+  { name: 'roll', usage: () => '/roll [sides]' },
+  { name: 'serverinfo', usage: () => '/serverinfo' },
+  { name: 'toplvl', usage: () => '/toplvl [page]' },
+  { name: 'warnings', usage: (u) => `/warnings [${u}]` },
 ];
 
-const MINECRAFT_HELP: CommandInfo = {
-  name: '/minecraft',
-  description: 'Panel serwera Minecraft: stan, gracze, uruchamianie serwera i whitelista.',
-  usage: '/minecraft',
-};
+const MINECRAFT_HELP: CommandInfo = { name: 'minecraft', usage: () => '/minecraft' };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
+  const t = helpMessages[await getGuildLanguage(interaction.guildId)];
   try {
     const isOwnerGuild = (OWNER_GUILD_IDS as readonly string[]).includes(interaction.guildId ?? '');
     // /minecraft istnieje tylko na serwerze GameZone (MC_GUILD_ID).
@@ -138,29 +78,20 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
       const pageCommands = commands.slice(start, end);
 
       const embed = createBaseEmbed({
-        title: '📚 Lista komend - Deezy',
-        description:
-          '**Legenda:**\n' +
-          '`<parametr>` - wymagany\n' +
-          '`[parametr]` - opcjonalny\n' +
-          '`@użytkownik` - wzmianka użytkownika\n' +
-          '⸻⸻⸻⸻⸻⸻⸻⸻⸻\n' +
-          '**Dostępne komendy:**',
+        title: t.title,
+        description: t.legend,
         color: COLORS.DEFAULT,
-        footerText: `Strona ${page + 1}/${totalPages} • Komendy alfabetycznie`,
+        footerText: t.footer(page + 1, totalPages),
       });
 
       pageCommands.forEach((cmd) => {
-        let fieldValue = cmd.description;
-        if (cmd.usage) {
-          fieldValue += `\n↪ Użycie: \`${cmd.usage}\``;
-        }
-        embed.addFields({ name: `**${cmd.name}**`, value: fieldValue, inline: false });
+        const fieldValue = `${t.descriptions[cmd.name]}\n↪ ${t.usage}: \`${cmd.usage(t.userPlaceholder)}\``;
+        embed.addFields({ name: `**/${cmd.name}**`, value: fieldValue, inline: false });
       });
 
       embed.addFields({
-        name: '📬 Pomoc i kontakt',
-        value: `Pytania i problemy z botem: [serwer wsparcia](${SUPPORT_SERVER_URL}). Zgłoszenie nadużycia albo prośba o usunięcie danych: **${CONTACT_EMAIL}**`,
+        name: t.contactTitle,
+        value: t.contact(SUPPORT_SERVER_URL, CONTACT_EMAIL),
         inline: false,
       });
 
@@ -171,11 +102,11 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     // polityka prywatności musi być łatwo dostępna z poziomu aplikacji). Przyciski-linki nie
     // wysyłają interakcji, więc nie trzeba ich wyłączać po upływie czasu kolektora.
     const linkRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder().setLabel('Panel').setStyle(ButtonStyle.Link).setURL(SITE_URL),
-      new ButtonBuilder().setLabel('Serwer wsparcia').setStyle(ButtonStyle.Link).setURL(SUPPORT_SERVER_URL),
-      new ButtonBuilder().setLabel('Regulamin').setStyle(ButtonStyle.Link).setURL(TERMS_URL),
-      new ButtonBuilder().setLabel('Polityka prywatności').setStyle(ButtonStyle.Link).setURL(PRIVACY_URL),
-      new ButtonBuilder().setLabel('Status').setStyle(ButtonStyle.Link).setURL(STATUS_URL)
+      new ButtonBuilder().setLabel(t.buttons.panel).setStyle(ButtonStyle.Link).setURL(SITE_URL),
+      new ButtonBuilder().setLabel(t.buttons.support).setStyle(ButtonStyle.Link).setURL(SUPPORT_SERVER_URL),
+      new ButtonBuilder().setLabel(t.buttons.terms).setStyle(ButtonStyle.Link).setURL(TERMS_URL),
+      new ButtonBuilder().setLabel(t.buttons.privacy).setStyle(ButtonStyle.Link).setURL(PRIVACY_URL),
+      new ButtonBuilder().setLabel(t.buttons.status).setStyle(ButtonStyle.Link).setURL(STATUS_URL)
     );
 
     const createButtons = (disabled = false) => {
@@ -228,7 +159,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     });
   } catch (error) {
     logger.error(`[help] Błąd wykonania komendy: ${error}`);
-    const errorEmbed = createErrorEmbed('Wystąpił błąd podczas wyświetlania pomocy.');
+    const errorEmbed = createErrorEmbed(t.error);
     if (interaction.replied || interaction.deferred) {
       await interaction.editReply({ embeds: [errorEmbed] }).catch(() => {});
     } else {

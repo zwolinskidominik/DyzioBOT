@@ -73,7 +73,7 @@ describe('commandToggle', () => {
 
   it('allows a command not present in disabledCommands', async () => {
     mockFindOne.mockReturnValue({
-      lean: jest.fn().mockResolvedValue({ guildId: 'g1', enabled: true, disabledCommands: ['dowcip'] }),
+      lean: jest.fn().mockResolvedValue({ guildId: 'g1', enabled: true, disabledCommands: ['joke'] }),
     });
     const result = await commandToggle(makeInteraction('g1'), makeCommand('meme', 'fun'));
     expect(result).toBeNull();

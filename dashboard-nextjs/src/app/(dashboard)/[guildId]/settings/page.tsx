@@ -42,9 +42,9 @@ interface FormState {
 
 const DEFAULT_FORM: FormState = { language: "pl", nick: "", bio: "" };
 
-const LANGS: { id: "pl" | "en"; flag: string; labelKey: "polish" | "englishSoon"; short: string; enabled: boolean }[] = [
+const LANGS: { id: "pl" | "en"; flag: string; labelKey: "polish" | "english"; short: string; enabled: boolean }[] = [
   { id: "pl", flag: "🇵🇱", labelKey: "polish", short: "PL", enabled: true },
-  { id: "en", flag: "🇬🇧", labelKey: "englishSoon", short: "EN", enabled: false },
+  { id: "en", flag: "🇬🇧", labelKey: "english", short: "EN", enabled: true },
 ];
 
 interface DangerDef {
@@ -194,7 +194,11 @@ export default function SettingsPage() {
 
         if (generalRes.ok) {
           const g = await generalRes.json();
-          nextForm = { ...nextForm, systemNotifyChannelId: g.systemNotifyChannelId };
+          nextForm = {
+            ...nextForm,
+            language: g.language === "en" ? "en" : "pl",
+            systemNotifyChannelId: g.systemNotifyChannelId,
+          };
         }
 
         setForm(nextForm);
@@ -231,7 +235,7 @@ export default function SettingsPage() {
       const generalRes = await fetch(`/api/guild/${guildId}/settings/general`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ language: "pl", systemNotifyChannelId: form.systemNotifyChannelId }),
+        body: JSON.stringify({ language: form.language, systemNotifyChannelId: form.systemNotifyChannelId }),
       });
       if (!generalRes.ok) throw new Error(t.saveError);
 
@@ -606,7 +610,7 @@ export default function SettingsPage() {
                     </div>
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${COLORS.border}`, display: "flex", gap: 14, fontSize: 10, color: COLORS.textMuted }}>
                       <span><span style={{ display: "block", fontWeight: 700, color: COLORS.textPrimary }}>{totalModules}</span>{t.profile.modules}</span>
-                      <span><span style={{ display: "block", fontWeight: 700, color: COLORS.textPrimary }}>PL</span>{t.profile.language}</span>
+                      <span><span style={{ display: "block", fontWeight: 700, color: COLORS.textPrimary }}>{form.language.toUpperCase()}</span>{t.profile.language}</span>
                     </div>
                   </div>
                 </div>
@@ -686,6 +690,9 @@ export default function SettingsPage() {
                   );
                 })}
               </div>
+              {form.language === "en" && (
+                <p style={{ margin: "10px 0 0", fontSize: 11, lineHeight: 1.5, color: COLORS.textMuted }}>{t.language.partialNote}</p>
+              )}
             </div>
           </SlideIn>
 

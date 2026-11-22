@@ -321,29 +321,29 @@ describe('embed command', () => {
 
   it('creates embed with title and description only', async () => {
     const interaction = makeInteraction();
-    interaction.options._set('tytul', 'Test Title');
-    interaction.options._set('opis', 'Test Description');
+    interaction.options._set('title', 'Test Title');
+    interaction.options._set('description', 'Test Description');
     await run({ interaction });
     expect(interaction.editReply).toHaveBeenCalled();
   });
 
   it('creates embed with extra fields (tytul2/opis2, tytul3/opis3)', async () => {
     const interaction = makeInteraction();
-    interaction.options._set('tytul', 'T');
-    interaction.options._set('opis', 'D');
-    interaction.options._set('tytul2', 'Field2');
-    interaction.options._set('opis2', 'Desc2');
-    interaction.options._set('tytul3', 'Field3');
-    interaction.options._set('opis3', 'Desc3');
+    interaction.options._set('title', 'T');
+    interaction.options._set('description', 'D');
+    interaction.options._set('title2', 'Field2');
+    interaction.options._set('description2', 'Desc2');
+    interaction.options._set('title3', 'Field3');
+    interaction.options._set('description3', 'Desc3');
     await run({ interaction });
     expect(interaction.editReply).toHaveBeenCalled();
   });
 
   it('skips incomplete extra fields (title without description)', async () => {
     const interaction = makeInteraction();
-    interaction.options._set('tytul', 'T');
-    interaction.options._set('opis', 'D');
-    interaction.options._set('tytul2', 'Field2');
+    interaction.options._set('title', 'T');
+    interaction.options._set('description', 'D');
+    interaction.options._set('title2', 'Field2');
     // opis2 missing
     await run({ interaction });
     expect(interaction.editReply).toHaveBeenCalled();
@@ -351,25 +351,25 @@ describe('embed command', () => {
 
   it('uses default color when none specified', async () => {
     const interaction = makeInteraction();
-    interaction.options._set('tytul', 'T');
-    interaction.options._set('opis', 'D');
+    interaction.options._set('title', 'T');
+    interaction.options._set('description', 'D');
     await run({ interaction });
     expect(interaction.editReply).toHaveBeenCalled();
   });
 
   it('uses custom color when specified', async () => {
     const interaction = makeInteraction();
-    interaction.options._set('tytul', 'T');
-    interaction.options._set('opis', 'D');
-    interaction.options._set('kolor', '#ff0000');
+    interaction.options._set('title', 'T');
+    interaction.options._set('description', 'D');
+    interaction.options._set('color', '#ff0000');
     await run({ interaction });
     expect(interaction.editReply).toHaveBeenCalled();
   });
 
   it('returns error when guild is null (buildEmbed returns null)', async () => {
     const interaction = makeInteraction({ guild: null });
-    interaction.options._set('tytul', 'T');
-    interaction.options._set('opis', 'D');
+    interaction.options._set('title', 'T');
+    interaction.options._set('description', 'D');
     await run({ interaction });
     expect(interaction.editReply).toHaveBeenCalled();
   });
@@ -377,8 +377,8 @@ describe('embed command', () => {
   it('handles error in try/catch', async () => {
     const interaction = makeInteraction();
     interaction.deferReply.mockRejectedValue(new Error('fail'));
-    interaction.options._set('tytul', 'T');
-    interaction.options._set('opis', 'D');
+    interaction.options._set('title', 'T');
+    interaction.options._set('description', 'D');
     // The outer catch should handle this - editReply with error embed
     await run({ interaction });
   });

@@ -14,12 +14,12 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('warnings')
-  .setDescription('Sprawdź ostrzeżenia użytkownika')
+  .setDescription('Check a user\'s warnings').setDescriptionLocalizations({ pl: 'Sprawdź ostrzeżenia użytkownika' })
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('nick')
-      .setDescription('Użytkownik, którego liczba ostrzeżeń ma zostać sprawdzona.')
+      .setName('user')
+      .setDescription('User whose warnings you want to check.').setDescriptionLocalizations({ pl: 'Użytkownik, którego liczba ostrzeżeń ma zostać sprawdzona.' })
       .setRequired(false)
   );
 
@@ -28,7 +28,7 @@ export const options = {
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  const targetUser: User = interaction.options.getUser('nick') || interaction.user;
+  const targetUser: User = interaction.options.getUser('user') || interaction.user;
   const userId = targetUser.id;
   const guildId = interaction.guild!.id;
 

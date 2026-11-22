@@ -314,7 +314,7 @@ describe('wrozba command', () => {
 
   it('has correct data', () => {
     const { data } = load();
-    expect(data.name).toBe('wrozba');
+    expect(data.name).toBe('fortune');
   });
 
   it('happy path: shows fortune', async () => {

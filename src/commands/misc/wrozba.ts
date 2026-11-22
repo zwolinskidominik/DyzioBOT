@@ -6,8 +6,8 @@ import { getFortune, DAILY_FORTUNE_LIMIT } from '../../services/fortuneService';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
-  .setName('wrozba')
-  .setDescription('Sprawdź, co los przyniósł Ci na dziś 🔮');
+  .setName('fortune')
+  .setDescription('See what fate has in store for you today 🔮').setDescriptionLocalizations({ pl: 'Sprawdź, co los przyniósł Ci na dziś 🔮' });
 
 export const options = {
   deleted: true,

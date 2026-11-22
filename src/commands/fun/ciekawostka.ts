@@ -28,10 +28,10 @@ async function fetchFact(): Promise<string> {
 // ─── Command ──────────────────────────────────────────────────────────────────
 
 export const data = new SlashCommandBuilder()
-  .setName('ciekawostka')
-  .setDescription('Poznaj losową ciekawostkę ze świata 🌎');
+  .setName('fact')
+  .setDescription('Learn a random fun fact about the world 🌎').setDescriptionLocalizations({ pl: 'Poznaj losową ciekawostkę ze świata 🌎' });
 
-export const options = { cooldown: 3 };
+export const options = { cooldown: 3, languages: ['pl'] as const };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   let text: string;

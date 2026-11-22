@@ -13,12 +13,12 @@ import logger from '../../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('birthday-remember')
-  .setDescription('Ustaw swoją datę urodzin, żeby Deezy o niej pamiętał 🎂')
+  .setDescription('Set your birthday so Deezy remembers it 🎂').setDescriptionLocalizations({ pl: 'Ustaw swoją datę urodzin, żeby Deezy o niej pamiętał 🎂' })
   .setDMPermission(false)
   .addStringOption((option) =>
     option
-      .setName('data')
-      .setDescription('Data urodzin w formacie DD-MM-YYYY lub DD-MM.')
+      .setName('date')
+      .setDescription('Birthday in DD-MM-YYYY or DD-MM format.').setDescriptionLocalizations({ pl: 'Data urodzin w formacie DD-MM-YYYY lub DD-MM.' })
       .setRequired(true)
   );
 
@@ -28,7 +28,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const errorEmbed = createBaseEmbed({ isError: true });
   const successEmbed = createBaseEmbed({ color: COLORS.BIRTHDAY });
 
-  const dateString = interaction.options.getString('data', true);
+  const dateString = interaction.options.getString('date', true);
   const userId = interaction.user.id;
   const guildId = interaction.guild?.id;
   const botId = interaction.client.application!.id;

@@ -7,11 +7,11 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('toplvl')
-  .setDescription('Sprawdź ranking najwyższych poziomów na serwerze')
+  .setDescription('See the highest levels in the server').setDescriptionLocalizations({ pl: 'Sprawdź ranking najwyższych poziomów na serwerze' })
   .addIntegerOption((option) =>
     option
-      .setName('strona')
-      .setDescription('Numer strony (1 = miejsca 1-10, 2 = miejsca 11-20, itd.)')
+      .setName('page')
+      .setDescription('Page number (1 = places 1-10, 2 = places 11-20, etc.)').setDescriptionLocalizations({ pl: 'Numer strony (1 = miejsca 1-10, 2 = miejsca 11-20, itd.)' })
       .setRequired(false)
       .setMinValue(1)
       .setMaxValue(10)
@@ -24,7 +24,7 @@ export const options = {
 export async function run({ interaction }: { interaction: ChatInputCommandInteraction }) {
   const guildId = interaction.guildId!;
   const guild = interaction.guild!;
-  const page = interaction.options.getInteger('strona') ?? 1;
+  const page = interaction.options.getInteger('page') ?? 1;
   const perPage = 10;
 
   await flushXp();

@@ -5,11 +5,11 @@ import { createErrorEmbed } from '../../utils/embedHelpers';
 
 export const data = new SlashCommandBuilder()
   .setName('withdraw')
-  .setDescription('Wypłać monety z banku do portfela')
+  .setDescription('Withdraw coins from the bank to your wallet').setDescriptionLocalizations({ pl: 'Wypłać monety z banku do portfela' })
   .addStringOption((o) =>
     o
-      .setName('kwota')
-      .setDescription('Kwota do wypłaty lub "all"')
+      .setName('amount')
+      .setDescription('Amount to withdraw or "all"').setDescriptionLocalizations({ pl: 'Kwota do wypłaty lub "all"' })
       .setRequired(true),
   );
 
@@ -20,7 +20,7 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
 
   const guildId = interaction.guildId!;
   const userId = interaction.user.id;
-  const raw = interaction.options.getString('kwota', true).trim().toLowerCase();
+  const raw = interaction.options.getString('amount', true).trim().toLowerCase();
 
   const amount: number | 'all' = raw === 'all' ? 'all' : parseInt(raw, 10);
 

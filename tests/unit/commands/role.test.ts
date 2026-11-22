@@ -90,7 +90,7 @@ describe('/role temp', () => {
     const interaction = mockInteraction({
       guild,
       member: mockGuildMember({ id: 'mod-1', highestPos: 10 }),
-      _options: { _subcommand: 'temp', uzytkownik: targetUser, czas: '1d', powod: null },
+      _options: { _subcommand: 'temp', user: targetUser, duration: '1d', reason: null },
       ...overrides,
     });
 
@@ -188,7 +188,7 @@ describe('/role remove', () => {
 
     const interaction = mockInteraction({
       guild,
-      _options: { _subcommand: 'remove', uzytkownik: targetUser },
+      _options: { _subcommand: 'remove', user: targetUser },
     });
     interaction.options.getRole = jest.fn().mockReturnValue(role);
 
@@ -205,7 +205,7 @@ describe('/role remove', () => {
     const role = { id: 'role-1', name: 'VIP', position: 3, managed: false };
 
     const interaction = mockInteraction({
-      _options: { _subcommand: 'remove', uzytkownik: targetUser },
+      _options: { _subcommand: 'remove', user: targetUser },
     });
     interaction.options.getRole = jest.fn().mockReturnValue(role);
 
@@ -223,7 +223,7 @@ describe('/role list', () => {
   it('shows entries when there are active temp roles', async () => {
     const { run } = require('../../../src/commands/admin/role');
     const interaction = mockInteraction({
-      _options: { _subcommand: 'list', uzytkownik: null },
+      _options: { _subcommand: 'list', user: null },
     });
     interaction.options.getRole = jest.fn().mockReturnValue(null);
 
@@ -242,7 +242,7 @@ describe('/role list', () => {
   it('shows empty message when no temp roles', async () => {
     const { run } = require('../../../src/commands/admin/role');
     const interaction = mockInteraction({
-      _options: { _subcommand: 'list', uzytkownik: null },
+      _options: { _subcommand: 'list', user: null },
     });
     interaction.options.getRole = jest.fn().mockReturnValue(null);
 
@@ -256,7 +256,7 @@ describe('/role list', () => {
     const { run } = require('../../../src/commands/admin/role');
     const filterUser = mockUser({ id: 'u1' });
     const interaction = mockInteraction({
-      _options: { _subcommand: 'list', uzytkownik: filterUser },
+      _options: { _subcommand: 'list', user: filterUser },
     });
     interaction.options.getRole = jest.fn().mockReturnValue(null);
 

@@ -1,4 +1,5 @@
 import type { Guild } from 'discord.js';
+import mongoose from 'mongoose';
 import { GuildSettingsModel } from '../models/GuildSettings';
 import logger from '../utils/logger';
 import { DEFAULT_LANG, isLang, langFromDiscordLocale, type Lang } from './index';
@@ -12,11 +13,18 @@ export const CACHE_TTL_MS = 60_000;
 
 const cache = new Map<string, { lang: Lang; at: number }>();
 
+/** Podmienialne w testach (readyState Mongoose nie da się zamockować). */
+export const languageDeps = {
+  dbReady: (): boolean => mongoose.connection.readyState === mongoose.ConnectionStates.connected,
+};
+
 export async function getGuildLanguage(guildId: string | null | undefined, now: number = Date.now()): Promise<Lang> {
   // Prywatne wiadomości nie mają ustawień serwera.
   if (!guildId) return DEFAULT_LANG;
   const hit = cache.get(guildId);
   if (hit && now - hit.at < CACHE_TTL_MS) return hit.lang;
+  // Bez połączenia z bazą Mongoose czekałby do 10 s (buforowanie) - odpowiedź nie może na to czekać.
+  if (!languageDeps.dbReady()) return hit?.lang ?? DEFAULT_LANG;
   try {
     const settings = await GuildSettingsModel.findOne({ guildId }).select({ language: 1 }).lean();
     const lang = isLang(settings?.language) ? settings.language : DEFAULT_LANG;

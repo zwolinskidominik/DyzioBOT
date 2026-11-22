@@ -7,11 +7,11 @@ type AvatarSize = 16 | 32 | 64 | 128 | 256 | 512 | 1024 | 2048 | 4096;
 
 export const data = new SlashCommandBuilder()
   .setName('avatar')
-  .setDescription('Wyświetl avatar użytkownika w pełnym rozmiarze')
+  .setDescription('Show a user\'s avatar in full size').setDescriptionLocalizations({ pl: 'Wyświetl avatar użytkownika w pełnym rozmiarze' })
   .addUserOption((option) =>
     option
-      .setName('uzytkownik')
-      .setDescription('Użytkownik, którego avatar chcesz zobaczyć.')
+      .setName('user')
+      .setDescription('User whose avatar you want to see.').setDescriptionLocalizations({ pl: 'Użytkownik, którego avatar chcesz zobaczyć.' })
       .setRequired(false)
   );
 
@@ -21,7 +21,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   await interaction.deferReply();
 
   try {
-    const targetUser: User = interaction.options.getUser('uzytkownik') || interaction.user;
+    const targetUser: User = interaction.options.getUser('user') || interaction.user;
     const guild: Guild = interaction.guild!;
     const globalAvatarURL: string = getUserAvatarURL(targetUser);
     // Avatar ustawiony na TYM serwerze (np. bot z profilem per-serwer z dashboardu, albo

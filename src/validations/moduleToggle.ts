@@ -4,6 +4,9 @@ import { BirthdayConfigurationModel } from '../models/BirthdayConfiguration';
 import { LevelConfigModel } from '../models/LevelConfig';
 import { GiveawayConfigModel } from '../models/GiveawayConfig';
 import logger from '../utils/logger';
+import type { Lang } from '../i18n';
+import { commonMessages } from '../i18n/messages/common';
+import { getGuildLanguage } from '../i18n/guildLanguage';
 
 /**
  * Generyczna walidacja "czy moduł X jest włączony" dla komend, które nie mają
@@ -15,7 +18,8 @@ import logger from '../utils/logger';
  */
 interface ModuleGate {
   commands: Set<string>;
-  moduleLabel: string;
+  /** Nazwa modułu tak, jak w dashboardzie (w obu językach). */
+  moduleLabel: Record<Lang, string>;
   isAllowed: (guildId: string) => Promise<boolean>;
 }
 
@@ -25,7 +29,7 @@ const GATES: ModuleGate[] = [
     // "birthdays" (nadawaną automatycznie przez CommandHandler dla podfolderów),
     // więc commandToggle.ts (fun/misc) ich nie obejmuje.
     commands: new Set(['birthday', 'birthdays-next', 'birthday-remember', 'birthday-set-user']),
-    moduleLabel: 'Urodziny',
+    moduleLabel: { pl: 'Urodziny', en: 'Birthdays' },
     isAllowed: async (guildId) => {
       const config = await BirthdayConfigurationModel.findOne({ guildId }).lean();
       // Spójne z birthdayScheduler.ts - blokuje tylko jawne enabled:false, brak
@@ -35,7 +39,7 @@ const GATES: ModuleGate[] = [
   },
   {
     commands: new Set(['level', 'toplvl', 'xp']),
-    moduleLabel: 'Poziomy',
+    moduleLabel: { pl: 'Poziomy', en: 'Levels' },
     isAllowed: async (guildId) => {
       const config = await LevelConfigModel.findOne({ guildId }).lean();
       // Spójne z xpService.ts (przyznawanie XP) - wymaga jawnego enabled:true.
@@ -44,7 +48,7 @@ const GATES: ModuleGate[] = [
   },
   {
     commands: new Set(['giveaway']),
-    moduleLabel: 'Giveaway',
+    moduleLabel: { pl: 'Giveaway', en: 'Giveaway' },
     isAllowed: async (guildId) => {
       const config = await GiveawayConfigModel.findOne({ guildId }).lean();
       return config?.enabled === true;
@@ -65,7 +69,8 @@ export default async function moduleToggle(
   try {
     const allowed = await gate.isAllowed(interaction.guildId);
     if (!allowed) {
-      return `🔧 Moduł ${gate.moduleLabel} jest wyłączony na tym serwerze.`;
+      const lang = await getGuildLanguage(interaction.guildId);
+      return commonMessages[lang].moduleDisabled(gate.moduleLabel[lang]);
     }
     return null;
   } catch (error) {

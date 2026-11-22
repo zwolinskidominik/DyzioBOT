@@ -23,18 +23,18 @@ type PageResult =
 
 export const data = new SlashCommandBuilder()
   .setName('leaderboard')
-  .setDescription('Sprawdź ranking najbogatszych użytkowników serwera')
+  .setDescription('See the richest users in the server').setDescriptionLocalizations({ pl: 'Sprawdź ranking najbogatszych użytkowników serwera' })
   .addStringOption((o) =>
     o
-      .setName('typ')
-      .setDescription('Typ rankingu')
+      .setName('type')
+      .setDescription('Ranking type').setDescriptionLocalizations({ pl: 'Typ rankingu' })
       .setRequired(false)
       .addChoices(
-        { name: '💰 Bogactwo (net worth)', value: 'wealth' },
-        { name: '👛 Portfel', value: 'wallet' },
-        { name: '🏦 Bank', value: 'bank' },
-        { name: '📈 Zarobione łącznie', value: 'earned' },
-        { name: '🎲 Wygrane w grach', value: 'gambling' },
+        { name: '💰 Wealth (net worth)', name_localizations: { pl: '💰 Bogactwo (net worth)' }, value: 'wealth' },
+        { name: '👛 Wallet', name_localizations: { pl: '👛 Portfel' }, value: 'wallet' },
+        { name: '🏦 Bank', name_localizations: { pl: '🏦 Bank' }, value: 'bank' },
+        { name: '📈 Total earned', name_localizations: { pl: '📈 Zarobione łącznie' }, value: 'earned' },
+        { name: '🎲 Gambling winnings', name_localizations: { pl: '🎲 Wygrane w grach' }, value: 'gambling' },
       ),
   );
 
@@ -59,7 +59,7 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
   await interaction.deferReply();
 
   const guildId = interaction.guildId!;
-  const rawMode = interaction.options.getString('typ') ?? 'wealth';
+  const rawMode = interaction.options.getString('type') ?? 'wealth';
   const mode: LeaderboardMode = (MODES as readonly string[]).includes(rawMode)
     ? (rawMode as LeaderboardMode)
     : 'wealth';

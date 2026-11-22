@@ -34,8 +34,8 @@ const REPLAY_TIMEOUT = 180_000;
 /* ── Command definition ───────────────────────────────────── */
 
 export const data = new SlashCommandBuilder()
-  .setName('kamien-papier-nozyce')
-  .setDescription('Zmierz się z Deezy w Kamień, Papier, Nożyce ✊');
+  .setName('rock-paper-scissors')
+  .setDescription('Play Rock, Paper, Scissors against Deezy ✊').setDescriptionLocalizations({ pl: 'Zmierz się z Deezy w Kamień, Papier, Nożyce ✊' });
 
 export const options = {
   cooldown: 3,
@@ -180,7 +180,7 @@ function startReplayCollector(
   replayCollector.on('collect', async (i: ButtonInteraction) => {
     if (i.user.id !== authorId) {
       await i.reply({
-        content: '❌ To nie Twoja gra! Użyj `/kamien-papier-nozyce` żeby zagrać.',
+        content: '❌ To nie Twoja gra! Użyj `/rock-paper-scissors` żeby zagrać.',
         ephemeral: true,
       });
       startReplayCollector(message, authorId, authorTag, authorMention);

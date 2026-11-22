@@ -13,32 +13,32 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('embed')
-  .setDescription('Stwórz własną wiadomość embed')
+  .setDescription('Create your own embed message').setDescriptionLocalizations({ pl: 'Stwórz własną wiadomość embed' })
   .setDMPermission(false)
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addStringOption((option) =>
-    option.setName('tytul').setDescription('Tytuł embeda').setRequired(true)
+    option.setName('title').setDescription('Embed title').setDescriptionLocalizations({ pl: 'Tytuł embeda' }).setRequired(true)
   )
   .addStringOption((option) =>
-    option.setName('opis').setDescription('Opis embeda').setRequired(true)
+    option.setName('description').setDescription('Embed description').setDescriptionLocalizations({ pl: 'Opis embeda' }).setRequired(true)
   )
   .addStringOption((option) =>
     option
-      .setName('kolor')
-      .setDescription('Kolor embeda w formacie HEX (#000000)')
+      .setName('color')
+      .setDescription('Embed color in HEX format (#000000)').setDescriptionLocalizations({ pl: 'Kolor embeda w formacie HEX (#000000)' })
       .setRequired(false)
   )
   .addStringOption((option) =>
-    option.setName('tytul2').setDescription('Tytuł drugiego pola').setRequired(false)
+    option.setName('title2').setDescription('Second field title').setDescriptionLocalizations({ pl: 'Tytuł drugiego pola' }).setRequired(false)
   )
   .addStringOption((option) =>
-    option.setName('opis2').setDescription('Opis drugiego pola').setRequired(false)
+    option.setName('description2').setDescription('Second field description').setDescriptionLocalizations({ pl: 'Opis drugiego pola' }).setRequired(false)
   )
   .addStringOption((option) =>
-    option.setName('tytul3').setDescription('Tytuł trzeciego pola').setRequired(false)
+    option.setName('title3').setDescription('Third field title').setDescriptionLocalizations({ pl: 'Tytuł trzeciego pola' }).setRequired(false)
   )
   .addStringOption((option) =>
-    option.setName('opis3').setDescription('Opis trzeciego pola').setRequired(false)
+    option.setName('description3').setDescription('Third field description').setDescriptionLocalizations({ pl: 'Opis trzeciego pola' }).setRequired(false)
   );
 
 export const options = {
@@ -72,12 +72,12 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
 function getEmbedFields(interaction: ChatInputCommandInteraction): APIEmbedField[] {
   const fields: IEmbedField[] = [
     {
-      title: interaction.options.getString('tytul2'),
-      description: interaction.options.getString('opis2'),
+      title: interaction.options.getString('title2'),
+      description: interaction.options.getString('description2'),
     },
     {
-      title: interaction.options.getString('tytul3'),
-      description: interaction.options.getString('opis3'),
+      title: interaction.options.getString('title3'),
+      description: interaction.options.getString('description3'),
     },
   ];
 
@@ -96,9 +96,9 @@ function getEmbedFields(interaction: ChatInputCommandInteraction): APIEmbedField
 function buildEmbed(interaction: ChatInputCommandInteraction): EmbedBuilder | null {
   if (!interaction.guild) return null;
 
-  const title = interaction.options.getString('tytul');
-  const description = interaction.options.getString('opis');
-  const color = interaction.options.getString('kolor') || COLORS.EMBED;
+  const title = interaction.options.getString('title');
+  const description = interaction.options.getString('description');
+  const color = interaction.options.getString('color') || COLORS.EMBED;
 
   return createBaseEmbed({
     title: title || undefined,

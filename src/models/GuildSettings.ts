@@ -6,7 +6,7 @@ class GuildSettings {
   @prop({ required: true, type: () => String })
   public guildId!: string;
 
-  /** Na razie tylko 'pl' jest realnie obsługiwane - 'en' zarezerwowane na przyszłość. */
+  /** Język odpowiedzi bota: 'pl' albo 'en' (dashboard → Ustawienia). Odczyt: src/i18n/guildLanguage.ts. */
   @prop({ default: 'pl', type: () => String })
   public language!: string;
 

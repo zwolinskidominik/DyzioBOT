@@ -15,19 +15,19 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('warn-remove')
-  .setDescription('Usuń wybrane ostrzeżenie użytkownika')
+  .setDescription('Remove one of a user\'s warnings').setDescriptionLocalizations({ pl: 'Usuń wybrane ostrzeżenie użytkownika' })
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('uzytkownik')
-      .setDescription('Użytkownik, któremu chcesz usunąć ostrzeżenie.')
+      .setName('user')
+      .setDescription('User whose warning you want to remove.').setDescriptionLocalizations({ pl: 'Użytkownik, któremu chcesz usunąć ostrzeżenie.' })
       .setRequired(true)
   )
   .addIntegerOption((option) =>
     option
-      .setName('id_ostrzezenia')
-      .setDescription('Identyfikator ostrzeżenia do usunięcia.')
+      .setName('warning_id')
+      .setDescription('ID of the warning to remove.').setDescriptionLocalizations({ pl: 'Identyfikator ostrzeżenia do usunięcia.' })
       .setRequired(true)
   );
 
@@ -39,9 +39,9 @@ export const options = {
 };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  const targetUser: User | null = interaction.options.getUser('uzytkownik', true);
+  const targetUser: User | null = interaction.options.getUser('user', true);
   const targetUserId: string = targetUser.id;
-  const warningId: number = interaction.options.getInteger('id_ostrzezenia', true);
+  const warningId: number = interaction.options.getInteger('warning_id', true);
   const guildId: string = interaction.guild!.id;
 
   await interaction.deferReply();

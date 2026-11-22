@@ -18,17 +18,17 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('kick')
-  .setDescription('Wyrzuć użytkownika z serwera')
+  .setDescription('Kick a user from the server').setDescriptionLocalizations({ pl: 'Wyrzuć użytkownika z serwera' })
   .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('uzytkownik')
-      .setDescription('Użytkownik, którego chcesz wyrzucić.')
+      .setName('user')
+      .setDescription('User you want to kick.').setDescriptionLocalizations({ pl: 'Użytkownik, którego chcesz wyrzucić.' })
       .setRequired(true)
   )
   .addStringOption((option) =>
-    option.setName('powod').setDescription('Powód wyrzucenia.').setRequired(true)
+    option.setName('reason').setDescription('Reason for the kick.').setDescriptionLocalizations({ pl: 'Powód wyrzucenia.' }).setRequired(true)
   );
 
 export const options = {
@@ -56,7 +56,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
     const { config } = access;
 
-    const targetUser = interaction.options.getUser('uzytkownik');
+    const targetUser = interaction.options.getUser('user');
     if (!targetUser) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription('**Nie znaleziono użytkownika.**')],
@@ -65,7 +65,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
     const targetUserId = targetUser.id;
 
-    const reason = interaction.options.getString('powod');
+    const reason = interaction.options.getString('reason');
     if (!reason) {
       await interaction.editReply({
         embeds: [errorEmbed.setDescription('**Nie podano powodu.**')],

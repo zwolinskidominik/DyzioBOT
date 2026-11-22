@@ -244,6 +244,34 @@ describe('CommandHandler', () => {
     expect((handler as any).commandChanged(cmd1, cmd2)).toBe(true);
   });
 
+  describe('executeCommand - languages', () => {
+    function setup(guildLang: 'pl' | 'en') {
+      jest.doMock('../../../src/i18n/guildLanguage', () => ({ getGuildLanguage: jest.fn().mockResolvedValue(guildLang) }));
+      mockReaddirSync.mockReturnValue([]);
+      const { CommandHandler: CH } = require('../../../src/handlers/CommandHandler');
+      const handler = new CH(mockClient(), {});
+      const run = jest.fn().mockResolvedValue(undefined);
+      (handler as any).commands.set('wordle', { data: { name: 'wordle' }, options: { languages: ['pl'] }, run });
+      const interaction = mockInteraction({ commandName: 'wordle', guild: mockGuild({ id: 'g1' }) });
+      return { handler, run, interaction };
+    }
+
+    it('blocks a Polish-only game on an English server, with an English reply', async () => {
+      const { handler, run, interaction } = setup('en');
+      await (handler as any).executeCommand(interaction);
+      expect(run).not.toHaveBeenCalled();
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ content: expect.stringContaining('only available in Polish-language servers') })
+      );
+    });
+
+    it('runs it on a Polish server', async () => {
+      const { handler, run, interaction } = setup('pl');
+      await (handler as any).executeCommand(interaction);
+      expect(run).toHaveBeenCalled();
+    });
+  });
+
   describe('executeCommand - restrictedGuildIds', () => {
     it('blocks execution outside the allowed guilds', async () => {
       mockReaddirSync.mockReturnValue([]);
@@ -253,14 +281,14 @@ describe('CommandHandler', () => {
 
       const run = jest.fn();
       const command = {
-        data: { name: 'kalendarz-adwentowy' },
+        data: { name: 'advent-calendar' },
         options: { restrictedGuildIds: ['owner-guild'] },
         run,
       };
-      (handler as any).commands.set('kalendarz-adwentowy', command);
+      (handler as any).commands.set('advent-calendar', command);
 
       const guild = mockGuild({ id: 'other-guild' });
-      const interaction = mockInteraction({ commandName: 'kalendarz-adwentowy', guild });
+      const interaction = mockInteraction({ commandName: 'advent-calendar', guild });
 
       await (handler as any).executeCommand(interaction);
 
@@ -278,14 +306,14 @@ describe('CommandHandler', () => {
 
       const run = jest.fn().mockResolvedValue(undefined);
       const command = {
-        data: { name: 'kalendarz-adwentowy' },
+        data: { name: 'advent-calendar' },
         options: { restrictedGuildIds: ['owner-guild'] },
         run,
       };
-      (handler as any).commands.set('kalendarz-adwentowy', command);
+      (handler as any).commands.set('advent-calendar', command);
 
       const guild = mockGuild({ id: 'owner-guild' });
-      const interaction = mockInteraction({ commandName: 'kalendarz-adwentowy', guild });
+      const interaction = mockInteraction({ commandName: 'advent-calendar', guild });
 
       await (handler as any).executeCommand(interaction);
 
@@ -318,13 +346,13 @@ describe('CommandHandler', () => {
 
       const command = {
         data: {
-          name: 'kalendarz-adwentowy',
-          toJSON: () => ({ name: 'kalendarz-adwentowy', description: 'x', type: 1 }),
+          name: 'advent-calendar',
+          toJSON: () => ({ name: 'advent-calendar', description: 'x', type: 1 }),
         },
         options: { restrictedGuildIds: ['owner-guild'] },
         run: jest.fn(),
       };
-      (handler as any).commands.set('kalendarz-adwentowy', command);
+      (handler as any).commands.set('advent-calendar', command);
 
       const guild = mockGuild({ id: 'owner-guild' });
       client.guilds.fetch = jest.fn().mockResolvedValue(guild);
@@ -333,7 +361,7 @@ describe('CommandHandler', () => {
 
       expect(client.application.commands.create).not.toHaveBeenCalled();
       expect(guild.commands.create).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'kalendarz-adwentowy' })
+        expect.objectContaining({ name: 'advent-calendar' })
       );
     });
 
@@ -350,14 +378,14 @@ describe('CommandHandler', () => {
       };
       const restrictedCommand = {
         data: {
-          name: 'kalendarz-adwentowy',
-          toJSON: () => ({ name: 'kalendarz-adwentowy', description: 'x', type: 1 }),
+          name: 'advent-calendar',
+          toJSON: () => ({ name: 'advent-calendar', description: 'x', type: 1 }),
         },
         options: { restrictedGuildIds: ['shared-guild'] },
         run: jest.fn(),
       };
       (handler as any).commands.set('dev-cmd', devCommand);
-      (handler as any).commands.set('kalendarz-adwentowy', restrictedCommand);
+      (handler as any).commands.set('advent-calendar', restrictedCommand);
 
       const guild = mockGuild({ id: 'shared-guild' });
       client.guilds.fetch = jest.fn().mockResolvedValue(guild);
@@ -366,7 +394,7 @@ describe('CommandHandler', () => {
 
       expect(guild.commands.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'dev-cmd' }));
       expect(guild.commands.create).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'kalendarz-adwentowy' })
+        expect.objectContaining({ name: 'advent-calendar' })
       );
     });
   });

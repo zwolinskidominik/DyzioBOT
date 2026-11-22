@@ -282,18 +282,18 @@ function drawQuestionFooter(ctx: Ctx2D, question: string, username: string) {
 
 export const data = new SlashCommandBuilder()
   .setName('8ball')
-  .setDescription('Zadaj pytanie, a magiczna kula wyda wyrok 🔮')
+  .setDescription('Ask a question and the magic ball will answer 🔮').setDescriptionLocalizations({ pl: 'Zadaj pytanie, a magiczna kula wyda wyrok 🔮' })
   .addStringOption((o) =>
-    o.setName('pytanie')
-      .setDescription('Twoje pytanie do magicznej kuli')
+    o.setName('question')
+      .setDescription('Your question for the magic ball').setDescriptionLocalizations({ pl: 'Twoje pytanie do magicznej kuli' })
       .setRequired(true)
       .setMaxLength(256),
   );
 
-export const options = { cooldown: 3 };
+export const options = { cooldown: 3, languages: ['pl'] as const };
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
-  const question = interaction.options.getString('pytanie', true);
+  const question = interaction.options.getString('question', true);
   const answer   = ALL_ANSWERS[Math.floor(Math.random() * ALL_ANSWERS.length)];
   const category = getCategory(answer);
 

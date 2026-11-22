@@ -16,11 +16,11 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('wrapped-test')
-  .setDescription('Wygeneruj testowy Server Wrapped')
+  .setDescription('Generate a test Server Wrapped').setDescriptionLocalizations({ pl: 'Wygeneruj testowy Server Wrapped' })
   .addBooleanOption((option) =>
     option
-      .setName('publicznie')
-      .setDescription('Wyślij na skonfigurowany kanał Wrapped zamiast tylko podglądu dla Ciebie (domyślnie: nie)')
+      .setName('public')
+      .setDescription('Send to the configured Wrapped channel instead of a preview only for you (default: no)').setDescriptionLocalizations({ pl: 'Wyślij na skonfigurowany kanał Wrapped zamiast tylko podglądu dla Ciebie (domyślnie: nie)' })
       .setRequired(false)
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
@@ -38,7 +38,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   if (!interaction.guild) return;
 
   const guild = interaction.guild;
-  const postPublicly = interaction.options.getBoolean('publicznie') ?? false;
+  const postPublicly = interaction.options.getBoolean('public') ?? false;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 

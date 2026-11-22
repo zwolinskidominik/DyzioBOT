@@ -7,11 +7,11 @@ const RESULT_EMOJI = ':game_die:';
 
 export const data = new SlashCommandBuilder()
   .setName('roll')
-  .setDescription('Wylosuj liczbę - domyślnie od 1 do 6 🎲')
+  .setDescription('Roll a number - 1 to 6 by default 🎲').setDescriptionLocalizations({ pl: 'Wylosuj liczbę - domyślnie od 1 do 6 🎲' })
   .addIntegerOption((option) =>
     option
-      .setName('max-liczba')
-      .setDescription('Liczba ścianek kostki (np. 20 dla D20)')
+      .setName('sides')
+      .setDescription('Number of sides on the die (e.g. 20 for a D20)').setDescriptionLocalizations({ pl: 'Liczba ścianek kostki (np. 20 dla D20)' })
       .setRequired(false)
   );
 
@@ -19,7 +19,7 @@ export const options = {};
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   try {
-    const sides = interaction.options.getInteger('max-liczba') ?? 6;
+    const sides = interaction.options.getInteger('sides') ?? 6;
 
     if (!isValidSides(sides)) {
       await interaction.reply({ embeds: [createErrorEmbed('Kostka musi mieć co najmniej 2 ścianki.')], flags: MessageFlags.Ephemeral });

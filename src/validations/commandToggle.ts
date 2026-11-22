@@ -2,6 +2,8 @@ import { ChatInputCommandInteraction } from 'discord.js';
 import type { ICommand } from '../interfaces/Command';
 import { CommandConfigModel } from '../models/CommandConfig';
 import logger from '../utils/logger';
+import { commonMessages } from '../i18n/messages/common';
+import { getGuildLanguage } from '../i18n/guildLanguage';
 
 /** Kategorie (foldery src/commands/) objęte modułem "Narzędzia" w dashboardzie. */
 const UTILITY_CATEGORIES = new Set(['fun', 'misc']);
@@ -28,10 +30,10 @@ export default async function commandToggle(
 
     if (!config) return null; // brak configu = moduł włączony (opt-out)
     if (config.enabled === false) {
-      return '🔧 Moduł Komendy jest wyłączony na tym serwerze.';
+      return commonMessages[await getGuildLanguage(interaction.guildId)].commandsModuleDisabled;
     }
     if (config.disabledCommands?.includes(command.data.name)) {
-      return '🔧 Ta komenda jest wyłączona na tym serwerze.';
+      return commonMessages[await getGuildLanguage(interaction.guildId)].commandDisabled;
     }
 
     return null;

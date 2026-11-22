@@ -6,35 +6,35 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('xp')
-  .setDescription('Zarządzaj XP i poziomami użytkowników')
+  .setDescription('Manage users\' XP and levels').setDescriptionLocalizations({ pl: 'Zarządzaj XP i poziomami użytkowników' })
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .addSubcommand((s) =>
     s
       .setName('add')
-      .setDescription('Dodaje XP')
-      .addUserOption((o) => o.setName('uzytkownik').setDescription('Użytkownik').setRequired(true))
+      .setDescription('Adds XP').setDescriptionLocalizations({ pl: 'Dodaje XP' })
+      .addUserOption((o) => o.setName('user').setDescription('User').setDescriptionLocalizations({ pl: 'Użytkownik' }).setRequired(true))
       .addIntegerOption((o) =>
-        o.setName('ilosc').setDescription('Ilość XP').setRequired(true).setMinValue(1)
+        o.setName('amount').setDescription('Amount of XP').setDescriptionLocalizations({ pl: 'Ilość XP' }).setRequired(true).setMinValue(1)
       )
   )
   .addSubcommand((s) =>
     s
       .setName('remove')
-      .setDescription('Usuwa XP')
-      .addUserOption((o) => o.setName('uzytkownik').setDescription('Użytkownik').setRequired(true))
+      .setDescription('Removes XP').setDescriptionLocalizations({ pl: 'Usuwa XP' })
+      .addUserOption((o) => o.setName('user').setDescription('User').setDescriptionLocalizations({ pl: 'Użytkownik' }).setRequired(true))
       .addIntegerOption((o) =>
-        o.setName('ilosc').setDescription('Ilość XP').setRequired(true).setMinValue(1)
+        o.setName('amount').setDescription('Amount of XP').setDescriptionLocalizations({ pl: 'Ilość XP' }).setRequired(true).setMinValue(1)
       )
   )
   .addSubcommand((s) =>
     s
       .setName('set')
-      .setDescription('Ustawia konkretną wartość XP lub poziomu')
-      .addUserOption((o) => o.setName('uzytkownik').setDescription('Użytkownik').setRequired(true))
+      .setDescription('Sets an exact XP or level value').setDescriptionLocalizations({ pl: 'Ustawia konkretną wartość XP lub poziomu' })
+      .addUserOption((o) => o.setName('user').setDescription('User').setDescriptionLocalizations({ pl: 'Użytkownik' }).setRequired(true))
       .addStringOption((o) =>
         o
-          .setName('wartosc')
-          .setDescription('Wartość XP lub poziom z suffixem L (np. 1000 lub 5L)')
+          .setName('value')
+          .setDescription('XP value or level with an L suffix (e.g. 1000 or 5L)').setDescriptionLocalizations({ pl: 'Wartość XP lub poziom z suffixem L (np. 1000 lub 5L)' })
           .setRequired(true)
       )
   );
@@ -49,10 +49,10 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
   try {
     const gid = interaction.guildId!;
     const subcommand = interaction.options.getSubcommand();
-    const user = interaction.options.getUser('uzytkownik', true);
+    const user = interaction.options.getUser('user', true);
 
     if (subcommand === 'set') {
-      const valueStr = interaction.options.getString('wartosc', true);
+      const valueStr = interaction.options.getString('value', true);
 
       const isLevelSet = valueStr.toLowerCase().endsWith('l');
       const numericValue = parseInt(valueStr.replace(/[lL]$/, ''), 10);
@@ -90,7 +90,7 @@ export async function run({ interaction }: { interaction: ChatInputCommandIntera
       }
     }
 
-    const amt = interaction.options.getInteger('ilosc', true);
+    const amt = interaction.options.getInteger('amount', true);
     const delta = subcommand === 'add' ? amt : -amt;
 
     await modifyXp(interaction.client, gid, user.id, delta);

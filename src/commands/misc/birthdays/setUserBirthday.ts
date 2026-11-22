@@ -14,19 +14,19 @@ import logger from '../../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('birthday-set-user')
-  .setDescription('Ustaw datę urodzin innego użytkownika')
+  .setDescription('Set another user\'s birthday').setDescriptionLocalizations({ pl: 'Ustaw datę urodzin innego użytkownika' })
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('uzytkownik')
-      .setDescription('Użytkownik, którego datę urodzin chcesz ustawić.')
+      .setName('user')
+      .setDescription('User whose birthday you want to set.').setDescriptionLocalizations({ pl: 'Użytkownik, którego datę urodzin chcesz ustawić.' })
       .setRequired(true)
   )
   .addStringOption((option) =>
     option
-      .setName('data')
-      .setDescription('Data urodzin w formacie DD-MM-YYYY lub DD-MM.')
+      .setName('date')
+      .setDescription('Birthday in DD-MM-YYYY or DD-MM format.').setDescriptionLocalizations({ pl: 'Data urodzin w formacie DD-MM-YYYY lub DD-MM.' })
       .setRequired(true)
   );
 
@@ -39,8 +39,8 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const errorEmbed = createBaseEmbed({ isError: true });
   const successEmbed = createBaseEmbed({ color: COLORS.BIRTHDAY });
 
-  const dateString = interaction.options.getString('data', true);
-  const userOption = interaction.options.getUser('uzytkownik', true);
+  const dateString = interaction.options.getString('date', true);
+  const userOption = interaction.options.getUser('user', true);
   const guildId = interaction.guild?.id;
   const botId = interaction.client.application!.id;
 

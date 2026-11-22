@@ -71,7 +71,7 @@ describe('getOutcome', () => {
 describe('/kpn command - data export', () => {
   it('exports correct command name', () => {
     const { data } = require('../../../src/commands/fun/kpn');
-    expect(data.name).toBe('kamien-papier-nozyce');
+    expect(data.name).toBe('rock-paper-scissors');
   });
 
   it('has a cooldown', () => {

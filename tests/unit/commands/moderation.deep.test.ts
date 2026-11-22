@@ -379,8 +379,8 @@ describe('mute command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(targetUser);
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas_trwania') return '1d';
-      if (name === 'powod') return 'Spam';
+      if (name === 'duration') return '1d';
+      if (name === 'reason') return 'Spam';
       return null;
     });
 
@@ -404,8 +404,8 @@ describe('mute command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(targetUser);
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas_trwania') return '2h';
-      if (name === 'powod') return 'Too noisy';
+      if (name === 'duration') return '2h';
+      if (name === 'reason') return 'Too noisy';
       return null;
     });
 
@@ -435,8 +435,8 @@ describe('mute command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(mockUser());
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas_trwania') return null;
-      if (name === 'powod') return 'Spam';
+      if (name === 'duration') return null;
+      if (name === 'reason') return 'Spam';
       return null;
     });
 
@@ -452,8 +452,8 @@ describe('mute command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(mockUser());
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas_trwania') return '1h';
-      if (name === 'powod') return null;
+      if (name === 'duration') return '1h';
+      if (name === 'reason') return null;
       return null;
     });
 
@@ -472,8 +472,8 @@ describe('mute command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(mockUser({ id: 't1' }));
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas_trwania') return 'invalid';
-      if (name === 'powod') return 'Spam';
+      if (name === 'duration') return 'invalid';
+      if (name === 'reason') return 'Spam';
       return null;
     });
 
@@ -491,8 +491,8 @@ describe('mute command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(mockUser({ id: 't1' }));
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas_trwania') return '1h';
-      if (name === 'powod') return 'Spam';
+      if (name === 'duration') return '1h';
+      if (name === 'reason') return 'Spam';
       return null;
     });
 
@@ -510,8 +510,8 @@ describe('mute command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(mockUser({ id: 't1' }));
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas_trwania') return '1h';
-      if (name === 'powod') return 'Spam';
+      if (name === 'duration') return '1h';
+      if (name === 'reason') return 'Spam';
       return null;
     });
 
@@ -529,8 +529,8 @@ describe('mute command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(mockUser({ id: 't1' }));
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas_trwania') return '1h';
-      if (name === 'powod') return 'Spam';
+      if (name === 'duration') return '1h';
+      if (name === 'reason') return 'Spam';
       return null;
     });
 
@@ -549,8 +549,8 @@ describe('mute command', () => {
     const interaction = mockInteraction({ guild });
     interaction.options.getUser = jest.fn().mockReturnValue(mockUser({ id: 't1' }));
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas_trwania') return '1h';
-      if (name === 'powod') return 'Spam';
+      if (name === 'duration') return '1h';
+      if (name === 'reason') return 'Spam';
       return null;
     });
 
@@ -779,7 +779,7 @@ describe('warn command', () => {
     const interaction = mockInteraction();
     interaction.options.getUser = jest.fn().mockReturnValue(mockUser({ id: 't1' }));
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'uzytkownik' || name === 'użytkownik') return null;
+      if (name === 'user' || name === 'user') return null;
       return null; // both powod and user return null, but getUser returns the user
     });
     // Override: getUser returns user, getString returns null for powod

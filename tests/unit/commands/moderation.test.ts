@@ -124,8 +124,8 @@ describe('Moderation commands - run functions', () => {
     const interaction = mockInteraction();
     interaction.options.getUser = jest.fn().mockReturnValue(targetUser);
     interaction.options.getString = jest.fn().mockImplementation((name: string) => {
-      if (name === 'czas') return '1d';
-      if (name === 'powod') return 'Spam';
+      if (name === 'duration') return '1d';
+      if (name === 'reason') return 'Spam';
       return null;
     });
     interaction.guild.members.fetch = jest.fn().mockResolvedValue(targetMember);

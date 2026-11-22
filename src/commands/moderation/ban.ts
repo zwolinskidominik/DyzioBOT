@@ -19,17 +19,17 @@ import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
   .setName('ban')
-  .setDescription('Zbanuj użytkownika na serwerze')
+  .setDescription('Ban a user from the server').setDescriptionLocalizations({ pl: 'Zbanuj użytkownika na serwerze' })
   .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
   .setDMPermission(false)
   .addUserOption((option) =>
     option
-      .setName('uzytkownik')
-      .setDescription('Użytkownik, którego chcesz zbanować.')
+      .setName('user')
+      .setDescription('User you want to ban.').setDescriptionLocalizations({ pl: 'Użytkownik, którego chcesz zbanować.' })
       .setRequired(true)
   )
   .addStringOption((option) =>
-    option.setName('powod').setDescription('Powód zbanowania.').setRequired(true)
+    option.setName('reason').setDescription('Reason for the ban.').setDescriptionLocalizations({ pl: 'Powód zbanowania.' }).setRequired(true)
   );
 
 export const options = {
@@ -58,9 +58,9 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     }
     const { config } = access;
 
-    const targetUser: User = interaction.options.getUser('uzytkownik', true);
+    const targetUser: User = interaction.options.getUser('user', true);
     const targetUserId: string = targetUser.id;
-    const reason: string = interaction.options.getString('powod', true);
+    const reason: string = interaction.options.getString('reason', true);
 
     let targetMember: GuildMember;
     try {

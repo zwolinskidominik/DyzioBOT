@@ -81,7 +81,7 @@ const fakeForecastDays = [
 ];
 
 /* ── Helper ────────────────────────────────────────────────── */
-function buildInteraction(opts: Record<string, unknown> = {}, subcommand = 'teraz') {
+function buildInteraction(opts: Record<string, unknown> = {}, subcommand = 'now') {
   const mockAwait = jest.fn();
   const interaction = mockInteraction({ _options: { _subcommand: subcommand, ...opts } });
 
@@ -108,20 +108,20 @@ describe('/pogoda command', () => {
   /* ── data export ─────────────────────────────────────────── */
   it('exports correct command name', () => {
     const { data } = require('../../../src/commands/fun/pogoda');
-    expect(data.name).toBe('pogoda');
+    expect(data.name).toBe('weather');
   });
 
-  it('has "teraz" and "prognoza" subcommands', () => {
+  it('has "now" and "forecast" subcommands', () => {
     const { data } = require('../../../src/commands/fun/pogoda');
     const names = data.options.map((o: any) => o.name);
-    expect(names).toContain('teraz');
-    expect(names).toContain('prognoza');
+    expect(names).toContain('now');
+    expect(names).toContain('forecast');
   });
 
-  it('both subcommands have required "miasto" option', () => {
+  it('both subcommands have required "city" option', () => {
     const { data } = require('../../../src/commands/fun/pogoda');
     for (const sub of data.options) {
-      const miasto = sub.options?.find((o: any) => o.name === 'miasto');
+      const miasto = sub.options?.find((o: any) => o.name === 'city');
       expect(miasto).toBeDefined();
       expect(miasto.required).toBe(true);
     }
@@ -135,7 +135,7 @@ describe('/pogoda command', () => {
   /* ── run - single city result ────────────────────────────── */
   it('defers reply and sends weather embed on success', async () => {
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction } = buildInteraction({ miasto: 'Warszawa' });
+    const { interaction } = buildInteraction({ city: 'Warszawa' });
 
     await run({ interaction, client: interaction.client });
 
@@ -151,7 +151,7 @@ describe('/pogoda command', () => {
   /* ── run - city too short ────────────────────────────────── */
   it('sends error for city name shorter than 2 chars', async () => {
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction } = buildInteraction({ miasto: 'X' });
+    const { interaction } = buildInteraction({ city: 'X' });
 
     await run({ interaction, client: interaction.client });
 
@@ -167,7 +167,7 @@ describe('/pogoda command', () => {
     mockGeocode.mockResolvedValue([]);
 
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction } = buildInteraction({ miasto: 'Nonexistentcity' });
+    const { interaction } = buildInteraction({ city: 'Nonexistentcity' });
 
     await run({ interaction, client: interaction.client });
 
@@ -183,7 +183,7 @@ describe('/pogoda command', () => {
     mockFetchWeather.mockResolvedValue(null);
 
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction } = buildInteraction({ miasto: 'Warszawa' });
+    const { interaction } = buildInteraction({ city: 'Warszawa' });
 
     await run({ interaction, client: interaction.client });
 
@@ -197,7 +197,7 @@ describe('/pogoda command', () => {
     mockGeocode.mockRejectedValue(new Error('network fail'));
 
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction } = buildInteraction({ miasto: 'Warszawa' });
+    const { interaction } = buildInteraction({ city: 'Warszawa' });
 
     await run({ interaction, client: interaction.client });
 
@@ -209,7 +209,7 @@ describe('/pogoda command', () => {
   /* ── run - trims whitespace ──────────────────────────────── */
   it('trims city name whitespace', async () => {
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction } = buildInteraction({ miasto: '  Kraków  ' });
+    const { interaction } = buildInteraction({ city: '  Kraków  ' });
 
     await run({ interaction, client: interaction.client });
 
@@ -221,7 +221,7 @@ describe('/pogoda command', () => {
     mockGeocode.mockResolvedValue([fakeLocation, fakeLocation2]);
 
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction, mockAwait } = buildInteraction({ miasto: 'Warsaw' });
+    const { interaction, mockAwait } = buildInteraction({ city: 'Warsaw' });
 
     mockAwait.mockResolvedValue({
       values: ['0'],
@@ -248,7 +248,7 @@ describe('/pogoda command', () => {
     mockGeocode.mockResolvedValue([fakeLocation, fakeLocation2]);
 
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction, mockAwait } = buildInteraction({ miasto: 'Warsaw' });
+    const { interaction, mockAwait } = buildInteraction({ city: 'Warsaw' });
 
     mockAwait.mockResolvedValue({
       values: ['1'],
@@ -265,7 +265,7 @@ describe('/pogoda command', () => {
     mockGeocode.mockResolvedValue([fakeLocation, fakeLocation2]);
 
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction, mockAwait } = buildInteraction({ miasto: 'Warsaw' });
+    const { interaction, mockAwait } = buildInteraction({ city: 'Warsaw' });
 
     mockAwait.mockRejectedValue(new Error('Collector timed out'));
 
@@ -286,7 +286,7 @@ describe('/pogoda command', () => {
 
   it('prognoza: fetches forecast and sends forecast embed', async () => {
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction } = buildInteraction({ miasto: 'Warszawa' }, 'prognoza');
+    const { interaction } = buildInteraction({ city: 'Warszawa' }, 'forecast');
 
     await run({ interaction, client: interaction.client });
 
@@ -304,7 +304,7 @@ describe('/pogoda command', () => {
     mockFetchForecast.mockResolvedValue([]);
 
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction } = buildInteraction({ miasto: 'Warszawa' }, 'prognoza');
+    const { interaction } = buildInteraction({ city: 'Warszawa' }, 'forecast');
 
     await run({ interaction, client: interaction.client });
 
@@ -319,7 +319,7 @@ describe('/pogoda command', () => {
     mockGeocode.mockResolvedValue([fakeLocation, fakeLocation2]);
 
     const { run } = require('../../../src/commands/fun/pogoda');
-    const { interaction, mockAwait } = buildInteraction({ miasto: 'Warsaw' }, 'prognoza');
+    const { interaction, mockAwait } = buildInteraction({ city: 'Warsaw' }, 'forecast');
 
     mockAwait.mockResolvedValue({
       values: ['1'],

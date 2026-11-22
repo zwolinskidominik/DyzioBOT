@@ -110,14 +110,14 @@ async function saveResult(
 
 export const data = new SlashCommandBuilder()
   .setName('wordle')
-  .setDescription('Odgadnij ukryte polskie słowo w 6 próbach 🟩')
+  .setDescription('Guess the hidden Polish word in 6 tries 🟩').setDescriptionLocalizations({ pl: 'Odgadnij ukryte polskie słowo w 6 próbach 🟩' })
   .addIntegerOption((o) =>
-    o.setName('litery')
-      .setDescription('Liczba liter w słowie (domyślnie 5, zakres 5-7)')
+    o.setName('letters')
+      .setDescription('Number of letters in the word (default 5, range 5-7)').setDescriptionLocalizations({ pl: 'Liczba liter w słowie (domyślnie 5, zakres 5-7)' })
       .setMinValue(5).setMaxValue(7).setRequired(false),
   );
 
-export const options = { cooldown: 5 };
+export const options = { cooldown: 5, languages: ['pl'] as const };
 
 /* ── Polish dictionary check (sjp.pl) ──────────────────────── */
 
@@ -366,7 +366,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   const userId   = interaction.user.id;
   const username = interaction.user.username;
   const guildId  = interaction.guildId ?? 'dm';
-  const length   = interaction.options.getInteger('litery') ?? 5;
+  const length   = interaction.options.getInteger('letters') ?? 5;
 
   if (activeUsers.has(userId)) {
     await interaction.reply({

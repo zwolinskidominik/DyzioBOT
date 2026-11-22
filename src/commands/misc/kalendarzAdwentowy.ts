@@ -10,8 +10,8 @@ import fs from 'fs/promises';
 import logger from '../../utils/logger';
 
 export const data = new SlashCommandBuilder()
-  .setName('kalendarz-adwentowy')
-  .setDescription('Otwórz dzisiejsze okienko i odbierz swoją niespodziankę 🎁');
+  .setName('advent-calendar')
+  .setDescription('Open today\'s window and get your surprise 🎁').setDescriptionLocalizations({ pl: 'Otwórz dzisiejsze okienko i odbierz swoją niespodziankę 🎁' });
 
 export const options = {
   guildOnly: true,
