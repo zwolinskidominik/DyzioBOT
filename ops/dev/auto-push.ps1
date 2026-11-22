@@ -10,7 +10,9 @@ $log = Join-Path $repo '.git\auto-push.log'
 
 function Write-Log([string]$message) {
   $line = '{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $message
-  $old = if (Test-Path $log) { @(Get-Content $log -Tail 199) } else { @() }
+  # [string[]] - otherwise PowerShell unrolls a one-line array into a string and lines get glued.
+  [string[]]$old = @()
+  if (Test-Path $log) { $old = @(Get-Content $log -Tail 199) }
   Set-Content -Path $log -Value ($old + $line) -Encoding ascii
 }
 
