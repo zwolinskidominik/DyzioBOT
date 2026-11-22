@@ -6,12 +6,15 @@ import {
   SlashCommandBuilder,
   PermissionFlagsBits,
   ModalSubmitInteraction,
+  type Attachment,
   TextChannel,
   MessageFlags,
 } from 'discord.js';
 import type { ICommandOptions } from '../../interfaces/Command';
 import { createBaseEmbed, createErrorEmbed } from '../../utils/embedHelpers';
 import logger from '../../utils/logger';
+import { sayMessages } from '../../i18n/messages/say';
+import { getGuildLanguage } from '../../i18n/guildLanguage';
 
 const CUSTOM_IDS = {
   MESSAGE: 'sayMessage',
@@ -19,11 +22,35 @@ const CUSTOM_IDS = {
 };
 const MODAL_TIMEOUT = 300_000;
 
+/** Obrazek do ogłoszenia: tylko popularne formaty i rozmiar sprawdzony PRZED wysłaniem. */
+export const IMAGE_MAX_MB = 8;
+const IMAGE_TYPES: Readonly<Record<string, string>> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+};
+
+/** Bezpieczna nazwa pliku (bez nazwy od użytkownika) albo null, gdy plik nie jest dozwolonym obrazkiem. */
+export function imageFileName(image: Pick<Attachment, 'contentType' | 'size'>): string | null {
+  const type = image.contentType?.split(';')[0]?.trim().toLowerCase() ?? '';
+  const ext = IMAGE_TYPES[type];
+  if (!ext || image.size > IMAGE_MAX_MB * 1024 * 1024) return null;
+  return `deezy-image.${ext}`;
+}
+
 export const data = new SlashCommandBuilder()
   .setName('say')
   .setDescription('Send a message in this channel as Deezy').setDescriptionLocalizations({ pl: 'Wyślij wiadomość na wybranym kanale jako Deezy' })
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-  .setDMPermission(false);
+  .setDMPermission(false)
+  .addAttachmentOption((o) =>
+    o
+      .setName('image')
+      .setDescription('Image to attach to the message (optional)')
+      .setDescriptionLocalizations({ pl: 'Obrazek dołączony do wiadomości (opcjonalnie)' })
+      .setRequired(false)
+  );
 
 export const options = {
   userPermissions: [PermissionFlagsBits.Administrator],
@@ -40,13 +67,23 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
   }
 
   const channel = interaction.channel as TextChannel;
+  const lang = await getGuildLanguage(interaction.guildId);
+  const image = interaction.options.getAttachment('image');
+  const imageName = image ? imageFileName(image) : null;
+  if (image && !imageName) {
+    await interaction.reply({
+      embeds: [createErrorEmbed(sayMessages[lang].imageInvalid(IMAGE_MAX_MB))],
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
   const modal = createSayModal();
 
   await interaction.showModal(modal);
 
   try {
     const response = await interaction.awaitModalSubmit({ time: MODAL_TIMEOUT });
-    await handleModalSubmit(response, channel);
+    await handleModalSubmit(response, channel, image && imageName ? { url: image.url, name: imageName } : null, sayMessages[lang].sent);
   } catch (error) {
     logger.error(`Błąd podczas wysyłania wiadomości w /say: ${error}`);
     await interaction.followUp({
@@ -82,7 +119,9 @@ function createSayModal(): ModalBuilder {
 
 async function handleModalSubmit(
   response: ModalSubmitInteraction,
-  channel: TextChannel
+  channel: TextChannel,
+  image: { url: string; name: string } | null,
+  sentText: string
 ): Promise<void> {
   const messageContent = response.fields.getTextInputValue(CUSTOM_IDS.MESSAGE);
   const embedMode = response.fields.getTextInputValue(CUSTOM_IDS.EMBED_MODE);
@@ -90,15 +129,18 @@ async function handleModalSubmit(
   // Tekst wpisany przez admina nie może pingować: „@everyone”, <@&rola> czy <@user> w treści
   // (np. w changelogu) mają się wyświetlić, a nie wysłać powiadomienie do całego serwera.
   const allowedMentions = { parse: [] };
+  const files = image ? [{ attachment: image.url, name: image.name }] : [];
   if (embedMode && embedMode.toLowerCase() === 'on') {
     const embed = createBaseEmbed({ description: messageContent });
-    await channel.send({ embeds: [embed], allowedMentions });
+    // Obrazek wewnątrz embeda (pod tekstem) zamiast osobnego załącznika nad nim.
+    if (image) embed.setImage(`attachment://${image.name}`);
+    await channel.send({ embeds: [embed], files, allowedMentions });
   } else {
-    await channel.send({ content: messageContent, allowedMentions });
+    await channel.send({ content: messageContent, files, allowedMentions });
   }
 
   await response.reply({
-    content: 'Twoja wiadomość została wysłana',
+    content: sentText,
     flags: MessageFlags.Ephemeral,
   });
 }

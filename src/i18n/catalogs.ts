@@ -1,6 +1,7 @@
 import type { Messages } from './index';
 import { commonMessages } from './messages/common';
 import { helpMessages } from './messages/help';
+import { sayMessages } from './messages/say';
 
 /**
  * Wszystkie słowniki bota - test sprawdza na nich, czy angielska wersja ma te same klucze co polska
@@ -9,4 +10,5 @@ import { helpMessages } from './messages/help';
 export const ALL_CATALOGS: Record<string, Messages<unknown>> = {
   common: commonMessages,
   help: helpMessages,
+  say: sayMessages,
 };
