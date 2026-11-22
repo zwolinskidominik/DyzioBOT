@@ -15,7 +15,7 @@ import type { MonitorSnapshot } from '../../../src/services/minecraft/monitor';
 import type { ControlResult } from '../../../src/services/minecraft/controlClient';
 import type { ServerView } from '../../../src/services/minecraft/serverState';
 import { canManageWhitelist, canStartServer, memberRoleIds } from '../../../src/services/minecraft/permissions';
-import { MC_IDS, buildPanelButtons, buildPanelEmbed, parseMcCustomId } from '../../../src/utils/minecraftEmbeds';
+import { CLAUDE_STARTER, MC_IDS, buildPanelButtons, buildPanelEmbed, parseMcCustomId } from '../../../src/utils/minecraftEmbeds';
 import { planWhitelistSteps, NickSchema } from '../../../src/services/minecraft/whitelistService';
 
 describe('RenameLimiter', () => {
@@ -142,6 +142,12 @@ describe('customId', () => {
     expect(field({ kind: 'online', online: 1, max: 20, players: [] })?.value).toBe(`<@${startedBy.userId}> <t:1795377600:R>`);
     expect(field({ kind: 'starting', phase: 'machine' })).toBeDefined();
     expect(field({ kind: 'offline' })).toBeUndefined();
+  });
+
+  it('labels a start made by Claude instead of mentioning a person', () => {
+    const startedBy = { userId: CLAUDE_STARTER, at: new Date('2026-11-22T20:00:00Z') };
+    const embed = buildPanelEmbed({ kind: 'online', online: 0, max: 20, players: [] }, 'mc.deezy.cc', { startedBy }).toJSON();
+    expect(embed.fields?.find((f) => f.name === 'Włączył')?.value).toBe('🤖 Claude (AI) <t:1795377600:R>');
   });
 });
 

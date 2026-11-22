@@ -18,13 +18,10 @@ import { canManageWhitelist, canStartServer, memberRoleIds, type InteractionActo
 import {
   getMinecraftRuntime,
   panelPayload,
-  refreshPanel,
-  setStartedBy,
-  updateStatsChannel,
   visibleView,
   type MinecraftRuntime,
 } from '../../services/minecraft/runtime';
-import { progressText } from '../../services/minecraft/startController';
+import { runServerStart } from '../../services/minecraft/startFlow';
 import {
   listWhitelist,
   reconcileWhitelist,
@@ -102,35 +99,11 @@ async function handleStart(interaction: ButtonInteraction, rt: MinecraftRuntime)
   }
 
   await interaction.deferUpdate();
-  const guild = interaction.guild!;
-  const messageId = interaction.message.id;
-  // Licznik od razu na „startuje” (jeśli pozwala limit zmian nazwy).
-  void updateStatsChannel(guild, rt, { kind: 'starting', phase: 'machine' }).catch(() => undefined);
-  // Panel pokazuje od razu, kto włącza serwer; przy nieudanym starcie wracamy do poprzedniej osoby.
-  const previousStarter = rt.startedBy ?? null;
-  await setStartedBy(rt, { userId: interaction.user.id, at: new Date() });
-
-  const outcome = await rt.starter.start(async (snapshot) => {
-    const extras = { progress: progressText(snapshot.view), startInProgress: true };
-    await interaction.editReply(panelPayload(rt, snapshot.view, extras)).catch(() => undefined);
-    await refreshPanel(guild, rt, snapshot.view, extras, messageId).catch(() => undefined);
+  const outcome = await runServerStart(interaction.guild!, rt, interaction.user.id, {
+    editOwn: (payload) => interaction.editReply(payload),
+    ownMessageId: interaction.message.id,
   });
-
-  if (outcome.kind !== 'ready' && outcome.kind !== 'timeout') await setStartedBy(rt, previousStarter);
-  if (outcome.kind === 'unavailable') {
-    await replyEphemeral(interaction, 'Nie udało się uruchomić serwera, spróbuj za chwilę.');
-    return;
-  }
-  if (outcome.kind === 'busy' || outcome.kind === 'cooldown') return;
-
-  const finalText =
-    outcome.kind === 'ready'
-      ? `✅ Serwer gotowy - wchodźcie: \`${rt.config.displayHost}\``
-      : '❌ Serwer nie wystartował w ciągu 5 minut. Kliknij „Odśwież” za chwilę, a jeśli dalej nic - daj znać administratorowi.';
-  const extras = { progress: finalText, startInProgress: false };
-  await interaction.editReply(panelPayload(rt, outcome.view, extras)).catch(() => undefined);
-  await refreshPanel(guild, rt, outcome.view, extras, messageId).catch(() => undefined);
-  void updateStatsChannel(guild, rt, outcome.view).catch(() => undefined);
+  if (outcome.kind === 'unavailable') await replyEphemeral(interaction, 'Nie udało się uruchomić serwera, spróbuj za chwilę.');
 }
 
 async function handleList(interaction: ButtonInteraction, rt: MinecraftRuntime): Promise<void> {

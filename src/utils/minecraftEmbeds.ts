@@ -68,6 +68,9 @@ export interface PanelExtras {
   startedBy?: StartedBy | null | undefined;
 }
 
+/** Specjalna wartość `startedBy.userId`: serwer włączył Claude (komenda właściciela bota), a nie osoba z Discorda. */
+export const CLAUDE_STARTER = 'claude';
+
 export interface StartedBy {
   userId: string;
   at: Date;
@@ -119,7 +122,8 @@ export function buildPanelEmbed(view: ServerView, host: string, extras: PanelExt
   if (extras.startedBy && isMachineUp(view)) {
     // Wzmianka w embedzie nikogo nie pinguje; <t:…:R> Discord pokazuje jako „5 minut temu”.
     const unix = Math.floor(extras.startedBy.at.getTime() / 1000);
-    fields.push({ name: 'Włączył', value: `<@${extras.startedBy.userId}> <t:${unix}:R>`, inline: false });
+    const who = extras.startedBy.userId === CLAUDE_STARTER ? '🤖 Claude (AI)' : `<@${extras.startedBy.userId}>`;
+    fields.push({ name: 'Włączył', value: `${who} <t:${unix}:R>`, inline: false });
   }
   const embed = new EmbedBuilder()
     .setColor(state.color)
