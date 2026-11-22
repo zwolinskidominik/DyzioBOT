@@ -14,7 +14,7 @@ import { getBotConfig } from '../../config/bot';
 import logger from '../../utils/logger';
 import { request } from 'undici';
 
-const { FACEIT_API_KEY } = env();
+// Klucz czytany dopiero przy użyciu komendy - import modułu nie wymaga pełnego .env (testy, CI).
 
 const API_BASE_URL = 'https://open.faceit.com/data/v4';
 
@@ -82,7 +82,7 @@ function getStatAsString(
 }
 
 async function fetchPlayerData(nickname: string): Promise<IFaceitPlayer | null> {
-  const apiKey = FACEIT_API_KEY;
+  const apiKey = env().FACEIT_API_KEY;
   if (!apiKey)
     throw new Error('Brak klucza API Faceit w zmiennych środowiskowych (FACEIT_API_KEY).');
 
@@ -99,7 +99,7 @@ async function fetchPlayerData(nickname: string): Promise<IFaceitPlayer | null> 
 }
 
 async function fetchPlayerStats(playerId: string): Promise<ICS2Stats | null> {
-  const apiKey = FACEIT_API_KEY;
+  const apiKey = env().FACEIT_API_KEY;
   if (!apiKey)
     throw new Error('Brak klucza API Faceit w zmiennych środowiskowych (FACEIT_API_KEY).');
 
