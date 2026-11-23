@@ -24,6 +24,7 @@ describe("proxy matcher", () => {
     "/favicon.ico",
     "/api/auth/session",
     "/api/health",
+    "/gz/abcdefghijklmnopqrstuv",
     "/_next/static/chunks/main.js",
     "/_next/image",
   ])("leaves %s public", (pathname) => {

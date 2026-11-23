@@ -122,6 +122,7 @@ export const config = {
     // a prawo wymaga udostępnienia regulaminu przed zawarciem umowy (czyli przed logowaniem).
     // flags/ i twemoji/ to statyczne pliki z public/ używane także przed zalogowaniem (navbar
     // na stronie głównej) — bez wyjątku proxy przekierowywało je na /login i obrazek się nie ładował.
-    "/((?!$|login|privacy$|terms$|flags/|twemoji/|api/auth|api/health|_next/static|_next/image|deezy\\.png|favicon).*)",
+    // gz/ - lista modów GameZone pod tajnym linkiem (sprawdza token sama, patrz app/gz/[token]/route.ts).
+    "/((?!$|login|privacy$|terms$|flags/|twemoji/|gz/|api/auth|api/health|_next/static|_next/image|deezy\\.png|favicon).*)",
   ],
 };

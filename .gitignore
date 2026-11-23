@@ -45,3 +45,5 @@ dashboard-nextjs/next-env.d.ts
 assets/thumbnails/
 assets/greetings/uploads/
 assets/lobby/uploads/
+# Pliki tylko na VPS (np. lista modów GameZone pod tajnym linkiem /gz/<token>)
+assets/private/
