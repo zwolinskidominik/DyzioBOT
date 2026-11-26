@@ -167,7 +167,7 @@ const LOG_KINDS: { id: LogKind | "all"; label: string; color: string }[] = [
 
 const DAY_RANGE_IDS = ["7", "30", "90", "all"] as const;
 
-const PER_PAGE_OPTIONS = [6, 12, 25];
+const PER_PAGE_OPTIONS = [15, 30, 50];
 
 // Realne zabezpieczenia — patrz src/utils/moderationHelpers.ts (canModerate + applyTimeoutSafely)
 // i src/services/moderationLogService.ts. Zawsze aktywne dla /ban, /kick, /mute i /warn.
@@ -800,7 +800,7 @@ function LogTab({ guildId, onChanged }: { guildId: string; onChanged?: () => voi
   const [kind, setKind] = useState<LogKind | "all">("all");
   const [days, setDays] = useState("30");
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(6);
+  const [perPage, setPerPage] = useState(15);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const t = useMessages(moderationMessages);
   const { lang } = useLang();
