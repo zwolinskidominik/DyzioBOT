@@ -397,6 +397,18 @@ function WarnStepEditor({ step, onChange, allowNone = true }: { step: WarnStep; 
   );
 }
 
+/**
+ * Ramka kroku drabinki: pełny kolor kary z lewej (3px), a góra i dół (1px) przechodzą w przezroczystość
+ * w prawo. Gradient jako tło „border-box” pod nieprzezroczystym „padding-box” - zachowuje zaokrąglenia.
+ */
+function ladderRowStyle(color: string): React.CSSProperties {
+  return {
+    border: "1px solid transparent",
+    borderLeftWidth: 3,
+    background: `linear-gradient(#1d202b, #1d202b) padding-box, linear-gradient(90deg, ${color} 0%, ${rgba(color, 0.45)} 30%, transparent 75%) border-box`,
+  };
+}
+
 function LadderEditor({ steps, onChange }: { steps: WarnStep[]; onChange: (steps: WarnStep[]) => void }) {
   const t = useMessages(moderationMessages);
   const WARN_ACTIONS = buildWarnActions(t);
@@ -420,7 +432,7 @@ function LadderEditor({ steps, onChange }: { steps: WarnStep[]; onChange: (steps
           // Poniżej lg wiersz łamie się na dwa: [numer + opis] i [lista wyboru + usuń]. Wcześniej
           // select miał sztywne 160px i shrink-0, więc na opis zostawało ok. 30px. lg:contents
           // sprawia, że od lg opakowania znikają z układu i rząd wygląda dokładnie jak dotąd.
-          <div key={i} className="flex flex-col gap-2 rounded-lg py-2.5 pl-3 pr-2.5 lg:flex-row lg:items-center lg:gap-[11px]" style={{ background: "#1d202b", borderLeft: `3px solid ${meta.color}` }}>
+          <div key={i} className="flex flex-col gap-2 rounded-lg py-2.5 pl-3 pr-2.5 lg:flex-row lg:items-center lg:gap-[11px]" style={ladderRowStyle(meta.color)}>
             <div className="flex min-w-0 items-center gap-[11px] lg:contents">
               <span className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-md text-[11px] font-extrabold" style={{ background: rgba(meta.color, 0.16), color: meta.color }}>
                 {i + 1}
