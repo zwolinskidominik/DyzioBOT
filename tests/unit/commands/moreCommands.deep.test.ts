@@ -272,7 +272,8 @@ describe('help command (deep)', () => {
 
     it('hides /meme from /help on other servers', async () => {
       const helpSrc = require('fs').readFileSync(require.resolve('../../../src/commands/misc/help'), 'utf8');
-      const total = (helpSrc.match(/^  { name: '/gm) ?? []).length;
+      const allCommands = helpSrc.slice(helpSrc.indexOf('const ALL_COMMANDS'), helpSrc.indexOf('const MINECRAFT_HELP'));
+      const total = (allCommands.match(/^  { name: '/gm) ?? []).length;
       expect(await footerFor(OWNER_GUILD)).toContain(`/${Math.ceil(total / 5)}`);
       expect(await footerFor('123456789012345678')).toContain(`/${Math.ceil((total - 1) / 5)}`);
     });

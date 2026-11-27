@@ -9,6 +9,7 @@ import { duringStart, StartController } from './startController';
 import { RenameLimiter, applyStatsChannelName, ensureStatsChannel } from './statsChannel';
 import { channelNameFor, type ServerView } from './serverState';
 import { reconcileWhitelist } from './whitelistService';
+import { MinecraftStatsService } from './statsService';
 
 /**
  * Jeden komplet obiektów funkcji Minecraft na proces bota (stan w pamięci: ostatnie IP, cooldown
@@ -19,6 +20,8 @@ export interface MinecraftRuntime {
   monitor: MinecraftMonitor;
   starter: StartController;
   limiter: RenameLimiter;
+  /** Statystyki graczy (GET /stats w gamezone-control). */
+  stats: MinecraftStatsService;
   /** Kto włączył serwer (kopia z bazy; `undefined` = jeszcze nie wczytano po restarcie bota). */
   startedBy: StartedBy | null | undefined;
 }
@@ -33,7 +36,14 @@ export function getMinecraftRuntime(): MinecraftRuntime | null {
     return runtime;
   }
   const monitor = new MinecraftMonitor(config, new ControlClient(config));
-  runtime = { config, monitor, starter: new StartController(monitor), limiter: new RenameLimiter(), startedBy: undefined };
+  runtime = {
+    config,
+    monitor,
+    starter: new StartController(monitor),
+    limiter: new RenameLimiter(),
+    stats: new MinecraftStatsService(config),
+    startedBy: undefined,
+  };
   return runtime;
 }
 

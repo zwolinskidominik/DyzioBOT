@@ -36,6 +36,8 @@ export const helpMessages = defineMessages({
       toplvl: 'Pokazuje ranking użytkowników według poziomu (top 10 na stronę).',
       warnings: 'Wyświetla twoje ostrzeżenia lub ostrzeżenia innego użytkownika.',
       minecraft: 'Panel serwera Minecraft: stan, gracze, uruchamianie serwera i whitelista.',
+      'mc-stats': 'Statystyki gracza z serwera Minecraft: czas gry i śmierci.',
+      'mc-top': 'Topka graczy serwera Minecraft: najdłużej grający albo najwięcej śmierci.',
     },
   },
   en: {
@@ -72,6 +74,8 @@ export const helpMessages = defineMessages({
       toplvl: 'Shows the users ranked by level (top 10 per page).',
       warnings: "Shows your warnings or another user's.",
       minecraft: 'Minecraft server panel: status, players, server start and whitelist.',
+      'mc-stats': 'Minecraft player stats: playtime and deaths.',
+      'mc-top': 'Top Minecraft players: longest playtime or most deaths.',
     },
   },
 });

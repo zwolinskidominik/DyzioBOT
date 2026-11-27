@@ -54,7 +54,11 @@ const ALL_COMMANDS: CommandInfo[] = [
   { name: 'warnings', usage: (u) => `/warnings [${u}]` },
 ];
 
-const MINECRAFT_HELP: CommandInfo = { name: 'minecraft', usage: () => '/minecraft' };
+const MINECRAFT_HELP: CommandInfo[] = [
+  { name: 'minecraft', usage: () => '/minecraft' },
+  { name: 'mc-stats', usage: (u) => `/mc-stats [${u}] [nick]` },
+  { name: 'mc-top', usage: () => '/mc-top [type]' },
+];
 
 export async function run({ interaction }: ICommandOptions): Promise<void> {
   const t = helpMessages[await getGuildLanguage(interaction.guildId)];
@@ -64,7 +68,7 @@ export async function run({ interaction }: ICommandOptions): Promise<void> {
     const isMinecraftGuild = getMinecraftConfig()?.guildId === interaction.guildId;
     const commands = [
       ...ALL_COMMANDS.filter((cmd) => !cmd.ownerGuildsOnly || isOwnerGuild),
-      ...(isMinecraftGuild ? [MINECRAFT_HELP] : []),
+      ...(isMinecraftGuild ? MINECRAFT_HELP : []),
     ].sort((a, b) => a.name.localeCompare(b.name));
     const totalPages = Math.ceil(commands.length / 5);
     let currentPage = 0;
