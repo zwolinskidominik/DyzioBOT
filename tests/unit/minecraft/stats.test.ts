@@ -67,11 +67,14 @@ describe('MinecraftStatsService', () => {
     expect(result).toMatchObject({ ok: true, data: { stale: true } });
   });
 
-  it('reports a missing endpoint as not ready and a bad body as unavailable', async () => {
+  it('reports a missing endpoint or an empty upload as not ready and a bad body as unavailable', async () => {
     await expect(new MinecraftStatsService(CONFIG, { fetchImpl: () => response(404, {}) }).get()).resolves.toEqual({
       ok: false,
       reason: 'not_ready',
     });
+    await expect(
+      new MinecraftStatsService(CONFIG, { fetchImpl: () => response(200, { updatedAt: null, players: [] }) }).get()
+    ).resolves.toEqual({ ok: false, reason: 'not_ready' });
     const bad = { ...BODY, players: [{ uuid: 'x', name: 'bad nick!', playTime: 1, deaths: 0 }] };
     await expect(new MinecraftStatsService(CONFIG, { fetchImpl: () => response(200, bad) }).get()).resolves.toEqual({
       ok: false,

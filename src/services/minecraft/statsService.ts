@@ -126,6 +126,8 @@ export class MinecraftStatsService {
         logger.warn('[MC] gamezone-control /stats zwróciło nieoczekiwaną odpowiedź.');
         return { ok: false, reason: 'unavailable' };
       }
+      // Usługa działa, ale maszyna jeszcze nie wysłała żadnych statystyk - to samo co brak danych.
+      if (parsed.data.updatedAt === null && parsed.data.players.length === 0) return { ok: false, reason: 'not_ready' };
       return {
         ok: true,
         data: {
