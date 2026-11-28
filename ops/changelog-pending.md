@@ -12,3 +12,7 @@ Ostatni wysłany wpis: 22.11.2026 (zmiany z 31.10 i 21.11).
 - Na serwerach z językiem angielskim gry ze słowami po polsku (`/wordle`, `/hangman`, `/fact`, `/8ball` i rankingi) są na razie niedostępne. / On English servers the Polish word games are unavailable for now.
 - Wyłączenia komend ustawione w panelu przeniesione automatycznie na nowe nazwy. / Disabled commands in the dashboard were moved to the new names automatically.
 - `/say` ma opcjonalny obrazek (PNG, JPG, GIF, WEBP do 8 MB), w trybie embed wyświetlany w środku embeda. / `/say` has an optional image (PNG, JPG, GIF, WEBP up to 8 MB), shown inside the embed in embed mode.
+
+## Wdrożone 26.11.2026 (do zbiorczego wpisu)
+
+- Panel → Moderacja: historia kar pokazuje domyślnie 15 pozycji na stronę (do wyboru 15, 30, 50), a kroki drabinki kar mają nową ramkę w kolorze kary. / Dashboard → Moderation: the punishment history shows 15 entries per page by default (15, 30 or 50), and warn ladder steps have a new frame in the punishment color.
