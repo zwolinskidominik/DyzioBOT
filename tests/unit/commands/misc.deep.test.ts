@@ -352,7 +352,9 @@ describe('wrozba command', () => {
 
     await run({ interaction, client: interaction.client });
 
-    expect(mockCreateErrorEmbed).toHaveBeenCalledWith(expect.stringContaining('DB error'));
+    // Szczegóły błędu tylko w logach - użytkownik dostaje ogólny komunikat.
+    expect(mockCreateErrorEmbed).toHaveBeenCalledWith(expect.stringContaining('Spróbuj za chwilę'));
+    expect(mockCreateErrorEmbed).not.toHaveBeenCalledWith(expect.stringContaining('DB error'));
   });
 });
 
