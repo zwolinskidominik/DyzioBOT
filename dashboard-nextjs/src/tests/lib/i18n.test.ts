@@ -23,6 +23,7 @@ import { suggestionsMessages } from "@/i18n/messages/suggestions";
 import { tempChannelsMessages } from "@/i18n/messages/tempChannels";
 import { ticketsMessages } from "@/i18n/messages/tickets";
 import { wordleMessages } from "@/i18n/messages/wordle";
+import { fortunesMessages } from "@/i18n/messages/fortunes";
 
 const DICTIONARIES = {
   antiSpamMessages,
@@ -48,6 +49,7 @@ const DICTIONARIES = {
   tempChannelsMessages,
   ticketsMessages,
   wordleMessages,
+  fortunesMessages,
 };
 
 /** Spłaszczone klucze słownika z typem wartości ("string", "function" albo "array"). */

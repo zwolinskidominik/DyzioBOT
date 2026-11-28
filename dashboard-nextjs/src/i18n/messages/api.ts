@@ -44,6 +44,10 @@ export const apiMessages = defineMessages({
       wordleLength: (min: number, max: number) => `Słowo musi mieć od ${min} do ${max} liter`,
       wordleWordExists: "To słowo już istnieje w bazie",
       wordleWordNotFound: "Nie znaleziono słowa",
+      // Wróżby
+      fortuneLength: (min: number, max: number) => `Wróżba musi mieć od ${min} do ${max} znaków`,
+      fortuneExists: "Taka wróżba już jest w puli",
+      fortuneNotFound: "Nie znaleziono wróżby",
       // Moderacja
       logEntryNotFound: "Nie znaleziono wpisu.",
       punishmentAlreadyUndone: "Ta kara została już cofnięta.",
@@ -137,6 +141,9 @@ export const apiMessages = defineMessages({
       wordleLength: (min: number, max: number) => `The word must have ${min} to ${max} letters`,
       wordleWordExists: "This word already exists",
       wordleWordNotFound: "Word not found",
+      fortuneLength: (min: number, max: number) => `A fortune must have ${min} to ${max} characters`,
+      fortuneExists: "This fortune is already in the pool",
+      fortuneNotFound: "Fortune not found",
       logEntryNotFound: "Entry not found.",
       punishmentAlreadyUndone: "This punishment has already been undone.",
       unbanFailed: "Couldn't unban the user.",

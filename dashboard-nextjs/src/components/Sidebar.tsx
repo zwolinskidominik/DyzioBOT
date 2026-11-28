@@ -9,6 +9,7 @@ import {
   ChevronDown, ChevronRight, Home, Cake, Hand, Trophy, UserPlus, UserCheck,
   Lightbulb, Ticket, HelpCircle, Tv, Smile, FileText, BarChart3, Activity,
   Radio, ScrollText, Gamepad2, Gift, ShieldAlert, Star, Dices, Puzzle, PartyPopper, Plus, SmilePlus, Wrench, Gavel, Settings,
+  Sparkles,
 } from "lucide-react";
 import { prefetchGuildData } from "@/lib/cache";
 import { OWNER_IDS, OWNER_GUILD_IDS } from "@/lib/owner";
@@ -79,6 +80,7 @@ const moduleGroups: ModuleGroup[] = [
       { id: "qotd", name: "qotd", icon: HelpCircle, href: "/qotd" },
       { id: "hangman", name: "hangman", icon: Dices, href: "/hangman", ownerOnly: true },
       { id: "wordle", name: "wordle", icon: Puzzle, href: "/wordle", ownerOnly: true },
+      { id: "fortunes", name: "fortunes", icon: Sparkles, href: "/fortunes", ownerOnly: true, ownerGuildOnly: true },
       { id: "tournament", name: "tournament", icon: Gamepad2, href: "/tournament", ownerOnly: true, ownerGuildOnly: true },
       { id: "giveaway", name: "giveaway", icon: Gift, href: "/giveaway" },
       { id: "wrapped", name: "wrapped", icon: PartyPopper, href: "/wrapped", ownerOnly: true, ownerGuildOnly: true },
